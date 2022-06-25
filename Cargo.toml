@@ -2,7 +2,7 @@
 name = "stacks"
 version = "0.1.0"
 edition = "2021"
-description = "`stacks` is a service that proxies embedded databases like SQLite and DuckDB"
+description = "stacks is a service that proxies embedded databases like SQLite and DuckDB"
 license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
