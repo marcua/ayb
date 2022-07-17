@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
+use std::vec::Vec;
 
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use rusqlite;
@@ -16,17 +18,43 @@ impl fmt::Display for DBType {
     }
 }
 
-fn run_sqlite_query(path: &PathBuf, query: &str) -> rusqlite::Result<()> {
+fn run_sqlite_query(
+    path: &PathBuf,
+    query: &str,
+) -> Result<Vec<HashMap<String, String>>, rusqlite::Error> {
     let conn = rusqlite::Connection::open(path)?;
-    conn.execute(query, [])?;
-    Ok(())
+    let mut prepared = conn.prepare(query)?;
+    let num_columns = prepared.column_count();
+    let mut column_names = HashMap::new();
+    for column_index in 0..num_columns {
+        column_names.insert(
+            column_index,
+            String::from(prepared.column_name(column_index)?),
+        );
+    }
+
+    let mut rows = prepared.query([])?;
+    let mut results: Vec<HashMap<String, String>> = Vec::new();
+    while let Some(row) = rows.next()? {
+        let mut row_map: HashMap<String, String> = HashMap::new();
+        for column_index in 0..num_columns {
+            row_map.insert(
+                column_names.get(&column_index).unwrap().to_string(),
+                row.get(column_index)?,
+            );
+        }
+        results.push(row_map);
+    }
+    Ok(results)
 }
 
 fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<(), &'static str> {
     match db_type {
         DBType::Sqlite => {
             match run_sqlite_query(path, query) {
-                Ok(_result) => println!("Got result"),
+                Ok(result) => {
+                    println!("The result: {:#?}", result)
+                }
                 Err(err) => {
                     println!("SQLite error: {}", err);
                 }
