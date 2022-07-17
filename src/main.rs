@@ -77,8 +77,6 @@ fn main() -> Result<(), &'static str> {
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("query") {
-        // Move business logic into library
-        // Wrap in HTTP API
         if let (Some(path), Some(query), Some(db_type)) = (
             matches.get_one::<PathBuf>("path"),
             matches.get_one::<String>("query"),
