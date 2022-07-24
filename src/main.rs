@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 use std::vec::Vec;
@@ -12,40 +11,39 @@ enum DBType {
     Duckdb,
 }
 
+struct QueryResult {
+    fields: Vec<String>,
+    rows: Vec<Vec<String>>,
+}
+
 impl fmt::Display for DBType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
 }
 
-fn run_sqlite_query(
-    path: &PathBuf,
-    query: &str,
-) -> Result<Vec<HashMap<String, String>>, rusqlite::Error> {
+fn run_sqlite_query(path: &PathBuf, query: &str) -> Result<QueryResult, rusqlite::Error> {
     let conn = rusqlite::Connection::open(path)?;
     let mut prepared = conn.prepare(query)?;
     let num_columns = prepared.column_count();
-    let mut column_names = HashMap::new();
+    let mut fields: Vec<String> = Vec::new();
     for column_index in 0..num_columns {
-        column_names.insert(
-            column_index,
-            String::from(prepared.column_name(column_index)?),
-        );
+        fields.push(String::from(prepared.column_name(column_index)?))
     }
 
     let mut rows = prepared.query([])?;
-    let mut results: Vec<HashMap<String, String>> = Vec::new();
+    let mut results: Vec<Vec<String>> = Vec::new();
     while let Some(row) = rows.next()? {
-        let mut row_map: HashMap<String, String> = HashMap::new();
+        let mut result: Vec<String> = Vec::new();
         for column_index in 0..num_columns {
-            row_map.insert(
-                column_names.get(&column_index).unwrap().to_string(),
-                row.get(column_index)?,
-            );
+            result.push(row.get(column_index)?);
         }
-        results.push(row_map);
+        results.push(result);
     }
-    Ok(results)
+    Ok(QueryResult {
+        fields,
+        rows: results,
+    })
 }
 
 fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<(), &'static str> {
@@ -53,7 +51,8 @@ fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<(), &'stat
         DBType::Sqlite => {
             match run_sqlite_query(path, query) {
                 Ok(result) => {
-                    println!("The result: {:#?}", result)
+                    println!("Result schema: {:#?}", result.fields);
+                    println!("Results: {:#?}", result.rows);
                 }
                 Err(err) => {
                     println!("SQLite error: {}", err);
