@@ -4,7 +4,7 @@ use std::process::Command;
 
 #[test]
 fn insert_and_read_rows() -> Result<(), Box<dyn std::error::Error>> {
-    // Delete sqlite files from old runs (it's OK if they don't exist)
+    // Delete SQLite files from old runs (it's OK if they don't exist)
     match fs::remove_file("test.sqlite") {
         Ok(()) => {}
         Err(err) => {
