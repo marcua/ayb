@@ -58,7 +58,7 @@ fn insert_and_read_rows() -> Result<(), Box<dyn std::error::Error>> {
     "fname",
     "lname",
 ]
-Results: [
+Results!!!: [
     [
         "the first",
         "the last",
