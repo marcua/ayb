@@ -1,10 +1,10 @@
 mod sqlite;
 
+use crate::databases::sqlite::run_sqlite_query;
+use clap::ValueEnum;
 use std::fmt;
 use std::path::PathBuf;
 use std::vec::Vec;
-use clap::ValueEnum;
-use crate::databases::sqlite::run_sqlite_query;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum DBType {
@@ -29,9 +29,7 @@ pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<(), &'
         DBType::Sqlite => {
             query_results = run_sqlite_query(path, query);
         }
-        _ => {
-            return Err("Unsupported DB type")
-        }
+        _ => return Err("Unsupported DB type"),
     }
     match query_results {
         Ok(result) => {

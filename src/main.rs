@@ -1,8 +1,8 @@
 mod databases;
 
+use clap::{arg, command, value_parser, Command};
 use databases::{run_query, DBType};
 use std::path::PathBuf;
-use clap::{arg, command, value_parser, Command};
 
 fn main() -> Result<(), &'static str> {
     let matches = command!()
