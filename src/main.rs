@@ -1,7 +1,9 @@
 mod databases;
+mod http;
 
 use clap::{arg, command, value_parser, Command};
 use databases::{run_query, DBType};
+use http::run_server;
 use std::path::PathBuf;
 
 fn main() -> Result<(), &'static str> {
@@ -13,6 +15,16 @@ fn main() -> Result<(), &'static str> {
                 .arg(arg!(-q --query <VALUE> "The query to run"))
                 .arg(arg!(-p --path <FILE> "Path to the DB").value_parser(value_parser!(PathBuf))),
         )
+        .subcommand(
+            Command::new("server")
+                .about("Run an HTTP server")
+                .arg(
+                    arg!(-p --port <VALUE> "The listener port")
+                        .value_parser(value_parser!(u16))
+                        .default_value("8000"),
+                )
+                .arg(arg!(--host <VALUE> "The host/IP to bind to").default_value("127.0.0.1")),
+        )
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("query") {
@@ -22,6 +34,20 @@ fn main() -> Result<(), &'static str> {
             matches.get_one::<DBType>("type"),
         ) {
             run_query(path, &query, db_type)?;
+        }
+    } else if let Some(matches) = matches.subcommand_matches("server") {
+        if let (Some(host), Some(port)) = (
+            matches.get_one::<String>("host"),
+            matches.get_one::<u16>("port"),
+        ) {
+            match run_server(host, port) {
+                Ok(_result) => {
+                    println!("Server is stopping...")
+                }
+                Err(err) => {
+                    println!("Unable to run server {}", err);
+                }
+            }
         }
     }
 
