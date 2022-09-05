@@ -1,9 +1,6 @@
-mod databases;
-mod http;
-
 use clap::{arg, command, value_parser, Command};
-use databases::{run_query, DBType};
-use http::run_server;
+use stacks::databases::{run_query, DBType};
+use stacks::http::run_server;
 use std::path::PathBuf;
 
 fn main() -> Result<(), &'static str> {
@@ -33,7 +30,15 @@ fn main() -> Result<(), &'static str> {
             matches.get_one::<String>("query"),
             matches.get_one::<DBType>("type"),
         ) {
-            run_query(path, &query, db_type)?;
+            match run_query(path, &query, db_type) {
+                Ok(result) => {
+                    println!("Result schema: {:#?}", result.fields);
+                    println!("Results: {:#?}", result.rows);
+                }
+                Err(err) => {
+                    println!("{}", err);
+                }
+            }
         }
     } else if let Some(matches) = matches.subcommand_matches("server") {
         if let (Some(host), Some(port)) = (

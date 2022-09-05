@@ -2,6 +2,7 @@ mod sqlite;
 
 use crate::databases::sqlite::run_sqlite_query;
 use clap::ValueEnum;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::path::PathBuf;
 use std::vec::Vec;
@@ -18,27 +19,18 @@ impl fmt::Display for DBType {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct QueryResult {
-    fields: Vec<String>,
-    rows: Vec<Vec<String>>,
+    pub fields: Vec<String>,
+    pub rows: Vec<Vec<String>>,
 }
 
-pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<(), &'static str> {
-    let query_results;
+pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryResult, String> {
     match db_type {
-        DBType::Sqlite => {
-            query_results = run_sqlite_query(path, query);
-        }
-        _ => return Err("Unsupported DB type"),
+        DBType::Sqlite => match run_sqlite_query(path, query) {
+            Ok(result) => Ok(result),
+            Err(err) => Err(format!("SQLite error: {}", err)),
+        },
+        _ => return Err("Error: Unsupported DB type".to_string()),
     }
-    match query_results {
-        Ok(result) => {
-            println!("Result schema: {:#?}", result.fields);
-            println!("Results: {:#?}", result.rows);
-        }
-        Err(err) => {
-            println!("SQLite error: {}", err);
-        }
-    }
-    Ok(())
 }
