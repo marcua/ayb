@@ -13,6 +13,7 @@ clap = { version = "3.2.8", features = ["cargo", "derive"] }
 derive_more = { version = "0.99.0" }
 rusqlite = { version = "0.27.0", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.6.2", features = ["runtime-actix-rustls", "any", "migrate", "tls"] }
 
 [dev-dependencies]
 assert_cmd = "2.0"
