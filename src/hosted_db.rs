@@ -1,6 +1,6 @@
 mod sqlite;
 
-use crate::databases::sqlite::run_sqlite_query;
+use crate::hosted_db::sqlite::run_sqlite_query;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::fmt;

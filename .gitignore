@@ -7,3 +7,6 @@
 
 # Emacs
 *~
+
+# Test SQLite file
+test.db

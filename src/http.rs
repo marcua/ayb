@@ -1,4 +1,4 @@
-use crate::databases::{run_query, DBType, QueryResult};
+use crate::hosted_db::{run_query, DBType, QueryResult};
 use actix_web::{error, middleware, post, web, App, HttpServer};
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
@@ -36,8 +36,27 @@ async fn query(
     }
 }
 
+/*
+#[put("/v1/{entity}/{database}")]
+async fn create(
+    path: web::Path<EntityDatabase>,
+    req: HttpRequest // tried this
+) -> Result<web::Json<CreationResult>, CreationError> {
+    let entity = &path.entity;
+    let database = &path.database;
+    // TODO(marcua): Read db type from header
+    let db_type = req.headers().get("db-type")?.to_str().ok(); //DBType::Sqlite;
+
+    match create_database(&entity, &database, &db_type) {
+        Ok(result) => Ok(web::Json(result)),
+        Err(err) => Err(QueryError { error_string: err }),
+    }
+}
+ */
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(query);
+    //cfg.service(create);
 }
 
 // TODO(marcua): Understand tokio::main vs actix_web::main

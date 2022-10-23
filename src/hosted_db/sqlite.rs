@@ -1,4 +1,4 @@
-use crate::databases::QueryResult;
+use crate::hosted_db::QueryResult;
 use rusqlite;
 use std::path::PathBuf;
 
