@@ -1,58 +1,65 @@
-use crate::hosted_db::{run_query, DBType, QueryResult};
+use crate::hosted_db::{run_query, QueryResult};
+use crate::stacks_db::models::{Database, DBType};
 use actix_web::{error, middleware, post, web, App, HttpServer};
 use derive_more::{Display, Error};
+use dotenvy;
 use serde::{Deserialize, Serialize};
+use sqlx;
 
 #[derive(Serialize, Deserialize)]
-pub struct EntityDatabase {
-    entity: String,
+pub struct OwnerDatabase {
+    owner: String,
     database: String,
 }
 
 #[derive(Debug, Display, Error)]
 #[display(fmt = "{}", error_string)]
-struct QueryError {
+struct Error {
     error_string: String,
 }
 
-impl error::ResponseError for QueryError {}
+impl error::ResponseError for Error {}
 
-#[post("/v1/{entity}/{database}")]
+#[post("/v1/{owner}/{database}/query")]
 async fn query(
-    path: web::Path<EntityDatabase>,
+    path: web::Path<OwnerDatabase>,
     query: String,
 ) -> Result<web::Json<QueryResult>, QueryError> {
-    let entity = &path.entity;
+    let owner = &path.owner;
     let database = &path.database;
     // TODO(marcua): derive database type from DB (requires creation
     // endpoint).
     let db_type = DBType::Sqlite;
     // TODO(marcua): make the path relate to some
     // persistent storage (with high availability, etc.)
-    let path = ["/tmp", entity, database].iter().collect();
+    let path = ["/tmp", owner, database].iter().collect();
     match run_query(&path, &query, &db_type) {
         Ok(result) => Ok(web::Json(result)),
-        Err(err) => Err(QueryError { error_string: err }),
+        Err(err) => Err(Error { error_string: err }),
     }
 }
 
-/*
-#[put("/v1/{entity}/{database}")]
+#[post("/v1/{owner}/{database}")]
 async fn create(
-    path: web::Path<EntityDatabase>,
-    req: HttpRequest // tried this
-) -> Result<web::Json<CreationResult>, CreationError> {
-    let entity = &path.entity;
-    let database = &path.database;
-    // TODO(marcua): Read db type from header
-    let db_type = req.headers().get("db-type")?.to_str().ok(); //DBType::Sqlite;
+    path: web::Path<OwnerDatabase>,
+    // req: HttpRequest // tried this
+    db_pool: web::Data<&sqlx::AnyPool>, 
+) -> Result<web::Json<CreationResult>, Error> {
+    let owner = &path.owner;
 
-    match create_database(&entity, &database, &db_type) {
+    // TODO(marcua): Read db type from header
+    // let db_type = req.headers().get("db-type")?.to_str().ok(); //DBType::Sqlite;
+    let database = Database {
+        owner_id: 0, // TODO(marcua): actual owner.
+        slug: path.database,
+        db_type: DBType::Sqlite // TODO(marcua): actual db type from headers.
+    };
+    
+    match create_database(&owner, &database, &db_type) {
         Ok(result) => Ok(web::Json(result)),
         Err(err) => Err(QueryError { error_string: err }),
     }
 }
- */
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(query);
@@ -62,11 +69,23 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 // TODO(marcua): Understand tokio::main vs actix_web::main
 #[actix_web::main]
 pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
+    let database_url = dotenvy::var("DATABASE_URL")
+        .expect("Provide a DATABASE_URL");
+
+    let db = sqlx::any::AnyPoolOptions::new()
+        .max_connections(20)
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to DATABASE_URL");
+
+    sqlx::migrate!().run(&db).await;
+
     println!("Starting server {}:{}...", host, port);
     HttpServer::new(|| {
         App::new()
             .wrap(middleware::Compress::default())
             .configure(config)
+            .app_data(web::Data::new(&db))
     })
     .bind((host, *port))?
     .run()

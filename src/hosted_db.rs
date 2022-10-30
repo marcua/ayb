@@ -1,23 +1,10 @@
 mod sqlite;
 
 use crate::hosted_db::sqlite::run_sqlite_query;
-use clap::ValueEnum;
+use crate::stacks_db::models::{DBType};
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::path::PathBuf;
 use std::vec::Vec;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum DBType {
-    Sqlite,
-    Duckdb,
-}
-
-impl fmt::Display for DBType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct QueryResult {

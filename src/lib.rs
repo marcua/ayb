@@ -5,3 +5,4 @@
 
 pub mod hosted_db;
 pub mod http;
+pub mod stacks_db;
