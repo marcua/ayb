@@ -9,7 +9,7 @@ CREATE TABLE database_owner (
 CREATE TABLE database (
        id INT NOT NULL,
        slug VARCHAR(64) NOT NULL,
-       db_type INT NOT NULL,
+       db_type SMALLINT NOT NULL,
        owner_id INT NOT NULL,
 
        PRIMARY KEY(id),

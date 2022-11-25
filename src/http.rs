@@ -1,4 +1,5 @@
 use crate::hosted_db::{run_query, QueryResult};
+use crate::stacks_db::crud::{create_database, DatabaseCreationResult};
 use crate::stacks_db::models::{Database, DBType};
 use actix_web::{error, middleware, post, web, App, HttpServer};
 use derive_more::{Display, Error};
@@ -24,7 +25,7 @@ impl error::ResponseError for Error {}
 async fn query(
     path: web::Path<OwnerDatabase>,
     query: String,
-) -> Result<web::Json<QueryResult>, QueryError> {
+) -> Result<web::Json<QueryResult>, Error> {
     let owner = &path.owner;
     let database = &path.database;
     // TODO(marcua): derive database type from DB (requires creation
@@ -43,21 +44,21 @@ async fn query(
 async fn create(
     path: web::Path<OwnerDatabase>,
     // req: HttpRequest // tried this
-    db_pool: web::Data<&sqlx::AnyPool>, 
-) -> Result<web::Json<CreationResult>, Error> {
-    let owner = &path.owner;
+    db_pool: web::Data<&sqlx::PgPool>, 
+) -> Result<web::Json<DatabaseCreationResult>, Error> {
+    // let owner = &path.owner;
 
     // TODO(marcua): Read db type from header
     // let db_type = req.headers().get("db-type")?.to_str().ok(); //DBType::Sqlite;
     let database = Database {
         owner_id: 0, // TODO(marcua): actual owner.
-        slug: path.database,
+        slug: path.database.clone(),
         db_type: DBType::Sqlite // TODO(marcua): actual db type from headers.
     };
     
-    match create_database(&owner, &database, &db_type) {
+    match create_database(&database, &db_pool).await {
         Ok(result) => Ok(web::Json(result)),
-        Err(err) => Err(QueryError { error_string: err }),
+        Err(err) => Err(Error { error_string: err }),
     }
 }
 
@@ -72,20 +73,23 @@ pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
     let database_url = dotenvy::var("DATABASE_URL")
         .expect("Provide a DATABASE_URL");
 
-    let db = sqlx::any::AnyPoolOptions::new()
+    let db = sqlx::postgres::PgPoolOptions::new()
         .max_connections(20)
         .connect(&database_url)
         .await
         .expect("Failed to connect to DATABASE_URL");
 
-    sqlx::migrate!().run(&db).await;
+    sqlx::migrate!()
+        .run(&db)
+        .await
+        .expect("Unable to run migration");
 
     println!("Starting server {}:{}...", host, port);
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
             .configure(config)
-            .app_data(web::Data::new(&db))
+            .app_data(web::Data::new(db.clone()))
     })
     .bind((host, *port))?
     .run()
