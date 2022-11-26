@@ -1,7 +1,7 @@
 mod sqlite;
 
 use crate::hosted_db::sqlite::run_sqlite_query;
-use crate::stacks_db::models::{DBType};
+use crate::stacks_db::models::DBType;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
