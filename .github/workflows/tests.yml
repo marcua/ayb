@@ -12,6 +12,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: cargo install sqlx-cli --no-default-features --features native-tls,postgres
     - name: Build
       run: cargo build --verbose
     - name: Ensure sqlx offline files are up to date
