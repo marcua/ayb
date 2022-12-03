@@ -3,14 +3,14 @@ use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct OwnerDatabase {
-    pub owner: String,
+pub struct EntityDatabasePath {
+    pub entity: String,
     pub database: String,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Owner {
-    pub owner: String,
+pub struct EntityPath {
+    pub entity: String,
 }
 
 #[derive(Debug, Display, Error)]

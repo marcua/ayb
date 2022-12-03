@@ -1,6 +1,4 @@
-use crate::stacks_db::models::{
-    Database, DatabaseOwner, InstantiatedDatabase, InstantiatedDatabaseOwner,
-};
+use crate::stacks_db::models::{Database, Entity, InstantiatedDatabase, InstantiatedEntity};
 use sqlx;
 use sqlx::postgres::PgPool;
 
@@ -11,11 +9,11 @@ pub async fn create_database(
     let rec = sqlx::query_as!(
         InstantiatedDatabase,
         r#"
-INSERT INTO database ( owner_id, slug, db_type )
+INSERT INTO database ( entity_id, slug, db_type )
 VALUES ( $1, $2, $3 )
-RETURNING id, owner_id, slug, db_type
+RETURNING id, entity_id, slug, db_type
         "#,
-        database.owner_id,
+        database.entity_id,
         database.slug,
         database.db_type
     )
@@ -26,28 +24,26 @@ RETURNING id, owner_id, slug, db_type
     Ok(rec)
 }
 
-pub async fn create_owner(
-    owner: &DatabaseOwner,
-    pool: &PgPool,
-) -> Result<InstantiatedDatabaseOwner, String> {
+pub async fn create_entity(entity: &Entity, pool: &PgPool) -> Result<InstantiatedEntity, String> {
     let rec = sqlx::query_as!(
-        InstantiatedDatabaseOwner,
+        InstantiatedEntity,
         r#"
-INSERT INTO database_owner ( slug )
-VALUES ( $1 )
-RETURNING id, slug
+INSERT INTO entity ( slug, entity_type )
+VALUES ( $1, $2 )
+RETURNING id, slug, entity_type
         "#,
-        owner.slug
+        entity.slug,
+        entity.entity_type
     )
     .fetch_one(pool)
     .await
-    .expect("Unable to create owner");
+    .expect("Unable to create entity");
 
     Ok(rec)
 }
 
 pub async fn get_database(
-    owner_slug: &String,
+    entity_slug: &String,
     database_slug: &String,
     pool: &PgPool,
 ) -> Result<InstantiatedDatabase, String> {
@@ -57,15 +53,15 @@ pub async fn get_database(
 SELECT
     database.id,
     database.slug,
-    database.owner_id,
+    database.entity_id,
     database.db_type
 FROM database
-JOIN database_owner on database.owner_id = database_owner.id
+JOIN entity on database.entity_id = entity.id
 WHERE
-    database_owner.slug = $1
+    entity.slug = $1
     AND database.slug = $2
         "#,
-        owner_slug,
+        entity_slug,
         database_slug
     )
     .fetch_one(pool)
@@ -75,22 +71,22 @@ WHERE
     Ok(rec)
 }
 
-pub async fn get_owner(
-    owner_slug: &String,
-    pool: &PgPool,
-) -> Result<InstantiatedDatabaseOwner, String> {
+pub async fn get_entity(entity_slug: &String, pool: &PgPool) -> Result<InstantiatedEntity, String> {
     let rec = sqlx::query_as!(
-        InstantiatedDatabaseOwner,
+        InstantiatedEntity,
         r#"
-SELECT id, slug
-FROM database_owner
+SELECT
+    id,
+    slug,
+    entity_type
+FROM entity
 WHERE slug = $1
         "#,
-        owner_slug
+        entity_slug
     )
     .fetch_one(pool)
     .await
-    .expect("Unable to retrieve owner");
+    .expect("Unable to retrieve entity");
 
     Ok(rec)
 }

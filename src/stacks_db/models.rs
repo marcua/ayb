@@ -36,9 +36,42 @@ impl DBType {
     }
 }
 
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum EntityType {
+    User = 0,
+    Organization = 1,
+}
+
+impl fmt::Display for EntityType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl EntityType {
+    pub fn from_i16(value: i16) -> EntityType {
+        match value {
+            0 => EntityType::User,
+            1 => EntityType::Organization,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn from_str(value: &str) -> EntityType {
+        match value {
+            "user" => EntityType::User,
+            "organization" => EntityType::Organization,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Database {
-    pub owner_id: i32,
+    pub entity_id: i32,
     pub slug: String,
     pub db_type: i16,
 }
@@ -46,18 +79,20 @@ pub struct Database {
 #[derive(Serialize, Deserialize)]
 pub struct InstantiatedDatabase {
     pub id: i32,
-    pub owner_id: i32,
+    pub entity_id: i32,
     pub slug: String,
     pub db_type: i16,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct DatabaseOwner {
+pub struct Entity {
     pub slug: String,
+    pub entity_type: i16,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct InstantiatedDatabaseOwner {
+pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
+    pub entity_type: i16,
 }

@@ -1,11 +1,11 @@
-use crate::http::endpoints::{create_database, create_owner, query};
+use crate::http::endpoints::{create_database, create_entity, query};
 use actix_web::{middleware, web, App, HttpServer};
 use dotenvy;
 use sqlx;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(create_database);
-    cfg.service(create_owner);
+    cfg.service(create_entity);
     cfg.service(query);
 }
 
