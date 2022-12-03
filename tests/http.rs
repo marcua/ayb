@@ -20,6 +20,10 @@ async fn query_and_assert(query: &'static str, result: &Value) {
 }
 
 #[actix_web::test]
+#[ignore]
+// TODO(marcua): Bring this test back as an
+// integration test (https://github.com/marcua/stacks/issues/19) after
+// adding a CLI (https://github.com/marcua/stacks/issues/15)
 async fn test_query_ok() {
     fs::create_dir_all("/tmp/entity").expect("Unable to create database path");
     match fs::remove_file("/tmp/entity/test.sqlite/query") {
