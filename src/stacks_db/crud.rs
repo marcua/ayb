@@ -14,7 +14,6 @@ VALUES ( $1, $2, $3 )
 RETURNING id, entity_id, slug, db_type
         "#,
         database.entity_id,
-        
         database.slug,
         database.db_type
     )
