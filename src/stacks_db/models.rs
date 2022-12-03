@@ -26,6 +26,14 @@ impl DBType {
             _ => panic!("Unknown value: {}", value),
         }
     }
+
+    pub fn from_str(value: &str) -> DBType {
+        match value {
+            "sqlite" => DBType::Sqlite,
+            "duckdb" => DBType::Duckdb,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]

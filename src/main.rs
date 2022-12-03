@@ -1,6 +1,6 @@
 use clap::{arg, command, value_parser, Command};
 use stacks::hosted_db::run_query;
-use stacks::http::run_server;
+use stacks::http::server::run_server;
 use stacks::stacks_db::models::DBType;
 use std::path::PathBuf;
 

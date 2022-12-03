@@ -1,7 +1,7 @@
 use actix_web::{http::StatusCode, test, App};
 use assert_json_diff::assert_json_include;
 use serde_json::{json, Value};
-use stacks::{hosted_db::QueryResult, http::config};
+use stacks::{hosted_db::QueryResult, http::server::config};
 use std::fs;
 
 async fn query_and_assert(query: &'static str, result: &Value) {
