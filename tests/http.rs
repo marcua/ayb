@@ -1,13 +1,13 @@
 use actix_web::{http::StatusCode, test, App};
 use assert_json_diff::assert_json_include;
 use serde_json::{json, Value};
-use stacks::{databases::QueryResult, http::config};
+use stacks::{hosted_db::QueryResult, http::server::config};
 use std::fs;
 
 async fn query_and_assert(query: &'static str, result: &Value) {
     let app = test::init_service(App::new().configure(config)).await;
     let req = test::TestRequest::post()
-        .uri("/v1/entity/test.sqlite")
+        .uri("/v1/entity/test.sqlite/query")
         .set_payload(query)
         .to_request();
     let resp = test::call_service(&app, req).await;
@@ -20,9 +20,13 @@ async fn query_and_assert(query: &'static str, result: &Value) {
 }
 
 #[actix_web::test]
+#[ignore]
+// TODO(marcua): Bring this test back as an
+// integration test (https://github.com/marcua/stacks/issues/19) after
+// adding a CLI (https://github.com/marcua/stacks/issues/15)
 async fn test_query_ok() {
     fs::create_dir_all("/tmp/entity").expect("Unable to create database path");
-    match fs::remove_file("/tmp/entity/test.sqlite") {
+    match fs::remove_file("/tmp/entity/test.sqlite/query") {
         Ok(()) => {}
         Err(err) => {
             assert_eq!(format!("{}", err), "No such file or directory (os error 2)")

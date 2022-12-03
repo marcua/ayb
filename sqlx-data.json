@@ -1,0 +1,147 @@
+{
+  "db": "PostgreSQL",
+  "643125a84e9b3b29ee3baa8ed476ba7be3e7b9b29a39bc531f46f589f0d14483": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "entity_id",
+          "ordinal": 1,
+          "type_info": "Int4"
+        },
+        {
+          "name": "slug",
+          "ordinal": 2,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "db_type",
+          "ordinal": 3,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Varchar",
+          "Int2"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO database ( entity_id, slug, db_type )\nVALUES ( $1, $2, $3 )\nRETURNING id, entity_id, slug, db_type\n        "
+  },
+  "88d4c10a9b791b1955482e2b95e74912ed733f89e2e4f8291621c2a1319c2994": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "slug",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "entity_type",
+          "ordinal": 2,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int2"
+        ]
+      }
+    },
+    "query": "\nINSERT INTO entity ( slug, entity_type )\nVALUES ( $1, $2 )\nRETURNING id, slug, entity_type\n        "
+  },
+  "9155f37421915d53940ade5307a7b993e6b57d92f03ba735ff29bac164d8f0f4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "slug",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "entity_id",
+          "ordinal": 2,
+          "type_info": "Int4"
+        },
+        {
+          "name": "db_type",
+          "ordinal": 3,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    database.id,\n    database.slug,\n    database.entity_id,\n    database.db_type\nFROM database\nJOIN entity on database.entity_id = entity.id\nWHERE\n    entity.slug = $1\n    AND database.slug = $2\n        "
+  },
+  "b0be4cc26e844ab1a23fbabcaf8c457651a707b238b89730b0a9bd8b21accc1e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int4"
+        },
+        {
+          "name": "slug",
+          "ordinal": 1,
+          "type_info": "Varchar"
+        },
+        {
+          "name": "entity_type",
+          "ordinal": 2,
+          "type_info": "Int2"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      }
+    },
+    "query": "\nSELECT\n    id,\n    slug,\n    entity_type\nFROM entity\nWHERE slug = $1\n        "
+  }
+}
