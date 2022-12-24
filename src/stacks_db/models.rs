@@ -34,6 +34,13 @@ impl DBType {
             _ => panic!("Unknown value: {}", value),
         }
     }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            DBType::Sqlite => "sqlite",
+            DBType::Duckdb => "duckdb"
+        }
+    }
 }
 
 #[derive(

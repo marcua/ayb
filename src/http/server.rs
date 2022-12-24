@@ -10,7 +10,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 }
 
 // TODO(marcua): Understand tokio::main vs actix_web::main
-#[actix_web::main]
+// https://stackoverflow.com/questions/66416174/using-actix-from-a-tokio-app-mixing-actix-webmain-and-tokiomain (try using tokio::main on the main function, and not here).
 pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
     let database_url = dotenvy::var("DATABASE_URL").expect("Provide a DATABASE_URL");
 
@@ -32,7 +32,7 @@ pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
             .configure(config)
             .app_data(web::Data::new(db.clone()))
     })
-    .bind((host, *port))?
-    .run()
-    .await
+        .bind((host, *port))?
+        .run()
+        .await
 }
