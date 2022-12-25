@@ -39,8 +39,11 @@ async fn main() -> std::io::Result<()> {
                         .about("Create a database")
                         .arg(arg!(--entity <VALUE> "The entity under which to create the DB"))
                         .arg(arg!(--database <VALUE> "The DBto create"))
-                        .arg(arg!(--type <VALUE> "The type of DB").value_parser(value_parser!(DBType))),
-                )
+                        .arg(
+                            arg!(--type <VALUE> "The type of DB")
+                                .value_parser(value_parser!(DBType)),
+                        ),
+                ),
         )
         .get_matches();
 
@@ -65,22 +68,22 @@ async fn main() -> std::io::Result<()> {
             matches.get_one::<String>("host"),
             matches.get_one::<u16>("port"),
         ) {
-            run_server(host, port).await;            
+            run_server(host, port).await?;
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
         if let (Some(host), Some(port)) = (
             matches.get_one::<String>("host"),
             matches.get_one::<u16>("port"),
         ) {
-            let base_url = format!("https://{}:{}/", host, port);
-            let client = StacksClient {base_url};
+            let base_url = format!("http://{}:{}", host, port);
+            let client = StacksClient { base_url };
             if let Some(matches) = matches.subcommand_matches("create_database") {
                 if let (Some(entity), Some(database), Some(db_type)) = (
                     matches.get_one::<String>("entity"),
                     matches.get_one::<String>("database"),
-                    matches.get_one::<DBType>("type")
+                    matches.get_one::<DBType>("type"),
                 ) {
-                    match client.create_database(entity, database, db_type) {
+                    match client.create_database(entity, database, db_type).await {
                         Ok(response) => {
                             println!("Response is: {}", response);
                         }
@@ -91,7 +94,7 @@ async fn main() -> std::io::Result<()> {
                 }
             }
         }
-    }           
+    }
 
     Ok(())
 }

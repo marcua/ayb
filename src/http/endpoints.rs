@@ -15,7 +15,7 @@ use sqlx;
 async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
-    db_pool: web::Data<&sqlx::PgPool>,
+    db_pool: web::Data<sqlx::PgPool>,
 ) -> Result<web::Json<InstantiatedDatabase>, Error> {
     let entity_slug = &path.entity;
     match get_entity_crud(entity_slug, &db_pool).await {

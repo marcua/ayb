@@ -38,7 +38,7 @@ impl DBType {
     pub fn to_str(&self) -> &str {
         match self {
             DBType::Sqlite => "sqlite",
-            DBType::Duckdb => "duckdb"
+            DBType::Duckdb => "duckdb",
         }
     }
 }
