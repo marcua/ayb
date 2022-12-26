@@ -1,3 +1,4 @@
+use crate::error::StacksError;
 use crate::stacks_db::models::{Database, Entity, InstantiatedDatabase, InstantiatedEntity};
 use sqlx;
 use sqlx::postgres::PgPool;
@@ -5,7 +6,7 @@ use sqlx::postgres::PgPool;
 pub async fn create_database(
     database: &Database,
     pool: &PgPool,
-) -> Result<InstantiatedDatabase, String> {
+) -> Result<InstantiatedDatabase, StacksError> {
     let rec = sqlx::query_as!(
         InstantiatedDatabase,
         r#"
@@ -18,13 +19,12 @@ RETURNING id, entity_id, slug, db_type
         database.db_type
     )
     .fetch_one(pool)
-    .await
-    .expect("Unable to create database");
+    .await?;
 
     Ok(rec)
 }
 
-pub async fn create_entity(entity: &Entity, pool: &PgPool) -> Result<InstantiatedEntity, String> {
+pub async fn create_entity(entity: &Entity, pool: &PgPool) -> Result<InstantiatedEntity, StacksError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"
@@ -36,8 +36,7 @@ RETURNING id, slug, entity_type
         entity.entity_type
     )
     .fetch_one(pool)
-    .await
-    .expect("Unable to create entity");
+    .await?;
 
     Ok(rec)
 }
@@ -46,7 +45,7 @@ pub async fn get_database(
     entity_slug: &String,
     database_slug: &String,
     pool: &PgPool,
-) -> Result<InstantiatedDatabase, String> {
+) -> Result<InstantiatedDatabase, StacksError> {
     let rec = sqlx::query_as!(
         InstantiatedDatabase,
         r#"
@@ -65,13 +64,12 @@ WHERE
         database_slug
     )
     .fetch_one(pool)
-    .await
-    .expect("Unable to retrieve database");
+    .await?;
 
     Ok(rec)
 }
 
-pub async fn get_entity(entity_slug: &String, pool: &PgPool) -> Result<InstantiatedEntity, String> {
+pub async fn get_entity(entity_slug: &String, pool: &PgPool) -> Result<InstantiatedEntity, StacksError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"
@@ -85,8 +83,7 @@ WHERE slug = $1
         entity_slug
     )
     .fetch_one(pool)
-    .await
-    .expect("Unable to retrieve entity");
+    .await?;
 
     Ok(rec)
 }

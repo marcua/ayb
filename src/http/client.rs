@@ -1,4 +1,4 @@
-use crate::http::structs::Error;
+use crate::error::StacksError;
 use crate::stacks_db::models::DBType;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
@@ -16,7 +16,7 @@ impl StacksClient {
         entity: &str,
         database: &str,
         db_type: &DBType,
-    ) -> Result<String, Error> {
+    ) -> Result<String, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("db-type"),
@@ -42,7 +42,7 @@ impl StacksClient {
                         };
                          */
                     }
-                    other => Err(Error {
+                    other => Err(StacksError {
                         error_string: format!(
                             "Response code: {}, text: {:?}",
                             other,
@@ -51,7 +51,7 @@ impl StacksClient {
                     }),
                 }
             }
-            Err(err) => Err(Error {
+            Err(err) => Err(StacksError {
                 error_string: err.to_string(),
             }),
         }
