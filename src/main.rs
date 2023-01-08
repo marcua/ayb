@@ -2,7 +2,7 @@ use clap::{arg, command, value_parser, Command};
 use stacks::hosted_db::run_query;
 use stacks::http::client::StacksClient;
 use stacks::http::server::run_server;
-use stacks::stacks_db::models::DBType;
+use stacks::stacks_db::models::{DBType, EntityType};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -38,10 +38,19 @@ async fn main() -> std::io::Result<()> {
                     Command::new("create_database")
                         .about("Create a database")
                         .arg(arg!(--entity <VALUE> "The entity under which to create the DB"))
-                        .arg(arg!(--database <VALUE> "The DBto create"))
+                        .arg(arg!(--database <VALUE> "The DB to create"))
                         .arg(
                             arg!(--type <VALUE> "The type of DB")
                                 .value_parser(value_parser!(DBType)),
+                        ),
+                )
+                .subcommand(
+                    Command::new("create_entity")
+                        .about("Create an entity")
+                        .arg(arg!(--entity <VALUE> "The entity to create"))
+                        .arg(
+                            arg!(--type <VALUE> "The type of entity")
+                                .value_parser(value_parser!(EntityType)),
                         ),
                 ),
         )
@@ -84,6 +93,20 @@ async fn main() -> std::io::Result<()> {
                     matches.get_one::<DBType>("type"),
                 ) {
                     match client.create_database(entity, database, db_type).await {
+                        Ok(response) => {
+                            println!("Response is: {}", response);
+                        }
+                        Err(err) => {
+                            println!("Error is: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("create_entity") {
+                if let (Some(entity), Some(entity_type)) = (
+                    matches.get_one::<String>("entity"),
+                    matches.get_one::<EntityType>("type"),
+                ) {
+                    match client.create_entity(entity, entity_type).await {
                         Ok(response) => {
                             println!("Response is: {}", response);
                         }

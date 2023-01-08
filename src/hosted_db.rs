@@ -13,9 +13,17 @@ pub struct QueryResult {
     pub rows: Vec<Vec<String>>,
 }
 
-pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryResult, StacksError> {
+pub fn run_query(
+    path: &PathBuf,
+    query: &str,
+    db_type: &DBType,
+) -> Result<QueryResult, StacksError> {
     match db_type {
         DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
-        _ => return Err(StacksError{error_string: "Unsupported DB type".to_string()}),
+        _ => {
+            return Err(StacksError {
+                error_string: "Unsupported DB type".to_string(),
+            })
+        }
     }
 }

@@ -34,7 +34,7 @@ async fn create_database(
 async fn create_entity(
     path: web::Path<EntityPath>,
     req: HttpRequest,
-    db_pool: web::Data<&sqlx::PgPool>,
+    db_pool: web::Data<sqlx::PgPool>,
 ) -> Result<web::Json<InstantiatedEntity>, StacksError> {
     let entity_type = get_header(req, "entity-type")?;
     let entity = Entity {
@@ -49,7 +49,7 @@ async fn create_entity(
 async fn query(
     path: web::Path<EntityDatabasePath>,
     query: String,
-    db_pool: web::Data<&sqlx::PgPool>,
+    db_pool: web::Data<sqlx::PgPool>,
 ) -> Result<web::Json<QueryResult>, StacksError> {
     let entity_slug = &path.entity;
     let database_slug = &path.database;

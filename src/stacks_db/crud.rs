@@ -24,7 +24,10 @@ RETURNING id, entity_id, slug, db_type
     Ok(rec)
 }
 
-pub async fn create_entity(entity: &Entity, pool: &PgPool) -> Result<InstantiatedEntity, StacksError> {
+pub async fn create_entity(
+    entity: &Entity,
+    pool: &PgPool,
+) -> Result<InstantiatedEntity, StacksError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"
@@ -69,7 +72,10 @@ WHERE
     Ok(rec)
 }
 
-pub async fn get_entity(entity_slug: &String, pool: &PgPool) -> Result<InstantiatedEntity, StacksError> {
+pub async fn get_entity(
+    entity_slug: &String,
+    pool: &PgPool,
+) -> Result<InstantiatedEntity, StacksError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"
@@ -83,7 +89,13 @@ WHERE slug = $1
         entity_slug
     )
     .fetch_one(pool)
-    .await?;
+    .await
+    .or_else(|err| match err {
+        sqlx::Error::RowNotFound => Err(StacksError {
+            error_string: format!("Entity not found: {:?}", entity_slug),
+        }),
+        _ => Err(StacksError::from(err)),
+    })?;
 
     Ok(rec)
 }

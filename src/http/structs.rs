@@ -10,4 +10,3 @@ pub struct EntityDatabasePath {
 pub struct EntityPath {
     pub entity: String,
 }
-
