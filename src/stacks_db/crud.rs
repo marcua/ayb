@@ -19,7 +19,14 @@ RETURNING id, entity_id, slug, db_type
         database.db_type
     )
     .fetch_one(pool)
-    .await?;
+    .await
+    .or_else(|err| match err {
+        // TODO(marcua): Figure out why `db_error.code() == "23505"`, which is less brittle and should work according to the sqlx docs, thinks it's receiving an `Option` for `code()`.
+        sqlx::Error::Database(db_error) if db_error.message() == "duplicate key value violates unique constraint \"database_entity_id_slug_key\"" => Err(StacksError {
+            error_string: format!("Database already exists")
+        }),
+        _ => Err(StacksError::from(err)),
+    })?;
 
     Ok(rec)
 }
@@ -39,7 +46,14 @@ RETURNING id, slug, entity_type
         entity.entity_type
     )
     .fetch_one(pool)
-    .await?;
+    .await
+    .or_else(|err| match err {
+        // TODO(marcua): Figure out why `db_error.code() == "23505"`, which is less brittle and should work according to the sqlx docs, thinks it's receiving an `Option` for `code()`.
+        sqlx::Error::Database(db_error) if db_error.message() == "duplicate key value violates unique constraint \"entity_slug_key\"" => Err(StacksError {
+            error_string: format!("Entity already exists")
+        }),
+        _ => Err(StacksError::from(err)),
+    })?;
 
     Ok(rec)
 }
