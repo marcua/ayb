@@ -34,6 +34,13 @@ impl DBType {
             _ => panic!("Unknown value: {}", value),
         }
     }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            DBType::Sqlite => "sqlite",
+            DBType::Duckdb => "duckdb",
+        }
+    }
 }
 
 #[derive(
@@ -67,16 +74,23 @@ impl EntityType {
             _ => panic!("Unknown value: {}", value),
         }
     }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            EntityType::User => "user",
+            EntityType::Organization => "organization",
+        }
+    }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Database {
     pub entity_id: i32,
     pub slug: String,
     pub db_type: i16,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InstantiatedDatabase {
     pub id: i32,
     pub entity_id: i32,
@@ -84,13 +98,13 @@ pub struct InstantiatedDatabase {
     pub db_type: i16,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Entity {
     pub slug: String,
     pub entity_type: i16,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,

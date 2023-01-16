@@ -1,5 +1,5 @@
 CREATE TABLE entity (
-       id INT NOT NULL,
+       id SERIAL NOT NULL,
        slug VARCHAR(64) NOT NULL,
        entity_type SMALLINT NOT NULL,
        
@@ -8,7 +8,7 @@ CREATE TABLE entity (
 );       
 
 CREATE TABLE database (
-       id INT NOT NULL,
+       id SERIAL NOT NULL,
        slug VARCHAR(64) NOT NULL,
        db_type SMALLINT NOT NULL,
        entity_id INT NOT NULL,
