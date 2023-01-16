@@ -11,7 +11,7 @@ clap = { version = "3.2.8", features = ["cargo", "derive"] }
 derive_more = { version = "0.99.0" }
 dotenvy = { version = "0.15.6" }
 env_logger = { version = "0.10.0" }
-reqwest = { version = "0.11.13" }
+reqwest = { version = "0.11.13", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1.9" }

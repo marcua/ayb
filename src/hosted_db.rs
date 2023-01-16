@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {
     pub fields: Vec<String>,
     pub rows: Vec<Vec<String>>,

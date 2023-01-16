@@ -101,7 +101,7 @@ async fn main() -> std::io::Result<()> {
                 ) {
                     match client.create_database(entity, database, db_type).await {
                         Ok(response) => {
-                            println!("Response is: {}", response);
+                            println!("Response is: {:?}", response);
                         }
                         Err(err) => {
                             println!("Error is: {}", err);
@@ -115,7 +115,7 @@ async fn main() -> std::io::Result<()> {
                 ) {
                     match client.create_entity(entity, entity_type).await {
                         Ok(response) => {
-                            println!("Response is: {}", response);
+                            println!("Response is: {:?}", response);
                         }
                         Err(err) => {
                             println!("Error is: {}", err);
@@ -130,7 +130,7 @@ async fn main() -> std::io::Result<()> {
                 ) {
                     match client.query(entity, database, query).await {
                         Ok(response) => {
-                            println!("Response is: {}", response);
+                            println!("Response is: {:?}", response);
                         }
                         Err(err) => {
                             println!("Error is: {}", err);

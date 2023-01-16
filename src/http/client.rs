@@ -1,6 +1,8 @@
 use crate::error::StacksError;
-use crate::stacks_db::models::{DBType, EntityType};
+use crate::hosted_db::{QueryResult};
+use crate::stacks_db::models::{DBType, EntityType, InstantiatedDatabase, InstantiatedEntity};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use serde::de::DeserializeOwned;
 
 pub struct StacksClient {
     pub base_url: String,
@@ -11,17 +13,11 @@ impl StacksClient {
         format!("{}/v1/{}", self.base_url, endpoint)
     }
 
-    async fn handle_response(&self, response: reqwest::Response) -> Result<String, StacksError> {
+    async fn handle_response<T: DeserializeOwned>(&self, response: reqwest::Response) -> Result<T, StacksError> {
         match response.status() {
             reqwest::StatusCode::OK => {
-                println!("Success! {:?}", response);
-                Ok("some success".to_owned())
-                /*
-                        match response.json::<APIResponse>().await {
-                        Ok(parsed) => println!("Success! {:?}", parsed),
-                        Err(_) => Err(Error {error_string: format!("Non-JSON response: {}", other.text)})
-                };
-                     */
+                response.json::<T>().await.or_else(|err| Err(
+                    StacksError {error_string: format!("Unable to parse response: {}", err)}))
             }
             other => Err(StacksError {
                 error_string: format!(
@@ -38,7 +34,7 @@ impl StacksClient {
         entity: &str,
         database: &str,
         db_type: &DBType,
-    ) -> Result<String, StacksError> {
+    ) -> Result<InstantiatedDatabase, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("db-type"),
@@ -58,7 +54,7 @@ impl StacksClient {
         &self,
         entity: &str,
         entity_type: &EntityType,
-    ) -> Result<String, StacksError> {
+    ) -> Result<InstantiatedEntity, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("entity-type"),
@@ -79,7 +75,7 @@ impl StacksClient {
         entity: &str,
         database: &str,
         query: &str,
-    ) -> Result<String, StacksError> {
+    ) -> Result<QueryResult, StacksError> {
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{}/{}/query", entity, database)))
             .body(query.to_owned())
