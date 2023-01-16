@@ -1,4 +1,5 @@
 use crate::error::StacksError;
+use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::{EntityDatabasePath, EntityPath};
 use crate::http::utils::get_header;
@@ -55,9 +56,7 @@ async fn query(
     let database_slug = &path.database;
     let database = get_database_crud(entity_slug, database_slug, &db_pool).await?;
     let db_type = DBType::from_i16(database.db_type);
-    // TODO(marcua): make the path relate to some
-    // persistent storage (with high availability, etc.)
-    let path = ["/tmp", entity_slug, database_slug].iter().collect();
-    let result = run_query(&path, &query, &db_type)?;
+    let db_path = database_path(entity_slug, database_slug)?;
+    let result = run_query(&db_path, &query, &db_type)?;
     Ok(web::Json(result))
 }

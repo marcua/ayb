@@ -49,9 +49,14 @@ RETURNING id, slug, entity_type
     .await
     .or_else(|err| match err {
         // TODO(marcua): Figure out why `db_error.code() == "23505"`, which is less brittle and should work according to the sqlx docs, thinks it's receiving an `Option` for `code()`.
-        sqlx::Error::Database(db_error) if db_error.message() == "duplicate key value violates unique constraint \"entity_slug_key\"" => Err(StacksError {
-            error_string: format!("Entity already exists")
-        }),
+        sqlx::Error::Database(db_error)
+            if db_error.message()
+                == "duplicate key value violates unique constraint \"entity_slug_key\"" =>
+        {
+            Err(StacksError {
+                error_string: format!("Entity already exists"),
+            })
+        }
         _ => Err(StacksError::from(err)),
     })?;
 

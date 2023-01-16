@@ -1,3 +1,4 @@
+pub mod paths;
 mod sqlite;
 
 use crate::error::StacksError;

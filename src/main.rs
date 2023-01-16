@@ -52,6 +52,13 @@ async fn main() -> std::io::Result<()> {
                             arg!(--type <VALUE> "The type of entity")
                                 .value_parser(value_parser!(EntityType)),
                         ),
+                )
+                .subcommand(
+                    Command::new("query")
+                        .about("Query a database")
+                        .arg(arg!(--entity <VALUE> "The entity under which to create the DB"))
+                        .arg(arg!(--database <VALUE> "The DB to create"))
+                        .arg(arg!(<query> "The query to execute")),
                 ),
         )
         .get_matches();
@@ -107,6 +114,21 @@ async fn main() -> std::io::Result<()> {
                     matches.get_one::<EntityType>("type"),
                 ) {
                     match client.create_entity(entity, entity_type).await {
+                        Ok(response) => {
+                            println!("Response is: {}", response);
+                        }
+                        Err(err) => {
+                            println!("Error is: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("query") {
+                if let (Some(entity), Some(database), Some(query)) = (
+                    matches.get_one::<String>("entity"),
+                    matches.get_one::<String>("database"),
+                    matches.get_one::<String>("query"),
+                ) {
+                    match client.query(entity, database, query).await {
                         Ok(response) => {
                             println!("Response is: {}", response);
                         }

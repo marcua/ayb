@@ -74,5 +74,18 @@ impl StacksClient {
         self.handle_response(response).await
     }
 
-    pub fn query(&self) {}
+    pub async fn query(
+        &self,
+        entity: &str,
+        database: &str,
+        query: &str,
+    ) -> Result<String, StacksError> {
+        let response = reqwest::Client::new()
+            .post(self.make_url(format!("{}/{}/query", entity, database)))
+            .body(query.to_owned())
+            .send()
+            .await?;
+
+        self.handle_response(response).await
+    }
 }
