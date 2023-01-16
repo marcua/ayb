@@ -23,7 +23,7 @@ pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
     migrate!()
         .run(&pool)
         .await
-        .expect("Unable to run migration");
+        .expect("Unable to run migrations");
 
     println!("Starting server {}:{}...", host, port);
     HttpServer::new(move || {

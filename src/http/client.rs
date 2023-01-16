@@ -66,7 +66,7 @@ impl StacksClient {
         );
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}", entity)))
+            .post(self.make_url(entity.to_owned()))
             .headers(headers)
             .send()
             .await?;
