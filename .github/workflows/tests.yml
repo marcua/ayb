@@ -28,3 +28,6 @@ jobs:
     #  run: cargo clippy
     - name: Run tests
       run: cargo test --verbose
+      env:
+        POSTGRES_HOST: localhost
+        POSTGRES_PORT: 5432
