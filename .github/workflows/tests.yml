@@ -36,7 +36,7 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Create DB for sqlx to validate models
-      create_db test_db
+      run: create_db test_db
     - name: Build
       run: cargo build --verbose
     - name: Ensure fmt finds no changes
