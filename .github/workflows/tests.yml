@@ -47,3 +47,4 @@ jobs:
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
         POSTGRES_USER: postgres_user
+        SQLX_OFFLINE: true
