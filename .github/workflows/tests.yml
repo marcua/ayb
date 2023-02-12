@@ -21,10 +21,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-  env:
-     PGHOST: localhost
-     PGUSER: postgres_user
-     PGPASSWORD: test
   steps:
     - uses: actions/checkout@v3
     - name: Cargo cache
@@ -37,6 +33,10 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Create DB for sqlx to validate models
       run: create_db test_db
+      env:
+        PGHOST: localhost
+        PGUSER: postgres_user
+        PGPASSWORD: test
     - name: Build
       run: cargo build --verbose
     - name: Ensure fmt finds no changes
