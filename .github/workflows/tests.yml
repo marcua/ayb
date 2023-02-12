@@ -12,8 +12,8 @@ jobs:
       postgres:
         image: postgres
         env:
-          POSTGRES_PASSWORD: test
           POSTGRES_USER: postgres_user
+          POSTGRES_PASSWORD: test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -22,6 +22,10 @@ jobs:
         ports:
           - 5432:5432
     steps:
+    - env:
+        PGHOST: localhost
+        PGUSER: postgres_user
+        PGPASSWORD: test        
     - uses: actions/checkout@v3
     - name: Cargo cache
       uses: actions/cache@v3
@@ -31,10 +35,10 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Create DB for sqlx to validate models
+      create_db test_db
     - name: Build
       run: cargo build --verbose
-      env:
-        SQLX_OFFLINE: true
     - name: Ensure fmt finds no changes
       run: cargo fmt -- --check
     - name: Install sqlx-cli
@@ -43,8 +47,3 @@ jobs:
     #  run: cargo clippy
     - name: Run tests
       run: cargo test --verbose
-      env:
-        POSTGRES_HOST: localhost
-        POSTGRES_PORT: 5432
-        POSTGRES_USER: postgres_user
-        SQLX_OFFLINE: true
