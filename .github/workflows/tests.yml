@@ -25,6 +25,7 @@ jobs:
       PGHOST: localhost
       PGUSER: postgres_user
       PGPASSWORD: test
+      SQLX_OFFLINE: true
     steps:
     - uses: actions/checkout@v3
     - name: Cargo cache
