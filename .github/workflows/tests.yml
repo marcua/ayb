@@ -22,9 +22,8 @@ jobs:
         ports:
           - 5432:5432
     env:
-      PGHOST: localhost
-      PGUSER: postgres_user
-      PGPASSWORD: test
+      # Build binaries based on sqlx-data.json rather than live database,
+      # which isn't initialized yet for tests.
       SQLX_OFFLINE: true
     steps:
     - uses: actions/checkout@v3
@@ -36,8 +35,6 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Create DB for sqlx to validate models
-      run: createdb test_db
     - name: Build
       run: cargo build --verbose
     - name: Ensure fmt finds no changes
