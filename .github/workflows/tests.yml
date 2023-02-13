@@ -7,15 +7,40 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres_user
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      # Build binaries based on sqlx-data.json rather than live database,
+      # which isn't initialized yet for tests.
+      SQLX_OFFLINE: true
     steps:
     - uses: actions/checkout@v3
+    - name: Cargo cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Build
       run: cargo build --verbose
     - name: Ensure fmt finds no changes
       run: cargo fmt -- --check
+    - name: Install sqlx-cli
+      run: cargo install sqlx-cli
     # - name: Ensure clippy finds no issues
     #  run: cargo clippy
     - name: Run tests
