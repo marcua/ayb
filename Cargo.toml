@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 actix-web = { version = "4.3.1" }
-clap = { version = "4.1.7", features = ["cargo", "derive"] }
+clap = { version = "4.1.8", features = ["cargo", "derive"] }
 derive_more = { version = "0.99.0" }
 dotenvy = { version = "0.15.6" }
 env_logger = { version = "0.10.0" }
