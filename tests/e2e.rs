@@ -8,15 +8,10 @@ fn client_query(query: &str, result: &str) -> Result<(), Box<dyn std::error::Err
     Command::cargo_bin("stacks")?
         .args([
             "client",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000",
+            "--url",
+            "http://127.0.0.1:8000",
             "query",
-            "--entity",
-            "e2e",
-            "--database",
-            "test.sqlite",
+            "e2e/test.sqlite",
             query,
         ])
         .assert()
@@ -38,16 +33,10 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
     // Create entity.
     Command::cargo_bin("stacks")?
         .args([
+            "STACKS_SERVER_URL=http://127.0.0.1:8000",
             "client",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000",
             "create_entity",
-            "--entity",
             "e2e",
-            "--type",
-            "user",
         ])
         .assert()
         .success()
@@ -57,17 +46,11 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
     Command::cargo_bin("stacks")?
         .args([
             "client",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000",
+            "--url",
+            "http://127.0.0.1:8000",
             "create_database",
-            "--entity",
-            "e2e",
-            "--type",
+            "e2e/test.sqlite",
             "sqlite",            
-            "--database",
-            "test.sqlite",
         ])
         .assert()
         .success()

@@ -29,11 +29,9 @@ async fn main() -> std::io::Result<()> {
             Command::new("client")
                 .about("Connect to an HTTP server")
                 .arg(
-                    arg!(-p --port <VALUE> "The listener port")
-                        .value_parser(value_parser!(u16))
-                        .default_value("8000"),
+                    arg!(--url <VALUE> "The server URL")
+                        .env("STACKS_SERVER_URL")
                 )
-                .arg(arg!(--host <VALUE> "The host/IP to bind to").default_value("127.0.0.1"))
                 .subcommand(
                     Command::new("create_database")
                         .about("Create a database")
@@ -56,7 +54,7 @@ async fn main() -> std::io::Result<()> {
                 .subcommand(
                     Command::new("query")
                         .about("Query a database")
-                        .arg(arg!(--entity <VALUE> "The entity under which to create the DB"))
+                        .arg(arg!(<VALUE> "The entity under which to create the DB"))
                         .arg(arg!(--database <VALUE> "The DB to create"))
                         .arg(arg!(<query> "The query to execute")),
                 ),
@@ -87,12 +85,8 @@ async fn main() -> std::io::Result<()> {
             run_server(host, port).await?;
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
-        if let (Some(host), Some(port)) = (
-            matches.get_one::<String>("host"),
-            matches.get_one::<u16>("port"),
-        ) {
-            let base_url = format!("http://{}:{}", host, port);
-            let client = StacksClient { base_url };
+        if let Some(url) = matches.get_one::<String>("url") {
+            let client = StacksClient { base_url: url.to_string() };
             if let Some(matches) = matches.subcommand_matches("create_database") {
                 if let (Some(entity), Some(database), Some(db_type)) = (
                     matches.get_one::<String>("entity"),
