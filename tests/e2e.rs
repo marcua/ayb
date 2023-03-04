@@ -32,12 +32,8 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create entity.
     Command::cargo_bin("stacks")?
-        .args([
-            "STACKS_SERVER_URL=http://127.0.0.1:8000",
-            "client",
-            "create_entity",
-            "e2e",
-        ])
+        .args(["client", "create_entity", "e2e"])
+        .env("STACKS_SERVER_URL", "http://127.0.0.1:8000")
         .assert()
         .success()
         .stdout("Response is: InstantiatedEntity { id: 1, slug: \"e2e\", entity_type: 0 }\n");
