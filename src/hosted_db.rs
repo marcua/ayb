@@ -23,7 +23,7 @@ pub fn run_query(
         DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
         _ => {
             return Err(StacksError {
-                error_string: "Unsupported DB type".to_string(),
+                message: "Unsupported DB type".to_string(),
             })
         }
     }

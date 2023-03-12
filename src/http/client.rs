@@ -20,16 +20,18 @@ impl StacksClient {
         match response.status() {
             reqwest::StatusCode::OK => response.json::<T>().await.or_else(|err| {
                 Err(StacksError {
-                    error_string: format!("Unable to parse response: {}", err),
+                    message: format!("Unable to parse successful response: {}", err),
                 })
             }),
-            other => Err(StacksError {
-                error_string: format!(
-                    "Response code: {}, text: {:?}",
-                    other,
-                    response.text().await?
-                ),
-            }),
+            _other => {
+                let error = response.json::<StacksError>().await;
+                match error {
+                    Ok(stacks_error) => Err(stacks_error),
+                    Err(error) => Err(StacksError {
+                        message: format!("Unable to parse error response: {:#?}", error),
+                    }),
+                }
+            }
         }
     }
 

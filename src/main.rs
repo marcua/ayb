@@ -128,11 +128,14 @@ async fn main() -> std::io::Result<()> {
                         )
                         .await
                     {
-                        Ok(response) => {
-                            println!("Response is: {:?}", response);
+                        Ok(_response) => {
+                            println!(
+                                "Successfully created {}/{}",
+                                entity_database.entity, entity_database.database
+                            );
                         }
                         Err(err) => {
-                            println!("Error is: {}", err);
+                            println!("Error: {}", err);
                         }
                     }
                 }
@@ -142,11 +145,11 @@ async fn main() -> std::io::Result<()> {
                     matches.get_one::<EntityType>("type"),
                 ) {
                     match client.create_entity(entity, entity_type).await {
-                        Ok(response) => {
-                            println!("Response is: {:?}", response);
+                        Ok(_response) => {
+                            println!("Successfully registered {}", entity);
                         }
                         Err(err) => {
-                            println!("Error is: {}", err);
+                            println!("Error: {}", err);
                         }
                     }
                 }
@@ -163,7 +166,7 @@ async fn main() -> std::io::Result<()> {
                             println!("Response is: {:?}", response);
                         }
                         Err(err) => {
-                            println!("Error is: {}", err);
+                            println!("Error: {}", err);
                         }
                     }
                 }
