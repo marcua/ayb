@@ -8,15 +8,10 @@ fn client_query(query: &str, result: &str) -> Result<(), Box<dyn std::error::Err
     Command::cargo_bin("stacks")?
         .args([
             "client",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000",
+            "--url",
+            "http://127.0.0.1:8000",
             "query",
-            "--entity",
-            "e2e",
-            "--database",
-            "test.sqlite",
+            "e2e/test.sqlite",
             query,
         ])
         .assert()
@@ -37,41 +32,47 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create entity.
     Command::cargo_bin("stacks")?
-        .args([
-            "client",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000",
-            "create_entity",
-            "--entity",
-            "e2e",
-            "--type",
-            "user",
-        ])
+        .args(["client", "create_entity", "e2e"])
+        .env("STACKS_SERVER_URL", "http://127.0.0.1:8000")
         .assert()
         .success()
-        .stdout("Response is: InstantiatedEntity { id: 1, slug: \"e2e\", entity_type: 0 }\n");
+        .stdout("Successfully registered e2e\n");
+
+    // Can't create an entity twice.
+    Command::cargo_bin("stacks")?
+        .args(["client", "create_entity", "e2e"])
+        .env("STACKS_SERVER_URL", "http://127.0.0.1:8000")
+        .assert()
+        .success()
+        .stdout("Error: Entity already exists\n");
 
     // Create database.
     Command::cargo_bin("stacks")?
         .args([
             "client",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            "8000",
+            "--url",
+            "http://127.0.0.1:8000",
             "create_database",
-            "--entity",
-            "e2e",
-            "--type",
-            "sqlite",            
-            "--database",
-            "test.sqlite",
+            "e2e/test.sqlite",
+            "sqlite",
         ])
         .assert()
         .success()
-        .stdout("Response is: InstantiatedDatabase { id: 1, entity_id: 1, slug: \"test.sqlite\", db_type: 0 }\n");
+        .stdout("Successfully created e2e/test.sqlite\n");
+
+    // Can't create a database twice.
+    Command::cargo_bin("stacks")?
+        .args([
+            "client",
+            "--url",
+            "http://127.0.0.1:8000",
+            "create_database",
+            "e2e/test.sqlite",
+            "sqlite",
+        ])
+        .assert()
+        .success()
+        .stdout("Error: Database already exists\n");
 
     // Populate and query database.
     client_query(

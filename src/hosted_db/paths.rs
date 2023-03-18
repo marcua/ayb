@@ -8,7 +8,7 @@ pub fn database_path(entity_slug: &str, database_slug: &str) -> Result<PathBuf, 
     let mut path: PathBuf = ["/tmp", "stacks", entity_slug].iter().collect();
     if let Err(e) = fs::create_dir_all(&path) {
         return Err(StacksError {
-            error_string: format!("Unable to create entity path for {}: {}", entity_slug, e),
+            message: format!("Unable to create entity path for {}: {}", entity_slug, e),
         });
     }
     path.push(database_slug);

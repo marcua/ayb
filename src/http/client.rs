@@ -1,6 +1,7 @@
 use crate::error::StacksError;
 use crate::hosted_db::QueryResult;
-use crate::stacks_db::models::{DBType, EntityType, InstantiatedDatabase, InstantiatedEntity};
+use crate::http::structs::{Database, Entity};
+use crate::stacks_db::models::{DBType, EntityType};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -16,20 +17,23 @@ impl StacksClient {
     async fn handle_response<T: DeserializeOwned>(
         &self,
         response: reqwest::Response,
+        expected_status: reqwest::StatusCode,
     ) -> Result<T, StacksError> {
         match response.status() {
-            reqwest::StatusCode::OK => response.json::<T>().await.or_else(|err| {
+            status if status == expected_status => response.json::<T>().await.or_else(|err| {
                 Err(StacksError {
-                    error_string: format!("Unable to parse response: {}", err),
+                    message: format!("Unable to parse successful response: {}", err),
                 })
             }),
-            other => Err(StacksError {
-                error_string: format!(
-                    "Response code: {}, text: {:?}",
-                    other,
-                    response.text().await?
-                ),
-            }),
+            _other => {
+                let error = response.json::<StacksError>().await;
+                match error {
+                    Ok(stacks_error) => Err(stacks_error),
+                    Err(error) => Err(StacksError {
+                        message: format!("Unable to parse error response: {:#?}", error),
+                    }),
+                }
+            }
         }
     }
 
@@ -38,7 +42,7 @@ impl StacksClient {
         entity: &str,
         database: &str,
         db_type: &DBType,
-    ) -> Result<InstantiatedDatabase, StacksError> {
+    ) -> Result<Database, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("db-type"),
@@ -51,14 +55,15 @@ impl StacksClient {
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, reqwest::StatusCode::CREATED)
+            .await
     }
 
     pub async fn create_entity(
         &self,
         entity: &str,
         entity_type: &EntityType,
-    ) -> Result<InstantiatedEntity, StacksError> {
+    ) -> Result<Entity, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("entity-type"),
@@ -71,7 +76,8 @@ impl StacksClient {
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, reqwest::StatusCode::CREATED)
+            .await
     }
 
     pub async fn query(
@@ -86,6 +92,7 @@ impl StacksClient {
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
     }
 }
