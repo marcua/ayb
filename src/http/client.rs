@@ -17,9 +17,10 @@ impl StacksClient {
     async fn handle_response<T: DeserializeOwned>(
         &self,
         response: reqwest::Response,
+        expected_status: reqwest::StatusCode,
     ) -> Result<T, StacksError> {
         match response.status() {
-            reqwest::StatusCode::OK => response.json::<T>().await.or_else(|err| {
+            status if status == expected_status => response.json::<T>().await.or_else(|err| {
                 Err(StacksError {
                     message: format!("Unable to parse successful response: {}", err),
                 })
@@ -54,7 +55,8 @@ impl StacksClient {
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, reqwest::StatusCode::CREATED)
+            .await
     }
 
     pub async fn create_entity(
@@ -74,7 +76,8 @@ impl StacksClient {
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, reqwest::StatusCode::CREATED)
+            .await
     }
 
     pub async fn query(
@@ -89,6 +92,7 @@ impl StacksClient {
             .send()
             .await?;
 
-        self.handle_response(response).await
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
     }
 }

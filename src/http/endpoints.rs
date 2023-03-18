@@ -10,7 +10,7 @@ use crate::stacks_db::crud::{
     get_database as get_database_crud, get_entity as get_entity_crud,
 };
 use crate::stacks_db::models::{DBType, Database, Entity, EntityType};
-use actix_web::{post, web, HttpRequest};
+use actix_web::{post, web, HttpRequest, HttpResponse};
 use sqlx;
 
 #[post("/v1/{entity}/{database}")]
@@ -18,7 +18,7 @@ async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
     db_pool: web::Data<sqlx::PgPool>,
-) -> Result<web::Json<APIDatabase>, StacksError> {
+) -> Result<HttpResponse, StacksError> {
     let entity_slug = &path.entity;
     let entity = get_entity_crud(entity_slug, &db_pool).await?;
     let db_type = get_header(req, "db-type")?;
@@ -28,10 +28,7 @@ async fn create_database(
         db_type: DBType::from_str(&db_type) as i16,
     };
     let created_database = create_database_crud(&database, &db_pool).await?;
-    Ok(web::Json(APIDatabase::from_persisted(
-        &entity,
-        &created_database,
-    )))
+    Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
 }
 
 #[post("/v1/{entity}")]
@@ -39,14 +36,14 @@ async fn create_entity(
     path: web::Path<EntityPath>,
     req: HttpRequest,
     db_pool: web::Data<sqlx::PgPool>,
-) -> Result<web::Json<APIEntity>, StacksError> {
+) -> Result<HttpResponse, StacksError> {
     let entity_type = get_header(req, "entity-type")?;
     let entity = Entity {
         slug: path.entity.clone(),
         entity_type: EntityType::from_str(&entity_type) as i16,
     };
     let created_entity = create_entity_crud(&entity, &db_pool).await?;
-    Ok(web::Json(APIEntity::from_persisted(&created_entity)))
+    Ok(HttpResponse::Created().json(APIEntity::from_persisted(&created_entity)))
 }
 
 #[post("/v1/{entity}/{database}/query")]
