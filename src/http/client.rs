@@ -1,6 +1,7 @@
 use crate::error::StacksError;
 use crate::hosted_db::QueryResult;
-use crate::stacks_db::models::{DBType, EntityType, InstantiatedDatabase, InstantiatedEntity};
+use crate::http::structs::{Database, Entity};
+use crate::stacks_db::models::{DBType, EntityType};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -40,7 +41,7 @@ impl StacksClient {
         entity: &str,
         database: &str,
         db_type: &DBType,
-    ) -> Result<InstantiatedDatabase, StacksError> {
+    ) -> Result<Database, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("db-type"),
@@ -60,7 +61,7 @@ impl StacksClient {
         &self,
         entity: &str,
         entity_type: &EntityType,
-    ) -> Result<InstantiatedEntity, StacksError> {
+    ) -> Result<Entity, StacksError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("entity-type"),
