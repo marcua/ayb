@@ -102,7 +102,7 @@ async fn main() -> std::io::Result<()> {
                             arg!(--format <type> "The format in which to output the result")
                                 .value_parser(value_parser!(OutputFormat))
                                 .default_value(OutputFormat::Table.to_str())
-                                .required(false)),                        
+                                .required(false)),
                 ),
         )
         .get_matches();
