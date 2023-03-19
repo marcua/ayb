@@ -1,5 +1,5 @@
 use clap::builder::ValueParser;
-use clap::{arg, command, value_parser, Command};
+use clap::{arg, command, value_parser, Command, ValueEnum};
 use regex::Regex;
 use stacks::hosted_db::run_query;
 use stacks::http::client::StacksClient;
@@ -18,6 +18,21 @@ fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
         })
     } else {
         Err("Argument must be formatted as 'entity/database'".to_string())
+    }
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum OutputFormat {
+    Table = 0,
+    Csv = 1,
+}
+
+impl OutputFormat {
+    pub fn to_str(&self) -> &str {
+        match self {
+            OutputFormat::Table => "table",
+            OutputFormat::Csv => "csv",
+        }
     }
 }
 
@@ -82,7 +97,12 @@ async fn main() -> std::io::Result<()> {
                              .required(true)
                         )
                         .arg(arg!(<query> "The query to execute")
-                             .required(true)),
+                             .required(true))
+                        .arg(
+                            arg!(--format <type> "The format in which to output the result")
+                                .value_parser(value_parser!(OutputFormat))
+                                .default_value(OutputFormat::Table.to_str())
+                                .required(false)),
                 ),
         )
         .get_matches();
@@ -154,16 +174,23 @@ async fn main() -> std::io::Result<()> {
                     }
                 }
             } else if let Some(matches) = matches.subcommand_matches("query") {
-                if let (Some(entity_database), Some(query)) = (
+                if let (Some(entity_database), Some(query), Some(format)) = (
                     matches.get_one::<EntityDatabasePath>("database"),
                     matches.get_one::<String>("query"),
+                    matches.get_one::<OutputFormat>("format"),
                 ) {
                     match client
                         .query(&entity_database.entity, &entity_database.database, query)
                         .await
                     {
-                        Ok(response) => {
-                            println!("Response is: {:?}", response);
+                        Ok(query_result) => {
+                            if query_result.rows.len() > 0 {
+                                match format {
+                                    OutputFormat::Table => query_result.generate_table()?,
+                                    OutputFormat::Csv => query_result.generate_csv()?,
+                                }
+                            }
+                            println!("\nRows: {}", query_result.rows.len());
                         }
                         Err(err) => {
                             println!("Error: {}", err);

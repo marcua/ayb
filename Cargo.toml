@@ -18,6 +18,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1.11" }
 sqlx = { version = "0.6.2", features = ["runtime-actix-native-tls", "postgres", "offline"] }
 tokio = { version = "1.26.0", features = ["macros", "rt"] }
+prettytable-rs = "0.10.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"
