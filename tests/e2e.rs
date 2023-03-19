@@ -4,7 +4,7 @@ use std::process::Command;
 use std::thread;
 use std::time;
 
-fn client_query(query: &str, result: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn client_query(query: &str, format: &str, result: &str) -> Result<(), Box<dyn std::error::Error>> {
     Command::cargo_bin("stacks")?
         .args([
             "client",
@@ -12,6 +12,8 @@ fn client_query(query: &str, result: &str) -> Result<(), Box<dyn std::error::Err
             "http://127.0.0.1:8000",
             "query",
             "e2e/test.sqlite",
+            "--format",
+            format,
             query,
         ])
         .assert()
@@ -77,18 +79,27 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
     // Populate and query database.
     client_query(
         "CREATE TABLE test_table(fname varchar, lname varchar);",
-        "Response is: QueryResult { fields: [], rows: [] }",
+        "table",
+        "\nRows: 0",
     )?;
     client_query(
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
-        "Response is: QueryResult { fields: [], rows: [] }",
+        "table",
+        "\nRows: 0",
     )?;
     client_query(
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
-        "Response is: QueryResult { fields: [], rows: [] }",
+        "table",
+        "\nRows: 0",
     )?;
     client_query("SELECT * FROM test_table;",
-                 "Response is: QueryResult { fields: [\"fname\", \"lname\"], rows: [[\"the first\", \"the last\"], [\"the first2\", \"the last2\"]] }")?;
+                 "table",                 
+                 " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
+    client_query(
+        "SELECT * FROM test_table;",
+        "csv",
+        "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
+    )?;
 
     // TODO(marcua): Make this cleanup code run even on test failure.
     // See https://medium.com/@ericdreichert/test-setup-and-teardown-in-rust-without-a-framework-ba32d97aa5ab
