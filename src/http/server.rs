@@ -1,4 +1,4 @@
-use crate::http::endpoints::{create_database, create_entity, query};
+use crate::http::endpoints::{create_database, query, register};
 use actix_web::{middleware, web, App, HttpServer};
 use serde::{Deserialize, Serialize};
 use sqlx::migrate;
@@ -16,8 +16,8 @@ struct Config {
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(create_database);
-    cfg.service(create_entity);
     cfg.service(query);
+    cfg.service(register);
 }
 
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {

@@ -77,17 +77,6 @@ async fn main() -> std::io::Result<()> {
                         ),
                 )
                 .subcommand(
-                    Command::new("create_entity")
-                        .about("Create an entity")
-                        .arg(arg!(<entity> "The entity to create")
-                             .required(true))
-                        .arg(
-                            arg!(<type> "The type of entity")
-                                .value_parser(value_parser!(EntityType))
-                                .default_value(EntityType::User.to_str())
-                                .required(false)),
-                )
-                .subcommand(
                     Command::new("query")
                         .about("Query a database")
                         .arg(arg!(<database> "The database to which to connect (e.g., entity/database.sqlite")
@@ -101,7 +90,18 @@ async fn main() -> std::io::Result<()> {
                                 .value_parser(value_parser!(OutputFormat))
                                 .default_value(OutputFormat::Table.to_str())
                                 .required(false)),
-                ),
+                )
+                .subcommand(
+                    Command::new("register")
+                        .about("Register a user/organization")
+                        .arg(arg!(<entity> "The entity to create")
+                             .required(true))
+                        .arg(
+                            arg!(<type> "The type of entity")
+                                .value_parser(value_parser!(EntityType))
+                                .default_value(EntityType::User.to_str())
+                                .required(false)),
+                )
         )
         .get_matches();
 
@@ -154,12 +154,12 @@ async fn main() -> std::io::Result<()> {
                         }
                     }
                 }
-            } else if let Some(matches) = matches.subcommand_matches("create_entity") {
+            } else if let Some(matches) = matches.subcommand_matches("register") {
                 if let (Some(entity), Some(entity_type)) = (
                     matches.get_one::<String>("entity"),
                     matches.get_one::<EntityType>("type"),
                 ) {
-                    match client.create_entity(entity, entity_type).await {
+                    match client.register(entity, entity_type).await {
                         Ok(_response) => {
                             println!("Successfully registered {}", entity);
                         }

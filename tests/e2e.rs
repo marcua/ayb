@@ -32,17 +32,17 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
         .spawn()?;
     thread::sleep(time::Duration::from_secs(1));
 
-    // Create entity.
+    // Register an entity.
     Command::cargo_bin("stacks")?
-        .args(["client", "create_entity", "e2e"])
+        .args(["client", "register", "e2e"])
         .env("STACKS_SERVER_URL", "http://127.0.0.1:5433")
         .assert()
         .success()
         .stdout("Successfully registered e2e\n");
 
-    // Can't create an entity twice.
+    // Can't register an entity twice.
     Command::cargo_bin("stacks")?
-        .args(["client", "create_entity", "e2e"])
+        .args(["client", "register", "e2e"])
         .env("STACKS_SERVER_URL", "http://127.0.0.1:5433")
         .assert()
         .success()

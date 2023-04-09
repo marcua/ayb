@@ -59,7 +59,23 @@ impl StacksClient {
             .await
     }
 
-    pub async fn create_entity(
+    pub async fn query(
+        &self,
+        entity: &str,
+        database: &str,
+        query: &str,
+    ) -> Result<QueryResult, StacksError> {
+        let response = reqwest::Client::new()
+            .post(self.make_url(format!("{}/{}/query", entity, database)))
+            .body(query.to_owned())
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn register(
         &self,
         entity: &str,
         entity_type: &EntityType,
@@ -77,22 +93,6 @@ impl StacksClient {
             .await?;
 
         self.handle_response(response, reqwest::StatusCode::CREATED)
-            .await
-    }
-
-    pub async fn query(
-        &self,
-        entity: &str,
-        database: &str,
-        query: &str,
-    ) -> Result<QueryResult, StacksError> {
-        let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}/{}/query", entity, database)))
-            .body(query.to_owned())
-            .send()
-            .await?;
-
-        self.handle_response(response, reqwest::StatusCode::OK)
             .await
     }
 }
