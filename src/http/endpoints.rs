@@ -31,21 +31,6 @@ async fn create_database(
     Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
 }
 
-#[post("/v1/{entity}")]
-async fn create_entity(
-    path: web::Path<EntityPath>,
-    req: HttpRequest,
-    db_pool: web::Data<sqlx::PgPool>,
-) -> Result<HttpResponse, StacksError> {
-    let entity_type = get_header(req, "entity-type")?;
-    let entity = Entity {
-        slug: path.entity.clone(),
-        entity_type: EntityType::from_str(&entity_type) as i16,
-    };
-    let created_entity = create_entity_crud(&entity, &db_pool).await?;
-    Ok(HttpResponse::Created().json(APIEntity::from_persisted(&created_entity)))
-}
-
 #[post("/v1/{entity}/{database}/query")]
 async fn query(
     path: web::Path<EntityDatabasePath>,
@@ -59,4 +44,19 @@ async fn query(
     let db_path = database_path(entity_slug, database_slug)?;
     let result = run_query(&db_path, &query, &db_type)?;
     Ok(web::Json(result))
+}
+
+#[post("/v1/{entity}")]
+async fn register(
+    path: web::Path<EntityPath>,
+    req: HttpRequest,
+    db_pool: web::Data<sqlx::PgPool>,
+) -> Result<HttpResponse, StacksError> {
+    let entity_type = get_header(req, "entity-type")?;
+    let entity = Entity {
+        slug: path.entity.clone(),
+        entity_type: EntityType::from_str(&entity_type) as i16,
+    };
+    let created_entity = create_entity_crud(&entity, &db_pool).await?;
+    Ok(HttpResponse::Created().json(APIEntity::from_persisted(&created_entity)))
 }
