@@ -9,7 +9,7 @@ fn client_query(query: &str, format: &str, result: &str) -> Result<(), Box<dyn s
         .args([
             "client",
             "--url",
-            "http://127.0.0.1:8000",
+            "http://127.0.0.1:5433",
             "query",
             "e2e/test.sqlite",
             "--format",
@@ -28,14 +28,14 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
 
     // Run server, give it a few seconds to start
     let mut server = Command::cargo_bin("stacks")?
-        .args(["server", "--host", "127.0.0.1", "--port", "8000"])
+        .args(["server", "--config", "tests/test-server-config.toml"])
         .spawn()?;
     thread::sleep(time::Duration::from_secs(1));
 
     // Create entity.
     Command::cargo_bin("stacks")?
         .args(["client", "create_entity", "e2e"])
-        .env("STACKS_SERVER_URL", "http://127.0.0.1:8000")
+        .env("STACKS_SERVER_URL", "http://127.0.0.1:5433")
         .assert()
         .success()
         .stdout("Successfully registered e2e\n");
@@ -43,7 +43,7 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
     // Can't create an entity twice.
     Command::cargo_bin("stacks")?
         .args(["client", "create_entity", "e2e"])
-        .env("STACKS_SERVER_URL", "http://127.0.0.1:8000")
+        .env("STACKS_SERVER_URL", "http://127.0.0.1:5433")
         .assert()
         .success()
         .stdout("Error: Entity already exists\n");
@@ -53,7 +53,7 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
         .args([
             "client",
             "--url",
-            "http://127.0.0.1:8000",
+            "http://127.0.0.1:5433",
             "create_database",
             "e2e/test.sqlite",
             "sqlite",
@@ -67,7 +67,7 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
         .args([
             "client",
             "--url",
-            "http://127.0.0.1:8000",
+            "http://127.0.0.1:5433",
             "create_database",
             "e2e/test.sqlite",
             "sqlite",

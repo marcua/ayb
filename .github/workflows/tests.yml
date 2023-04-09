@@ -39,8 +39,6 @@ jobs:
       run: cargo build --verbose
     - name: Ensure fmt finds no changes
       run: cargo fmt -- --check
-    - name: Install sqlx-cli
-      run: cargo install sqlx-cli
     # - name: Ensure clippy finds no issues
     #  run: cargo clippy
     - name: Run tests

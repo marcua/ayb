@@ -1,8 +1,18 @@
 use crate::http::endpoints::{create_database, create_entity, query};
 use actix_web::{middleware, web, App, HttpServer};
-use dotenvy;
+use serde::{Deserialize, Serialize};
 use sqlx::migrate;
 use sqlx::postgres::PgPoolOptions;
+use std::fs;
+use std::path::PathBuf;
+use toml;
+
+#[derive(Serialize, Deserialize)]
+struct Config {
+    host: String,
+    port: u16,
+    database_url: String,
+}
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(create_database);
@@ -10,13 +20,15 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(query);
 }
 
-pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
+pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
-    let database_url = dotenvy::var("DATABASE_URL").expect("Provide a DATABASE_URL");
+
+    let contents = fs::read_to_string(config_path)?;
+    let conf: Config = toml::from_str(&contents).unwrap();
 
     let pool = PgPoolOptions::new()
         .max_connections(20)
-        .connect(&database_url)
+        .connect(&conf.database_url)
         .await
         .expect("Unable to connect to database");
 
@@ -25,14 +37,14 @@ pub async fn run_server(host: &str, port: &u16) -> std::io::Result<()> {
         .await
         .expect("Unable to run migrations");
 
-    println!("Starting server {}:{}...", host, port);
+    println!("Starting server {}:{}...", conf.host, conf.port);
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
             .configure(config)
             .app_data(web::Data::new(pool.clone()))
     })
-    .bind((host, *port))?
+    .bind((conf.host, conf.port))?
     .run()
     .await
 }
