@@ -1,6 +1,6 @@
 use crate::http::endpoints::{create_database, create_entity, query};
 use actix_web::{middleware, web, App, HttpServer};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use sqlx::migrate;
 use sqlx::postgres::PgPoolOptions;
 use std::fs;
@@ -22,10 +22,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
-    
+
     let contents = fs::read_to_string(config_path)?;
     let conf: Config = toml::from_str(&contents).unwrap();
-    
+
     let pool = PgPoolOptions::new()
         .max_connections(20)
         .connect(&conf.database_url)
