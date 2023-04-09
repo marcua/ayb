@@ -49,12 +49,10 @@ async fn main() -> std::io::Result<()> {
         .subcommand(
             Command::new("server")
                 .about("Run an HTTP server")
-                .arg(
-                    arg!(-p --port <VALUE> "The listener port")
-                        .value_parser(value_parser!(u16))
-                        .default_value("8000"),
-                )
-                .arg(arg!(--host <VALUE> "The host/IP to bind to").default_value("127.0.0.1")),
+                .arg(arg!(--config <FILE> "Path to the server's configuration file")
+                     .value_parser(value_parser!(PathBuf))
+                     .env("STACKS_SERVER_CONFIG_FILE")
+                     .default_value("./stacks.toml"))
         )
         .subcommand(
             Command::new("client")
@@ -124,11 +122,8 @@ async fn main() -> std::io::Result<()> {
             }
         }
     } else if let Some(matches) = matches.subcommand_matches("server") {
-        if let (Some(host), Some(port)) = (
-            matches.get_one::<String>("host"),
-            matches.get_one::<u16>("port"),
-        ) {
-            run_server(host, port).await?;
+        if let Some(config) = matches.get_one::<PathBuf>("config") {
+            run_server(config).await?;
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
         if let Some(url) = matches.get_one::<String>("url") {

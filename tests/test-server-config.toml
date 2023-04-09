@@ -1,0 +1,3 @@
+host = "0.0.0.0"
+port = 5433
+database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
