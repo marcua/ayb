@@ -1,8 +1,8 @@
 [package]
-name = "stacks"
-version = "0.1.0"
+name = "ayb"
+version = "0.1.1"
 edition = "2021"
-description = "stacks is a service that proxies embedded databases like SQLite and DuckDB"
+description = "ayb makes it easy to create, host, and share embedded databases like SQLite and DuckDB"
 license = "Apache-2.0"
 
 [dependencies]

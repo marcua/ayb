@@ -289,6 +289,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
+name = "ayb"
+version = "0.1.1"
+dependencies = [
+ "actix-web",
+ "assert-json-diff",
+ "assert_cmd",
+ "clap",
+ "derive_more",
+ "env_logger",
+ "prettytable-rs",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "sqlx",
+ "tokio",
+ "toml",
+]
+
+[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1900,28 +1922,6 @@ dependencies = [
  "once_cell",
  "tokio",
  "tokio-native-tls",
-]
-
-[[package]]
-name = "stacks"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "assert-json-diff",
- "assert_cmd",
- "clap",
- "derive_more",
- "env_logger",
- "prettytable-rs",
- "regex",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "serde_repr",
- "sqlx",
- "tokio",
- "toml",
 ]
 
 [[package]]

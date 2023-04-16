@@ -1,4 +1,4 @@
-use crate::stacks_db::models::{
+use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
