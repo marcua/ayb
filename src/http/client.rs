@@ -1,7 +1,7 @@
+use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{Database, Entity};
-use crate::ayb_db::models::{DBType, EntityType};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 

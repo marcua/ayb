@@ -1,5 +1,5 @@
-use crate::error::AybError;
 use crate::ayb_db::models::{Database, Entity, InstantiatedDatabase, InstantiatedEntity};
+use crate::error::AybError;
 use sqlx;
 use sqlx::postgres::PgPool;
 
@@ -31,10 +31,7 @@ RETURNING id, entity_id, slug, db_type
     Ok(rec)
 }
 
-pub async fn create_entity(
-    entity: &Entity,
-    pool: &PgPool,
-) -> Result<InstantiatedEntity, AybError> {
+pub async fn create_entity(entity: &Entity, pool: &PgPool) -> Result<InstantiatedEntity, AybError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"

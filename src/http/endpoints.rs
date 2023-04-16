@@ -1,3 +1,8 @@
+use crate::ayb_db::crud::{
+    create_database as create_database_crud, create_entity as create_entity_crud,
+    get_database as get_database_crud, get_entity as get_entity_crud,
+};
+use crate::ayb_db::models::{DBType, Database, Entity, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
@@ -5,11 +10,6 @@ use crate::http::structs::{
     Database as APIDatabase, Entity as APIEntity, EntityDatabasePath, EntityPath,
 };
 use crate::http::utils::get_header;
-use crate::ayb_db::crud::{
-    create_database as create_database_crud, create_entity as create_entity_crud,
-    get_database as get_database_crud, get_entity as get_entity_crud,
-};
-use crate::ayb_db::models::{DBType, Database, Entity, EntityType};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use sqlx;
 
