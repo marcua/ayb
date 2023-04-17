@@ -1,9 +1,9 @@
 pub mod paths;
 mod sqlite;
 
-use crate::error::StacksError;
+use crate::ayb_db::models::DBType;
+use crate::error::AybError;
 use crate::hosted_db::sqlite::run_sqlite_query;
-use crate::stacks_db::models::DBType;
 use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -45,15 +45,11 @@ impl QueryResult {
     }
 }
 
-pub fn run_query(
-    path: &PathBuf,
-    query: &str,
-    db_type: &DBType,
-) -> Result<QueryResult, StacksError> {
+pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryResult, AybError> {
     match db_type {
         DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
         _ => {
-            return Err(StacksError {
+            return Err(AybError {
                 message: "Unsupported DB type".to_string(),
             })
         }

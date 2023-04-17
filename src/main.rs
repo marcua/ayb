@@ -1,11 +1,11 @@
+use ayb::ayb_db::models::{DBType, EntityType};
+use ayb::hosted_db::run_query;
+use ayb::http::client::AybClient;
+use ayb::http::server::run_server;
+use ayb::http::structs::EntityDatabasePath;
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use regex::Regex;
-use stacks::hosted_db::run_query;
-use stacks::http::client::StacksClient;
-use stacks::http::server::run_server;
-use stacks::http::structs::EntityDatabasePath;
-use stacks::stacks_db::models::{DBType, EntityType};
 use std::path::PathBuf;
 
 fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
@@ -51,15 +51,15 @@ async fn main() -> std::io::Result<()> {
                 .about("Run an HTTP server")
                 .arg(arg!(--config <FILE> "Path to the server's configuration file")
                      .value_parser(value_parser!(PathBuf))
-                     .env("STACKS_SERVER_CONFIG_FILE")
-                     .default_value("./stacks.toml"))
+                     .env("AYB_SERVER_CONFIG_FILE")
+                     .default_value("./ayb.toml"))
         )
         .subcommand(
             Command::new("client")
                 .about("Connect to an HTTP server")
                 .arg(
                     arg!(--url <VALUE> "The server URL")
-                        .env("STACKS_SERVER_URL")
+                        .env("AYB_SERVER_URL")
                         .required(true)
                 )
                 .subcommand(
@@ -127,7 +127,7 @@ async fn main() -> std::io::Result<()> {
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
         if let Some(url) = matches.get_one::<String>("url") {
-            let client = StacksClient {
+            let client = AybClient {
                 base_url: url.to_string(),
             };
             if let Some(matches) = matches.subcommand_matches("create_database") {

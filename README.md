@@ -1,4 +1,4 @@
-[![Build status](https://github.com/marcua/stacks/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/stacks/actions/workflows/tests.yml)
+[![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
 
-# stacks
-stacks is a service that proxies embedded databases like SQLite and DuckDB
+# `ayb`
+`ayb` makes it easy to create, host, and share embedded databases like SQLite and DuckDB

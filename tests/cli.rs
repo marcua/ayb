@@ -12,7 +12,7 @@ fn insert_and_read_rows() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    Command::cargo_bin("stacks")?
+    Command::cargo_bin("ayb")?
         .args([
             "query",
             "--path",
@@ -26,7 +26,7 @@ fn insert_and_read_rows() -> Result<(), Box<dyn std::error::Error>> {
         .success()
         .stdout("Result schema: []\nResults: []\n");
 
-    Command::cargo_bin("stacks")?
+    Command::cargo_bin("ayb")?
         .args([
             "query",
             "--path",
@@ -40,7 +40,7 @@ fn insert_and_read_rows() -> Result<(), Box<dyn std::error::Error>> {
         .success()
         .stdout("Result schema: []\nResults: []\n");
 
-    Command::cargo_bin("stacks")?
+    Command::cargo_bin("ayb")?
         .args([
             "query",
             "--path",
@@ -70,7 +70,7 @@ Results: [
 ]
 "#;
 
-    Command::cargo_bin("stacks")?
+    Command::cargo_bin("ayb")?
         .args([
             "query",
             "--path",

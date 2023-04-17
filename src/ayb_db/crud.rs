@@ -1,12 +1,12 @@
-use crate::error::StacksError;
-use crate::stacks_db::models::{Database, Entity, InstantiatedDatabase, InstantiatedEntity};
+use crate::ayb_db::models::{Database, Entity, InstantiatedDatabase, InstantiatedEntity};
+use crate::error::AybError;
 use sqlx;
 use sqlx::postgres::PgPool;
 
 pub async fn create_database(
     database: &Database,
     pool: &PgPool,
-) -> Result<InstantiatedDatabase, StacksError> {
+) -> Result<InstantiatedDatabase, AybError> {
     let rec = sqlx::query_as!(
         InstantiatedDatabase,
         r#"
@@ -22,19 +22,16 @@ RETURNING id, entity_id, slug, db_type
     .await
     .or_else(|err| match err {
         // TODO(marcua): Figure out why `db_error.code() == "23505"`, which is less brittle and should work according to the sqlx docs, thinks it's receiving an `Option` for `code()`.
-        sqlx::Error::Database(db_error) if db_error.message() == "duplicate key value violates unique constraint \"database_entity_id_slug_key\"" => Err(StacksError {
+        sqlx::Error::Database(db_error) if db_error.message() == "duplicate key value violates unique constraint \"database_entity_id_slug_key\"" => Err(AybError {
             message: format!("Database already exists")
         }),
-        _ => Err(StacksError::from(err)),
+        _ => Err(AybError::from(err)),
     })?;
 
     Ok(rec)
 }
 
-pub async fn create_entity(
-    entity: &Entity,
-    pool: &PgPool,
-) -> Result<InstantiatedEntity, StacksError> {
+pub async fn create_entity(entity: &Entity, pool: &PgPool) -> Result<InstantiatedEntity, AybError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"
@@ -53,11 +50,11 @@ RETURNING id, slug, entity_type
             if db_error.message()
                 == "duplicate key value violates unique constraint \"entity_slug_key\"" =>
         {
-            Err(StacksError {
+            Err(AybError {
                 message: format!("Entity already exists"),
             })
         }
-        _ => Err(StacksError::from(err)),
+        _ => Err(AybError::from(err)),
     })?;
 
     Ok(rec)
@@ -67,7 +64,7 @@ pub async fn get_database(
     entity_slug: &String,
     database_slug: &String,
     pool: &PgPool,
-) -> Result<InstantiatedDatabase, StacksError> {
+) -> Result<InstantiatedDatabase, AybError> {
     let rec = sqlx::query_as!(
         InstantiatedDatabase,
         r#"
@@ -94,7 +91,7 @@ WHERE
 pub async fn get_entity(
     entity_slug: &String,
     pool: &PgPool,
-) -> Result<InstantiatedEntity, StacksError> {
+) -> Result<InstantiatedEntity, AybError> {
     let rec = sqlx::query_as!(
         InstantiatedEntity,
         r#"
@@ -110,10 +107,10 @@ WHERE slug = $1
     .fetch_one(pool)
     .await
     .or_else(|err| match err {
-        sqlx::Error::RowNotFound => Err(StacksError {
+        sqlx::Error::RowNotFound => Err(AybError {
             message: format!("Entity not found: {:?}", entity_slug),
         }),
-        _ => Err(StacksError::from(err)),
+        _ => Err(AybError::from(err)),
     })?;
 
     Ok(rec)
