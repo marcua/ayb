@@ -11,3 +11,5 @@
 # Ignore ayb-specific files
 ayb.toml
 e2e.sh
+tests/ayb_data
+ayb_data

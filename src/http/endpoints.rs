@@ -7,7 +7,7 @@ use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::{
-    Database as APIDatabase, Entity as APIEntity, EntityDatabasePath, EntityPath,
+    AybConfig, Database as APIDatabase, Entity as APIEntity, EntityDatabasePath, EntityPath,
 };
 use crate::http::utils::get_header;
 use actix_web::{post, web, HttpRequest, HttpResponse};
@@ -36,12 +36,13 @@ async fn query(
     path: web::Path<EntityDatabasePath>,
     query: String,
     db_pool: web::Data<sqlx::PgPool>,
+    ayb_config: web::Data<AybConfig>,
 ) -> Result<web::Json<QueryResult>, AybError> {
     let entity_slug = &path.entity;
     let database_slug = &path.database;
     let database = get_database_crud(entity_slug, database_slug, &db_pool).await?;
     let db_type = DBType::from_i16(database.db_type);
-    let db_path = database_path(entity_slug, database_slug)?;
+    let db_path = database_path(entity_slug, database_slug, &ayb_config.data_path)?;
     let result = run_query(&db_path, &query, &db_type)?;
     Ok(web::Json(result))
 }

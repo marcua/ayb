@@ -1,18 +1,11 @@
 use crate::http::endpoints::{create_database, query, register};
+use crate::http::structs::AybConfig;
 use actix_web::{middleware, web, App, HttpServer};
-use serde::{Deserialize, Serialize};
 use sqlx::migrate;
 use sqlx::postgres::PgPoolOptions;
 use std::fs;
 use std::path::PathBuf;
 use toml;
-
-#[derive(Serialize, Deserialize)]
-struct Config {
-    host: String,
-    port: u16,
-    database_url: String,
-}
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(create_database);
@@ -24,11 +17,12 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
 
     let contents = fs::read_to_string(config_path)?;
-    let conf: Config = toml::from_str(&contents).unwrap();
+    let ayb_conf: AybConfig = toml::from_str(&contents).unwrap();
+    let ayb_conf_for_server = ayb_conf.clone();
 
     let pool = PgPoolOptions::new()
         .max_connections(20)
-        .connect(&conf.database_url)
+        .connect(&ayb_conf.database_url)
         .await
         .expect("Unable to connect to database");
 
@@ -37,14 +31,15 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
         .await
         .expect("Unable to run migrations");
 
-    println!("Starting server {}:{}...", conf.host, conf.port);
+    println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Compress::default())
             .configure(config)
             .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(ayb_conf_for_server.clone()))
     })
-    .bind((conf.host, conf.port))?
+    .bind((ayb_conf.host, ayb_conf.port))?
     .run()
     .await
 }

@@ -5,6 +5,14 @@ use crate::ayb_db::models::{
 
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfig {
+    pub host: String,
+    pub port: u16,
+    pub database_url: String,
+    pub data_path: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Database {
     pub entity: String,
