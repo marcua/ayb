@@ -1,5 +1,4 @@
 use ayb::ayb_db::models::{DBType, EntityType};
-use ayb::hosted_db::run_query;
 use ayb::http::client::AybClient;
 use ayb::http::server::run_server;
 use ayb::http::structs::EntityDatabasePath;
@@ -39,13 +38,6 @@ impl OutputFormat {
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let matches = command!()
-        .subcommand(
-            Command::new("query")
-                .about("Query a DB")
-                .arg(arg!(--type <VALUE> "The type of DB").value_parser(value_parser!(DBType)))
-                .arg(arg!(--query <VALUE> "The query to run"))
-                .arg(arg!(--path <FILE> "Path to the DB").value_parser(value_parser!(PathBuf))),
-        )
         .subcommand(
             Command::new("server")
                 .about("Run an HTTP server")
@@ -105,23 +97,7 @@ async fn main() -> std::io::Result<()> {
         )
         .get_matches();
 
-    if let Some(matches) = matches.subcommand_matches("query") {
-        if let (Some(path), Some(query), Some(db_type)) = (
-            matches.get_one::<PathBuf>("path"),
-            matches.get_one::<String>("query"),
-            matches.get_one::<DBType>("type"),
-        ) {
-            match run_query(path, &query, db_type) {
-                Ok(result) => {
-                    println!("Result schema: {:#?}", result.fields);
-                    println!("Results: {:#?}", result.rows);
-                }
-                Err(err) => {
-                    println!("{}", err);
-                }
-            }
-        }
-    } else if let Some(matches) = matches.subcommand_matches("server") {
+    if let Some(matches) = matches.subcommand_matches("server") {
         if let Some(config) = matches.get_one::<PathBuf>("config") {
             run_server(config).await?;
         }
