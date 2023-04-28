@@ -12,7 +12,7 @@ use std::vec::Vec;
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {
     pub fields: Vec<String>,
-    pub rows: Vec<Vec<String>>,
+    pub rows: Vec<Vec<Option<String>>>,
 }
 
 impl QueryResult {
@@ -25,7 +25,15 @@ impl QueryResult {
                 .collect::<Vec<_>>(),
         ));
         for row in &self.rows {
-            let cells = row.iter().map(|cell| Cell::new(cell)).collect::<Vec<_>>();
+            let cells = row
+                .iter()
+                .map(|cell| {
+                    Cell::new(match cell {
+                        Some(s) => s,
+                        None => "NULL",
+                    })
+                })
+                .collect::<Vec<_>>();
             table.add_row(Row::new(cells));
         }
         return table;

@@ -24,6 +24,22 @@ impl From<rusqlite::Error> for AybError {
     }
 }
 
+impl From<rusqlite::types::FromSqlError> for AybError {
+    fn from(cause: rusqlite::types::FromSqlError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<std::str::Utf8Error> for AybError {
+    fn from(cause: std::str::Utf8Error) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
 impl From<sqlx::Error> for AybError {
     fn from(cause: sqlx::Error) -> Self {
         AybError {
