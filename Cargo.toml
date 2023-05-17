@@ -12,7 +12,7 @@ actix-web = { version = "4.3.1" }
 clap = { version = "4.2.7", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 env_logger = { version = "0.10.0" }
-reqwest = { version = "0.11.17", features = ["json"] }
+reqwest = { version = "0.11.18", features = ["json"] }
 rusqlite = { version = "0.29.0", features = ["bundled"] }
 regex = { version = "1.8.0"}
 serde = { version = "1.0", features = ["derive"] }
