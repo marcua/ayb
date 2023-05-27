@@ -19,7 +19,7 @@ rusqlite = { version = "0.27.0", features = ["bundled"] }
 regex = { version = "1.8.0"}
 serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1.11" }
-sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite", "offline"] }
+sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
 toml = { version = "0.7.3" }
 tokio = { version = "1.28.1", features = ["macros", "rt"] }
 prettytable-rs = "0.10.0"
