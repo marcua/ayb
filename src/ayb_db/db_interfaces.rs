@@ -20,6 +20,7 @@ use std::str::FromStr;
 // https://github.com/splitgraph/seafowl/blob/542159ebb42cada59cea6bd82fef4ab9e9724a94/src/repository/default.rs#L28
 #[async_trait]
 pub trait AybDb: DynClone + Send + Sync {
+    fn is_duplicate_constraint_error(&self, db_error: &dyn sqlx::error::DatabaseError) -> bool;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
     async fn create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
     async fn get_database(
@@ -37,25 +38,40 @@ macro_rules! implement_ayb_db {
     ($db_type: ident) => {
         #[async_trait]
         impl AybDb for $db_type {
+            fn is_duplicate_constraint_error(
+                &self,
+                db_error: &dyn sqlx::error::DatabaseError,
+            ) -> bool {
+                match db_error.code() {
+                    Some(code) => code.to_string() == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
+                    None => false,
+                }
+            }
+
             async fn create_database(
-                &self, database: &Database,
+                &self,
+                database: &Database,
             ) -> Result<InstantiatedDatabase, AybError> {
                 let db: InstantiatedDatabase = sqlx::query_as(
                     r#"
                 INSERT INTO database ( entity_id, slug, db_type )
                 VALUES ( $1, $2, $3 )
                 RETURNING id, entity_id, slug, db_type
-                "#)
+                "#,
+                )
                 .bind(database.entity_id)
                 .bind(&database.slug)
                 .bind(database.db_type)
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    // TODO(marcua): Figure out why `db_error.code() == "23505"`, which is less brittle and should work according to the sqlx docs, thinks it's receiving an `Option` for `code()`.
-                    sqlx::Error::Database(db_error) if db_error.message() == "duplicate key value violates unique constraint \"database_entity_id_slug_key\"" => Err(AybError {
-                        message: format!("Database already exists")
-                    }),
+                    sqlx::Error::Database(db_error)
+                        if self.is_duplicate_constraint_error(&*db_error) =>
+                    {
+                        Err(AybError {
+                            message: format!("Database already exists"),
+                        })
+                    }
                     _ => Err(AybError::from(err)),
                 })?;
 
@@ -68,16 +84,15 @@ macro_rules! implement_ayb_db {
                 INSERT INTO entity ( slug, entity_type )
                 VALUES ( $1, $2 )
                 RETURNING id, slug, entity_type
-                "#)
+                "#,
+                )
                 .bind(&entity.slug)
                 .bind(entity.entity_type)
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    // TODO(marcua): Figure out why `db_error.code() == "23505"`, which is less brittle and should work according to the sqlx docs, thinks it's receiving an `Option` for `code()`.
                     sqlx::Error::Database(db_error)
-                        if db_error.message()
-                        == "duplicate key value violates unique constraint \"entity_slug_key\"" =>
+                        if self.is_duplicate_constraint_error(&*db_error) =>
                     {
                         Err(AybError {
                             message: format!("Entity already exists"),
@@ -106,11 +121,12 @@ JOIN entity on database.entity_id = entity.id
 WHERE
     entity.slug = $1
     AND database.slug = $2
-        "#)
-                    .bind(entity_slug)
-                    .bind(database_slug)
-                    .fetch_one(&self.pool)
-                    .await?;
+        "#,
+                )
+                .bind(entity_slug)
+                .bind(database_slug)
+                .fetch_one(&self.pool)
+                .await?;
 
                 Ok(db)
             }
@@ -127,21 +143,22 @@ SELECT
     entity_type
 FROM entity
 WHERE slug = $1
-        "#)
-                    .bind(entity_slug)
-                    .fetch_one(&self.pool)
-                    .await
-                    .or_else(|err| match err {
-                        sqlx::Error::RowNotFound => Err(AybError {
-                            message: format!("Entity not found: {:?}", entity_slug),
-                        }),
-                        _ => Err(AybError::from(err)),
-                    })?;
+        "#,
+                )
+                .bind(entity_slug)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError {
+                        message: format!("Entity not found: {:?}", entity_slug),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
 
                 Ok(entity)
             }
         }
-    }
+    };
 }
 
 #[derive(Clone)]
@@ -150,6 +167,8 @@ struct SqliteAybDb {
 }
 
 impl SqliteAybDb {
+    pub const DUPLICATE_CONSTRAINT_ERROR_CODE: &str = "2067";
+
     pub async fn connect(url: String) -> SqliteAybDb {
         let connection_options = SqliteConnectOptions::from_str(&url)
             .expect("Unable to interpret SQLite connection uri")
@@ -174,6 +193,8 @@ struct PostgresAybDb {
 }
 
 impl PostgresAybDb {
+    pub const DUPLICATE_CONSTRAINT_ERROR_CODE: &str = "23505";
+
     pub async fn connect(url: String) -> PostgresAybDb {
         let pool = PgPoolOptions::new()
             .max_connections(20)
