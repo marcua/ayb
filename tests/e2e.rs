@@ -23,12 +23,21 @@ fn client_query(query: &str, format: &str, result: &str) -> Result<(), Box<dyn s
 }
 
 #[test]
-fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
+fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
+    return client_server_integration("tests/test-server-config-postgres.toml");
+}
+
+#[test]
+fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
+    return client_server_integration("tests/test-server-config-sqlite.toml");
+}
+
+fn client_server_integration(config_file: &str) -> Result<(), Box<dyn std::error::Error>> {
     Command::new("tests/reset_db.sh").assert().success();
 
     // Run server, give it a few seconds to start
     let mut server = Command::cargo_bin("ayb")?
-        .args(["server", "--config", "tests/test-server-config.toml"])
+        .args(["server", "--config", config_file])
         .spawn()?;
     thread::sleep(time::Duration::from_secs(1));
 

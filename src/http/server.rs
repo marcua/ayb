@@ -19,6 +19,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     let contents = fs::read_to_string(config_path)?;
     let ayb_conf: AybConfig = toml::from_str(&contents).unwrap();
     let ayb_conf_for_server = ayb_conf.clone();
+    fs::create_dir_all(&ayb_conf.data_path).expect("Unable to create data directory");
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url).await.unwrap();
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);

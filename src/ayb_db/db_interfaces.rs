@@ -2,7 +2,13 @@ use crate::ayb_db::models::{Database, Entity, InstantiatedDatabase, Instantiated
 use crate::error::AybError;
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
-use sqlx::{migrate, postgres::PgPoolOptions, sqlite::SqlitePoolOptions, Pool, Postgres, Sqlite};
+use sqlx::{
+    migrate,
+    postgres::PgPoolOptions,
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    Pool, Postgres, Sqlite,
+};
+use std::str::FromStr;
 
 // AybDb is a trait for a database interface for storing `ayb`'s
 // metadata. To support different databases (e.g., SQLite and
@@ -145,11 +151,14 @@ struct SqliteAybDb {
 
 impl SqliteAybDb {
     pub async fn connect(url: String) -> SqliteAybDb {
+        let connection_options = SqliteConnectOptions::from_str(&url)
+            .expect("Unable to interpret SQLite connection uri")
+            .create_if_missing(true);
         let pool = SqlitePoolOptions::new()
-            .connect(&url)
+            .connect_with(connection_options)
             .await
             .expect("Unable to connect to database");
-        migrate!()
+        migrate!("./migrations/sqlite")
             .run(&pool)
             .await
             .expect("Unable to run migrations");
@@ -171,7 +180,7 @@ impl PostgresAybDb {
             .connect(&url)
             .await
             .expect("Unable to connect to database");
-        migrate!()
+        migrate!("./migrations/postgres")
             .run(&pool)
             .await
             .expect("Unable to run migrations");
