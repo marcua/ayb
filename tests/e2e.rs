@@ -33,11 +33,17 @@ fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> 
 }
 
 fn client_server_integration(db_type: &str) -> Result<(), Box<dyn std::error::Error>> {
-    Command::new(format!("tests/reset_db_{}.sh", db_type)).assert().success();
+    Command::new(format!("tests/reset_db_{}.sh", db_type))
+        .assert()
+        .success();
 
     // Run server, give it a few seconds to start
     let mut server = Command::cargo_bin("ayb")?
-        .args(["server", "--config", &*format!("tests/test-server-config-{}.toml", db_type)])
+        .args([
+            "server",
+            "--config",
+            &*format!("tests/test-server-config-{}.toml", db_type),
+        ])
         .spawn()?;
     thread::sleep(time::Duration::from_secs(1));
 
