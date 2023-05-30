@@ -1,4 +1,4 @@
 host = "0.0.0.0"
 port = 5433
-database_url = "sqlite://tests/ayb_data/ayb.sqlite"
-data_path = "./tests/ayb_data"
+database_url = "sqlite://tests/ayb_data_sqlite/ayb.sqlite"
+data_path = "./tests/ayb_data_sqlite"
