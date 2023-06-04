@@ -4,12 +4,17 @@ use std::process::Command;
 use std::thread;
 use std::time;
 
-fn client_query(query: &str, format: &str, result: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn client_query(
+    server_url: &str,
+    query: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     Command::cargo_bin("ayb")?
         .args([
             "client",
             "--url",
-            "http://127.0.0.1:5433",
+            server_url,
             "query",
             "e2e/test.sqlite",
             "--format",
@@ -23,19 +28,37 @@ fn client_query(query: &str, format: &str, result: &str) -> Result<(), Box<dyn s
 }
 
 #[test]
-fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
-    Command::new("tests/reset_db.sh").assert().success();
+fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
+    return client_server_integration("postgres", "http://127.0.0.1:5433");
+}
+
+#[test]
+fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
+    return client_server_integration("sqlite", "http://127.0.0.1:5434");
+}
+
+fn client_server_integration(
+    db_type: &str,
+    server_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    Command::new(format!("tests/reset_db_{}.sh", db_type))
+        .assert()
+        .success();
 
     // Run server, give it a few seconds to start
     let mut server = Command::cargo_bin("ayb")?
-        .args(["server", "--config", "tests/test-server-config.toml"])
+        .args([
+            "server",
+            "--config",
+            &*format!("tests/test-server-config-{}.toml", db_type),
+        ])
         .spawn()?;
     thread::sleep(time::Duration::from_secs(1));
 
     // Register an entity.
     Command::cargo_bin("ayb")?
         .args(["client", "register", "e2e"])
-        .env("AYB_SERVER_URL", "http://127.0.0.1:5433")
+        .env("AYB_SERVER_URL", server_url)
         .assert()
         .success()
         .stdout("Successfully registered e2e\n");
@@ -43,7 +66,7 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
     // Can't register an entity twice.
     Command::cargo_bin("ayb")?
         .args(["client", "register", "e2e"])
-        .env("AYB_SERVER_URL", "http://127.0.0.1:5433")
+        .env("AYB_SERVER_URL", server_url)
         .assert()
         .success()
         .stdout("Error: Entity already exists\n");
@@ -53,7 +76,7 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
         .args([
             "client",
             "--url",
-            "http://127.0.0.1:5433",
+            server_url,
             "create_database",
             "e2e/test.sqlite",
             "sqlite",
@@ -67,7 +90,7 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
         .args([
             "client",
             "--url",
-            "http://127.0.0.1:5433",
+            server_url,
             "create_database",
             "e2e/test.sqlite",
             "sqlite",
@@ -78,24 +101,30 @@ fn client_server_integration() -> Result<(), Box<dyn std::error::Error>> {
 
     // Populate and query database.
     client_query(
+        server_url,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         "table",
         "\nRows: 0",
     )?;
     client_query(
+        server_url,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
         "table",
         "\nRows: 0",
     )?;
     client_query(
+        server_url,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
         "table",
         "\nRows: 0",
     )?;
-    client_query("SELECT * FROM test_table;",
+    client_query(
+        server_url,
+        "SELECT * FROM test_table;",
                  "table",                 
                  " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
     client_query(
+        server_url,
         "SELECT * FROM test_table;",
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",

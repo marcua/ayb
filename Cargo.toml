@@ -1,6 +1,6 @@
 [package]
 name = "ayb"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "ayb makes it easy to create, host, and share embedded databases like SQLite and DuckDB"
 homepage = "https://github.com/marcua/ayb"
@@ -9,15 +9,17 @@ license = "Apache-2.0"
 
 [dependencies]
 actix-web = { version = "4.3.1" }
+async-trait = { version = "0.1.68" }
 clap = { version = "4.2.7", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
+dyn-clone = { version = "1.0.11" }
 env_logger = { version = "0.10.0" }
 reqwest = { version = "0.11.18", features = ["json"] }
-rusqlite = { version = "0.29.0", features = ["bundled"] }
+rusqlite = { version = "0.27.0", features = ["bundled"] }
 regex = { version = "1.8.0"}
 serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1.11" }
-sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "offline"] }
+sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
 toml = { version = "0.7.3" }
 tokio = { version = "1.28.1", features = ["macros", "rt"] }
 prettytable-rs = "0.10.0"

@@ -21,10 +21,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    env:
-      # Build binaries based on sqlx-data.json rather than live database,
-      # which isn't initialized yet for tests.
-      SQLX_OFFLINE: true
     steps:
     - uses: actions/checkout@v3
     - name: Cargo cache

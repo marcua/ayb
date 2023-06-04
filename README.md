@@ -20,25 +20,17 @@ cargo install ayb
 ```
 
 ### Running the server
-An `ayb` server stores its metadata in [PostgreSQL](https://www.postgresql.org/), and its embedded databases on a local disk. First, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to Postgres, and the data path for the embedded databases:
+An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and its embedded databases on a local disk. First, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to the database, and the data path for the embedded databases:
 
 ```bash
 cat <<EOF > ayb.toml
 host = "0.0.0.0"
 port = 5433
-database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
+database_url = "sqlite://ayb_data/ayb.sqlite"
+# Or, for Postgres:
+# database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
 data_path = "./ayb_data"
 EOF
-```
-
-The `database_url` above assumes you've created a `postgres_user` with password `test` and a  `test_db` that this user can access. Here are the commands to make that possible, assuming you already have PostgreSQL installed (say, with `sudo apt-get install postgresql` on Debian-based systems):
-```bash
-$ sudo -u postgres createuser -P postgres_user  # Enter password `test`
-$ sudo -u postgres psql -c "alter user postgres_user createdb;"
-# Edit /etc/postgresql/14/main/pg_hba.conf to have an entry like:
-# local   all             all                                     scram-sha-256
-$ service postgresql restart
-$ createdb -U postgres_user -W test_db
 ```
 
 Running the server then requires one command
@@ -123,22 +115,22 @@ Thank you for asking. [I hope the answer elicits some nostalgia](https://www.you
 Here's a rough roadmap for the project, with items near the top of the list more likely to be completed first. The nitty-gritty list of prioritized issues can be found on [this project board](https://github.com/marcua/ayb/projects/1), with the most-likely-to-be-completed issues near the top of the to-do list.
 
 * Make the single-user `ayb` experience excellent
-	* Reduce reliance on PostgreSQL. Given that the goal of `ayb` is to make it easier to create, share, and query databases, it's frustrating that running `ayb` requires you to pay the nontrivial cost of operationalizing PostgreSQL. While Postgres will be helpful for eventually coordinating between multiple `ayb` nodes, a single-node version should be able to store its metadata in SQLite with little setup costs.
-	* Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
-	* Clustering. Support for multiple `ayb` nodes to serve databases and requests. Whereas a single database will not span multiple machines, parallelism/distribution will happen across users and databases.
-	* Persistence beyond the node. Using projects like [LiteFS](https://github.com/superfly/litefs), stream updates to databases to persistent storage, and allow failover if an `ayb` node disappears.
-	* Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data. 
-	* Sessions/transactions. `ayb`'s query API is a stateless request/response API, making it impossible to start a database transaction or issue multiple queries in a session. Exposing sessions in the API will allow multiple statements per session, and by extension, transactions.
-	* Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
+  * [x] Reduce reliance on PostgreSQL (SQLite metadata storage). Given that the goal of `ayb` is to make it easier to create, share, and query databases, it's frustrating that running `ayb` requires you to pay the nontrivial cost of operationalizing PostgreSQL. While Postgres will be helpful for eventually coordinating between multiple `ayb` nodes, a single-node version should be able to store its metadata in SQLite with little setup costs.
+  * [ ] Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
+  * [ ] Clustering. Support for multiple `ayb` nodes to serve databases and requests. Whereas a single database will not span multiple machines, parallelism/distribution will happen across users and databases.
+  * [ ] Persistence beyond the node. Using projects like [LiteFS](https://github.com/superfly/litefs), stream updates to databases to persistent storage, and allow failover if an `ayb` node disappears.
+  * [ ] Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data.
+  * [ ] Sessions/transactions. `ayb`'s query API is a stateless request/response API, making it impossible to start a database transaction or issue multiple queries in a session. Exposing sessions in the API will allow multiple statements per session, and by extension, transactions.
+  * [ ] Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
 * Extend `ayb` to more people and software
-	* Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
-	* Forking. Allowing a user to fork their own copy of a database will enable collaborators to remix and build on each others' work.
-	* Versioning. To both make it less scary to execute sensitive operations and to make it possible for scientists to reference and publish checkpoints of their work, a user should be able to snapshot and revert to a database at a point in time.
-	* DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command. This effort is dependent on the DuckDB project. First, the DuckDB file format is rapidly changing ahead of the project's 1.0 release. Additionally, I don't know of an equivalent streaming replication project to LiteFS for DuckDB that handles *persistence beyond the node*.
-	* PostgreSQL wire protocol. While an HTTP API makes it easy to build new web apps, exposing `ayb` over the PostgreSQL wire protocol will allow existing tools and libraries to connect to and query an `ayb` database.
+  * [ ] Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
+  * [ ] Forking. Allowing a user to fork their own copy of a database will enable collaborators to remix and build on each others' work.
+  * [ ] Versioning. To both make it less scary to execute sensitive operations and to make it possible for scientists to reference and publish checkpoints of their work, a user should be able to snapshot and revert to a database at a point in time.
+  * [ ] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command. This effort is dependent on the DuckDB project. First, the DuckDB file format is rapidly changing ahead of the project's 1.0 release. Additionally, I don't know of an equivalent streaming replication project to LiteFS for DuckDB that handles *persistence beyond the node*.
+  * [ ] PostgreSQL wire protocol. While an HTTP API makes it easy to build new web apps, exposing `ayb` over the PostgreSQL wire protocol will allow existing tools and libraries to connect to and query an `ayb` database.
 * Increase discoverability with a web frontend
-	* Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
-	* Explore people's public datasets. Beyond simplifying the command line, platforms like GitHub also make it easier to find a user's publicly shared repositories, follow along in their work, and fork a copy for your own exploration. That same experience should be possible for `ayb`-hosted databases.
+  * [ ] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
+  * [ ] Explore people's public datasets. Beyond simplifying the command line, platforms like GitHub also make it easier to find a user's publicly shared repositories, follow along in their work, and fork a copy for your own exploration. That same experience should be possible for `ayb`-hosted databases.
 
 ## Contributing
 (This section is inspired by the [LiteFS project](https://github.com/superfly/litefs#contributing), and is just one of the many things to love about that project.)

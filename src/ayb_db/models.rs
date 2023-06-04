@@ -1,6 +1,7 @@
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use sqlx::FromRow;
 use std::fmt;
 
 #[derive(
@@ -90,7 +91,7 @@ pub struct Database {
     pub db_type: i16,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct InstantiatedDatabase {
     pub id: i32,
     pub entity_id: i32,
@@ -104,7 +105,7 @@ pub struct Entity {
     pub entity_type: i16,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
