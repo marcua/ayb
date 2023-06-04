@@ -14,4 +14,4 @@ e2e.sh
 tests/ayb_data_postgres
 tests/ayb_data_sqlite
 ayb_data
-rset_db.sh
+reset_db.sh
