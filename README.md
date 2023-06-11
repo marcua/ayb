@@ -8,7 +8,7 @@ With `ayb`, all your base can finally belong to you. Move SQL for great justice.
 
 `ayb` makes it easy to create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users or organizations to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API. In database terms, `ayb` is a multi-tenant RDBMS that relies on embedded databases like SQLite for persistence and query processing while exposing those databases over HTTP.
 
-*alpha warning*: `ayb` is neither feature complete nor production-ready. Functionality like authentication, permissions, isolation, high availability, transaction support, collaboration, or DuckDB hosting are on the [Roadmap](#roadmap) but not available today. I work on `ayb` as a hobbyist side project.
+*alpha warning*: `ayb` is neither feature complete nor production-ready. Functionality like authentication, permissions, collaboration, isolation, high availability, and transaction support are on the [Roadmap](#roadmap) but not available today. I work on `ayb` as a hobbyist side project.
 
 ## Getting started
 
@@ -19,8 +19,8 @@ With `ayb`, all your base can finally belong to you. Move SQL for great justice.
 cargo install ayb
 ```
 
-### Running the server
-An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and its embedded databases on a local disk. First, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to the database, and the data path for the embedded databases:
+### Running a server
+An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. To configure the server, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases:
 
 ```bash
 cat <<EOF > ayb.toml
@@ -39,8 +39,8 @@ $ ayb server
 ```
 
 
-### Running the client
-Once the server is running, you can set its URL as an environment variable called `AYB_SERVER_URL`, register a user (in this case, `marcua`), create a database `marcua/test.sqlite`, and issue SQL as your heart pleases. Here's how to do that at the command line:
+### Running a client
+Once the server is running, you can set its URL as an environment variable called `AYB_SERVER_URL`, register a user (in this case, `marcua`), create a database `marcua/test.sqlite`, and issue SQL as you like. Here's how to do that at the command line:
 
 ```bash
 $ export AYB_SERVER_URL=http://127.0.0.1:5433
