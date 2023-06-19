@@ -6,7 +6,7 @@ With `ayb`, all your base can finally belong to you. Move SQL for great justice.
 
 ## Introduction
 
-`ayb` makes it easy to create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users or organizations to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API. In database terms, `ayb` is a multi-tenant RDBMS that relies on embedded databases like SQLite for persistence and query processing while exposing those databases over HTTP.
+`ayb` is a multi-tenant database management system with easy-to-host instances that quickly allow you to register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
 
 *alpha warning*: `ayb` is neither feature complete nor production-ready. Functionality like authentication, permissions, collaboration, isolation, high availability, and transaction support are on the [Roadmap](#roadmap) but not available today. I work on `ayb` as a hobbyist side project.
 
@@ -23,14 +23,13 @@ cargo install ayb
 An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. To configure the server, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases:
 
 ```bash
-cat <<EOF > ayb.toml
+$ cat ayb.toml
 host = "0.0.0.0"
 port = 5433
 database_url = "sqlite://ayb_data/ayb.sqlite"
 # Or, for Postgres:
 # database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
 data_path = "./ayb_data"
-EOF
 ```
 
 Running the server then requires one command
