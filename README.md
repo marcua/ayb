@@ -1,12 +1,12 @@
 # `ayb`
-With `ayb`, all your base can finally belong to you. Move SQL for great justice.
+Ayb is the easiest way to get started writing shareable reproducable database demo apps.  With only 5 commands you can have a sharable database.
 
 [![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
 
 
 ## Introduction
 
-`ayb` is a multi-tenant database management system with easy-to-host instances that enable you to quickly register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
+`ayb` is a user-installable? database management system with easy-to-host instances that enable you to quickly register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
 
 To learn more about why `ayb` matters, how it works, or who it's for, [read this introductory blog post](https://blog.marcua.net/2023/06/25/ayb-a-multi-tenant-database-that-helps-you-own-your-data.html).
 
@@ -14,29 +14,17 @@ To learn more about why `ayb` matters, how it works, or who it's for, [read this
 
 ## Getting started
 
-### Installing
-`ayb` is written in Rust, and is available as the `ayb` crate. Assuming you have [installed Rust on your machine](https://www.rust-lang.org/tools/install), installing `ayb` takes a single command:
-
+### Quickstart 
 ```bash
-cargo install ayb
-```
+$ brew install cargo # install the rust cargo package manager
+$ cargo install ayb  # use cargo to install ayb
+$ ayb server background  # start a server with ayb in the background
+$ ayb client create_database marcua/test.sqlite # using the default server, crate a database
+Successfully created marcua/test.sqlite
+# start running ayb client commands
+$ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 
-### Running a server
-An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. To configure the server, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases:
-
-```bash
-$ cat ayb.toml
-host = "0.0.0.0"
-port = 5433
-database_url = "sqlite://ayb_data/ayb.sqlite"
-# Or, for Postgres:
-# database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
-data_path = "./ayb_data"
-```
-
-Running the server then requires one command
-```bash
-$ ayb server
+Rows: 0
 ```
 
 
@@ -44,13 +32,6 @@ $ ayb server
 Once the server is running, you can set its URL as an environment variable called `AYB_SERVER_URL`, register a user (in this case, `marcua`), create a database `marcua/test.sqlite`, and issue SQL as you like. Here's how to do that at the command line:
 
 ```bash
-$ export AYB_SERVER_URL=http://127.0.0.1:5433
-
-$ ayb client register marcua
-Successfully registered marcua
-
-$ ayb client create_database marcua/test.sqlite
-Successfully created marcua/test.sqlite
 
 $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 
@@ -109,8 +90,16 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "SEL
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```
 
-## What's with the name?
-Thank you for asking. [I hope the answer elicits some nostalgia](https://www.youtube.com/watch?v=qItugh-fFgg)! Shout out to Meelap Shah and Eugene Wu for convincing me to not call this project `stacks`, to Andrew Lange-Abramowitz for making the connection to the storied meme, and to Meredith Blumenstock for listening to me fret over it all.
+## Who is it for?
+
+### Educators
+AYB is the simplest way your students can install a database and get going. Focus on SQL and data modelling, not sysadmin on machines.
+### Students
+Trying to figure out a `SELECT` statement or a `JOIN ON` clause, get going with AYB
+
+### Data investigators
+Want to create a data set, and share it with collaboartors, ayb is the best route for that.
+
 
 ## Roadmap
 Here's a rough roadmap for the project, with items near the top of the list more likely to be completed first. The nitty-gritty list of prioritized issues can be found on [this project board](https://github.com/marcua/ayb/projects/1), with the most-likely-to-be-completed issues near the top of the to-do list.
@@ -132,6 +121,14 @@ Here's a rough roadmap for the project, with items near the top of the list more
 * Increase discoverability with a web frontend
   * [ ] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
   * [ ] Explore people's public datasets. Beyond simplifying the command line, platforms like GitHub also make it easier to find a user's publicly shared repositories, follow along in their work, and fork a copy for your own exploration. That same experience should be possible for `ayb`-hosted databases.
+
+## FAQ
+* When should I use ayb? when would I be better served by datasette? What about datasette?
+* When shouldn't I use ayb?
+* How should I package ayb with a jupyter notebook?
+* What's with the name?
+Thank you for asking. [I hope the answer elicits some nostalgia](https://www.youtube.com/watch?v=qItugh-fFgg)! Shout out to Meelap Shah and Eugene Wu for convincing me to not call this project `stacks`, to Andrew Lange-Abramowitz for making the connection to the storied meme, and to Meredith Blumenstock for listening to me fret over it all.
+
 
 ## Contributing
 (This section is inspired by the [LiteFS project](https://github.com/superfly/litefs#contributing), and is just one of the many things to love about that project.)
