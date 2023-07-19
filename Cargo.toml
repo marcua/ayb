@@ -16,7 +16,7 @@ dyn-clone = { version = "1.0.12" }
 env_logger = { version = "0.10.0" }
 reqwest = { version = "0.11.18", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled"] }
-regex = { version = "1.8.4"}
+regex = { version = "1.9.1"}
 serde = { version = "1.0", features = ["derive"] }
 serde_repr = { version = "0.1.14" }
 sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
