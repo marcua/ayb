@@ -1,12 +1,12 @@
 # `ayb`
-With `ayb`, all your base can finally belong to you. Move SQL for great justice.
+`ayb` makes it easy to create databases, share them with collaborators, and query them from a web application or the command line. With `ayb`, all your base can finally belong to you. Move SQL for great justice.
 
 [![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
 
 
 ## Introduction
 
-`ayb` is a multi-tenant database management system with easy-to-host instances that enable you to quickly register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
+`ayb` is a database management system with easy-to-host instances that enable users to quickly register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
 
 To learn more about why `ayb` matters, how it works, or who it's for, [read this introductory blog post](https://blog.marcua.net/2023/06/25/ayb-a-multi-tenant-database-that-helps-you-own-your-data.html).
 
