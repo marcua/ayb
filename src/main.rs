@@ -88,6 +88,8 @@ async fn main() -> std::io::Result<()> {
                         .about("Register a user/organization")
                         .arg(arg!(<entity> "The entity to create")
                              .required(true))
+                        .arg(arg!(<email_address> "The email address of the entity")
+                             .required(true))
                         .arg(
                             arg!(<type> "The type of entity")
                                 .value_parser(value_parser!(EntityType))
@@ -131,11 +133,12 @@ async fn main() -> std::io::Result<()> {
                     }
                 }
             } else if let Some(matches) = matches.subcommand_matches("register") {
-                if let (Some(entity), Some(entity_type)) = (
+                if let (Some(entity), Some(email_address), Some(entity_type)) = (
                     matches.get_one::<String>("entity"),
+                    matches.get_one::<String>("email_address"),
                     matches.get_one::<EntityType>("type"),
                 ) {
-                    match client.register(entity, entity_type).await {
+                    match client.register(entity, email_address, entity_type).await {
                         Ok(_response) => {
                             println!("Successfully registered {}", entity);
                         }

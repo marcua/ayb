@@ -1,4 +1,7 @@
-use crate::ayb_db::models::{Database, Entity, InstantiatedDatabase, InstantiatedEntity};
+use crate::ayb_db::models::{
+    AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod, InstantiatedDatabase,
+    InstantiatedEntity,
+};
 use crate::error::AybError;
 use async_trait::async_trait;
 use dyn_clone::{clone_trait_object, DynClone};
@@ -21,14 +24,22 @@ use std::str::FromStr;
 #[async_trait]
 pub trait AybDb: DynClone + Send + Sync {
     fn is_duplicate_constraint_error(&self, db_error: &dyn sqlx::error::DatabaseError) -> bool;
+    async fn create_authentication_method(
+        &self,
+        method: &AuthenticationMethod,
+    ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
-    async fn create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
+    async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
     async fn get_database(
         &self,
         entity_slug: &String,
         database_slug: &String,
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity(&self, entity_slug: &String) -> Result<InstantiatedEntity, AybError>;
+    async fn list_authentication_methods(
+        &self,
+        entity: &InstantiatedEntity,
+    ) -> Result<Vec<InstantiatedAuthenticationMethod>, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -46,6 +57,27 @@ macro_rules! implement_ayb_db {
                     Some(code) => code.to_string() == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
                     None => false,
                 }
+            }
+
+            async fn create_authentication_method(
+                &self,
+                method: &AuthenticationMethod,
+            ) -> Result<InstantiatedAuthenticationMethod, AybError> {
+                let instantiated_method: InstantiatedAuthenticationMethod = sqlx::query_as(
+                    r#"
+                INSERT INTO authentication_method ( entity_id, method_type, status, email_address )
+                VALUES ( $1, $2, $3, $4 )
+                RETURNING id, entity_id, method_type, status, email_address
+                "#,
+                )
+                .bind(method.entity_id)
+                .bind(method.method_type)
+                .bind(method.status)
+                .bind(&method.email_address)
+                .fetch_one(&self.pool)
+                .await?;
+
+                Ok(instantiated_method)
             }
 
             async fn create_database(
@@ -76,32 +108,6 @@ macro_rules! implement_ayb_db {
                 })?;
 
                 Ok(db)
-            }
-
-            async fn create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError> {
-                let entity: InstantiatedEntity = sqlx::query_as(
-                    r#"
-                INSERT INTO entity ( slug, entity_type )
-                VALUES ( $1, $2 )
-                RETURNING id, slug, entity_type
-                "#,
-                )
-                .bind(&entity.slug)
-                .bind(entity.entity_type)
-                .fetch_one(&self.pool)
-                .await
-                .or_else(|err| match err {
-                    sqlx::Error::Database(db_error)
-                        if self.is_duplicate_constraint_error(&*db_error) =>
-                    {
-                        Err(AybError {
-                            message: format!("Entity already exists"),
-                        })
-                    }
-                    _ => Err(AybError::from(err)),
-                })?;
-
-                Ok(entity)
             }
 
             async fn get_database(
@@ -156,6 +162,46 @@ WHERE slug = $1
                 })?;
 
                 Ok(entity)
+            }
+
+            async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError> {
+                let entity: InstantiatedEntity = sqlx::query_as(
+                    r#"
+                INSERT INTO entity ( slug, entity_type )
+                VALUES ( $1, $2 )
+                ON CONFLICT (slug) DO NOTHING
+                RETURNING id, slug, entity_type
+                "#,
+                )
+                .bind(&entity.slug)
+                .bind(entity.entity_type)
+                .fetch_one(&self.pool)
+                .await?;
+
+                Ok(entity)
+            }
+
+            async fn list_authentication_methods(
+                &self,
+                entity: &InstantiatedEntity,
+            ) -> Result<Vec<InstantiatedAuthenticationMethod>, AybError> {
+                let methods: Vec<InstantiatedAuthenticationMethod> = sqlx::query_as(
+                    r#"
+SELECT
+    id,
+    entity_id,
+    method_type,
+    status,
+    email_address
+FROM authentication_method
+WHERE entity_id = $1
+        "#,
+                )
+                .bind(entity.id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                Ok(methods)
             }
         }
     };

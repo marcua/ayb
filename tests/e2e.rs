@@ -57,7 +57,7 @@ fn client_server_integration(
 
     // Register an entity.
     Command::cargo_bin("ayb")?
-        .args(["client", "register", "e2e"])
+        .args(["client", "register", "e2e", "e2e@example.org"])
         .env("AYB_SERVER_URL", server_url)
         .assert()
         .success()
@@ -65,7 +65,7 @@ fn client_server_integration(
 
     // Can't register an entity twice.
     Command::cargo_bin("ayb")?
-        .args(["client", "register", "e2e"])
+        .args(["client", "register", "e2e", "e2e@example.org"])
         .env("AYB_SERVER_URL", server_url)
         .assert()
         .success()

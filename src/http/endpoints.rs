@@ -1,5 +1,8 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{DBType, Database, Entity, EntityType};
+use crate::ayb_db::models::{
+    AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType, DBType, Database,
+    Entity, EntityType, InstantiatedAuthenticationMethod,
+};
 use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
@@ -17,7 +20,7 @@ async fn create_database(
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
     let entity = ayb_db.get_entity(entity_slug).await?;
-    let db_type = get_header(req, "db-type")?;
+    let db_type = get_header(&req, "db-type")?;
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),
@@ -49,11 +52,58 @@ async fn register(
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
 ) -> Result<HttpResponse, AybError> {
-    let entity_type = get_header(req, "entity-type")?;
-    let entity = Entity {
-        slug: path.entity.clone(),
-        entity_type: EntityType::from_str(&entity_type) as i16,
-    };
-    let created_entity = ayb_db.create_entity(&entity).await?;
+    let email_address = get_header(&req, "email-address")?;
+    let entity_type = get_header(&req, "entity-type")?;
+    println!("Getting or creating entity");
+    let created_entity = ayb_db
+        .get_or_create_entity(&Entity {
+            slug: path.entity.clone(),
+            entity_type: EntityType::from_str(&entity_type) as i16,
+        })
+        .await?;
+    // Ensure that there are no verified authentication methods, and
+    // check to see if this method has been previously attempted but
+    // not verified.
+    println!("Listing");
+    let authentication_methods = ayb_db.list_authentication_methods(&created_entity).await?;
+    let mut already_verified = false;
+    let mut authentication_method: Option<InstantiatedAuthenticationMethod> = None;
+    for method in authentication_methods {
+        if method.status == (AuthenticationMethodStatus::Verified as i16) {
+            already_verified = true;
+            break;
+        }
+        if method.status == (AuthenticationMethodStatus::Unverified as i16)
+            && method.method_type == (AuthenticationMethodType::Email as i16)
+            && method.email_address == email_address
+        {
+            authentication_method = Some(method)
+        }
+    }
+
+    println!("Pre-verification");
+    if already_verified {
+        return Err(AybError {
+            message: format!("This entity has already been registered"),
+        });
+    }
+
+    if let None = authentication_method {
+        println!("Creating auth method");
+        authentication_method = Some(
+            ayb_db
+                .create_authentication_method(&AuthenticationMethod {
+                    entity_id: created_entity.id,
+                    method_type: AuthenticationMethodType::Email as i16,
+                    status: AuthenticationMethodStatus::Unverified as i16,
+                    email_address: email_address,
+                })
+                .await?,
+        );
+    }
+
+    // TODO(marcua): fix all the red in this file, and then make
+    // end-to-end test work until the point of sending an
+    // email. Commit.
     Ok(HttpResponse::Created().json(APIEntity::from_persisted(&created_entity)))
 }

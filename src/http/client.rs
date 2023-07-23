@@ -78,9 +78,14 @@ impl AybClient {
     pub async fn register(
         &self,
         entity: &str,
+        email_address: &str,
         entity_type: &EntityType,
     ) -> Result<Entity, AybError> {
         let mut headers = HeaderMap::new();
+        headers.insert(
+            HeaderName::from_static("email-address"),
+            HeaderValue::from_str(email_address).unwrap(),
+        );
         headers.insert(
             HeaderName::from_static("entity-type"),
             HeaderValue::from_str(entity_type.to_str()).unwrap(),
