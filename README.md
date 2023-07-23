@@ -1,7 +1,7 @@
 # `ayb`
 `ayb` makes it easy to create databases, share them with collaborators, and query them from a web application or the command line.
 
-With `ayb`, all your base can finally belong to you. Move SQL for great justice.
+With `ayb`, all your (data)base can finally belong to you. Move SQL for great justice.
 
 [![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
 
