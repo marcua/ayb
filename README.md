@@ -1,12 +1,14 @@
 # `ayb`
-With `ayb`, all your base can finally belong to you. Move SQL for great justice.
+`ayb` makes it easy to create databases, share them with collaborators, and query them from a web application or the command line.
+
+With `ayb`, all your (data)base can finally belong to you. Move SQL for great justice.
 
 [![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
 
 
 ## Introduction
 
-`ayb` is a multi-tenant database management system with easy-to-host instances that enable you to quickly register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
+`ayb` is a database management system with easy-to-host instances that enable users to quickly register an account, create databases, share them with collaborators, and query them from a web application or the command line. An `ayb` server allows users to create SQLite databases (other databases to come), and then exposes those databases through an HTTP API.
 
 To learn more about why `ayb` matters, how it works, or who it's for, [read this introductory blog post](https://blog.marcua.net/2023/06/25/ayb-a-multi-tenant-database-that-helps-you-own-your-data.html).
 
@@ -109,7 +111,12 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "SEL
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```
 
-## What's with the name?
+## FAQ
+
+### Who is `ayb` for?
+The introductory blog post has [a section describing each group that stands to benefit](https://blog.marcua.net/2023/06/25/ayb-a-multi-tenant-database-that-helps-you-own-your-data.html#students-sharers-and-sovereigns) from `ayb`'s aim to make it easier to create a database, interact with it, and share it with relevant people/organizations. Students would benefit from encountering less operational impediments to writing their first SQL query or sharing their in-progress database with a mentor or teacher for help. Sharers like scientists and journalists would benefit from an easy way to post a dataset and share it with collaborators. Finally, anyone concerned about the sovereignty of their data would benefit from a world where it's so easy to spin up a database that more of their data can live in databases they control.
+
+### What's with the name?
 Thank you for asking. [I hope the answer elicits some nostalgia](https://www.youtube.com/watch?v=qItugh-fFgg)! Shout out to Meelap Shah and Eugene Wu for convincing me to not call this project `stacks`, to Andrew Lange-Abramowitz for making the connection to the storied meme, and to Meredith Blumenstock for listening to me fret over it all.
 
 ## Roadmap
