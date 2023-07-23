@@ -6,11 +6,21 @@ use crate::ayb_db::models::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmail {
+    pub from: String,
+    pub reply_to: String,
+    pub smtp_host: String,
+    pub smtp_username: String,
+    pub smtp_password: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfig {
     pub host: String,
     pub port: u16,
     pub database_url: String,
     pub data_path: String,
+    pub email: AybConfigEmail,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -3,6 +3,7 @@ use crate::ayb_db::models::{
     AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType, DBType, Database,
     Entity, EntityType, InstantiatedAuthenticationMethod,
 };
+use crate::email::send_registration_email;
 use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
@@ -51,6 +52,7 @@ async fn register(
     path: web::Path<EntityPath>,
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
+    ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
     let email_address = get_header(&req, "email-address")?;
     let entity_type = get_header(&req, "entity-type")?;
@@ -96,14 +98,12 @@ async fn register(
                     entity_id: created_entity.id,
                     method_type: AuthenticationMethodType::Email as i16,
                     status: AuthenticationMethodStatus::Unverified as i16,
-                    email_address: email_address,
+                    email_address: email_address.to_owned(),
                 })
                 .await?,
         );
     }
 
-    // TODO(marcua): fix all the red in this file, and then make
-    // end-to-end test work until the point of sending an
-    // email. Commit.
+    // send_registration_email(&email_address, "fake token", &ayb_config.email).await?;
     Ok(HttpResponse::Created().json(APIEntity::from_persisted(&created_entity)))
 }
