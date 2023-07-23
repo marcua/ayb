@@ -111,6 +111,14 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "SEL
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```
 
+## FAQ
+
+### Who is `ayb` for?
+The introductory blog post has [a section on describing each group](https://blog.marcua.net/2023/06/25/ayb-a-multi-tenant-database-that-helps-you-own-your-data.html#students-sharers-and-sovereigns) that stands to benefit from `ayb`'s aim to make it easier to create a database, interact with it, and share it with relevant people/organizations. Students would benefit from encountering less operational impediments to writing their first SQL query or sharing their in-progress database with a mentor or teacher for help. Sharers like scientists and journalists would benefit from an easy way to post a dataset and share it with collaborators. Finally, anyone concerned about the sovereignty of their data would benefit from a world where it's so easy to spin up a database that more of their data can live in databases they control.
+
+### What's with the name?
+Thank you for asking. [I hope the answer elicits some nostalgia](https://www.youtube.com/watch?v=qItugh-fFgg)! Shout out to Meelap Shah and Eugene Wu for convincing me to not call this project `stacks`, to Andrew Lange-Abramowitz for making the connection to the storied meme, and to Meredith Blumenstock for listening to me fret over it all.
+
 ## Roadmap
 Here's a rough roadmap for the project, with items near the top of the list more likely to be completed first. The nitty-gritty list of prioritized issues can be found on [this project board](https://github.com/marcua/ayb/projects/1), with the most-likely-to-be-completed issues near the top of the to-do list.
 
@@ -131,14 +139,6 @@ Here's a rough roadmap for the project, with items near the top of the list more
 * Increase discoverability with a web frontend
   * [ ] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
   * [ ] Explore people's public datasets. Beyond simplifying the command line, platforms like GitHub also make it easier to find a user's publicly shared repositories, follow along in their work, and fork a copy for your own exploration. That same experience should be possible for `ayb`-hosted databases.
-
-## FAQ
-
-### Who is `ayb` for?
-The introductory blog post has [a section on describing each group](https://blog.marcua.net/2023/06/25/ayb-a-multi-tenant-database-that-helps-you-own-your-data.html#students-sharers-and-sovereigns) that stands to benefit from `ayb`'s aim to make it easier to create a database, interact with it, and share it with relevant people/organizations. Students would benefit from encountering less operational impediments to writing their first SQL query or sharing their in-progress database with a mentor or teacher for help. Sharers like scientists and journalists would benefit from an easy way to post a dataset and share it with collaborators. Finally, anyone concerned about the sovereignty of their data would benefit from a world where it's so easy to spin up a database that more of their data can live in databases they control.
-
-### What's with the name?
-Thank you for asking. [I hope the answer elicits some nostalgia](https://www.youtube.com/watch?v=qItugh-fFgg)! Shout out to Meelap Shah and Eugene Wu for convincing me to not call this project `stacks`, to Andrew Lange-Abramowitz for making the connection to the storied meme, and to Meredith Blumenstock for listening to me fret over it all.
 
 ## Contributing
 (This section is inspired by the [LiteFS project](https://github.com/superfly/litefs#contributing), and is just one of the many things to love about that project.)
