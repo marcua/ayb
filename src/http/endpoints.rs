@@ -8,8 +8,10 @@ use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::{
-    AybConfig, Database as APIDatabase, Entity as APIEntity, EntityDatabasePath, EntityPath,
+    AuthenticationDetails, AuthenticationMode, AybConfig, Database as APIDatabase,
+    Entity as APIEntity, EntityDatabasePath, EntityPath,
 };
+use crate::http::tokens::create_token;
 use crate::http::utils::get_header;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
@@ -56,7 +58,6 @@ async fn register(
 ) -> Result<HttpResponse, AybError> {
     let email_address = get_header(&req, "email-address")?;
     let entity_type = get_header(&req, "entity-type")?;
-    println!("Getting or creating entity");
     let created_entity = ayb_db
         .get_or_create_entity(&Entity {
             slug: path.entity.clone(),
@@ -66,7 +67,6 @@ async fn register(
     // Ensure that there are no verified authentication methods, and
     // check to see if this method has been previously attempted but
     // not verified.
-    println!("Listing");
     let authentication_methods = ayb_db.list_authentication_methods(&created_entity).await?;
     let mut already_verified = false;
     let mut authentication_method: Option<InstantiatedAuthenticationMethod> = None;
@@ -83,7 +83,6 @@ async fn register(
         }
     }
 
-    println!("Pre-verification");
     if already_verified {
         return Err(AybError {
             message: format!("This entity has already been registered"),
@@ -91,7 +90,6 @@ async fn register(
     }
 
     if let None = authentication_method {
-        println!("Creating auth method");
         authentication_method = Some(
             ayb_db
                 .create_authentication_method(&AuthenticationMethod {
@@ -104,6 +102,16 @@ async fn register(
         );
     }
 
-    // send_registration_email(&email_address, "fake token", &ayb_config.email).await?;
+    let token = create_token(
+        &AuthenticationDetails {
+            version: 1,
+            mode: AuthenticationMode::Register as i16,
+            entity: path.entity.clone(),
+            entity_type: created_entity.entity_type,
+            email_address: email_address.to_owned(),
+        },
+        &ayb_config.authentication,
+    )?;
+    send_registration_email(&email_address, &token, &ayb_config.email).await?;
     Ok(HttpResponse::Created().json(APIEntity::from_persisted(&created_entity)))
 }

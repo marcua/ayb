@@ -1,8 +1,10 @@
 use actix_web;
 use derive_more::{Display, Error};
+use fernet;
 use reqwest;
 use rusqlite;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use sqlx;
 
 #[derive(Debug, Deserialize, Display, Error, Serialize)]
@@ -16,6 +18,14 @@ impl actix_web::error::ResponseError for AybError {
     }
 }
 
+impl From<fernet::DecryptionError> for AybError {
+    fn from(cause: fernet::DecryptionError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
 impl From<rusqlite::Error> for AybError {
     fn from(cause: rusqlite::Error) -> Self {
         AybError {
@@ -26,6 +36,14 @@ impl From<rusqlite::Error> for AybError {
 
 impl From<rusqlite::types::FromSqlError> for AybError {
     fn from(cause: rusqlite::types::FromSqlError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<serde_json::Error> for AybError {
+    fn from(cause: serde_json::Error) -> Self {
         AybError {
             message: format!("{:?}", cause),
         }
