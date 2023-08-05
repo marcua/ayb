@@ -93,7 +93,7 @@ impl fmt::Display for AuthenticationMode {
 }
 
 impl AuthenticationMode {
-    pub fn from_u16(value: u16) -> AuthenticationMode {
+    pub fn from_i16(value: i16) -> AuthenticationMode {
         match value {
             0 => AuthenticationMode::Register,
             1 => AuthenticationMode::Login,
@@ -125,3 +125,12 @@ pub struct AuthenticationDetails {
     pub entity_type: i16,
     pub email_address: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct APIKey {
+    pub name: String,
+    pub key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EmptyResponse {}

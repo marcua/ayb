@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{Database, Entity};
+use crate::http::structs::{APIKey, Database, EmptyResponse};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -37,6 +37,23 @@ impl AybClient {
         }
     }
 
+    pub async fn confirm(&self, authentication_token: &str) -> Result<APIKey, AybError> {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            HeaderName::from_static("authentication-token"),
+            HeaderValue::from_str(authentication_token).unwrap(),
+        );
+
+        let response = reqwest::Client::new()
+            .post(self.make_url("confirm".to_owned()))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
     pub async fn create_database(
         &self,
         entity: &str,
@@ -50,7 +67,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}/{}", entity, database)))
+            .post(self.make_url(format!("{}/{}/create", entity, database)))
             .headers(headers)
             .send()
             .await?;
@@ -80,7 +97,7 @@ impl AybClient {
         entity: &str,
         email_address: &str,
         entity_type: &EntityType,
-    ) -> Result<Entity, AybError> {
+    ) -> Result<EmptyResponse, AybError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("email-address"),
@@ -92,12 +109,12 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .post(self.make_url(entity.to_owned()))
+            .post(self.make_url(format!("register/{}", entity)))
             .headers(headers)
             .send()
             .await?;
 
-        self.handle_response(response, reqwest::StatusCode::CREATED)
+        self.handle_response(response, reqwest::StatusCode::OK)
             .await
     }
 }

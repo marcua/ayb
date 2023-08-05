@@ -13,7 +13,7 @@ pub async fn send_registration_email(
     return send_email(
         to,
         "Your login credentials",
-        format!("To log in, type stacks client email-confirm email@example.com {token}"),
+        format!("To log in, type\n\tstacks client confirm {token}"),
         config,
     )
     .await;

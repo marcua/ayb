@@ -96,6 +96,12 @@ async fn main() -> std::io::Result<()> {
                                 .default_value(EntityType::User.to_str())
                                 .required(false)),
                 )
+                .subcommand(
+                    Command::new("confirm")
+                        .about("Confirm an email-based login/registration")
+                        .arg(arg!(<authentication_token> "The authentication token")
+                             .required(true))
+                )
         )
         .get_matches();
 
@@ -140,7 +146,24 @@ async fn main() -> std::io::Result<()> {
                 ) {
                     match client.register(entity, email_address, entity_type).await {
                         Ok(_response) => {
-                            println!("Successfully registered {}", entity);
+                            println!("Check your email to finish registering {}", entity);
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("confirm") {
+                if let Some(authentication_token) =
+                    matches.get_one::<String>("authentication_token")
+                {
+                    match client.confirm(authentication_token).await {
+                        Ok(api_key) => {
+                            // TODO(marcua): Save the token and use it for future requests.
+                            println!(
+                                "Successfully authenticated and saved token {}/{}",
+                                api_key.name, api_key.key
+                            );
                         }
                         Err(err) => {
                             println!("Error: {}", err);

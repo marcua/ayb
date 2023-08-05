@@ -125,9 +125,8 @@ impl AuthenticationMethodType {
 )]
 #[repr(i16)]
 pub enum AuthenticationMethodStatus {
-    Unverified = 0,
-    Verified = 1,
-    Revoked = 2,
+    Verified = 0,
+    Revoked = 1,
 }
 
 impl fmt::Display for AuthenticationMethodStatus {
@@ -139,16 +138,14 @@ impl fmt::Display for AuthenticationMethodStatus {
 impl AuthenticationMethodStatus {
     pub fn from_i16(value: i16) -> AuthenticationMethodStatus {
         match value {
-            0 => AuthenticationMethodStatus::Unverified,
-            1 => AuthenticationMethodStatus::Verified,
-            2 => AuthenticationMethodStatus::Revoked,
+            0 => AuthenticationMethodStatus::Verified,
+            1 => AuthenticationMethodStatus::Revoked,
             _ => panic!("Unknown value: {}", value),
         }
     }
 
     pub fn from_str(value: &str) -> AuthenticationMethodStatus {
         match value {
-            "unverified" => AuthenticationMethodStatus::Unverified,
             "verified" => AuthenticationMethodStatus::Verified,
             "revoked" => AuthenticationMethodStatus::Revoked,
             _ => panic!("Unknown value: {}", value),
@@ -157,7 +154,6 @@ impl AuthenticationMethodStatus {
 
     pub fn to_str(&self) -> &str {
         match self {
-            AuthenticationMethodStatus::Unverified => "unverified",
             AuthenticationMethodStatus::Verified => "verified",
             AuthenticationMethodStatus::Revoked => "revoked",
         }
