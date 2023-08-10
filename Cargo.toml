@@ -24,7 +24,7 @@ serde_json = { version = "1.0.104" }
 serde_repr = { version = "0.1.16" }
 sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
 toml = { version = "0.7.6" }
-tokio = { version = "1.29.1", features = ["macros", "rt"] }
+tokio = { version = "1.30.0", features = ["macros", "rt"] }
 prettytable-rs = "0.10.0"
 
 [dev-dependencies]
