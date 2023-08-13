@@ -72,11 +72,6 @@ pub struct EntityDatabasePath {
     pub database: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct EntityPath {
-    pub entity: String,
-}
-
 #[derive(
     Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
 )]

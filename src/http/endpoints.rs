@@ -9,7 +9,7 @@ use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::{
     APIKey as APIAPIKey, AuthenticationDetails, AuthenticationMode, AybConfig,
-    Database as APIDatabase, EmptyResponse, EntityDatabasePath, EntityPath,
+    Database as APIDatabase, EmptyResponse, EntityDatabasePath,
 };
 use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token};
 use crate::http::utils::get_header;
@@ -109,6 +109,46 @@ async fn create_database(
     Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
 }
 
+#[post("/v1/log_in")]
+async fn log_in(
+    req: HttpRequest,
+    ayb_db: web::Data<Box<dyn AybDb>>,
+    ayb_config: web::Data<AybConfig>,
+) -> Result<HttpResponse, AybError> {
+    let entity = get_header(&req, "entity")?;
+    let desired_entity = ayb_db.get_entity(&entity).await;
+
+    if let Ok(instantiated_entity) = desired_entity {
+        let auth_methods = ayb_db
+            .list_authentication_methods(&instantiated_entity)
+            .await?;
+        for method in auth_methods {
+            if AuthenticationMethodType::from_i16(method.method_type)
+                == AuthenticationMethodType::Email
+                && AuthenticationMethodStatus::from_i16(method.status)
+                    == AuthenticationMethodStatus::Verified
+            {
+                let token = encrypt_auth_token(
+                    &AuthenticationDetails {
+                        version: 1,
+                        mode: AuthenticationMode::Register as i16,
+                        entity: entity,
+                        entity_type: instantiated_entity.entity_type,
+                        email_address: method.email_address.to_owned(),
+                    },
+                    &ayb_config.authentication,
+                )?;
+                send_registration_email(&method.email_address, &token, &ayb_config.email).await?;
+                return Ok(HttpResponse::Ok().json(EmptyResponse {}));
+            }
+        }
+    }
+
+    return Err(AybError {
+        message: format!("No email authentication method for this entity."),
+    });
+}
+
 #[post("/v1/{entity}/{database}/query")]
 async fn query(
     path: web::Path<EntityDatabasePath>,
@@ -125,16 +165,16 @@ async fn query(
     Ok(web::Json(result))
 }
 
-#[post("/v1/register/{entity}")]
+#[post("/v1/register")]
 async fn register(
-    path: web::Path<EntityPath>,
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
+    let entity = get_header(&req, "entity")?;
     let email_address = get_header(&req, "email-address")?;
     let entity_type = get_header(&req, "entity-type")?;
-    let desired_entity = ayb_db.get_entity(&path.entity).await;
+    let desired_entity = ayb_db.get_entity(&entity).await;
     // Ensure that there are no authentication methods aside from
     // perhaps the currently requested one.
     let mut already_verified = false;
@@ -163,7 +203,7 @@ async fn register(
         &AuthenticationDetails {
             version: 1,
             mode: AuthenticationMode::Register as i16,
-            entity: path.entity.clone(),
+            entity: entity.clone(),
             entity_type: EntityType::from_str(&entity_type) as i16,
             email_address: email_address.to_owned(),
         },

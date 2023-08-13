@@ -13,7 +13,7 @@ pub async fn send_registration_email(
     return send_email(
         to,
         "Your login credentials",
-        format!("To log in, type\n\tstacks client confirm {token}"),
+        format!("To log in, type\n\tayb client confirm {token}"),
         config,
     )
     .await;

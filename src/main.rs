@@ -102,6 +102,12 @@ async fn main() -> std::io::Result<()> {
                         .arg(arg!(<authentication_token> "The authentication token")
                              .required(true))
                 )
+                .subcommand(
+                    Command::new("log_in")
+                        .about("Log in to ayb via email authentication")
+                        .arg(arg!(<entity> "The entity to log in as")
+                             .required(true))
+                )
         )
         .get_matches();
 
@@ -164,6 +170,17 @@ async fn main() -> std::io::Result<()> {
                                 "Successfully authenticated and saved token {}/{}",
                                 api_key.name, api_key.key
                             );
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("log_in") {
+                if let Some(entity) = matches.get_one::<String>("entity") {
+                    match client.log_in(entity).await {
+                        Ok(_response) => {
+                            println!("Check your email to finish logging in {}", entity);
                         }
                         Err(err) => {
                             println!("Error: {}", err);

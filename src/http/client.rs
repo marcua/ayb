@@ -76,6 +76,23 @@ impl AybClient {
             .await
     }
 
+    pub async fn log_in(&self, entity: &str) -> Result<EmptyResponse, AybError> {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            HeaderName::from_static("entity"),
+            HeaderValue::from_str(entity).unwrap(),
+        );
+
+        let response = reqwest::Client::new()
+            .post(self.make_url("log_in".to_owned()))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
     pub async fn query(
         &self,
         entity: &str,
@@ -100,6 +117,10 @@ impl AybClient {
     ) -> Result<EmptyResponse, AybError> {
         let mut headers = HeaderMap::new();
         headers.insert(
+            HeaderName::from_static("entity"),
+            HeaderValue::from_str(entity).unwrap(),
+        );
+        headers.insert(
             HeaderName::from_static("email-address"),
             HeaderValue::from_str(email_address).unwrap(),
         );
@@ -109,7 +130,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("register/{}", entity)))
+            .post(self.make_url(format!("register")))
             .headers(headers)
             .send()
             .await?;
