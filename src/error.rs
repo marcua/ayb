@@ -19,9 +19,9 @@ impl actix_web::error::ResponseError for AybError {
 }
 
 impl From<fernet::DecryptionError> for AybError {
-    fn from(cause: fernet::DecryptionError) -> Self {
+    fn from(_cause: fernet::DecryptionError) -> Self {
         AybError {
-            message: format!("{:?}", cause),
+            message: "Invalid or expired token".to_owned(),
         }
     }
 }

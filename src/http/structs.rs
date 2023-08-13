@@ -2,10 +2,7 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
-use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::fmt;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigAuthentication {
@@ -72,50 +69,9 @@ pub struct EntityDatabasePath {
     pub database: String,
 }
 
-#[derive(
-    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
-)]
-#[repr(i16)]
-pub enum AuthenticationMode {
-    Register = 0,
-    Login = 1,
-}
-
-impl fmt::Display for AuthenticationMode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl AuthenticationMode {
-    pub fn from_i16(value: i16) -> AuthenticationMode {
-        match value {
-            0 => AuthenticationMode::Register,
-            1 => AuthenticationMode::Login,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn from_str(value: &str) -> AuthenticationMode {
-        match value {
-            "register" => AuthenticationMode::Register,
-            "login" => AuthenticationMode::Login,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn to_str(&self) -> &str {
-        match self {
-            AuthenticationMode::Register => "register",
-            AuthenticationMode::Login => "login",
-        }
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuthenticationDetails {
     pub version: u16,
-    pub mode: i16,
     pub entity: String,
     pub entity_type: i16,
     pub email_address: String,

@@ -8,8 +8,8 @@ use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::{
-    APIKey as APIAPIKey, AuthenticationDetails, AuthenticationMode, AybConfig,
-    Database as APIDatabase, EmptyResponse, EntityDatabasePath,
+    APIKey as APIAPIKey, AuthenticationDetails, AybConfig, Database as APIDatabase, EmptyResponse,
+    EntityDatabasePath,
 };
 use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token};
 use crate::http::utils::get_header;
@@ -31,58 +31,42 @@ async fn confirm(
         })
         .await?;
 
-    // Ensure that there are no verified authentication methods, and
-    // check to see if this method has been previously attempted but
-    // not verified.
+    // Check if there are authentication methods already, and if this
+    // method in particular is verified.
     let auth_methods = ayb_db.list_authentication_methods(&created_entity).await?;
     let mut already_verified = false;
-    let mut auth_method: Option<InstantiatedAuthenticationMethod> = None;
+    let mut found_auth_method: Option<InstantiatedAuthenticationMethod> = None;
     for method in auth_methods {
-        if method.status == (AuthenticationMethodStatus::Verified as i16) {
-            already_verified = true;
-            if method.method_type == (AuthenticationMethodType::Email as i16)
-                && method.email_address == auth_details.email_address
-            {
-                auth_method = Some(method)
-            }
+        already_verified = true;
+        if method.method_type == (AuthenticationMethodType::Email as i16)
+            && method.email_address == auth_details.email_address
+        {
+            found_auth_method = Some(method)
         }
     }
 
-    match AuthenticationMode::from_i16(auth_details.mode) {
-        AuthenticationMode::Register => {
-            // If registering, either accept this authentication
-            // method if it was previously created, or if there is no
-            // other verification method already verified.
-            if let None = auth_method {
-                if already_verified {
-                    return Err(AybError {
-                        message: format!("This entity has already been registered"),
-                    });
-                }
-                ayb_db
-                    .create_authentication_method(&AuthenticationMethod {
-                        entity_id: created_entity.id,
-                        method_type: AuthenticationMethodType::Email as i16,
-                        status: AuthenticationMethodStatus::Verified as i16,
-                        email_address: auth_details.email_address,
-                    })
-                    .await?;
-            }
+    if let None = found_auth_method {
+        // If the user was logging in an already verified account,
+        // auth_method can't be empty. So the only way to reach this
+        // branch is when registering.
+        // When registering, either accept this authentication method
+        // if it was previously created, or if there is no other
+        // verification method already verified.
+        if already_verified {
+            return Err(AybError {
+                message: format!("{} has already been registered", created_entity.slug),
+            });
         }
-        AuthenticationMode::Login => {
-            // TODO(marcua): After creating the login endpoint,
-            // consider whether this code path is necessary, or if we
-            // can remove Register vs. Login mode. When doing that,
-            // think about entity that hasn't registered, has verified
-            // with the current authentication method, and has
-            // registered/verified with another authentication method.
-            if let None = auth_method {
-                return Err(AybError {
-                    message: format!("Login failed due to unverified authentication method"),
-                });
-            }
-        }
+        ayb_db
+            .create_authentication_method(&AuthenticationMethod {
+                entity_id: created_entity.id,
+                method_type: AuthenticationMethodType::Email as i16,
+                status: AuthenticationMethodStatus::Verified as i16,
+                email_address: auth_details.email_address,
+            })
+            .await?;
     }
+
     // TODO(marcua): When we implement permissions, get_or_create default API keys.
     // Ok(HttpResponse::Ok().json(APIAPIKey::from_persisted(&created_key)))
     Ok(HttpResponse::Ok().json(APIAPIKey {
@@ -131,7 +115,6 @@ async fn log_in(
                 let token = encrypt_auth_token(
                     &AuthenticationDetails {
                         version: 1,
-                        mode: AuthenticationMode::Register as i16,
                         entity: entity,
                         entity_type: instantiated_entity.entity_type,
                         email_address: method.email_address.to_owned(),
@@ -145,7 +128,7 @@ async fn log_in(
     }
 
     return Err(AybError {
-        message: format!("No email authentication method for this entity."),
+        message: format!("No account or email authentication method for {}", entity),
     });
 }
 
@@ -195,14 +178,13 @@ async fn register(
 
     if already_verified {
         return Err(AybError {
-            message: format!("This entity has already been registered"),
+            message: format!("{} has already been registered", entity),
         });
     }
 
     let token = encrypt_auth_token(
         &AuthenticationDetails {
             version: 1,
-            mode: AuthenticationMode::Register as i16,
             entity: entity.clone(),
             entity_type: EntityType::from_str(&entity_type) as i16,
             email_address: email_address.to_owned(),

@@ -28,5 +28,8 @@ pub fn decrypt_auth_token(
     auth_config: &AybConfigAuthentication,
 ) -> Result<AuthenticationDetails, AybError> {
     let generator = get_fernet_generator(auth_config)?;
-    Ok(serde_json::from_slice(&generator.decrypt(&cyphertext)?)?)
+    Ok(serde_json::from_slice(&generator.decrypt_with_ttl(
+        &cyphertext,
+        auth_config.token_expiration_seconds,
+    )?)?)
 }
