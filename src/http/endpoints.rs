@@ -12,7 +12,7 @@ use crate::http::structs::{
     EntityDatabasePath,
 };
 use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token};
-use crate::http::utils::get_header;
+use crate::http::utils::{get_header, get_lowercased_header};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/confirm")]
@@ -99,7 +99,7 @@ async fn log_in(
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
-    let entity = get_header(&req, "entity")?;
+    let entity = get_lowercased_header(&req, "entity")?;
     let desired_entity = ayb_db.get_entity(&entity).await;
 
     if let Ok(instantiated_entity) = desired_entity {
@@ -154,8 +154,8 @@ async fn register(
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
-    let entity = get_header(&req, "entity")?;
-    let email_address = get_header(&req, "email-address")?;
+    let entity = get_lowercased_header(&req, "entity")?;
+    let email_address = get_lowercased_header(&req, "email-address")?;
     let entity_type = get_header(&req, "entity-type")?;
     let desired_entity = ayb_db.get_entity(&entity).await;
     // Ensure that there are no authentication methods aside from
