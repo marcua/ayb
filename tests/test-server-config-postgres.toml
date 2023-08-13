@@ -2,3 +2,14 @@ host = "0.0.0.0"
 port = 5433
 database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
 data_path = "./tests/ayb_data_postgres"
+
+[email]
+from = "Server Sender <server@example.org>"
+reply_to = "Server Reply <replyto@example.org>"
+smtp_host = "localhost"
+smtp_username = "login@example.org"
+smtp_password = "the_password"
+
+[authentication]
+fernet_key = "y3UdMqGh6si7pvQb8wsuW3ryiJcacp0H1QoHUPfsjb0="
+token_expiration_seconds = 3600
