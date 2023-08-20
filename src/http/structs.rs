@@ -15,6 +15,7 @@ pub struct AybConfigEmail {
     pub from: String,
     pub reply_to: String,
     pub smtp_host: String,
+    pub smtp_port: u16,
     pub smtp_username: String,
     pub smtp_password: String,
 }
