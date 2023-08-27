@@ -1,3 +1,4 @@
+import json
 import os
 import ssl
 import subprocess
@@ -11,18 +12,27 @@ from aiosmtpd.smtp import SMTP
 # Inspired by https://aiosmtpd.readthedocs.io/en/latest/migrating.html
 
 class CustomHandler:
+    def __init__(self, directory):
+        self._directory = directory
 
     async def handle_DATA(self, server, session, envelope):
         peer = session.peer
         mail_from = envelope.mail_from
         rcpt_tos = envelope.rcpt_tos
-        data = envelope.content
-        print(peer, mail_from, rcpt_tos, data, dir(envelope))
+        lines = (envelope.content.decode('utf-8')
+                 # Prevent long lines from being split
+                 .replace('=\r\n', '')
+                 .splitlines())
+        index = lines.index('')
+        data = dict(line.split(': ', 1) for line in lines[:index])
+        data['content'] = lines[index+1:]
+        with open(os.path.join(directory, rcpt_tos[0]), 'a') as outfile:
+            outfile.write(f'{json.dumps(data)}\n')
         return '250 OK'
 
 if __name__ == '__main__':
     directory = os.path.join(os.getcwd(), sys.argv[1])
-    handler = CustomHandler()
+    handler = CustomHandler(directory)
     # TLS details from https://stackoverflow.com/questions/45447491/how-do-i-properly-support-starttls-with-aiosmtpd
     subprocess.call(f'openssl req -x509 -newkey rsa:4096 '
                     f'-keyout {directory}/key.pem -out {directory}/cert.pem '

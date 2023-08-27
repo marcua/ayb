@@ -57,7 +57,6 @@ async fn send_email(
         // that does not verify credentials or sign certificates with
         // a certificate authority.
 
-        // TODO(marcua): Make Python write to file
         // TODO(marcua): Make e2e tests read file, assert emails work
         let tls = TlsParameters::builder(config.smtp_host.to_owned())
             .dangerous_accept_invalid_certs(true)
