@@ -121,7 +121,13 @@ async fn log_in(
                     },
                     &ayb_config.authentication,
                 )?;
-                send_registration_email(&method.email_address, &token, &ayb_config.email).await?;
+                send_registration_email(
+                    &method.email_address,
+                    &token,
+                    &ayb_config.email,
+                    ayb_config.e2e_testing_on(),
+                )
+                .await?;
                 return Ok(HttpResponse::Ok().json(EmptyResponse {}));
             }
         }
@@ -191,6 +197,12 @@ async fn register(
         },
         &ayb_config.authentication,
     )?;
-    send_registration_email(&email_address, &token, &ayb_config.email).await?;
+    send_registration_email(
+        &email_address,
+        &token,
+        &ayb_config.email,
+        ayb_config.e2e_testing_on(),
+    )
+    .await?;
     Ok(HttpResponse::Ok().json(EmptyResponse {}))
 }

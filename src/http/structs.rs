@@ -26,8 +26,18 @@ pub struct AybConfig {
     pub port: u16,
     pub database_url: String,
     pub data_path: String,
+    pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
     pub email: AybConfigEmail,
+}
+
+impl AybConfig {
+    pub fn e2e_testing_on(&self) -> bool {
+        match self.e2e_testing {
+            Some(v) => v,
+            None => false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

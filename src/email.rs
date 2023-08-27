@@ -1,20 +1,24 @@
 use crate::error::AybError;
 use crate::http::structs::AybConfigEmail;
 use lettre::{
-    message::header::ContentType, transport::smtp::authentication::Credentials, transport::smtp::client::{Tls, TlsParameters}, AsyncSmtpTransport,
-    AsyncTransport, Message, SmtpTransport, Transport, Tokio1Executor,
+    message::header::ContentType,
+    transport::smtp::authentication::Credentials,
+    transport::smtp::client::{Tls, TlsParameters},
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 
 pub async fn send_registration_email(
     to: &str,
     token: &str,
     config: &AybConfigEmail,
+    e2e_testing_on: bool,
 ) -> Result<(), AybError> {
     return send_email(
         to,
         "Your login credentials",
         format!("To log in, type\n\tayb client confirm {token}"),
         config,
+        e2e_testing_on,
     )
     .await;
 }
@@ -24,6 +28,7 @@ async fn send_email(
     subject: &str,
     body: String,
     config: &AybConfigEmail,
+    e2e_testing_on: bool,
 ) -> Result<(), AybError> {
     // TODO(marcua): Any way to be more careful about these unwraps?
     let email = Message::builder()
@@ -40,47 +45,35 @@ async fn send_email(
         config.smtp_password.to_owned(),
     );
 
-    // Open a remote connection to SMTP server
-    if config.smtp_host == "localhost" {
-        // TODO(marcua): See if you can use the Async transport in Rust for both use cases
-        // TODO(marcua): Introduce an e2e config option for server, get rid of hard-coded hostname/port
+    let mut mailer: AsyncSmtpTransport<Tokio1Executor> =
+        AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
+            .unwrap()
+            .credentials(creds.clone())
+            .port(config.smtp_port)
+            .build();
+
+    if e2e_testing_on {
+        // When end-to-end testing, we connect to a local SMTP server
+        // that does not verify credentials or sign certificates with
+        // a certificate authority.
+
         // TODO(marcua): Make Python write to file
         // TODO(marcua): Make e2e tests read file, assert emails work
         let tls = TlsParameters::builder(config.smtp_host.to_owned())
             .dangerous_accept_invalid_certs(true)
             .build()
             .unwrap();
-        let mailer = SmtpTransport::relay(&config.smtp_host)
+        mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
             .unwrap()
-            .port(10025)
-            .tls(Tls::Required(tls))
-            //.credentials(creds)
-            .build();
-        /*let mailer: AsyncSmtpTransport<Tokio1Executor> =        
-            AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&config.smtp_host)
-            //.unwrap()
-            .credentials(creds.clone())
             .port(config.smtp_port)
             .tls(Tls::Required(tls))
-            .build();*/
-        
-        if let Err(e) = mailer.send(&email) {
-            return Err(AybError {
-                message: format!("Could not send email: {e:?}"),
-            });
-        }
-        
-    } else {
-        let mailer: AsyncSmtpTransport<Tokio1Executor> =
-            AsyncSmtpTransport::<Tokio1Executor>::relay(&config.smtp_host)
-            .unwrap()
-            .credentials(creds.clone())
             .build();
-        if let Err(e) = mailer.send(email).await {
-            return Err(AybError {
-                message: format!("Could not send email: {e:?}"),
-            });
-        }
+    }
+
+    if let Err(e) = mailer.send(email).await {
+        return Err(AybError {
+            message: format!("Could not send email: {e:?}"),
+        });
     }
 
     Ok(())
