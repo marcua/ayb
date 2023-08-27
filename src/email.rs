@@ -42,7 +42,6 @@ async fn send_email(
 
     // Open a remote connection to SMTP server
     if config.smtp_host == "localhost" {
-        // TODO(marcua): Clean up Python (both code and make everything use the test email directory, then delete directory/certs/virtualenv in cleanup script)
         // TODO(marcua): See if you can use the Async transport in Rust for both use cases
         // TODO(marcua): Introduce an e2e config option for server, get rid of hard-coded hostname/port
         // TODO(marcua): Make Python write to file

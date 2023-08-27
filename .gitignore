@@ -13,5 +13,6 @@ ayb.toml
 e2e.sh
 tests/ayb_data_postgres
 tests/ayb_data_sqlite
+tests/smtp_data
 ayb_data
 reset_db.sh
