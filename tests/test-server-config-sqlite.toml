@@ -8,7 +8,7 @@ e2e_testing = true
 from = "Server Sender <server@example.org>"
 reply_to = "Server Reply <replyto@example.org>"
 smtp_host = "localhost"
-smtp_port = 10025
+smtp_port = 10026
 smtp_username = "login@example.org"
 smtp_password = "the_password"
 

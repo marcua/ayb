@@ -24,7 +24,9 @@ class CustomHandler:
                  .replace('=\r\n', '')
                  .splitlines())
         index = lines.index('')
-        data = dict(line.split(': ', 1) for line in lines[:index])
+        split_lines = (tuple(line.split(': ', 1)) for line in lines[:index])
+        data = dict((first.lower().replace('-', '_'), second)
+                    for (first, second) in split_lines)
         data['content'] = lines[index+1:]
         with open(os.path.join(directory, rcpt_tos[0]), 'a') as outfile:
             outfile.write(f'{json.dumps(data)}\n')
@@ -32,6 +34,7 @@ class CustomHandler:
 
 if __name__ == '__main__':
     directory = os.path.join(os.getcwd(), sys.argv[1])
+    port = int(sys.argv[2])
     handler = CustomHandler(directory)
     # TLS details from https://stackoverflow.com/questions/45447491/how-do-i-properly-support-starttls-with-aiosmtpd
     subprocess.call(f'openssl req -x509 -newkey rsa:4096 '
@@ -42,7 +45,7 @@ if __name__ == '__main__':
     class ControllerStarttls(Controller):
         def factory(self):
             return SMTP(self.handler, require_starttls=True, tls_context=context)
-    controller = ControllerStarttls(handler, hostname='127.0.0.1', port=10025)
+    controller = ControllerStarttls(handler, hostname='127.0.0.1', port=port)
 
     # Run the event loop in a separate thread.
     controller.start()
