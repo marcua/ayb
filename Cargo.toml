@@ -20,7 +20,7 @@ reqwest = { version = "0.11.18", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled"] }
 regex = { version = "1.9.3"}
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.104" }
+serde_json = { version = "1.0.105" }
 serde_repr = { version = "0.1.16" }
 sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
 toml = { version = "0.7.6" }
