@@ -1,5 +1,6 @@
 use assert_cmd::prelude::*;
 use ayb::error::AybError;
+use quoted_printable;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::process::Command;
@@ -55,7 +56,10 @@ fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
     assert_eq!(email.subject, "Your login credentials");
     for line in &email.content {
         if line.starts_with(prefix) && line.len() > prefix.len() {
-            return Ok(line[prefix.len()..].to_owned());
+            return Ok(String::from_utf8(quoted_printable::decode(
+                line[prefix.len()..].to_owned(),
+                quoted_printable::ParseMode::Robust,
+            )?)?);
         }
     }
     return Err(AybError {
@@ -106,9 +110,18 @@ fn client_server_integration(
         .success()
         .stdout("Check your email to finish registering e2e\n");
 
-    // Can register an entity twice as long as you don't complete the process.
+    // Register the same entity with the same email address.
     Command::cargo_bin("ayb")?
         .args(["client", "register", "e2e", "e2e@example.org"])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Check your email to finish registering e2e\n");
+
+    // Can start to register an entity twice as long as you don't
+    // complete the process.
+    Command::cargo_bin("ayb")?
+        .args(["client", "register", "e2e", "e2e-another@example.org"])
         .env("AYB_SERVER_URL", server_url)
         .assert()
         .success()
@@ -117,14 +130,68 @@ fn client_server_integration(
     // Check that two emails were received
     let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
     assert_eq!(entries.len(), 2);
-    // XYZ assert subjects, assert contents, get both tokens, first succeeds second fails
-    let token0 = extract_token(&entries[0]);
-    let token1 = extract_token(&entries[1]);
-    println!("{:?}, {:?}", token0, token1);
+    let token0 = extract_token(&entries[0])?;
+    let token1 = extract_token(&entries[1])?;
+    let entries = parse_smtp_log(&format!(
+        "tests/smtp_data_{}/e2e-another@example.org",
+        smtp_port
+    ))?;
+    assert_eq!(entries.len(), 1);
+    let token2 = extract_token(&entries[0])?;
 
-    // XYZ Confirm registration
+    // Using a bad token (appending a letter) doesn't work.
+    Command::cargo_bin("ayb")?
+        .args(["client", "confirm", &format!("{}a", token0)])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Error: Invalid or expired token\n");
 
-    // XYZ Try logging in
+    // Using either token first will register the account. The second
+    // token, which has the same email address, will still work
+    // (confirming an email the second time is like logging in). The
+    // third token, which was with a different email address for the
+    // same account, won't work now that there's already a confirmed
+    // email address on the account..
+    Command::cargo_bin("ayb")?
+        .args(["client", "confirm", &token0])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Successfully authenticated and saved token default/insecure, unimplemented\n");
+
+    Command::cargo_bin("ayb")?
+        .args(["client", "confirm", &token1])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Successfully authenticated and saved token default/insecure, unimplemented\n");
+
+    Command::cargo_bin("ayb")?
+        .args(["client", "confirm", &token2])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Error: e2e has already been registered\n");
+
+    // Logging in as the user emails the first email address, which
+    // can confirm using the token it received.
+    Command::cargo_bin("ayb")?
+        .args(["client", "log_in", "e2e"])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Check your email to finish logging in e2e\n");
+
+    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
+    assert_eq!(entries.len(), 3);
+    let login_token = extract_token(&entries[2])?;
+    Command::cargo_bin("ayb")?
+        .args(["client", "confirm", &login_token])
+        .env("AYB_SERVER_URL", server_url)
+        .assert()
+        .success()
+        .stdout("Successfully authenticated and saved token default/insecure, unimplemented\n");
 
     // Create database.
     Command::cargo_bin("ayb")?

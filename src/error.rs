@@ -1,11 +1,13 @@
 use actix_web;
 use derive_more::{Display, Error};
 use fernet;
+use quoted_printable;
 use reqwest;
 use rusqlite;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sqlx;
+use std::string;
 
 #[derive(Debug, Deserialize, Display, Error, Serialize)]
 pub struct AybError {
@@ -26,6 +28,14 @@ impl From<fernet::DecryptionError> for AybError {
     }
 }
 
+impl From<quoted_printable::QuotedPrintableError> for AybError {
+    fn from(cause: quoted_printable::QuotedPrintableError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
 impl From<rusqlite::Error> for AybError {
     fn from(cause: rusqlite::Error) -> Self {
         AybError {
@@ -36,6 +46,14 @@ impl From<rusqlite::Error> for AybError {
 
 impl From<rusqlite::types::FromSqlError> for AybError {
     fn from(cause: rusqlite::types::FromSqlError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<string::FromUtf8Error> for AybError {
+    fn from(cause: string::FromUtf8Error) -> Self {
         AybError {
             message: format!("{:?}", cause),
         }
