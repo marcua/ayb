@@ -359,6 +359,7 @@ dependencies = [
  "fernet",
  "lettre",
  "prettytable-rs",
+ "quoted_printable 0.5.0",
  "regex",
  "reqwest",
  "rusqlite",
@@ -1336,7 +1337,7 @@ dependencies = [
  "native-tls",
  "nom",
  "once_cell",
- "quoted_printable",
+ "quoted_printable 0.4.8",
  "socket2 0.4.9",
  "tokio",
  "tokio-native-tls",
@@ -1731,6 +1732,12 @@ name = "quoted_printable"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a3866219251662ec3b26fc217e3e05bf9c4f84325234dfb96bf0bf840889e49"
+
+[[package]]
+name = "quoted_printable"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "79ec282e887b434b68c18fe5c121d38e72a5cf35119b59e54ec5b992ea9c8eb0"
 
 [[package]]
 name = "rand"
