@@ -166,30 +166,31 @@ WHERE slug = $1
 
             async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError> {
                 // Get or create logic inspired by https://stackoverflow.com/a/66337293
-                let entity: InstantiatedEntity = sqlx::query_as(
+                let mut tx = self.pool.begin().await?;
+                sqlx::query(
                     r#"
-BEGIN;
-
-
 INSERT INTO entity ( slug, entity_type )
 VALUES ( $1, $2 )
 ON CONFLICT (slug) DO UPDATE
-  SET entity_type = $2
-  WHERE false
-RETURNING id, slug, entity_type;
-
-SELECT id, slug, entity_type
-FROM entity
-WHERE slug = $1;
-
-COMMIT;
+    SET entity_type = $2
+    WHERE false;
                 "#,
                 )
                 .bind(&entity.slug)
                 .bind(entity.entity_type)
-                .fetch_one(&self.pool)
+                .execute(&mut tx)
                 .await?;
-
+                let entity: InstantiatedEntity = sqlx::query_as(
+                    r#"
+SELECT id, slug, entity_type
+FROM entity
+WHERE slug = $1;
+                "#,
+                )
+                .bind(&entity.slug)
+                .fetch_one(&mut tx)
+                .await?;
+                tx.commit().await?;
                 Ok(entity)
             }
 
