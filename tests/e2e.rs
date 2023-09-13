@@ -100,7 +100,7 @@ fn client_server_integration(
     let mut smtp_server = Command::new("tests/smtp_server.sh")
         .args([&*format!("{}", smtp_port)])
         .spawn()?;
-    thread::sleep(time::Duration::from_secs(5));
+    thread::sleep(time::Duration::from_secs(20));
 
     // Register an entity.
     Command::cargo_bin("ayb")?
