@@ -45,7 +45,7 @@ if __name__ == '__main__':
     class ControllerStarttls(Controller):
         def factory(self):
             return SMTP(self.handler, require_starttls=True, tls_context=context)
-    controller = ControllerStarttls(handler, hostname='127.0.0.1', port=port)
+    controller = ControllerStarttls(handler, hostname='0.0.0.0', port=port)
 
     # Run the event loop in a separate thread.
     controller.start()
