@@ -3,6 +3,7 @@ import os
 import ssl
 import subprocess
 import sys
+import time
 
 from aiosmtpd.controller import Controller
 from aiosmtpd.smtp import SMTP
@@ -49,6 +50,6 @@ if __name__ == '__main__':
 
     # Run the event loop in a separate thread.
     controller.start()
-    # Wait for the user to press Return.
-    input('SMTP server running. Press Return to stop server and exit.')
+    while True:
+        time.sleep(1)
     controller.stop()
