@@ -1,11 +1,10 @@
 use assert_cmd::prelude::*;
-use ayb::error::AybError;
-use quoted_printable;
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::process::Command;
 use std::thread;
 use std::time;
+
+mod utils;
 
 fn client_query(
     server_url: &str,
@@ -28,43 +27,6 @@ fn client_query(
         .success()
         .stdout(format!("{}\n", result));
     Ok(())
-}
-
-// TODO(marcua): Move all email stuff to an email_utils module.
-#[derive(Serialize, Deserialize)]
-struct EmailEntry {
-    from: String,
-    to: String,
-    reply_to: String,
-    subject: String,
-    content_type: String,
-    content_transfer_encoding: String,
-    date: String,
-    content: Vec<String>,
-}
-
-fn parse_smtp_log(file_path: &str) -> Result<Vec<EmailEntry>, serde_json::Error> {
-    let mut entries = Vec::new();
-    for line in fs::read_to_string(file_path).unwrap().lines() {
-        entries.push(serde_json::from_str(line)?);
-    }
-    return Ok(entries);
-}
-
-fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
-    let prefix = "\tayb client confirm ";
-    assert_eq!(email.subject, "Your login credentials");
-    for line in &email.content {
-        if line.starts_with(prefix) && line.len() > prefix.len() {
-            return Ok(String::from_utf8(quoted_printable::decode(
-                line[prefix.len()..].to_owned(),
-                quoted_printable::ParseMode::Robust,
-            )?)?);
-        }
-    }
-    return Err(AybError {
-        message: "No token found in email".to_owned(),
-    });
 }
 
 #[test]
@@ -128,16 +90,16 @@ fn client_server_integration(
         .stdout("Check your email to finish registering e2e\n");
 
     // Check that two emails were received
-    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
+    let entries = utils::parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
     assert_eq!(entries.len(), 2);
-    let token0 = extract_token(&entries[0])?;
-    let token1 = extract_token(&entries[1])?;
-    let entries = parse_smtp_log(&format!(
+    let token0 = utils::extract_token(&entries[0])?;
+    let token1 = utils::extract_token(&entries[1])?;
+    let entries = utils::parse_smtp_log(&format!(
         "tests/smtp_data_{}/e2e-another@example.org",
         smtp_port
     ))?;
     assert_eq!(entries.len(), 1);
-    let token2 = extract_token(&entries[0])?;
+    let token2 = utils::extract_token(&entries[0])?;
 
     // Using a bad token (appending a letter) doesn't work.
     Command::cargo_bin("ayb")?
@@ -183,9 +145,9 @@ fn client_server_integration(
         .success()
         .stdout("Check your email to finish logging in e2e\n");
 
-    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
+    let entries = utils::parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
     assert_eq!(entries.len(), 3);
-    let login_token = extract_token(&entries[2])?;
+    let login_token = utils::extract_token(&entries[2])?;
     Command::cargo_bin("ayb")?
         .args(["client", "confirm", &login_token])
         .env("AYB_SERVER_URL", server_url)
