@@ -48,7 +48,7 @@ fn client_server_integration(
         .assert()
         .success();
 
-    // Run server, give it a few seconds to start
+    // Run server
     let mut ayb_server = Command::cargo_bin("ayb")?
         .args([
             "server",
@@ -56,13 +56,14 @@ fn client_server_integration(
             &*format!("tests/test-server-config-{}.toml", db_type),
         ])
         .spawn()?;
-    thread::sleep(time::Duration::from_secs(1));
 
-    // Run stub SMTP server, give it a few seconds to start
+    // Run stub SMTP server
     let mut smtp_server = Command::new("tests/smtp_server.sh")
         .args([&*format!("{}", smtp_port)])
         .spawn()?;
-    thread::sleep(time::Duration::from_secs(20));
+
+    // Give the external processes time to start
+    thread::sleep(time::Duration::from_secs(10));
 
     // Register an entity.
     Command::cargo_bin("ayb")?
