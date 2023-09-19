@@ -1,6 +1,7 @@
 use actix_web;
 use derive_more::{Display, Error};
 use fernet;
+use lettre;
 use quoted_printable;
 use reqwest;
 use rusqlite;
@@ -24,6 +25,14 @@ impl From<fernet::DecryptionError> for AybError {
     fn from(_cause: fernet::DecryptionError) -> Self {
         AybError {
             message: "Invalid or expired token".to_owned(),
+        }
+    }
+}
+
+impl From<lettre::address::AddressError> for AybError {
+    fn from(cause: lettre::address::AddressError) -> Self {
+        AybError {
+            message: format!("Invalid email address: {}", cause),
         }
     }
 }

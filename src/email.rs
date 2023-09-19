@@ -30,11 +30,10 @@ async fn send_email(
     config: &AybConfigEmail,
     e2e_testing_on: bool,
 ) -> Result<(), AybError> {
-    // TODO(marcua): Any way to be more careful about these unwraps?
     let email = Message::builder()
-        .from(config.from.parse().unwrap())
-        .reply_to(config.reply_to.parse().unwrap())
-        .to(to.parse().unwrap())
+        .from(config.from.parse()?)
+        .reply_to(config.reply_to.parse()?)
+        .to(to.parse()?)
         .subject(subject)
         .header(ContentType::TEXT_PLAIN)
         .body(body)
