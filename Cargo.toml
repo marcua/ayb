@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 actix-web = { version = "4.4.0" }
-async-trait = { version = "0.1.72" }
+async-trait = { version = "0.1.73" }
 clap = { version = "4.4.2", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 dyn-clone = { version = "1.0.14" }
