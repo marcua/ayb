@@ -8,7 +8,7 @@ documentation = "https://github.com/marcua/ayb#readme"
 license = "Apache-2.0"
 
 [dependencies]
-actix-web = { version = "4.3.1" }
+actix-web = { version = "4.4.0" }
 async-trait = { version = "0.1.72" }
 clap = { version = "4.4.2", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
