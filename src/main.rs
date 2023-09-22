@@ -88,11 +88,25 @@ async fn main() -> std::io::Result<()> {
                         .about("Register a user/organization")
                         .arg(arg!(<entity> "The entity to create")
                              .required(true))
+                        .arg(arg!(<email_address> "The email address of the entity")
+                             .required(true))
                         .arg(
                             arg!(<type> "The type of entity")
                                 .value_parser(value_parser!(EntityType))
                                 .default_value(EntityType::User.to_str())
                                 .required(false)),
+                )
+                .subcommand(
+                    Command::new("confirm")
+                        .about("Confirm an email-based login/registration")
+                        .arg(arg!(<authentication_token> "The authentication token")
+                             .required(true))
+                )
+                .subcommand(
+                    Command::new("log_in")
+                        .about("Log in to ayb via email authentication")
+                        .arg(arg!(<entity> "The entity to log in as")
+                             .required(true))
                 )
         )
         .get_matches();
@@ -131,13 +145,42 @@ async fn main() -> std::io::Result<()> {
                     }
                 }
             } else if let Some(matches) = matches.subcommand_matches("register") {
-                if let (Some(entity), Some(entity_type)) = (
+                if let (Some(entity), Some(email_address), Some(entity_type)) = (
                     matches.get_one::<String>("entity"),
+                    matches.get_one::<String>("email_address"),
                     matches.get_one::<EntityType>("type"),
                 ) {
-                    match client.register(entity, entity_type).await {
+                    match client.register(entity, email_address, entity_type).await {
                         Ok(_response) => {
-                            println!("Successfully registered {}", entity);
+                            println!("Check your email to finish registering {}", entity);
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("confirm") {
+                if let Some(authentication_token) =
+                    matches.get_one::<String>("authentication_token")
+                {
+                    match client.confirm(authentication_token).await {
+                        Ok(api_key) => {
+                            // TODO(marcua): Save the token and use it for future requests.
+                            println!(
+                                "Successfully authenticated and saved token {}/{}",
+                                api_key.name, api_key.key
+                            );
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("log_in") {
+                if let Some(entity) = matches.get_one::<String>("entity") {
+                    match client.log_in(entity).await {
+                        Ok(_response) => {
+                            println!("Check your email to finish logging in {}", entity);
                         }
                         Err(err) => {
                             println!("Error: {}", err);

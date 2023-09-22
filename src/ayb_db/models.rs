@@ -84,6 +84,82 @@ impl EntityType {
     }
 }
 
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum AuthenticationMethodType {
+    Email = 0,
+}
+
+impl fmt::Display for AuthenticationMethodType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl AuthenticationMethodType {
+    pub fn from_i16(value: i16) -> AuthenticationMethodType {
+        match value {
+            0 => AuthenticationMethodType::Email,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn from_str(value: &str) -> AuthenticationMethodType {
+        match value {
+            "email" => AuthenticationMethodType::Email,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            AuthenticationMethodType::Email => "email",
+        }
+    }
+}
+
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum AuthenticationMethodStatus {
+    Verified = 0,
+    Revoked = 1,
+}
+
+impl fmt::Display for AuthenticationMethodStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl AuthenticationMethodStatus {
+    pub fn from_i16(value: i16) -> AuthenticationMethodStatus {
+        match value {
+            0 => AuthenticationMethodStatus::Verified,
+            1 => AuthenticationMethodStatus::Revoked,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn from_str(value: &str) -> AuthenticationMethodStatus {
+        match value {
+            "verified" => AuthenticationMethodStatus::Verified,
+            "revoked" => AuthenticationMethodStatus::Revoked,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            AuthenticationMethodStatus::Verified => "verified",
+            AuthenticationMethodStatus::Revoked => "revoked",
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Database {
     pub entity_id: i32,
@@ -110,4 +186,21 @@ pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
     pub entity_type: i16,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthenticationMethod {
+    pub entity_id: i32,
+    pub method_type: i16,
+    pub status: i16,
+    pub email_address: String,
+}
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct InstantiatedAuthenticationMethod {
+    pub id: i32,
+    pub entity_id: i32,
+    pub method_type: i16,
+    pub status: i16,
+    pub email_address: String,
 }

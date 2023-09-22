@@ -2,3 +2,16 @@ host = "0.0.0.0"
 port = 5434
 database_url = "sqlite://tests/ayb_data_sqlite/ayb.sqlite"
 data_path = "./tests/ayb_data_sqlite"
+e2e_testing = true
+
+[email]
+from = "Server Sender <server@example.org>"
+reply_to = "Server Reply <replyto@example.org>"
+smtp_host = "localhost"
+smtp_port = 10026
+smtp_username = "login@example.org"
+smtp_password = "the_password"
+
+[authentication]
+fernet_key = "y3UdMqGh6si7pvQb8wsuW3ryiJcacp0H1QoHUPfsjb0="
+token_expiration_seconds = 3600

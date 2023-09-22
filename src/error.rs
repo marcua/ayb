@@ -1,9 +1,14 @@
 use actix_web;
 use derive_more::{Display, Error};
+use fernet;
+use lettre;
+use quoted_printable;
 use reqwest;
 use rusqlite;
 use serde::{Deserialize, Serialize};
+use serde_json;
 use sqlx;
+use std::string;
 
 #[derive(Debug, Deserialize, Display, Error, Serialize)]
 pub struct AybError {
@@ -13,6 +18,30 @@ pub struct AybError {
 impl actix_web::error::ResponseError for AybError {
     fn error_response(&self) -> actix_web::HttpResponse {
         actix_web::HttpResponse::InternalServerError().json(self)
+    }
+}
+
+impl From<fernet::DecryptionError> for AybError {
+    fn from(_cause: fernet::DecryptionError) -> Self {
+        AybError {
+            message: "Invalid or expired token".to_owned(),
+        }
+    }
+}
+
+impl From<lettre::address::AddressError> for AybError {
+    fn from(cause: lettre::address::AddressError) -> Self {
+        AybError {
+            message: format!("Invalid email address: {}", cause),
+        }
+    }
+}
+
+impl From<quoted_printable::QuotedPrintableError> for AybError {
+    fn from(cause: quoted_printable::QuotedPrintableError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
     }
 }
 
@@ -26,6 +55,22 @@ impl From<rusqlite::Error> for AybError {
 
 impl From<rusqlite::types::FromSqlError> for AybError {
     fn from(cause: rusqlite::types::FromSqlError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<string::FromUtf8Error> for AybError {
+    fn from(cause: string::FromUtf8Error) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<serde_json::Error> for AybError {
+    fn from(cause: serde_json::Error) -> Self {
         AybError {
             message: format!("{:?}", cause),
         }

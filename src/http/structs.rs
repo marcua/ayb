@@ -2,8 +2,23 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
-
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigAuthentication {
+    pub fernet_key: String,
+    pub token_expiration_seconds: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmail {
+    pub from: String,
+    pub reply_to: String,
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    pub smtp_username: String,
+    pub smtp_password: String,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfig {
@@ -11,6 +26,18 @@ pub struct AybConfig {
     pub port: u16,
     pub database_url: String,
     pub data_path: String,
+    pub e2e_testing: Option<bool>,
+    pub authentication: AybConfigAuthentication,
+    pub email: AybConfigEmail,
+}
+
+impl AybConfig {
+    pub fn e2e_testing_on(&self) -> bool {
+        match self.e2e_testing {
+            Some(v) => v,
+            None => false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,7 +80,19 @@ pub struct EntityDatabasePath {
     pub database: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct EntityPath {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthenticationDetails {
+    pub version: u16,
     pub entity: String,
+    pub entity_type: i16,
+    pub email_address: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct APIKey {
+    pub name: String,
+    pub key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EmptyResponse {}

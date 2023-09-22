@@ -1,5 +1,5 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
-use crate::http::endpoints::{create_database, query, register};
+use crate::http::endpoints::{confirm, create_database, log_in, query, register};
 use crate::http::structs::AybConfig;
 use actix_web::{middleware, web, App, HttpServer};
 use dyn_clone::clone_box;
@@ -8,7 +8,9 @@ use std::path::PathBuf;
 use toml;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(confirm);
     cfg.service(create_database);
+    cfg.service(log_in);
     cfg.service(query);
     cfg.service(register);
 }

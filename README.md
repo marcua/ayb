@@ -48,8 +48,13 @@ Once the server is running, you can set its URL as an environment variable calle
 ```bash
 $ export AYB_SERVER_URL=http://127.0.0.1:5433
 
-$ ayb client register marcua
-Successfully registered marcua
+$ ayb client register marcua you@example.com
+Check your email to finish registering marcua
+
+# You will receive an email at you@example.com instructing you to type the next command
+# Note that bearer token-based authentication is on the roadmap, so the returned token is a placeholder
+$ ayb client confirm TOKEN_FROM_EMAIL
+Successfully authenticated and saved token default/insecure, unimplemented
 
 $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
@@ -82,11 +87,15 @@ Rows: 3
 
 The command line invocations above are a thin wrapper around `ayb`'s HTTP API. Here are the same commands as above, but with `curl`:
 ```bash
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua -H "entity-type: user"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/register -H "entity-type: user" -H "entity: marcua" -H "email-address: your@example.com"
 
-{"entity":"marcua","entity_type":"user"}
+{}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite -H "db-type: sqlite"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/confirm -H "authentication-token: TOKEN_FROM_EMAIL"
+
+{"name":"default","key":"insecure, unimplemented"}
+
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/create -H "db-type: sqlite"
 
 {"entity":"marcua","database":"test.sqlite","database_type":"sqlite"}
 

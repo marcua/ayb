@@ -1,7 +1,7 @@
 use crate::error::AybError;
 use actix_web::HttpRequest;
 
-pub fn get_header(req: HttpRequest, header_name: &str) -> Result<String, AybError> {
+pub fn get_header(req: &HttpRequest, header_name: &str) -> Result<String, AybError> {
     match req.headers().get(header_name) {
         Some(header) => match header.to_str() {
             Ok(header_value) => Ok(header_value.to_owned()),
@@ -13,4 +13,8 @@ pub fn get_header(req: HttpRequest, header_name: &str) -> Result<String, AybErro
             message: format!("Missing required `{}` header", header_name),
         }),
     }
+}
+
+pub fn get_lowercased_header(req: &HttpRequest, header_name: &str) -> Result<String, AybError> {
+    return Ok(get_header(req, header_name)?.to_lowercase());
 }
