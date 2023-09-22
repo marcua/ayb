@@ -46,7 +46,7 @@ async fn confirm(
     }
 
     if let None = found_auth_method {
-        // If the user was logging in an already verified account,
+        // If the user was logging in to an already verified account,
         // auth_method can't be empty. So the only way to reach this
         // branch is when registering.
         // When registering, either accept this authentication method
