@@ -20,6 +20,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "actix-grants-proc-macro"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c278a8d315dd00c434ad65ec14d3416cacb26d16961af8a1d7a19568071e4f32"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "actix-http"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -180,6 +191,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "actix-web-grants"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e03865e96db7fc34438d3f4aa330f81f537652f58f8b3728ddc623038055274"
+dependencies = [
+ "actix-grants-proc-macro",
+ "actix-web",
 ]
 
 [[package]]
@@ -348,6 +369,7 @@ name = "ayb"
 version = "0.1.4"
 dependencies = [
  "actix-web",
+ "actix-web-grants",
  "assert-json-diff",
  "assert_cmd",
  "async-trait",
@@ -357,6 +379,7 @@ dependencies = [
  "env_logger",
  "fernet",
  "lettre",
+ "prefixed-api-key",
  "prettytable-rs",
  "quoted_printable 0.5.0",
  "regex",
@@ -438,6 +461,12 @@ dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
 ]
+
+[[package]]
+name = "bs58"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
 
 [[package]]
 name = "bstr"
@@ -538,6 +567,12 @@ name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
+
+[[package]]
+name = "constant_time_eq"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21a53c0a4d288377e7415b53dcfc3c04da5cdc2cc95c8d5ac178b58f0b861ad6"
 
 [[package]]
 name = "convert_case"
@@ -1698,6 +1733,19 @@ checksum = "368ba315fb8c5052ab692e68a0eefec6ec57b23a36959c14496f0b0df2c0cecf"
 dependencies = [
  "predicates-core",
  "termtree",
+]
+
+[[package]]
+name = "prefixed-api-key"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f117b34dde5c1df3a3da7735f7a7eed170bbc87dc8ac5fbe9a763410e96546e"
+dependencies = [
+ "bs58",
+ "constant_time_eq",
+ "digest",
+ "hex",
+ "rand",
 ]
 
 [[package]]
