@@ -204,3 +204,11 @@ pub struct InstantiatedAuthenticationMethod {
     pub status: i16,
     pub email_address: String,
 }
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct ApiToken {
+    pub entity_id: i32,
+    pub short_token: String,
+    pub hash: String,
+    pub status: i16,
+}

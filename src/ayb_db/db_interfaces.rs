@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
-    AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod, InstantiatedDatabase,
-    InstantiatedEntity,
+    ApiToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
+    InstantiatedDatabase, InstantiatedEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -24,12 +24,14 @@ use std::str::FromStr;
 #[async_trait]
 pub trait AybDb: DynClone + Send + Sync {
     fn is_duplicate_constraint_error(&self, db_error: &dyn sqlx::error::DatabaseError) -> bool;
+    async fn create_api_token(&self, api_token: &ApiToken) -> Result<ApiToken, AybError>;
     async fn create_authentication_method(
         &self,
         method: &AuthenticationMethod,
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
+    async fn get_api_token(&self, short_token: &String) -> Result<ApiToken, AybError>;
     async fn get_database(
         &self,
         entity_slug: &String,
@@ -108,6 +110,34 @@ macro_rules! implement_ayb_db {
                 })?;
 
                 Ok(db)
+            }
+
+            async fn get_api_token(
+                &self,
+                short_token: &String,
+            ) -> Result<ApiToken, AybError> {
+                let api_token: ApiToken = sqlx::query_as(
+                    r#"
+SELECT
+    short_token,
+    entity_id,
+    hash,
+    status
+FROM api_token
+WHERE short_token = $1
+        "#,
+                )
+                .bind(short_token)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError {
+                        message: format!("API Token not found: {:?}", short_token),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(api_token)
             }
 
             async fn get_database(
