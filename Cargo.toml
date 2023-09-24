@@ -11,7 +11,7 @@ license = "Apache-2.0"
 actix-web = { version = "4.4.0" }
 actix-web-grants = { version = "3.0.2" }
 async-trait = { version = "0.1.73" }
-clap = { version = "4.4.2", features = ["cargo", "derive", "env"] }
+clap = { version = "4.4.4", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 dyn-clone = { version = "1.0.14" }
 env_logger = { version = "0.10.0" }
