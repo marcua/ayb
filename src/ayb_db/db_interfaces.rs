@@ -61,6 +61,24 @@ macro_rules! implement_ayb_db {
                 }
             }
 
+            async fn create_api_token(&self, api_token: &ApiToken) -> Result<ApiToken, AybError> {
+                let returned_token: ApiToken = sqlx::query_as(
+                    r#"
+                INSERT INTO api_token ( entity_id, short_token, hash, status )
+                VALUES ( $1, $2, $3, $4 )
+RETURNING entity_id, method_type, status, email_address
+                "#,
+                )
+                    .bind(api_token.entity_id)
+                    .bind(&api_token.short_token)
+                    .bind(&api_token.hash)
+                    .bind(api_token.status)
+                    .fetch_one(&self.pool)
+                    .await?;
+
+                Ok(returned_token)
+            }
+
             async fn create_authentication_method(
                 &self,
                 method: &AuthenticationMethod,
