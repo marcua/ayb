@@ -38,6 +38,8 @@ pub trait AybDb: DynClone + Send + Sync {
         database_slug: &String,
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity(&self, entity_slug: &String) -> Result<InstantiatedEntity, AybError>;
+    async fn list_api_tokens(&self, entity: &InstantiatedEntity)
+        -> Result<Vec<ApiToken>, AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -240,6 +242,28 @@ WHERE slug = $1;
                 .await?;
                 tx.commit().await?;
                 Ok(entity)
+            }
+
+            async fn list_api_tokens(
+                &self,
+                entity: &InstantiatedEntity,
+            ) -> Result<Vec<ApiToken>, AybError> {
+                let tokens: Vec<ApiToken> = sqlx::query_as(
+                    r#"
+SELECT
+    entity_id,
+    short_token,
+    hash,
+    status
+FROM api_token
+WHERE entity_id = $1
+        "#,
+                )
+                .bind(entity.id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                Ok(tokens)
             }
 
             async fn list_authentication_methods(
