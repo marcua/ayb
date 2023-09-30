@@ -11,7 +11,7 @@ license = "Apache-2.0"
 actix-web = { version = "4.4.0" }
 actix-web-grants = { version = "3.0.2" }
 async-trait = { version = "0.1.73" }
-clap = { version = "4.4.2", features = ["cargo", "derive", "env"] }
+clap = { version = "4.4.6", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 dyn-clone = { version = "1.0.14" }
 env_logger = { version = "0.10.0" }
@@ -25,9 +25,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.107" }
 serde_repr = { version = "0.1.16" }
 sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
-toml = { version = "0.8.0" }
+toml = { version = "0.8.1" }
 tokio = { version = "1.32.0", features = ["macros", "rt"] }
-prefixed-api-key = { version = "0.1.0"}
+prefixed-api-key = { version = "0.1.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 
 [dev-dependencies]
