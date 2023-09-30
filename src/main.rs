@@ -164,12 +164,19 @@ async fn main() -> std::io::Result<()> {
                     matches.get_one::<String>("authentication_token")
                 {
                     match client.confirm(authentication_token).await {
-                        Ok(api_key) => {
-                            // TODO(marcua): Save the token and use it for future requests.
-                            println!(
-                                "Successfully authenticated and saved token {}/{}",
-                                api_key.name, api_key.key
-                            );
+                        Ok(api_token) => {
+                            match api_token.token {
+                                Some(token) => {
+                                    // TODO(marcua): Save the token and use it for future requests.
+                                    println!(
+                                        "Successfully authenticated and saved token {}",
+                                        token
+                                    );
+                                }
+                                None => {
+                                    println!("Successfully authenticated");
+                                }
+                            }
                         }
                         Err(err) => {
                             println!("Error: {}", err);

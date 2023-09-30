@@ -1,5 +1,5 @@
 use crate::ayb_db::models::{
-    ApiToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
+    APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
     InstantiatedDatabase, InstantiatedEntity,
 };
 use crate::error::AybError;
@@ -24,14 +24,14 @@ use std::str::FromStr;
 #[async_trait]
 pub trait AybDb: DynClone + Send + Sync {
     fn is_duplicate_constraint_error(&self, db_error: &dyn sqlx::error::DatabaseError) -> bool;
-    async fn create_api_token(&self, api_token: &ApiToken) -> Result<ApiToken, AybError>;
+    async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError>;
     async fn create_authentication_method(
         &self,
         method: &AuthenticationMethod,
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
-    async fn get_api_token(&self, short_token: &String) -> Result<ApiToken, AybError>;
+    async fn get_api_token(&self, short_token: &String) -> Result<APIToken, AybError>;
     async fn get_database(
         &self,
         entity_slug: &String,
@@ -39,7 +39,7 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity(&self, entity_slug: &String) -> Result<InstantiatedEntity, AybError>;
     async fn list_api_tokens(&self, entity: &InstantiatedEntity)
-        -> Result<Vec<ApiToken>, AybError>;
+        -> Result<Vec<APIToken>, AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -63,8 +63,8 @@ macro_rules! implement_ayb_db {
                 }
             }
 
-            async fn create_api_token(&self, api_token: &ApiToken) -> Result<ApiToken, AybError> {
-                let returned_token: ApiToken = sqlx::query_as(
+            async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError> {
+                let returned_token: APIToken = sqlx::query_as(
                     r#"
                 INSERT INTO api_token ( entity_id, short_token, hash, status )
                 VALUES ( $1, $2, $3, $4 )
@@ -135,8 +135,8 @@ RETURNING entity_id, method_type, status, email_address
             async fn get_api_token(
                 &self,
                 short_token: &String,
-            ) -> Result<ApiToken, AybError> {
-                let api_token: ApiToken = sqlx::query_as(
+            ) -> Result<APIToken, AybError> {
+                let api_token: APIToken = sqlx::query_as(
                     r#"
 SELECT
     short_token,
@@ -247,8 +247,8 @@ WHERE slug = $1;
             async fn list_api_tokens(
                 &self,
                 entity: &InstantiatedEntity,
-            ) -> Result<Vec<ApiToken>, AybError> {
-                let tokens: Vec<ApiToken> = sqlx::query_as(
+            ) -> Result<Vec<APIToken>, AybError> {
+                let tokens: Vec<APIToken> = sqlx::query_as(
                     r#"
 SELECT
     entity_id,

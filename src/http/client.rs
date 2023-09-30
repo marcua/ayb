@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIKey, Database, EmptyResponse};
+use crate::http::structs::{APIToken, Database, EmptyResponse};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -37,7 +37,7 @@ impl AybClient {
         }
     }
 
-    pub async fn confirm(&self, authentication_token: &str) -> Result<APIKey, AybError> {
+    pub async fn confirm(&self, authentication_token: &str) -> Result<APIToken, AybError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("authentication-token"),

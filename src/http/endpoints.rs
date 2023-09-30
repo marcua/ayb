@@ -1,17 +1,18 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{
-    AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType, DBType, Database,
-    Entity, EntityType, InstantiatedAuthenticationMethod,
+    APIToken, APITokenStatus, AuthenticationMethod, AuthenticationMethodStatus,
+    AuthenticationMethodType, DBType, Database, Entity, EntityType,
+    InstantiatedAuthenticationMethod,
 };
 use crate::email::send_registration_email;
 use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::{
-    APIKey as APIAPIKey, AuthenticationDetails, AybConfig, Database as APIDatabase, EmptyResponse,
-    EntityDatabasePath,
+    APIToken as APIAPIToken, AuthenticationDetails, AybConfig, Database as APIDatabase,
+    EmptyResponse, EntityDatabasePath,
 };
-use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token};
+use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token, generate_api_token};
 use crate::http::utils::{get_header, get_lowercased_header};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
@@ -67,12 +68,19 @@ async fn confirm(
             .await?;
     }
 
-    // TODO(marcua): When we implement permissions, get_or_create default API keys.
-    // Ok(HttpResponse::Ok().json(APIAPIKey::from_persisted(&created_key)))
-    Ok(HttpResponse::Ok().json(APIAPIKey {
-        name: "default".to_string(),
-        key: "insecure, unimplemented".to_string(),
-    }))
+    let mut returned_token = APIAPIToken { token: None };
+    if auth_details.create_api_token {
+        let (prefixed_api_key, hash) = generate_api_token()?;
+        let _ = ayb_db.create_api_token(&APIToken {
+            entity_id: created_entity.id,
+            short_token: prefixed_api_key.short_token().to_string(),
+            hash: hash,
+            status: APITokenStatus::Active as i16,
+        });
+        returned_token.token = Some(prefixed_api_key.to_string())
+    }
+
+    Ok(HttpResponse::Ok().json(returned_token))
 }
 
 #[post("/v1/{entity}/{database}/create")]
@@ -100,6 +108,7 @@ async fn log_in(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
+    let create_api_token = get_header(&req, "create-api-token")? == "true";
     let desired_entity = ayb_db.get_entity(&entity).await;
 
     if let Ok(instantiated_entity) = desired_entity {
@@ -118,6 +127,7 @@ async fn log_in(
                         entity: entity,
                         entity_type: instantiated_entity.entity_type,
                         email_address: method.email_address.to_owned(),
+                        create_api_token: create_api_token,
                     },
                     &ayb_config.authentication,
                 )?;
@@ -194,6 +204,7 @@ async fn register(
             entity: entity.clone(),
             entity_type: EntityType::from_str(&entity_type) as i16,
             email_address: email_address.to_owned(),
+            create_api_token: true,
         },
         &ayb_config.authentication,
     )?;
