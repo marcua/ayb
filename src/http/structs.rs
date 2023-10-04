@@ -86,12 +86,11 @@ pub struct AuthenticationDetails {
     pub entity: String,
     pub entity_type: i16,
     pub email_address: String,
-    pub create_api_token: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct APIToken {
-    pub token: Option<String>,
+    pub token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

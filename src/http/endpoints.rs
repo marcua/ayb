@@ -68,17 +68,14 @@ async fn confirm(
             .await?;
     }
 
-    let mut returned_token = APIAPIToken { token: None };
-    if auth_details.create_api_token {
-        let (prefixed_api_key, hash) = generate_api_token()?;
-        let _ = ayb_db.create_api_token(&APIToken {
-            entity_id: created_entity.id,
-            short_token: prefixed_api_key.short_token().to_string(),
-            hash: hash,
-            status: APITokenStatus::Active as i16,
-        });
-        returned_token.token = Some(prefixed_api_key.to_string())
-    }
+    let (prefixed_api_key, hash) = generate_api_token()?;
+    let _ = ayb_db.create_api_token(&APIToken {
+        entity_id: created_entity.id,
+        short_token: prefixed_api_key.short_token().to_string(),
+        hash: hash,
+        status: APITokenStatus::Active as i16,
+    });
+    let returned_token = APIAPIToken { token: prefixed_api_key.to_string() };
 
     Ok(HttpResponse::Ok().json(returned_token))
 }
@@ -108,7 +105,6 @@ async fn log_in(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
-    let create_api_token = get_header(&req, "create-api-token")? == "true";
     let desired_entity = ayb_db.get_entity(&entity).await;
 
     if let Ok(instantiated_entity) = desired_entity {
@@ -127,7 +123,6 @@ async fn log_in(
                         entity: entity,
                         entity_type: instantiated_entity.entity_type,
                         email_address: method.email_address.to_owned(),
-                        create_api_token: create_api_token,
                     },
                     &ayb_config.authentication,
                 )?;
@@ -204,7 +199,6 @@ async fn register(
             entity: entity.clone(),
             entity_type: EntityType::from_str(&entity_type) as i16,
             email_address: email_address.to_owned(),
-            create_api_token: true,
         },
         &ayb_config.authentication,
     )?;
