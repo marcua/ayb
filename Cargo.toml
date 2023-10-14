@@ -9,6 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 actix-web = { version = "4.4.0" }
+actix-web-httpauth = { version = "0.8.1" }
 actix-web-grants = { version = "3.0.2" }
 async-trait = { version = "0.1.73" }
 clap = { version = "4.4.6", features = ["cargo", "derive", "env"] }
