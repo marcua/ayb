@@ -1,6 +1,6 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{
-    APIToken, APITokenStatus, AuthenticationMethod, AuthenticationMethodStatus,
+    AuthenticationMethod, AuthenticationMethodStatus,
     AuthenticationMethodType, DBType, Database, Entity, EntityType,
     InstantiatedAuthenticationMethod,
 };
@@ -68,14 +68,9 @@ async fn confirm(
             .await?;
     }
 
-    let (prefixed_api_key, hash) = generate_api_token()?;
-    let _ = ayb_db.create_api_token(&APIToken {
-        entity_id: created_entity.id,
-        short_token: prefixed_api_key.short_token().to_string(),
-        hash: hash,
-        status: APITokenStatus::Active as i16,
-    });
-    let returned_token = APIAPIToken { token: prefixed_api_key.to_string() };
+    let (api_token, token_string) = generate_api_token(&created_entity)?;
+    let _ = ayb_db.create_api_token(&api_token);
+    let returned_token = APIAPIToken { token: token_string };
 
     Ok(HttpResponse::Ok().json(returned_token))
 }

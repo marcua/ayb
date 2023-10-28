@@ -1,7 +1,13 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
+use crate::ayb_db::db_interfaces::AybDb;
+use crate::error::AybError;
 use crate::http::endpoints::{confirm, create_database, log_in, query, register};
 use crate::http::structs::AybConfig;
-use actix_web::{middleware, web, App, HttpServer};
+use crate::http::tokens::validate_api_token;
+use actix_web::{middleware, web, App, Error, HttpServer};
+use actix_web::dev::ServiceRequest;
+use actix_web_httpauth::extractors::bearer::BearerAuth;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
 use std::fs;
 use std::path::PathBuf;
@@ -9,10 +15,29 @@ use toml;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(confirm);
-    cfg.service(create_database);
     cfg.service(log_in);
-    cfg.service(query);
     cfg.service(register);
+    cfg.service(web::scope("/v1/{entity}/{database}")
+                .wrap(HttpAuthentication::bearer(validator))
+                .service(create_database)
+                .service(query));
+}
+
+async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+    match req.app_data::<web::Data<Box<dyn AybDb>>>() {
+        Some(ayb_db) => {
+            let valid = validate_api_token(credentials.token(), ayb_db).await;
+            match valid {
+                Ok(true) => {
+                    //req.attach(claims.permissions):
+                    Ok(req)
+                },
+                Ok(false) => Err((AybError { message: "Invalid API token".to_string() }.into(), req)),
+                Err(e) => Err((e.into(), req))
+            }
+        },
+        None => Err((AybError { message: "Misconfigured server: no database".to_string() }.into(), req))
+    }
 }
 
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
