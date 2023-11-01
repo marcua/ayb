@@ -20,17 +20,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-grants-proc-macro"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c278a8d315dd00c434ad65ec14d3416cacb26d16961af8a1d7a19568071e4f32"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "actix-http"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -191,16 +180,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "actix-web-grants"
-version = "3.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e03865e96db7fc34438d3f4aa330f81f537652f58f8b3728ddc623038055274"
-dependencies = [
- "actix-grants-proc-macro",
- "actix-web",
 ]
 
 [[package]]
@@ -384,7 +363,6 @@ name = "ayb"
 version = "0.1.4"
 dependencies = [
  "actix-web",
- "actix-web-grants",
  "actix-web-httpauth",
  "assert-json-diff",
  "assert_cmd",
