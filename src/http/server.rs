@@ -3,9 +3,9 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::http::endpoints::{confirm, create_database, log_in, query, register};
 use crate::http::structs::AybConfig;
-use crate::http::tokens::validate_api_token;
-use actix_web::{middleware, web, App, Error, HttpServer};
+use crate::http::tokens::retrieve_and_validate_api_token;
 use actix_web::dev::ServiceRequest;
+use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
@@ -17,26 +17,42 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(confirm);
     cfg.service(log_in);
     cfg.service(register);
-    cfg.service(web::scope("/v1/{entity}/{database}")
-                .wrap(HttpAuthentication::bearer(validator))
-                .service(create_database)
-                .service(query));
+    cfg.service(
+        web::scope("/v1/{entity}/{database}")
+            .wrap(HttpAuthentication::bearer(entity_validator))
+            .service(create_database)
+            .service(query),
+    );
 }
 
-async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+async fn entity_validator(
+    req: ServiceRequest,
+    credentials: BearerAuth,
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     match req.app_data::<web::Data<Box<dyn AybDb>>>() {
         Some(ayb_db) => {
-            let valid = validate_api_token(credentials.token(), ayb_db).await;
-            match valid {
-                Ok(true) => {
-                    //req.attach(claims.permissions):
-                    Ok(req)
-                },
-                Ok(false) => Err((AybError { message: "Invalid API token".to_string() }.into(), req)),
-                Err(e) => Err((e.into(), req))
+            let api_token = retrieve_and_validate_api_token(credentials.token(), ayb_db).await;
+            match api_token {
+                Ok(api_token) => {
+                    let entity = ayb_db.get_entity_by_id(api_token.entity_id).await;
+                    match entity {
+                        Ok(entity) => {
+                            req.extensions_mut().insert(entity);
+                            Ok(req)
+                        }
+                        Err(e) => Err((e.into(), req)),
+                    }
+                }
+                Err(e) => Err((e.into(), req)),
             }
-        },
-        None => Err((AybError { message: "Misconfigured server: no database".to_string() }.into(), req))
+        }
+        None => Err((
+            AybError {
+                message: "Misconfigured server: no database".to_string(),
+            }
+            .into(),
+            req,
+        )),
     }
 }
 

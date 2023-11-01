@@ -49,7 +49,7 @@ impl From<prefixed_api_key::BuilderError> for AybError {
 impl From<prefixed_api_key::PrefixedApiKeyError> for AybError {
     fn from(cause: prefixed_api_key::PrefixedApiKeyError) -> Self {
         AybError {
-            message: format!("Error parsing API token: {}", cause)
+            message: format!("Error parsing API token: {}", cause),
         }
     }
 }

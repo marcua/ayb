@@ -37,7 +37,11 @@ pub trait AybDb: DynClone + Send + Sync {
         entity_slug: &String,
         database_slug: &String,
     ) -> Result<InstantiatedDatabase, AybError>;
-    async fn get_entity(&self, entity_slug: &String) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_by_slug(
+        &self,
+        entity_slug: &String,
+    ) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
     async fn list_api_tokens(&self, entity: &InstantiatedEntity)
         -> Result<Vec<APIToken>, AybError>;
     async fn list_authentication_methods(
@@ -187,7 +191,7 @@ WHERE
                 Ok(db)
             }
 
-            async fn get_entity(
+            async fn get_entity_by_slug(
                 &self,
                 entity_slug: &String,
             ) -> Result<InstantiatedEntity, AybError> {
@@ -207,6 +211,33 @@ WHERE slug = $1
                 .or_else(|err| match err {
                     sqlx::Error::RowNotFound => Err(AybError {
                         message: format!("Entity not found: {:?}", entity_slug),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(entity)
+            }
+
+            async fn get_entity_by_id(
+                &self,
+                entity_id: i32,
+            ) -> Result<InstantiatedEntity, AybError> {
+                let entity: InstantiatedEntity = sqlx::query_as(
+                    r#"
+SELECT
+    id,
+    slug,
+    entity_type
+FROM entity
+WHERE id = $1
+        "#,
+                )
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError {
+                        message: format!("Entity not found: {:?}", entity_id),
                     }),
                     _ => Err(AybError::from(err)),
                 })?;

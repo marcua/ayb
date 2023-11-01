@@ -181,7 +181,7 @@ pub struct Entity {
     pub entity_type: i16,
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
