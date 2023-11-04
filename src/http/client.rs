@@ -7,11 +7,27 @@ use serde::de::DeserializeOwned;
 
 pub struct AybClient {
     pub base_url: String,
+    pub api_token: Option<String>,
 }
 
 impl AybClient {
     fn make_url(&self, endpoint: String) -> String {
         format!("{}/v1/{}", self.base_url, endpoint)
+    }
+
+    fn add_bearer_token(&self, headers: &mut HeaderMap) -> Result<(), AybError> {
+        if let Some(api_token) = &self.api_token {
+            headers.insert(
+                HeaderName::from_static("authorization"),
+                HeaderValue::from_str(format!("Bearer {}", api_token).as_str()).unwrap(),
+            );
+            return Ok(());
+        } else {
+            return Err(AybError {
+                message: "Calling endpoint that requires client API token, but none provided"
+                    .to_string(),
+            });
+        }
     }
 
     async fn handle_response<T: DeserializeOwned>(
@@ -65,6 +81,7 @@ impl AybClient {
             HeaderName::from_static("db-type"),
             HeaderValue::from_str(db_type.to_str()).unwrap(),
         );
+        self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{}/{}/create", entity, database)))
@@ -99,8 +116,12 @@ impl AybClient {
         database: &str,
         query: &str,
     ) -> Result<QueryResult, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{}/{}/query", entity, database)))
+            .headers(headers)
             .body(query.to_owned())
             .send()
             .await?;
