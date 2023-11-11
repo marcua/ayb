@@ -18,7 +18,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(log_in);
     cfg.service(register);
     cfg.service(
-        web::scope("/v1/{entity}/{database}")
+        web::scope("")
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_database)
             .service(query),

@@ -1,7 +1,7 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{
     AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType, DBType, Database,
-    Entity, EntityType, InstantiatedAuthenticationMethod,
+    Entity, EntityType, InstantiatedAuthenticationMethod, InstantiatedEntity,
 };
 use crate::email::send_registration_email;
 use crate::error::AybError;
@@ -13,7 +13,7 @@ use crate::http::structs::{
     EmptyResponse, EntityDatabasePath,
 };
 use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token, generate_api_token};
-use crate::http::utils::{get_authenticated_entity, get_header, get_lowercased_header};
+use crate::http::utils::{get_header, get_lowercased_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/confirm")]
@@ -82,6 +82,7 @@ async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
+    authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
@@ -91,8 +92,7 @@ async fn create_database(
         slug: path.database.clone(),
         db_type: DBType::from_str(&db_type) as i16,
     };
-    let authenticated_entity = get_authenticated_entity(&req)?;
-
+    let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     if can_create_database(&authenticated_entity, &entity) {
         let created_database = ayb_db.create_database(&database).await?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
@@ -153,16 +153,16 @@ async fn log_in(
 
 #[post("/v1/{entity}/{database}/query")]
 async fn query(
-    req: HttpRequest,
     path: web::Path<EntityDatabasePath>,
     query: String,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
+    authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<web::Json<QueryResult>, AybError> {
     let entity_slug = &path.entity;
     let database_slug = &path.database;
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
-    let authenticated_entity = get_authenticated_entity(&req)?;
+    let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
     if can_query(&authenticated_entity, &database) {
         let db_type = DBType::from_i16(database.db_type);

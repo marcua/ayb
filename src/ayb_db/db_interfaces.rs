@@ -72,7 +72,7 @@ macro_rules! implement_ayb_db {
                     r#"
                 INSERT INTO api_token ( entity_id, short_token, hash, status )
                 VALUES ( $1, $2, $3, $4 )
-RETURNING entity_id, method_type, status, email_address
+RETURNING entity_id, short_token, hash, status
                 "#,
                 )
                     .bind(api_token.entity_id)

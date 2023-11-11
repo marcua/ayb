@@ -6,8 +6,30 @@ use std::time;
 
 mod utils;
 
-fn client_query(
+fn create_database(
     server_url: &str,
+    api_key: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    Command::cargo_bin("ayb")?
+        .args([
+            "client",
+            "--url",
+            server_url,
+            "create_database",
+            "e2e-first/test.sqlite",
+            "sqlite",
+        ])
+        .env("AYB_API_TOKEN", api_key)
+        .assert()
+        .success()
+        .stdout(format!("{}\n", result));
+    Ok(())
+}
+
+fn query(
+    server_url: &str,
+    api_key: &str,
     query: &str,
     format: &str,
     result: &str,
@@ -18,11 +40,27 @@ fn client_query(
             "--url",
             server_url,
             "query",
-            "e2e/test.sqlite",
+            "e2e-first/test.sqlite",
             "--format",
             format,
             query,
         ])
+        .env("AYB_API_TOKEN", api_key)
+        .assert()
+        .success()
+        .stdout(format!("{}\n", result));
+    Ok(())
+}
+
+fn register(
+    server_url: &str,
+    slug: &str,
+    email: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    Command::cargo_bin("ayb")?
+        .args(["client", "register", slug, email])
+        .env("AYB_SERVER_URL", server_url)
         .assert()
         .success()
         .stdout(format!("{}\n", result));
@@ -55,6 +93,8 @@ fn client_server_integration(
             "--config",
             &*format!("tests/test-server-config-{}.toml", db_type),
         ])
+        .env("RUST_LOG", "actix_web=debug")
+        .env("RUST_BACKTRACE", "1")
         .spawn()?;
 
     // Run stub SMTP server
@@ -66,42 +106,37 @@ fn client_server_integration(
     thread::sleep(time::Duration::from_secs(10));
 
     // Register an entity.
-    Command::cargo_bin("ayb")?
-        .args(["client", "register", "e2e-first", "e2e@example.org"])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Check your email to finish registering e2e-first\n");
+    register(
+        server_url,
+        "e2e-first",
+        "e2e@example.org",
+        "Check your email to finish registering e2e-first",
+    )?;
 
     // Register the same entity with the same email address.
-    Command::cargo_bin("ayb")?
-        .args(["client", "register", "e2e-first", "e2e@example.org"])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Check your email to finish registering e2e-first\n");
+    register(
+        server_url,
+        "e2e-first",
+        "e2e@example.org",
+        "Check your email to finish registering e2e-first",
+    )?;
 
-    // Can start to register an entity twice as long as you don't
-    // complete the process.
-    Command::cargo_bin("ayb")?
-        .args(["client", "register", "e2e-first", "e2e-another@example.org"])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Check your email to finish registering e2e-first\n");
+    // Can start to register an entity twice with different email
+    // addresses as long as you don't complete the process.
+    register(
+        server_url,
+        "e2e-first",
+        "e2e-another@example.org",
+        "Check your email to finish registering e2e-first",
+    )?;
 
     // Start the registration process for a second user (e2e-second)
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "register",
-            "e2e-second",
-            "e2e-another@example.org",
-        ])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Check your email to finish registering e2e-second\n");
+    register(
+        server_url,
+        "e2e-second",
+        "e2e-another@example.org",
+        "Check your email to finish registering e2e-second",
+    )?;
 
     // Check that two emails were received
     let entries = utils::parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
@@ -185,7 +220,7 @@ fn client_server_integration(
             .assert()
             .success()
             .get_output(),
-    );
+    )?;
 
     // To summarize where we are at this point
     // * User e2e-first has three API tokens (first_api_key[0...2]). We'll use these
@@ -193,97 +228,83 @@ fn client_server_integration(
     // * User e2e-second has one API token (second_api_key0)
 
     // Can't create database on e2e-first with e2e-second's token.
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "--url",
-            server_url,
-            "create_database",
-            "e2e-first/test.sqlite",
-            "sqlite",
-        ])
-        .env("AYB_API_TOKEN", second_api_key0)
-        .assert()
-        .success()
-        .stdout("Successfully created e2e/test.sqlite\n");
+    create_database(
+        server_url,
+        &second_api_key0,
+        "Error: Authenticated entity e2e-second can not create a database for entity e2e-first",
+    )?;
 
     // Can't create database on e2e-first with invalid token.
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "--url",
-            server_url,
-            "create_database",
-            "e2e-first/test.sqlite",
-            "sqlite",
-        ])
-        .env("AYB_API_TOKEN", format!("{}bad", first_api_key0.clone()))
-        .assert()
-        .success()
-        .stdout("Successfully created e2e/test.sqlite\n");
+    create_database(
+        server_url,
+        &format!("{}bad", first_api_key0),
+        "Error: Invalid API token",
+    )?;
 
     // Create a database with the appropriate user/key pair.
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "--url",
-            server_url,
-            "create_database",
-            "e2e-first/test.sqlite",
-            "sqlite",
-        ])
-        .env("AYB_API_TOKEN", first_api_key0.clone())
-        .assert()
-        .success()
-        .stdout("Successfully created e2e-first/test.sqlite\n");
+    create_database(
+        server_url,
+        &first_api_key0,
+        "Successfully created e2e-first/test.sqlite",
+    )?;
 
     // Can't create a database twice.
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "--url",
-            server_url,
-            "create_database",
-            "e2e-first/test.sqlite",
-            "sqlite",
-        ])
-        .env("AYB_API_TOKEN", first_api_key0.clone())
-        .assert()
-        .success()
-        .stdout("Error: Database already exists\n");
-
-    // TODO
-    // * Fix API token DB creation
-    // * Query with other account's key (error)
-    // * Query with invalid key (error)
-    // * Query with the first account's three API keys (all work)
-
-    // Populate and query database.
-    client_query(
+    create_database(
         server_url,
+        &first_api_key0,
+        "Error: Database already exists",
+    )?;
+
+    // Can't query database with second account's API key
+    query(
+        server_url,
+        &second_api_key0,
+        "CREATE TABLE test_table(fname varchar, lname varchar);",
+        "table",
+        "Error: Authenticated entity e2e-second can not query database e2e-first/test.sqlite",
+    )?;
+
+    // Can't query database with bad API key.
+    query(
+        server_url,
+        &format!("{}bad", first_api_key0),
+        "CREATE TABLE test_table(fname varchar, lname varchar);",
+        "table",
+        "Error: Invalid API token",
+    )?;
+
+    // Populate and query database. Alternate through the three API
+    // keys for the first account to ensure they all work.
+    query(
+        server_url,
+        &first_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         "table",
         "\nRows: 0",
     )?;
-    client_query(
+    query(
         server_url,
+        &first_api_key1,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
         "table",
         "\nRows: 0",
     )?;
-    client_query(
+    query(
         server_url,
+        &first_api_key2,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
         "table",
         "\nRows: 0",
     )?;
-    client_query(
+    query(
         server_url,
+        &first_api_key0,
         "SELECT * FROM test_table;",
                  "table",                 
                  " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
-    client_query(
+    query(
         server_url,
+        &first_api_key0,
         "SELECT * FROM test_table;",
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",

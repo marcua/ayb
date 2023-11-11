@@ -1,5 +1,5 @@
 CREATE TABLE api_token (
-       short_token VARCHAR(8),
+       short_token VARCHAR(12),
        entity_id INT NOT NULL,
        hash VARCHAR(64) NOT NULL,
        status SMALLINT NOT NULL,
