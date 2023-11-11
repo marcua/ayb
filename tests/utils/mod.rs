@@ -19,7 +19,6 @@ pub struct EmailEntry {
 
 pub fn extract_api_key(output: &Output) -> Result<String, AybError> {
     let output_str = std::str::from_utf8(&output.stdout)?;
-    println!("Now featuring ---{}---", output_str);
     let re = Regex::new(r"^Successfully authenticated and saved token (\S+)\n").unwrap();
     if re.is_match(output_str) {
         let captures = re.captures(output_str).unwrap();
