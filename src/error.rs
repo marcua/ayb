@@ -2,6 +2,7 @@ use actix_web;
 use derive_more::{Display, Error};
 use fernet;
 use lettre;
+use prefixed_api_key;
 use quoted_printable;
 use reqwest;
 use rusqlite;
@@ -33,6 +34,22 @@ impl From<lettre::address::AddressError> for AybError {
     fn from(cause: lettre::address::AddressError) -> Self {
         AybError {
             message: format!("Invalid email address: {}", cause),
+        }
+    }
+}
+
+impl From<prefixed_api_key::BuilderError> for AybError {
+    fn from(cause: prefixed_api_key::BuilderError) -> Self {
+        AybError {
+            message: format!("Error in prefixed API key builder: {}", cause),
+        }
+    }
+}
+
+impl From<prefixed_api_key::PrefixedApiKeyError> for AybError {
+    fn from(cause: prefixed_api_key::PrefixedApiKeyError) -> Self {
+        AybError {
+            message: format!("Error parsing API token: {}", cause),
         }
     }
 }

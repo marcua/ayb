@@ -52,9 +52,10 @@ $ ayb client register marcua you@example.com
 Check your email to finish registering marcua
 
 # You will receive an email at you@example.com instructing you to type the next command
-# Note that bearer token-based authentication is on the roadmap, so the returned token is a placeholder
-$ ayb client confirm TOKEN_FROM_EMAIL
-Successfully authenticated and saved token default/insecure, unimplemented
+$ ayb client confirm <TOKEN_FROM_EMAIL>
+Successfully authenticated and saved token <API_TOKEN>
+
+$ export AYB_API_TOKEN=<API_TOKEN_FROM_PREVIOUS_COMMAND>
 
 $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
@@ -93,29 +94,29 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/register -H "entity-type: user" 
 
 $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/confirm -H "authentication-token: TOKEN_FROM_EMAIL"
 
-{"name":"default","key":"insecure, unimplemented"}
+{"token":"<API_TOKEN>"}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/create -H "db-type: sqlite"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/create -H "db-type: sqlite" -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>"
 
 {"entity":"marcua","database":"test.sqlite","database_type":"sqlite"}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d 'CREATE TABLE favorite_databases(name varchar, score integer);'
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d 'CREATE TABLE favorite_databases(name varchar, score integer);'
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "INSERT INTO favorite_databases (name, score) VALUES (\"DuckDB\", 9);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"DuckDB\", 9);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -d "SELECT * FROM favorite_databases;"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "SELECT * FROM favorite_databases;"
 
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```

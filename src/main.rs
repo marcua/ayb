@@ -54,6 +54,11 @@ async fn main() -> std::io::Result<()> {
                         .env("AYB_SERVER_URL")
                         .required(true)
                 )
+                .arg(
+                    arg!(--token <VALUE> "A client API token")
+                        .env("AYB_API_TOKEN")
+                        .required(false)
+                )
                 .subcommand(
                     Command::new("create_database")
                         .about("Create a database")
@@ -119,6 +124,7 @@ async fn main() -> std::io::Result<()> {
         if let Some(url) = matches.get_one::<String>("url") {
             let client = AybClient {
                 base_url: url.to_string(),
+                api_token: matches.get_one::<String>("token").cloned(),
             };
             if let Some(matches) = matches.subcommand_matches("create_database") {
                 if let (Some(entity_database), Some(db_type)) = (
@@ -164,11 +170,11 @@ async fn main() -> std::io::Result<()> {
                     matches.get_one::<String>("authentication_token")
                 {
                     match client.confirm(authentication_token).await {
-                        Ok(api_key) => {
+                        Ok(api_token) => {
                             // TODO(marcua): Save the token and use it for future requests.
                             println!(
-                                "Successfully authenticated and saved token {}/{}",
-                                api_key.name, api_key.key
+                                "Successfully authenticated and saved token {}",
+                                api_token.token
                             );
                         }
                         Err(err) => {

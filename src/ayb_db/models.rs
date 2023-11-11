@@ -181,7 +181,7 @@ pub struct Entity {
     pub entity_type: i16,
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
@@ -203,4 +203,52 @@ pub struct InstantiatedAuthenticationMethod {
     pub method_type: i16,
     pub status: i16,
     pub email_address: String,
+}
+
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum APITokenStatus {
+    Active = 0,
+    Revoked = 1,
+}
+
+impl fmt::Display for APITokenStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl APITokenStatus {
+    pub fn from_i16(value: i16) -> APITokenStatus {
+        match value {
+            0 => APITokenStatus::Active,
+            1 => APITokenStatus::Revoked,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn from_str(value: &str) -> APITokenStatus {
+        match value {
+            "active" => APITokenStatus::Active,
+            "revoked" => APITokenStatus::Revoked,
+            _ => panic!("Unknown value: {}", value),
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        match self {
+            APITokenStatus::Active => "active",
+            APITokenStatus::Revoked => "revoked",
+        }
+    }
+}
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct APIToken {
+    pub entity_id: i32,
+    pub short_token: String,
+    pub hash: String,
+    pub status: i16,
 }

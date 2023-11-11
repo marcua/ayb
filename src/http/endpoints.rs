@@ -1,18 +1,19 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{
     AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType, DBType, Database,
-    Entity, EntityType, InstantiatedAuthenticationMethod,
+    Entity, EntityType, InstantiatedAuthenticationMethod, InstantiatedEntity,
 };
 use crate::email::send_registration_email;
 use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
+use crate::http::permissions::{can_create_database, can_query};
 use crate::http::structs::{
-    APIKey as APIAPIKey, AuthenticationDetails, AybConfig, Database as APIDatabase, EmptyResponse,
-    EntityDatabasePath,
+    APIToken as APIAPIToken, AuthenticationDetails, AybConfig, Database as APIDatabase,
+    EmptyResponse, EntityDatabasePath,
 };
-use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token};
-use crate::http::utils::{get_header, get_lowercased_header};
+use crate::http::tokens::{decrypt_auth_token, encrypt_auth_token, generate_api_token};
+use crate::http::utils::{get_header, get_lowercased_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/confirm")]
@@ -67,12 +68,13 @@ async fn confirm(
             .await?;
     }
 
-    // TODO(marcua): When we implement permissions, get_or_create default API keys.
-    // Ok(HttpResponse::Ok().json(APIAPIKey::from_persisted(&created_key)))
-    Ok(HttpResponse::Ok().json(APIAPIKey {
-        name: "default".to_string(),
-        key: "insecure, unimplemented".to_string(),
-    }))
+    let (api_token, token_string) = generate_api_token(&created_entity)?;
+    let _ = ayb_db.create_api_token(&api_token).await?;
+    let returned_token = APIAPIToken {
+        token: token_string,
+    };
+
+    Ok(HttpResponse::Ok().json(returned_token))
 }
 
 #[post("/v1/{entity}/{database}/create")]
@@ -80,17 +82,28 @@ async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
+    authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
-    let entity = ayb_db.get_entity(entity_slug).await?;
+    let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let db_type = get_header(&req, "db-type")?;
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),
         db_type: DBType::from_str(&db_type) as i16,
     };
-    let created_database = ayb_db.create_database(&database).await?;
-    Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
+    let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
+    if can_create_database(&authenticated_entity, &entity) {
+        let created_database = ayb_db.create_database(&database).await?;
+        Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
+    } else {
+        Err(AybError {
+            message: format!(
+                "Authenticated entity {} can not create a database for entity {}",
+                authenticated_entity.slug, entity_slug
+            ),
+        })
+    }
 }
 
 #[post("/v1/log_in")]
@@ -100,7 +113,7 @@ async fn log_in(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
-    let desired_entity = ayb_db.get_entity(&entity).await;
+    let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
 
     if let Ok(instantiated_entity) = desired_entity {
         let auth_methods = ayb_db
@@ -144,14 +157,26 @@ async fn query(
     query: String,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
+    authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<web::Json<QueryResult>, AybError> {
     let entity_slug = &path.entity;
     let database_slug = &path.database;
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
-    let db_type = DBType::from_i16(database.db_type);
-    let db_path = database_path(entity_slug, database_slug, &ayb_config.data_path)?;
-    let result = run_query(&db_path, &query, &db_type)?;
-    Ok(web::Json(result))
+    let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
+
+    if can_query(&authenticated_entity, &database) {
+        let db_type = DBType::from_i16(database.db_type);
+        let db_path = database_path(entity_slug, database_slug, &ayb_config.data_path)?;
+        let result = run_query(&db_path, &query, &db_type)?;
+        Ok(web::Json(result))
+    } else {
+        Err(AybError {
+            message: format!(
+                "Authenticated entity {} can not query database {}/{}",
+                authenticated_entity.slug, entity_slug, database_slug
+            ),
+        })
+    }
 }
 
 #[post("/v1/register")]
@@ -163,7 +188,7 @@ async fn register(
     let entity = get_lowercased_header(&req, "entity")?;
     let email_address = get_lowercased_header(&req, "email-address")?;
     let entity_type = get_header(&req, "entity-type")?;
-    let desired_entity = ayb_db.get_entity(&entity).await;
+    let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
     // Ensure that there are no authentication methods aside from
     // perhaps the currently requested one.
     let mut already_verified = false;

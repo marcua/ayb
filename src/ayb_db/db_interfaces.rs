@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
-    AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod, InstantiatedDatabase,
-    InstantiatedEntity,
+    APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
+    InstantiatedDatabase, InstantiatedEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -24,18 +24,24 @@ use std::str::FromStr;
 #[async_trait]
 pub trait AybDb: DynClone + Send + Sync {
     fn is_duplicate_constraint_error(&self, db_error: &dyn sqlx::error::DatabaseError) -> bool;
+    async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError>;
     async fn create_authentication_method(
         &self,
         method: &AuthenticationMethod,
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
+    async fn get_api_token(&self, short_token: &String) -> Result<APIToken, AybError>;
     async fn get_database(
         &self,
         entity_slug: &String,
         database_slug: &String,
     ) -> Result<InstantiatedDatabase, AybError>;
-    async fn get_entity(&self, entity_slug: &String) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_by_slug(
+        &self,
+        entity_slug: &String,
+    ) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -57,6 +63,24 @@ macro_rules! implement_ayb_db {
                     Some(code) => code.to_string() == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
                     None => false,
                 }
+            }
+
+            async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError> {
+                let returned_token: APIToken = sqlx::query_as(
+                    r#"
+                INSERT INTO api_token ( entity_id, short_token, hash, status )
+                VALUES ( $1, $2, $3, $4 )
+RETURNING entity_id, short_token, hash, status
+                "#,
+                )
+                    .bind(api_token.entity_id)
+                    .bind(&api_token.short_token)
+                    .bind(&api_token.hash)
+                    .bind(api_token.status)
+                    .fetch_one(&self.pool)
+                    .await?;
+
+                Ok(returned_token)
             }
 
             async fn create_authentication_method(
@@ -110,6 +134,34 @@ macro_rules! implement_ayb_db {
                 Ok(db)
             }
 
+            async fn get_api_token(
+                &self,
+                short_token: &String,
+            ) -> Result<APIToken, AybError> {
+                let api_token: APIToken = sqlx::query_as(
+                    r#"
+SELECT
+    short_token,
+    entity_id,
+    hash,
+    status
+FROM api_token
+WHERE short_token = $1
+        "#,
+                )
+                .bind(short_token)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError {
+                        message: format!("API Token not found: {:?}", short_token),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(api_token)
+            }
+
             async fn get_database(
                 &self,
                 entity_slug: &String,
@@ -137,7 +189,7 @@ WHERE
                 Ok(db)
             }
 
-            async fn get_entity(
+            async fn get_entity_by_slug(
                 &self,
                 entity_slug: &String,
             ) -> Result<InstantiatedEntity, AybError> {
@@ -157,6 +209,33 @@ WHERE slug = $1
                 .or_else(|err| match err {
                     sqlx::Error::RowNotFound => Err(AybError {
                         message: format!("Entity not found: {:?}", entity_slug),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(entity)
+            }
+
+            async fn get_entity_by_id(
+                &self,
+                entity_id: i32,
+            ) -> Result<InstantiatedEntity, AybError> {
+                let entity: InstantiatedEntity = sqlx::query_as(
+                    r#"
+SELECT
+    id,
+    slug,
+    entity_type
+FROM entity
+WHERE id = $1
+        "#,
+                )
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError {
+                        message: format!("Entity not found: {:?}", entity_id),
                     }),
                     _ => Err(AybError::from(err)),
                 })?;

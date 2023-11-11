@@ -89,9 +89,8 @@ pub struct AuthenticationDetails {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct APIKey {
-    pub name: String,
-    pub key: String,
+pub struct APIToken {
+    pub token: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

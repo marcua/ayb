@@ -1,7 +1,9 @@
 use ayb::error::AybError;
 use quoted_printable;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::process::Output;
 
 #[derive(Serialize, Deserialize)]
 pub struct EmailEntry {
@@ -13,6 +15,19 @@ pub struct EmailEntry {
     content_transfer_encoding: String,
     date: String,
     content: Vec<String>,
+}
+
+pub fn extract_api_key(output: &Output) -> Result<String, AybError> {
+    let output_str = std::str::from_utf8(&output.stdout)?;
+    let re = Regex::new(r"^Successfully authenticated and saved token (\S+)\n").unwrap();
+    if re.is_match(output_str) {
+        let captures = re.captures(output_str).unwrap();
+        Ok(captures.get(1).map_or("", |m| m.as_str()).to_string())
+    } else {
+        Err(AybError {
+            message: "No API key".to_string(),
+        })
+    }
 }
 
 pub fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
@@ -27,7 +42,7 @@ pub fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
         }
     }
     return Err(AybError {
-        message: "No token found in email".to_owned(),
+        message: "No token found in email".to_string(),
     });
 }
 
