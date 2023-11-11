@@ -305,7 +305,7 @@ struct SqliteAybDb {
 }
 
 impl SqliteAybDb {
-    pub const DUPLICATE_CONSTRAINT_ERROR_CODE: &str = "2067";
+    pub const DUPLICATE_CONSTRAINT_ERROR_CODE: &'static str = "2067";
 
     pub async fn connect(url: String) -> SqliteAybDb {
         let connection_options = SqliteConnectOptions::from_str(&url)
@@ -331,7 +331,7 @@ struct PostgresAybDb {
 }
 
 impl PostgresAybDb {
-    pub const DUPLICATE_CONSTRAINT_ERROR_CODE: &str = "23505";
+    pub const DUPLICATE_CONSTRAINT_ERROR_CODE: &'static str = "23505";
 
     pub async fn connect(url: String) -> PostgresAybDb {
         let pool = PgPoolOptions::new()
