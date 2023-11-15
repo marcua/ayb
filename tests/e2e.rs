@@ -69,12 +69,12 @@ fn register(
 
 #[test]
 fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
-    return client_server_integration("postgres", "http://127.0.0.1:5433", 10025);
+    client_server_integration("postgres", "http://127.0.0.1:5433", 10025)
 }
 
 #[test]
 fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
-    return client_server_integration("sqlite", "http://127.0.0.1:5434", 10026);
+    client_server_integration("sqlite", "http://127.0.0.1:5434", 10026)
 }
 
 fn client_server_integration(

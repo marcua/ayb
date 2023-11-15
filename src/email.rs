@@ -13,14 +13,14 @@ pub async fn send_registration_email(
     config: &AybConfigEmail,
     e2e_testing_on: bool,
 ) -> Result<(), AybError> {
-    return send_email(
+    send_email(
         to,
         "Your login credentials",
         format!("To log in, type\n\tayb client confirm {token}"),
         config,
         e2e_testing_on,
     )
-    .await;
+    .await
 }
 
 async fn send_email(

@@ -56,7 +56,7 @@ pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, Stri
         APIToken {
             entity_id: entity.id,
             short_token: pak.short_token().to_string(),
-            hash: hash,
+            hash,
             status: APITokenStatus::Active as i16,
         },
         pak.to_string(),
@@ -68,7 +68,7 @@ pub async fn retrieve_and_validate_api_token(
     ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<APIToken, AybError> {
     let controller = api_key_controller()?;
-    let pak = PrefixedApiKey::from_string(&token)?;
+    let pak = PrefixedApiKey::from_string(token)?;
     let api_token = (ayb_db.get_api_token(&pak.short_token().to_owned())).await?;
     if !controller.check_hash(&pak, &api_token.hash) {
         return Err(AybError {

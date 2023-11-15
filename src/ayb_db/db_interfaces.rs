@@ -60,7 +60,7 @@ macro_rules! implement_ayb_db {
                 db_error: &dyn sqlx::error::DatabaseError,
             ) -> bool {
                 match db_error.code() {
-                    Some(code) => code.to_string() == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
+                    Some(code) => code == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
                     None => false,
                 }
             }
@@ -319,7 +319,7 @@ impl SqliteAybDb {
             .run(&pool)
             .await
             .expect("Unable to run migrations");
-        return Self { pool: pool };
+        Self { pool }
     }
 }
 
@@ -343,7 +343,7 @@ impl PostgresAybDb {
             .run(&pool)
             .await
             .expect("Unable to run migrations");
-        return Self { pool: pool };
+        Self { pool }
     }
 }
 

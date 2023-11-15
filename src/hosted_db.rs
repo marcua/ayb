@@ -36,7 +36,7 @@ impl QueryResult {
                 .collect::<Vec<_>>();
             table.add_row(Row::new(cells));
         }
-        return table;
+        table
     }
 
     pub fn generate_table(&self) -> Result<(), std::io::Error> {
@@ -57,7 +57,7 @@ pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryR
     match db_type {
         DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
         _ => {
-            return Err(AybError {
+            Err(AybError {
                 message: "Unsupported DB type".to_string(),
             })
         }

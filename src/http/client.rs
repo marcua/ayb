@@ -21,12 +21,12 @@ impl AybClient {
                 HeaderName::from_static("authorization"),
                 HeaderValue::from_str(format!("Bearer {}", api_token).as_str()).unwrap(),
             );
-            return Ok(());
+            Ok(())
         } else {
-            return Err(AybError {
+            Err(AybError {
                 message: "Calling endpoint that requires client API token, but none provided"
                     .to_string(),
-            });
+            })
         }
     }
 
@@ -37,11 +37,9 @@ impl AybClient {
     ) -> Result<T, AybError> {
         let status = response.status();
         match status {
-            status if status == expected_status => response.json::<T>().await.or_else(|err| {
-                Err(AybError {
+            status if status == expected_status => response.json::<T>().await.map_err(|err| AybError {
                     message: format!("Unable to parse successful response: {}", err),
-                })
-            }),
+                }),
             _other => {
                 let error = response.json::<AybError>().await;
                 match error {
@@ -155,7 +153,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("register")))
+            .post(self.make_url("register".to_string()))
             .headers(headers)
             .send()
             .await?;

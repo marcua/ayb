@@ -33,10 +33,7 @@ pub struct AybConfig {
 
 impl AybConfig {
     pub fn e2e_testing_on(&self) -> bool {
-        match self.e2e_testing {
-            Some(v) => v,
-            None => false,
-        }
+        self.e2e_testing.unwrap_or(false)
     }
 }
 
