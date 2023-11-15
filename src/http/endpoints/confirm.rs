@@ -71,3 +71,56 @@ async fn confirm(
 
     Ok(HttpResponse::Ok().json(returned_token))
 }
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{App, test};
+    use crate::http::tokens::encrypt_auth_token;
+    use crate::ayb_db::{db_interfaces::connect_to_ayb_db, models::EntityType};
+    use crate::http::structs::{AybConfig, AybConfigEmail, AybConfigAuthentication, AuthenticationDetails};
+    use super::*;
+
+    #[actix_web::test]
+    async fn v1_confirm_post() {
+        let db = connect_to_ayb_db("sqlite://:memory:".into()).await.unwrap();
+        let ayb_conf = AybConfig {
+            host: "0.0.0.0".into(),
+            port: 5433,
+            e2e_testing: Some(true),
+            database_url: "sqlite://:memory:".into(),
+            data_path: "./ayb_data".into(),
+            authentication: AybConfigAuthentication {
+                fernet_key: "QRibF1t12YQAwtCucF8RbBB_RHp9g92j1-wjxYJXiBc=".into(),
+                token_expiration_seconds: 31536000,
+            },
+            email: AybConfigEmail {
+                from: "".into(),
+                reply_to: "".into(),
+                smtp_host: "".into(),
+                smtp_port: 0,
+                smtp_username: "".into(),
+                smtp_password: "".into(),
+            },
+        };
+        let app = test::init_service(
+        App::new()
+                .app_data(web::Data::new(ayb_conf.clone()))
+                .app_data(web::Data::new(db))
+                .service(confirm)
+        ).await;
+        let req = test::TestRequest::post()
+            .uri("/v1/confirm")
+            .insert_header(("authentication-token", encrypt_auth_token(
+                &AuthenticationDetails {
+                    version: 1,
+                    entity: "entity".into(),
+                    entity_type: EntityType::User as i16,
+                    email_address: "entity@localhost".into(),
+                },
+                &ayb_conf.authentication,
+            ).unwrap()))
+            .to_request();
+
+        let _resp: APIAPIToken = test::call_and_read_body_json(&app, req).await;
+    }
+}
