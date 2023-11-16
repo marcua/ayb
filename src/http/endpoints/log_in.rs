@@ -29,9 +29,9 @@ async fn log_in(
             .list_authentication_methods(&instantiated_entity)
             .await?;
         for method in auth_methods {
-            if AuthenticationMethodType::from_i16(method.method_type)
+            if AuthenticationMethodType::try_from(method.method_type).expect("unknown authentication method type")
                 == AuthenticationMethodType::Email
-                && AuthenticationMethodStatus::from_i16(method.status)
+                && AuthenticationMethodStatus::try_from(method.status).expect("unknown authentication method status")
                 == AuthenticationMethodStatus::Verified
             {
                 let token = encrypt_auth_token(

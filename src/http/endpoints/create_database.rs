@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{
     DBType, Database, InstantiatedEntity,
@@ -27,7 +28,7 @@ async fn create_database(
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),
-        db_type: DBType::from_str(&db_type) as i16,
+        db_type: DBType::from_str(&db_type).expect("unknown database type") as i16,
     };
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     if can_create_database(&authenticated_entity, &entity) {

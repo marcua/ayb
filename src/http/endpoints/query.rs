@@ -28,7 +28,7 @@ async fn query(
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
     if can_query(&authenticated_entity, &database) {
-        let db_type = DBType::from_i16(database.db_type);
+        let db_type = DBType::try_from(database.db_type).expect("unknown database type");
         let db_path = database_path(entity_slug, database_slug, &ayb_config.data_path)?;
         let result = run_query(&db_path, &query, &db_type)?;
         Ok(web::Json(result))

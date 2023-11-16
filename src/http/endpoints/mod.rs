@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod testing;
 
 mod confirm;
