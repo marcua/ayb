@@ -34,9 +34,9 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Ensure fmt finds no changes
-      run: cargo fmt -- --check
-    # - name: Ensure clippy finds no issues
-    #  run: cargo clippy
+      run: cargo fmt --check
+    - name: Ensure clippy finds no issues
+      run: cargo clippy
     - name: Run code tests
       run: cargo test --verbose
     - name: Run E2E tests
