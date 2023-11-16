@@ -160,3 +160,6 @@ Here's a rough roadmap for the project, with items near the top of the list more
 
 This project has a roadmap and features are added and tested in a certain order. I'm adding a little friction in requiring a discussion/design document for features before submitting a pull request to ensure that I can focus my attention on well-motivated, well-sequenced, and well-understood functionality.
 
+### Running tests
+By default, only E2E tests are ignored. To run the E2E test use `cargo run -- --ignored`
+
