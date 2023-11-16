@@ -1,3 +1,5 @@
+mod testing;
+
 mod confirm;
 mod create_database;
 mod log_in;
