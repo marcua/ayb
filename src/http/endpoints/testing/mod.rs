@@ -1,4 +1,4 @@
-use crate::ayb_db::db_interfaces::{AybDb, connect_to_ayb_db};
+use crate::ayb_db::db_interfaces::{connect_to_ayb_db, AybDb};
 use crate::http::structs::{AybConfig, AybConfigAuthentication, AybConfigEmail};
 
 pub async fn test_ayb_database() -> Box<dyn AybDb> {

@@ -1,7 +1,9 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
-use crate::http::endpoints::{confirm_endpoint, create_db_endpoint, log_in_endpoint, query_endpoint, register_endpoint};
+use crate::http::endpoints::{
+    confirm_endpoint, create_db_endpoint, log_in_endpoint, query_endpoint, register_endpoint,
+};
 use crate::http::structs::AybConfig;
 use crate::http::tokens::retrieve_and_validate_api_token;
 use actix_web::dev::ServiceRequest;

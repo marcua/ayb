@@ -1,14 +1,12 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{
-    AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType,
-    Entity, InstantiatedAuthenticationMethod,
+    AuthenticationMethod, AuthenticationMethodStatus, AuthenticationMethodType, Entity,
+    InstantiatedAuthenticationMethod,
 };
 use crate::error::AybError;
-use crate::http::structs::{
-    APIToken as APIAPIToken, AybConfig,
-};
+use crate::http::structs::{APIToken as APIAPIToken, AybConfig};
 use crate::http::tokens::{decrypt_auth_token, generate_api_token};
-use crate::http::utils::{get_header};
+use crate::http::utils::get_header;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/confirm")]
@@ -74,33 +72,39 @@ async fn confirm(
 
 #[cfg(test)]
 mod tests {
-    use actix_web::{App, test};
-    use crate::http::tokens::encrypt_auth_token;
-    use crate::ayb_db::{db_interfaces::connect_to_ayb_db, models::EntityType};
-    use crate::http::endpoints::testing::{test_ayb_conf, test_ayb_database};
     use super::*;
+    use crate::ayb_db::models::EntityType;
+    use crate::http::endpoints::testing::{test_ayb_conf, test_ayb_database};
+    use crate::http::structs::AuthenticationDetails;
+    use crate::http::tokens::encrypt_auth_token;
+    use actix_web::{test, App};
 
     #[actix_web::test]
     async fn v1_confirm_post() {
         let database = test_ayb_database().await;
         let ayb_conf = test_ayb_conf();
         let app = test::init_service(
-        App::new()
+            App::new()
                 .app_data(web::Data::new(ayb_conf.clone()))
                 .app_data(web::Data::new(database))
-                .service(confirm)
-        ).await;
+                .service(confirm),
+        )
+        .await;
         let req = test::TestRequest::post()
             .uri("/v1/confirm")
-            .insert_header(("authentication-token", encrypt_auth_token(
-                &AuthenticationDetails {
-                    version: 1,
-                    entity: "entity".into(),
-                    entity_type: EntityType::User as i16,
-                    email_address: "entity@localhost".into(),
-                },
-                &ayb_conf.authentication,
-            ).unwrap()))
+            .insert_header((
+                "authentication-token",
+                encrypt_auth_token(
+                    &AuthenticationDetails {
+                        version: 1,
+                        entity: "entity".into(),
+                        entity_type: EntityType::User as i16,
+                        email_address: "entity@localhost".into(),
+                    },
+                    &ayb_conf.authentication,
+                )
+                .unwrap(),
+            ))
             .to_request();
 
         let _resp: APIAPIToken = test::call_and_read_body_json(&app, req).await;

@@ -1,17 +1,12 @@
-use std::str::FromStr;
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{
-    AuthenticationMethodType, EntityType,
-};
+use crate::ayb_db::models::{AuthenticationMethodType, EntityType};
 use crate::email::send_registration_email;
 use crate::error::AybError;
-use crate::http::structs::{
-    AuthenticationDetails, AybConfig,
-    EmptyResponse,
-};
-use crate::http::tokens::{encrypt_auth_token};
+use crate::http::structs::{AuthenticationDetails, AybConfig, EmptyResponse};
+use crate::http::tokens::encrypt_auth_token;
 use crate::http::utils::{get_header, get_lowercased_header};
 use actix_web::{post, web, HttpRequest, HttpResponse};
+use std::str::FromStr;
 
 #[post("/v1/register")]
 async fn register(
@@ -31,7 +26,8 @@ async fn register(
             .list_authentication_methods(&instantiated_entity)
             .await?;
         for method in auth_methods {
-            if AuthenticationMethodType::try_from(method.method_type).expect("unknown authentication method type")
+            if AuthenticationMethodType::try_from(method.method_type)
+                .expect("unknown authentication method type")
                 != AuthenticationMethodType::Email
                 || method.email_address != email_address
             {
@@ -51,8 +47,7 @@ async fn register(
         &AuthenticationDetails {
             version: 1,
             entity: entity.clone(),
-            entity_type: EntityType::from_str(&entity_type)
-                .expect("unknown entity type") as i16,
+            entity_type: EntityType::from_str(&entity_type).expect("unknown entity type") as i16,
             email_address: email_address.to_owned(),
         },
         &ayb_config.authentication,
@@ -63,6 +58,6 @@ async fn register(
         &ayb_config.email,
         ayb_config.e2e_testing_on(),
     )
-        .await?;
+    .await?;
     Ok(HttpResponse::Ok().json(EmptyResponse {}))
 }

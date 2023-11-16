@@ -37,9 +37,11 @@ impl AybClient {
     ) -> Result<T, AybError> {
         let status = response.status();
         match status {
-            status if status == expected_status => response.json::<T>().await.map_err(|err| AybError {
+            status if status == expected_status => {
+                response.json::<T>().await.map_err(|err| AybError {
                     message: format!("Unable to parse successful response: {}", err),
-                }),
+                })
+            }
             _other => {
                 let error = response.json::<AybError>().await;
                 match error {

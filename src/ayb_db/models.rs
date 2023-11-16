@@ -2,7 +2,6 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
-use std::fmt;
 use std::str::FromStr;
 
 macro_rules! try_from_i16 {
@@ -44,13 +43,6 @@ pub enum DBType {
     Duckdb = 1,
 }
 
-impl fmt::Display for DBType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-
 from_str!(DBType, {
     "sqlite" => DBType::Sqlite,
     "duckdb" => DBType::Duckdb
@@ -77,12 +69,6 @@ impl DBType {
 pub enum EntityType {
     User = 0,
     Organization = 1,
-}
-
-impl fmt::Display for EntityType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 from_str!(EntityType, {
@@ -112,12 +98,6 @@ pub enum AuthenticationMethodType {
     Email = 0,
 }
 
-impl fmt::Display for AuthenticationMethodType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 from_str!(AuthenticationMethodType, {
     "email" => AuthenticationMethodType::Email
 });
@@ -141,12 +121,6 @@ impl AuthenticationMethodType {
 pub enum AuthenticationMethodStatus {
     Verified = 0,
     Revoked = 1,
-}
-
-impl fmt::Display for AuthenticationMethodStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 from_str!(AuthenticationMethodStatus, {
@@ -220,12 +194,6 @@ pub struct InstantiatedAuthenticationMethod {
 pub enum APITokenStatus {
     Active = 0,
     Revoked = 1,
-}
-
-impl fmt::Display for APITokenStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 from_str!(APITokenStatus, {

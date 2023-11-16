@@ -1,16 +1,11 @@
-use std::str::FromStr;
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{
-    DBType, Database, InstantiatedEntity,
-};
+use crate::ayb_db::models::{DBType, Database, InstantiatedEntity};
+use std::str::FromStr;
 
 use crate::error::AybError;
 
-
-use crate::http::permissions::{can_create_database};
-use crate::http::structs::{
-    Database as APIDatabase, EntityDatabasePath,
-};
+use crate::http::permissions::can_create_database;
+use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
 
 use crate::http::utils::{get_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};

@@ -1,18 +1,11 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{
-    AuthenticationMethodStatus, AuthenticationMethodType,
-};
+use crate::ayb_db::models::{AuthenticationMethodStatus, AuthenticationMethodType};
 use crate::email::send_registration_email;
 use crate::error::AybError;
 
-
-
-use crate::http::structs::{
-    AuthenticationDetails, AybConfig,
-    EmptyResponse,
-};
-use crate::http::tokens::{encrypt_auth_token};
-use crate::http::utils::{get_lowercased_header};
+use crate::http::structs::{AuthenticationDetails, AybConfig, EmptyResponse};
+use crate::http::tokens::encrypt_auth_token;
+use crate::http::utils::get_lowercased_header;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/log_in")]
@@ -29,10 +22,12 @@ async fn log_in(
             .list_authentication_methods(&instantiated_entity)
             .await?;
         for method in auth_methods {
-            if AuthenticationMethodType::try_from(method.method_type).expect("unknown authentication method type")
+            if AuthenticationMethodType::try_from(method.method_type)
+                .expect("unknown authentication method type")
                 == AuthenticationMethodType::Email
-                && AuthenticationMethodStatus::try_from(method.status).expect("unknown authentication method status")
-                == AuthenticationMethodStatus::Verified
+                && AuthenticationMethodStatus::try_from(method.status)
+                    .expect("unknown authentication method status")
+                    == AuthenticationMethodStatus::Verified
             {
                 let token = encrypt_auth_token(
                     &AuthenticationDetails {
@@ -49,7 +44,7 @@ async fn log_in(
                     &ayb_config.email,
                     ayb_config.e2e_testing_on(),
                 )
-                    .await?;
+                .await?;
                 return Ok(HttpResponse::Ok().json(EmptyResponse {}));
             }
         }
