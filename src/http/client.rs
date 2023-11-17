@@ -41,7 +41,8 @@ impl AybClient {
                 message: format!("Unable to parse successful response: {}", err),
             })
         } else {
-            response.json::<AybError>()
+            response
+                .json::<AybError>()
                 .await
                 .map(|v| Err(v))
                 .map_err(|error| AybError {
