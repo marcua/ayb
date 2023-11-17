@@ -1,8 +1,43 @@
+use crate::error::AybError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
-use std::fmt;
+use std::str::FromStr;
+
+macro_rules! try_from_i16 {
+    ($struct:ident, { $($left:literal => $right:expr),+ }) => {
+        impl TryFrom<i16> for $struct {
+            type Error = AybError;
+
+            fn try_from(value: i16) -> Result<Self, Self::Error> {
+                match value {
+                    $($left => Ok($right),)*
+                    _ => Err(Self::Error {
+                        message: format!("Unknown value: {}", value),
+                    }),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! from_str {
+    ($struct:ident, { $($left:literal => $right:expr),+ }) => {
+        impl FromStr for $struct {
+            type Err = AybError;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                match value {
+                    $($left => Ok($right),)*
+                    _ => Err(Self::Err {
+                        message: format!("Unknown value: {}", value),
+                    }),
+                }
+            }
+        }
+    };
+}
 
 #[derive(
     Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
@@ -13,29 +48,17 @@ pub enum DBType {
     Duckdb = 1,
 }
 
-impl fmt::Display for DBType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+from_str!(DBType, {
+    "sqlite" => DBType::Sqlite,
+    "duckdb" => DBType::Duckdb
+});
+
+try_from_i16!(DBType, {
+    0 => DBType::Sqlite,
+    1 => DBType::Duckdb
+});
 
 impl DBType {
-    pub fn from_i16(value: i16) -> DBType {
-        match value {
-            0 => DBType::Sqlite,
-            1 => DBType::Duckdb,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn from_str(value: &str) -> DBType {
-        match value {
-            "sqlite" => DBType::Sqlite,
-            "duckdb" => DBType::Duckdb,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
     pub fn to_str(&self) -> &str {
         match self {
             DBType::Sqlite => "sqlite",
@@ -53,29 +76,17 @@ pub enum EntityType {
     Organization = 1,
 }
 
-impl fmt::Display for EntityType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+from_str!(EntityType, {
+    "user" => EntityType::User,
+    "organization" => EntityType::Organization
+});
+
+try_from_i16!(EntityType, {
+    0 => EntityType::User,
+    1 => EntityType::Organization
+});
 
 impl EntityType {
-    pub fn from_i16(value: i16) -> EntityType {
-        match value {
-            0 => EntityType::User,
-            1 => EntityType::Organization,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn from_str(value: &str) -> EntityType {
-        match value {
-            "user" => EntityType::User,
-            "organization" => EntityType::Organization,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
     pub fn to_str(&self) -> &str {
         match self {
             EntityType::User => "user",
@@ -92,27 +103,15 @@ pub enum AuthenticationMethodType {
     Email = 0,
 }
 
-impl fmt::Display for AuthenticationMethodType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+from_str!(AuthenticationMethodType, {
+    "email" => AuthenticationMethodType::Email
+});
+
+try_from_i16!(AuthenticationMethodType, {
+    0 => AuthenticationMethodType::Email
+});
 
 impl AuthenticationMethodType {
-    pub fn from_i16(value: i16) -> AuthenticationMethodType {
-        match value {
-            0 => AuthenticationMethodType::Email,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn from_str(value: &str) -> AuthenticationMethodType {
-        match value {
-            "email" => AuthenticationMethodType::Email,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
     pub fn to_str(&self) -> &str {
         match self {
             AuthenticationMethodType::Email => "email",
@@ -129,29 +128,17 @@ pub enum AuthenticationMethodStatus {
     Revoked = 1,
 }
 
-impl fmt::Display for AuthenticationMethodStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+from_str!(AuthenticationMethodStatus, {
+    "verified" => AuthenticationMethodStatus::Verified,
+    "revoked" => AuthenticationMethodStatus::Revoked
+});
+
+try_from_i16!(AuthenticationMethodStatus, {
+    0 => AuthenticationMethodStatus::Verified,
+    1 => AuthenticationMethodStatus::Revoked
+});
 
 impl AuthenticationMethodStatus {
-    pub fn from_i16(value: i16) -> AuthenticationMethodStatus {
-        match value {
-            0 => AuthenticationMethodStatus::Verified,
-            1 => AuthenticationMethodStatus::Revoked,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn from_str(value: &str) -> AuthenticationMethodStatus {
-        match value {
-            "verified" => AuthenticationMethodStatus::Verified,
-            "revoked" => AuthenticationMethodStatus::Revoked,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
     pub fn to_str(&self) -> &str {
         match self {
             AuthenticationMethodStatus::Verified => "verified",
@@ -214,29 +201,17 @@ pub enum APITokenStatus {
     Revoked = 1,
 }
 
-impl fmt::Display for APITokenStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+from_str!(APITokenStatus, {
+    "active" => APITokenStatus::Active,
+    "revoked" => APITokenStatus::Revoked
+});
+
+try_from_i16!(APITokenStatus, {
+    0 => APITokenStatus::Active,
+    1 => APITokenStatus::Revoked
+});
 
 impl APITokenStatus {
-    pub fn from_i16(value: i16) -> APITokenStatus {
-        match value {
-            0 => APITokenStatus::Active,
-            1 => APITokenStatus::Revoked,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
-    pub fn from_str(value: &str) -> APITokenStatus {
-        match value {
-            "active" => APITokenStatus::Active,
-            "revoked" => APITokenStatus::Revoked,
-            _ => panic!("Unknown value: {}", value),
-        }
-    }
-
     pub fn to_str(&self) -> &str {
         match self {
             APITokenStatus::Active => "active",

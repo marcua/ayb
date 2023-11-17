@@ -8,6 +8,9 @@
 # Emacs
 *~
 
+# IntelliJ Idea-based IDEs
+.idea/
+
 # Ignore ayb-specific files
 ayb.toml
 e2e.sh

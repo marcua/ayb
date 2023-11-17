@@ -31,16 +31,13 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
-    async fn get_api_token(&self, short_token: &String) -> Result<APIToken, AybError>;
+    async fn get_api_token(&self, short_token: &str) -> Result<APIToken, AybError>;
     async fn get_database(
         &self,
-        entity_slug: &String,
-        database_slug: &String,
+        entity_slug: &str,
+        database_slug: &str,
     ) -> Result<InstantiatedDatabase, AybError>;
-    async fn get_entity_by_slug(
-        &self,
-        entity_slug: &String,
-    ) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
         &self,
@@ -60,7 +57,7 @@ macro_rules! implement_ayb_db {
                 db_error: &dyn sqlx::error::DatabaseError,
             ) -> bool {
                 match db_error.code() {
-                    Some(code) => code.to_string() == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
+                    Some(code) => code == $db_type::DUPLICATE_CONSTRAINT_ERROR_CODE,
                     None => false,
                 }
             }
@@ -136,7 +133,7 @@ RETURNING entity_id, short_token, hash, status
 
             async fn get_api_token(
                 &self,
-                short_token: &String,
+                short_token: &str,
             ) -> Result<APIToken, AybError> {
                 let api_token: APIToken = sqlx::query_as(
                     r#"
@@ -164,8 +161,8 @@ WHERE short_token = $1
 
             async fn get_database(
                 &self,
-                entity_slug: &String,
-                database_slug: &String,
+                entity_slug: &str,
+                database_slug: &str,
             ) -> Result<InstantiatedDatabase, AybError> {
                 let db: InstantiatedDatabase = sqlx::query_as(
                     r#"
@@ -191,7 +188,7 @@ WHERE
 
             async fn get_entity_by_slug(
                 &self,
-                entity_slug: &String,
+                entity_slug: &str,
             ) -> Result<InstantiatedEntity, AybError> {
                 let entity: InstantiatedEntity = sqlx::query_as(
                     r#"
@@ -319,7 +316,7 @@ impl SqliteAybDb {
             .run(&pool)
             .await
             .expect("Unable to run migrations");
-        return Self { pool: pool };
+        Self { pool }
     }
 }
 
@@ -343,7 +340,7 @@ impl PostgresAybDb {
             .run(&pool)
             .await
             .expect("Unable to run migrations");
-        return Self { pool: pool };
+        Self { pool }
     }
 }
 

@@ -33,10 +33,7 @@ pub struct AybConfig {
 
 impl AybConfig {
     pub fn e2e_testing_on(&self) -> bool {
-        match self.e2e_testing {
-            Some(v) => v,
-            None => false,
-        }
+        self.e2e_testing.unwrap_or(false)
     }
 }
 
@@ -52,7 +49,10 @@ impl Database {
         Database {
             entity: entity.slug.clone(),
             database: database.slug.clone(),
-            database_type: DBType::from_i16(database.db_type).to_str().to_string(),
+            database_type: DBType::try_from(database.db_type)
+                .expect("unknown database type")
+                .to_str()
+                .to_string(),
         }
     }
 }
@@ -67,7 +67,8 @@ impl Entity {
     pub fn from_persisted(entity: &PersistedEntity) -> Entity {
         Entity {
             entity: entity.slug.clone(),
-            entity_type: EntityType::from_i16(entity.entity_type)
+            entity_type: EntityType::try_from(entity.entity_type)
+                .expect("unknown entity type")
                 .to_str()
                 .to_string(),
         }
