@@ -36,24 +36,20 @@ impl AybClient {
         expected_status: reqwest::StatusCode,
     ) -> Result<T, AybError> {
         let status = response.status();
-        match status {
-            status if status == expected_status => {
-                response.json::<T>().await.map_err(|err| AybError {
-                    message: format!("Unable to parse successful response: {}", err),
-                })
-            }
-            _other => {
-                let error = response.json::<AybError>().await;
-                match error {
-                    Ok(ayb_error) => Err(ayb_error),
-                    Err(error) => Err(AybError {
-                        message: format!(
-                            "Unable to parse error response: {:#?}, response code: {}",
-                            error, status
-                        ),
-                    }),
-                }
-            }
+        if status == expected_status {
+            response.json::<T>().await.map_err(|err| AybError {
+                message: format!("Unable to parse successful response: {}", err),
+            })
+        } else {
+            response.json::<AybError>()
+                .await
+                .map(|v| Err(v))
+                .map_err(|error| AybError {
+                    message: format!(
+                        "Unable to parse error response: {:#?}, response code: {}",
+                        error, status
+                    ),
+                })?
         }
     }
 
