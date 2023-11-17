@@ -26,8 +26,7 @@ async fn register(
             .list_authentication_methods(&instantiated_entity)
             .await?;
         for method in auth_methods {
-            if AuthenticationMethodType::try_from(method.method_type)
-                .expect("unknown authentication method type")
+            if AuthenticationMethodType::try_from(method.method_type)?
                 != AuthenticationMethodType::Email
                 || method.email_address != email_address
             {
@@ -47,7 +46,7 @@ async fn register(
         &AuthenticationDetails {
             version: 1,
             entity: entity.clone(),
-            entity_type: EntityType::from_str(&entity_type).expect("unknown entity type") as i16,
+            entity_type: EntityType::from_str(&entity_type)? as i16,
             email_address: email_address.to_owned(),
         },
         &ayb_config.authentication,

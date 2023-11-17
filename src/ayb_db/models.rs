@@ -3,16 +3,19 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
 use std::str::FromStr;
+use crate::error::AybError;
 
 macro_rules! try_from_i16 {
     ($struct:ident, { $($left:literal => $right:expr),+ }) => {
         impl TryFrom<i16> for $struct {
-            type Error = ();
+            type Error = AybError;
 
             fn try_from(value: i16) -> Result<Self, Self::Error> {
                 match value {
                     $($left => Ok($right),)*
-                    _ => Err(()),
+                    _ => Err(Self::Error {
+                        message: format!("Unknown value: {}", value),
+                    }),
                 }
             }
         }
@@ -22,12 +25,14 @@ macro_rules! try_from_i16 {
 macro_rules! from_str {
     ($struct:ident, { $($left:literal => $right:expr),+ }) => {
         impl FromStr for $struct {
-            type Err = ();
+            type Err = AybError;
 
             fn from_str(value: &str) -> Result<Self, Self::Err> {
                 match value {
                     $($left => Ok($right),)*
-                    _ => Err(()),
+                    _ => Err(Self::Err {
+                        message: format!("Unknown value: {}", value),
+                    }),
                 }
             }
         }
