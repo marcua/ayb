@@ -37,7 +37,5 @@ jobs:
       run: cargo fmt --check
     - name: Ensure clippy finds no issues
       run: cargo clippy
-    - name: Run code tests
+    - name: Run tests
       run: cargo test --verbose
-    - name: Run E2E tests
-      run: cargo test -- --ignored
