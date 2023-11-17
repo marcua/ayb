@@ -1,9 +1,9 @@
+use crate::error::AybError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
 use std::str::FromStr;
-use crate::error::AybError;
 
 macro_rules! try_from_i16 {
     ($struct:ident, { $($left:literal => $right:expr),+ }) => {
