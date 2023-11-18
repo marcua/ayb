@@ -150,10 +150,10 @@ Here's a rough roadmap for the project, with items near the top of the list more
 
 * Make the single-user `ayb` experience excellent
   * [x] Reduce reliance on PostgreSQL (SQLite metadata storage). Given that the goal of `ayb` is to make it easier to create, share, and query databases, it's frustrating that running `ayb` requires you to pay the nontrivial cost of operationalizing PostgreSQL. While Postgres will be helpful for eventually coordinating between multiple `ayb` nodes, a single-node version should be able to store its metadata in SQLite with little setup costs.
-  * [ ] Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
+  * [x] Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
+  * [ ] Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data.
   * [ ] Clustering. Support for multiple `ayb` nodes to serve databases and requests. Whereas a single database will not span multiple machines, parallelism/distribution will happen across users and databases.
   * [ ] Persistence beyond the node. Using projects like [LiteFS](https://github.com/superfly/litefs), stream updates to databases to persistent storage, and allow failover if an `ayb` node disappears.
-  * [ ] Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data.
   * [ ] Sessions/transactions. `ayb`'s query API is a stateless request/response API, making it impossible to start a database transaction or issue multiple queries in a session. Exposing sessions in the API will allow multiple statements per session, and by extension, transactions.
   * [ ] Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
 * Extend `ayb` to more people and software
