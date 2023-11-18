@@ -24,9 +24,6 @@ pub fn encrypt_auth_token(
     authentication_details: &AuthenticationDetails,
     auth_config: &AybConfigAuthentication,
 ) -> Result<String, AybError> {
-    // TODO(marcua): Add `ayb server show_config` and `ayb server
-    // create_config` to make setting up keys easier.
-    // println!("key: {}", fernet::Fernet::generate_key());
     let generator = get_fernet_generator(auth_config)?;
     Ok(generator.encrypt(&serde_json::to_vec(&authentication_details)?))
 }

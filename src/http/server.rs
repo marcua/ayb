@@ -1,8 +1,8 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
+use crate::http::config::read_config;
 use crate::http::endpoints::{confirm, create_database, log_in, query, register};
-use crate::http::structs::AybConfig;
 use crate::http::tokens::retrieve_and_validate_api_token;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
@@ -11,7 +11,6 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
 use std::fs;
 use std::path::PathBuf;
-use toml;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(confirm);
@@ -59,8 +58,7 @@ async fn entity_validator(
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
 
-    let contents = fs::read_to_string(config_path)?;
-    let ayb_conf: AybConfig = toml::from_str(&contents).unwrap();
+    let ayb_conf = read_config(config_path).unwrap();
     let ayb_conf_for_server = ayb_conf.clone();
     fs::create_dir_all(&ayb_conf.data_path).expect("Unable to create data directory");
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url).await.unwrap();
