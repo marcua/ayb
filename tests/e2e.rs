@@ -44,14 +44,13 @@ impl Drop for Cleanup {
 struct AybServer(Child);
 impl AybServer {
     fn run(db_type: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let child =
+        Ok(Self(
             ayb_cmd!("server", "--config", &format!("tests/test-server-config-{}.toml", db_type); {
                 "RUST_LOG" => "actix_web=debug",
                 "RUST_BACKTRACE" => "1"
             })
-            .spawn();
-
-        Ok(Self(child?))
+            .spawn()?,
+        ))
     }
 }
 
