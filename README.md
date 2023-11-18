@@ -40,7 +40,7 @@ data_path = "./ayb_data"
 
 [authentication]
 # A secret (and unique to your server) key that is used for account registration.
-fernet_key = "Wviqeo0r4EEsTGG3fE0KP5eMIhwgdykcnlaSJQuEe4o="
+fernet_key = "<UNIQUE_KEY_GENERATED_BY_COMMAND>="
 token_expiration_seconds = 3600
 
 [email]
