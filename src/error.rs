@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use sqlx;
 use std::string;
+use toml;
 
 #[derive(Debug, Deserialize, Display, Error, Serialize)]
 pub struct AybError {
@@ -102,6 +103,14 @@ impl From<std::str::Utf8Error> for AybError {
     }
 }
 
+impl From<std::io::Error> for AybError {
+    fn from(cause: std::io::Error) -> Self {
+        AybError {
+            message: format!("IO error: {:?}", cause),
+        }
+    }
+}
+
 impl From<sqlx::Error> for AybError {
     fn from(cause: sqlx::Error) -> Self {
         AybError {
@@ -114,6 +123,22 @@ impl From<reqwest::Error> for AybError {
     fn from(cause: reqwest::Error) -> Self {
         AybError {
             message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<toml::de::Error> for AybError {
+    fn from(cause: toml::de::Error) -> Self {
+        AybError {
+            message: format!("Unable to deserialize toml string: {:?}", cause),
+        }
+    }
+}
+
+impl From<toml::ser::Error> for AybError {
+    fn from(cause: toml::ser::Error) -> Self {
+        AybError {
+            message: format!("Unable to serialize toml string: {:?}", cause),
         }
     }
 }

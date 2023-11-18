@@ -24,16 +24,32 @@ cargo install ayb
 ```
 
 ### Running a server
-An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. To configure the server, create an `ayb.toml` configuration file to tell the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases:
+An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. An `ayb.toml` file tells the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases. You can generate a starter file with `ayb default_server_config`.
 
 ```bash
+$ ayb default_server_config > ayb.toml
+
 $ cat ayb.toml
+
 host = "0.0.0.0"
 port = 5433
 database_url = "sqlite://ayb_data/ayb.sqlite"
 # Or, for Postgres:
 # database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
 data_path = "./ayb_data"
+
+[authentication]
+# A secret (and unique to your server) key that is used for account registration.
+fernet_key = "<UNIQUE_KEY_GENERATED_BY_COMMAND>="
+token_expiration_seconds = 3600
+
+[email]
+from = "Server Sender <server@example.org>"
+reply_to = "Server Reply <replyto@example.org>"
+smtp_host = "localhost"
+smtp_port = 465
+smtp_username = "login@example.org"
+smtp_password = "the_password"
 ```
 
 Running the server then requires one command

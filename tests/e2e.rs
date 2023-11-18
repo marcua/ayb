@@ -1,4 +1,5 @@
 use assert_cmd::prelude::*;
+use regex::Regex;
 use std::fs;
 use std::process::Command;
 use std::thread;
@@ -75,6 +76,36 @@ fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>
 #[test]
 fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
     client_server_integration("sqlite", "http://127.0.0.1:5434", 10026)
+}
+
+#[test]
+fn default_server_config() -> Result<(), Box<dyn std::error::Error>> {
+    let re = Regex::new(r#"fernet_key = "[^"]+""#).unwrap();
+    let expected = r#"host = "0.0.0.0"
+port = 5433
+database_url = "sqlite://ayb_data/ayb.sqlite"
+data_path = "./ayb_data"
+
+[authentication]
+!!!fernet_line!!!
+token_expiration_seconds = 3600
+
+[email]
+from = "Server Sender <server@example.org>"
+reply_to = "Server Reply <replyto@example.org>"
+smtp_host = "localhost"
+smtp_port = 465
+smtp_username = "login@example.org"
+smtp_password = "the_password"
+
+"#;
+    let cmd = Command::cargo_bin("ayb")?
+        .args(["default_server_config"])
+        .assert()
+        .success();
+    let output = std::str::from_utf8(&cmd.get_output().stdout)?;
+    assert_eq!(re.replace_all(output, "!!!fernet_line!!!"), expected);
+    Ok(())
 }
 
 fn client_server_integration(
