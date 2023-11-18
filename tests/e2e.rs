@@ -1,30 +1,93 @@
 use assert_cmd::prelude::*;
 use regex::Regex;
 use std::fs;
-use std::process::Command;
+use std::process::{Child, Command};
 use std::thread;
 use std::time;
 
 mod utils;
+
+// ayb_cmd!("value1", value2; {
+//     "ENV_VAR" => env_value
+// })
+macro_rules! ayb_cmd {
+    ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
+        Command::cargo_bin("ayb")?
+                .args([$($value,)*])
+                $(.env($env_left, $env_right))*
+    }
+}
+
+// ayb_assert_cmd!("value1", value2; {
+//     "ENV_VAR" => env_value
+// })
+macro_rules! ayb_assert_cmd {
+    ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
+        Command::cargo_bin("ayb")?
+                .args([$($value,)*])
+                $(.env($env_left, $env_right))*
+                .assert()
+                .success()
+    }
+}
+
+struct Cleanup;
+
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        if let Err(err) = fs::remove_dir_all("/tmp/ayb/e2e") {
+            assert_eq!(format!("{}", err), "No such file or directory (os error 2)")
+        }
+    }
+}
+
+struct AybServer(Child);
+impl AybServer {
+    fn run(db_type: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self(
+            ayb_cmd!("server", "--config", &format!("tests/test-server-config-{}.toml", db_type); {
+                "RUST_LOG" => "actix_web=debug",
+                "RUST_BACKTRACE" => "1"
+            })
+            .spawn()?,
+        ))
+    }
+}
+
+impl Drop for AybServer {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+    }
+}
+
+struct SmtpServer(Child);
+
+impl SmtpServer {
+    fn run(smtp_port: u16) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(SmtpServer(
+            Command::new("tests/smtp_server.sh")
+                .args([&*format!("{}", smtp_port)])
+                .spawn()?,
+        ))
+    }
+}
+
+impl Drop for SmtpServer {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+    }
+}
 
 fn create_database(
     server_url: &str,
     api_key: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "--url",
-            server_url,
-            "create_database",
-            "e2e-first/test.sqlite",
-            "sqlite",
-        ])
-        .env("AYB_API_TOKEN", api_key)
-        .assert()
-        .success()
-        .stdout(format!("{}\n", result));
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "create_database", "e2e-first/test.sqlite", "sqlite"; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
     Ok(())
 }
 
@@ -35,21 +98,11 @@ fn query(
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    Command::cargo_bin("ayb")?
-        .args([
-            "client",
-            "--url",
-            server_url,
-            "query",
-            "e2e-first/test.sqlite",
-            "--format",
-            format,
-            query,
-        ])
-        .env("AYB_API_TOKEN", api_key)
-        .assert()
-        .success()
-        .stdout(format!("{}\n", result));
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "query", "e2e-first/test.sqlite", "--format", format, query; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
     Ok(())
 }
 
@@ -59,12 +112,11 @@ fn register(
     email: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    Command::cargo_bin("ayb")?
-        .args(["client", "register", slug, email])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout(format!("{}\n", result));
+    let cmd = ayb_assert_cmd!("client", "register", slug, email; {
+        "AYB_SERVER_URL" => server_url,
+    });
+
+    cmd.stdout(format!("{}\n", result));
     Ok(())
 }
 
@@ -99,10 +151,7 @@ smtp_username = "login@example.org"
 smtp_password = "the_password"
 
 "#;
-    let cmd = Command::cargo_bin("ayb")?
-        .args(["default_server_config"])
-        .assert()
-        .success();
+    let cmd = ayb_assert_cmd!("default_server_config"; {});
     let output = std::str::from_utf8(&cmd.get_output().stdout)?;
     assert_eq!(re.replace_all(output, "!!!fernet_line!!!"), expected);
     Ok(())
@@ -113,25 +162,17 @@ fn client_server_integration(
     server_url: &str,
     smtp_port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let _cleanup = Cleanup;
+
     Command::new(format!("tests/reset_db_{}.sh", db_type))
         .assert()
         .success();
 
     // Run server
-    let mut ayb_server = Command::cargo_bin("ayb")?
-        .args([
-            "server",
-            "--config",
-            &*format!("tests/test-server-config-{}.toml", db_type),
-        ])
-        .env("RUST_LOG", "actix_web=debug")
-        .env("RUST_BACKTRACE", "1")
-        .spawn()?;
+    let _ayb_server = AybServer::run(db_type).expect("failed to start the ayb server");
 
     // Run stub SMTP server
-    let mut smtp_server = Command::new("tests/smtp_server.sh")
-        .args([&*format!("{}", smtp_port)])
-        .spawn()?;
+    let _smtp_server = SmtpServer::run(smtp_port).expect("failed to start the smtp server");
 
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
@@ -183,12 +224,10 @@ fn client_server_integration(
     let second_token0 = utils::extract_token(&entries[1])?;
 
     // Using a bad token (appending a letter) doesn't work.
-    Command::cargo_bin("ayb")?
-        .args(["client", "confirm", &format!("{}a", first_token0)])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Error: Invalid or expired token\n");
+    let cmd = ayb_assert_cmd!("client", "confirm", &format!("{}a", first_token0); {
+        "AYB_SERVER_URL" => server_url,
+    });
+    cmd.stdout("Error: Invalid or expired token\n");
 
     // Using either token first will register the account. The second
     // token, which has the same email address, will still work
@@ -196,62 +235,44 @@ fn client_server_integration(
     // third token, which was with a different email address for the
     // same account, won't work now that there's already a confirmed
     // email address on the account..
-    let first_api_key0 = utils::extract_api_key(
-        Command::cargo_bin("ayb")?
-            .args(["client", "confirm", &first_token0])
-            .env("AYB_SERVER_URL", server_url)
-            .assert()
-            .success()
-            .get_output(),
-    )?;
+    let cmd = ayb_assert_cmd!("client", "confirm", &first_token0; {
+        "AYB_SERVER_URL" => server_url,
+    });
+    let first_api_key0 = utils::extract_api_key(cmd.get_output())?;
 
-    let first_api_key1 = utils::extract_api_key(
-        Command::cargo_bin("ayb")?
-            .args(["client", "confirm", &first_token1])
-            .env("AYB_SERVER_URL", server_url)
-            .assert()
-            .success()
-            .get_output(),
-    )?;
+    let cmd = ayb_assert_cmd!("client", "confirm", &first_token1; {
+        "AYB_SERVER_URL" => server_url,
+    });
+    let first_api_key1 = utils::extract_api_key(cmd.get_output())?;
 
-    Command::cargo_bin("ayb")?
-        .args(["client", "confirm", &first_token2])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Error: e2e-first has already been registered\n");
+    let cmd = ayb_assert_cmd!("client", "confirm", &first_token2; {
+        "AYB_SERVER_URL" => server_url,
+    });
+    cmd.stdout("Error: e2e-first has already been registered\n");
 
     // And for the second account, we can still confirm using the only
     // authentication token we've requested so far.
-    let second_api_key0 = utils::extract_api_key(
-        Command::cargo_bin("ayb")?
-            .args(["client", "confirm", &second_token0])
-            .env("AYB_SERVER_URL", server_url)
-            .assert()
-            .success()
-            .get_output(),
-    )?;
+    let cmd = ayb_assert_cmd!("client", "confirm", &second_token0; {
+        "AYB_SERVER_URL" => server_url,
+    });
+    let second_api_key0 = utils::extract_api_key(cmd.get_output())?;
 
     // Logging in as the user emails the first email address, which
     // can confirm using the token it received.
-    Command::cargo_bin("ayb")?
-        .args(["client", "log_in", "e2e-first"])
-        .env("AYB_SERVER_URL", server_url)
-        .assert()
-        .success()
-        .stdout("Check your email to finish logging in e2e-first\n");
+    let cmd = ayb_assert_cmd!("client", "log_in", "e2e-first"; {
+        "AYB_SERVER_URL" => server_url,
+    });
+
+    cmd.stdout("Check your email to finish logging in e2e-first\n");
 
     let entries = utils::parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
     assert_eq!(entries.len(), 3);
     let login_token = utils::extract_token(&entries[2])?;
-    let first_api_key2 = utils::extract_api_key(
-        Command::cargo_bin("ayb")?
-            .args(["client", "confirm", &login_token])
-            .env("AYB_SERVER_URL", server_url)
-            .assert()
-            .success()
-            .get_output(),
-    )?;
+
+    let cmd = ayb_assert_cmd!("client", "confirm", &login_token; {
+        "AYB_SERVER_URL" => server_url,
+    });
+    let first_api_key2 = utils::extract_api_key(cmd.get_output())?;
 
     // To summarize where we are at this point
     // * User e2e-first has three API tokens (first_api_key[0...2]). We'll use these
@@ -340,14 +361,6 @@ fn client_server_integration(
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
-
-    // TODO(marcua): Make this cleanup code run even on test failure.
-    // See https://medium.com/@ericdreichert/test-setup-and-teardown-in-rust-without-a-framework-ba32d97aa5ab
-    if let Err(err) = fs::remove_dir_all("/tmp/ayb/e2e") {
-        assert_eq!(format!("{}", err), "No such file or directory (os error 2)")
-    }
-    ayb_server.kill()?;
-    smtp_server.kill()?;
 
     Ok(())
 }
