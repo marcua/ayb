@@ -1,5 +1,5 @@
 use ayb::error::AybError;
-use quoted_printable;
+
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -36,14 +36,14 @@ pub fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
     for line in &email.content {
         if line.starts_with(prefix) && line.len() > prefix.len() {
             return Ok(String::from_utf8(quoted_printable::decode(
-                line[prefix.len()..].to_owned(),
+                &line[prefix.len()..],
                 quoted_printable::ParseMode::Robust,
             )?)?);
         }
     }
-    return Err(AybError {
+    Err(AybError {
         message: "No token found in email".to_string(),
-    });
+    })
 }
 
 pub fn parse_smtp_log(file_path: &str) -> Result<Vec<EmailEntry>, serde_json::Error> {
@@ -51,5 +51,5 @@ pub fn parse_smtp_log(file_path: &str) -> Result<Vec<EmailEntry>, serde_json::Er
     for line in fs::read_to_string(file_path).unwrap().lines() {
         entries.push(serde_json::from_str(line)?);
     }
-    return Ok(entries);
+    Ok(entries)
 }

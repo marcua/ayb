@@ -214,7 +214,7 @@ async fn main() -> std::io::Result<()> {
                         .await
                     {
                         Ok(query_result) => {
-                            if query_result.rows.len() > 0 {
+                            if !query_result.rows.is_empty() {
                                 match format {
                                     OutputFormat::Table => query_result.generate_table()?,
                                     OutputFormat::Csv => query_result.generate_csv()?,

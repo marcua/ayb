@@ -17,16 +17,16 @@ pub fn get_header(req: &HttpRequest, header_name: &str) -> Result<String, AybErr
 }
 
 pub fn get_lowercased_header(req: &HttpRequest, header_name: &str) -> Result<String, AybError> {
-    return Ok(get_header(req, header_name)?.to_lowercase());
+    Ok(get_header(req, header_name)?.to_lowercase())
 }
 
 pub fn unwrap_authenticated_entity(
     entity: &Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<InstantiatedEntity, AybError> {
-    return match entity {
+    match entity {
         Some(instantiated_entity) => Ok(instantiated_entity.clone().into_inner()),
         None => Err(AybError {
             message: "Endpoint requires an entity, but one was not provided".to_string(),
         }),
-    };
+    }
 }
