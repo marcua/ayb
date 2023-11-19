@@ -11,6 +11,16 @@ pub struct AybConfigAuthentication {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmailTemplatesConfirm {
+    pub confirmation_url: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmailTemplates {
+    pub confirm: Option<AybConfigEmailTemplatesConfirm>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigEmail {
     pub from: String,
     pub reply_to: String,
@@ -18,6 +28,7 @@ pub struct AybConfigEmail {
     pub smtp_port: u16,
     pub smtp_username: String,
     pub smtp_password: String,
+    pub templates: Option<AybConfigEmailTemplates>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
