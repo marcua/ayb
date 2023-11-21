@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
-//use rusqlite;
-//use rusqlite::types::ValueRef;
+use rusqlite;
+use rusqlite::types::ValueRef;
 
 use sqlx::{
     migrate,
