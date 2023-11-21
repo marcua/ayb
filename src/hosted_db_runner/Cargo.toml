@@ -1,0 +1,9 @@
+[package]
+name = "hosted_db_runner"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rusqlite = { version = "0.26.3", features = ["bundled", "wasm32-wasi-vfs"] }
