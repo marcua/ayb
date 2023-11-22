@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 rusqlite = { version = "0.26.3", features = ["bundled", "wasm32-wasi-vfs"] }
+serde = { version = "1.0", features = ["derive"] }

@@ -1,17 +1,9 @@
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::vec::Vec;
 use rusqlite;
 use rusqlite::types::ValueRef;
-
-use sqlx::{
-    migrate,
-    postgres::PgPoolOptions,
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    Pool, Postgres, Sqlite,
-};
-
-
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::string;
+use std::vec::Vec;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {
@@ -19,7 +11,52 @@ pub struct QueryResult {
     pub rows: Vec<Vec<Option<String>>>,
 }
 
-pub fn run_sqlite_query(path: &PathBuf, query: &str) -> Result<QueryResult, std::io::Error> {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AybError {
+    pub message: String,
+}
+
+impl From<std::io::Error> for AybError {
+    fn from(cause: std::io::Error) -> Self {
+        AybError {
+            message: format!("IO error: {:?}", cause),
+        }
+    }
+}
+
+impl From<rusqlite::Error> for AybError {
+    fn from(cause: rusqlite::Error) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<rusqlite::types::FromSqlError> for AybError {
+    fn from(cause: rusqlite::types::FromSqlError) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<std::str::Utf8Error> for AybError {
+    fn from(cause: std::str::Utf8Error) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+impl From<string::FromUtf8Error> for AybError {
+    fn from(cause: string::FromUtf8Error) -> Self {
+        AybError {
+            message: format!("{:?}", cause),
+        }
+    }
+}
+
+pub fn run_sqlite_query(path: &PathBuf, query: &str) -> Result<QueryResult, AybError> {
     let conn = rusqlite::Connection::open(path)?;
     let mut prepared = conn.prepare(query)?;
     let num_columns = prepared.column_count();
@@ -52,7 +89,13 @@ pub fn run_sqlite_query(path: &PathBuf, query: &str) -> Result<QueryResult, std:
     })
 }
 
-
-fn main() -> std::io::Result<()> {    
-    println!("{:#?}", run_sqlite_query(&PathBuf::from("testing.sqlite"), "CREATE TABLE TABLE moo (hello varchar(20));")?);
+fn main() -> Result<(), AybError> {
+    println!(
+        "{:#?}",
+        run_sqlite_query(
+            &PathBuf::from("testing.sqlite"),
+            "CREATE TABLE TABLE moo (hello varchar(20));"
+        )?
+    );
+    Ok(())
 }
