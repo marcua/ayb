@@ -1,7 +1,7 @@
 use crate::http::structs::AybConfigEmail;
 
 const CLI_CONFIRM_TMPL: &str = "To complete your registration, type\n\tayb client confirm {token}";
-const WEB_CONFIRM_TMPL: &str = "To complete your registration, visit\n\t <{url}>";
+const WEB_CONFIRM_TMPL: &str = "To complete your registration, visit\n\t {url}";
 
 pub fn render_confirmation_template(config: &AybConfigEmail, token: &str) -> String {
     if let Some(tmpl_conf) = &config.templates {
