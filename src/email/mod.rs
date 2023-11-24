@@ -1,3 +1,4 @@
+use crate::email::templating::render_confirmation_template;
 use crate::error::AybError;
 use crate::http::structs::AybConfigEmail;
 use lettre::{
@@ -6,6 +7,8 @@ use lettre::{
     transport::smtp::client::{Tls, TlsParameters},
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
+
+mod templating;
 
 pub async fn send_registration_email(
     to: &str,
@@ -16,7 +19,7 @@ pub async fn send_registration_email(
     send_email(
         to,
         "Your login credentials",
-        format!("To log in, type\n\tayb client confirm {token}"),
+        render_confirmation_template(config, token),
         config,
         e2e_testing_on,
     )
