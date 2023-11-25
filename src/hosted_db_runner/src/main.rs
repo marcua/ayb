@@ -94,7 +94,7 @@ fn main() -> Result<(), AybError> {
         "{:#?}",
         run_sqlite_query(
             &PathBuf::from("testing.sqlite"),
-            "CREATE TABLE TABLE moo (hello varchar(20));"
+            "CREATE TABLE moo (hello varchar(20));"
         )?
     );
     Ok(())

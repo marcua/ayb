@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rusqlite = { version = "0.26.3", features = ["bundled", "wasm32-wasi-vfs"] }
+# Until this PR is merged: https://github.com/rusqlite/rusqlite/pull/1332
+rusqlite = { git = "https://github.com/marcua/rusqlite.git", branch = "wasi-example", features = ["bundled"] }
 serde = { version = "1.0", features = ["derive"] }
