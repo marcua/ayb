@@ -1,4 +1,8 @@
-use crate::ayb_db::models::{DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase, InstantiatedEntity as PersistedEntity};
+use crate::ayb_db::models::{
+    DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
+    InstantiatedEntity as PersistedEntity,
+};
+use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -97,13 +101,36 @@ pub struct EntityDatabasePath {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityQueryPath {
-    pub entity: String
+    pub entity: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityQueryResponse {
     pub slug: String,
     pub databases: Vec<EntityDatabase>,
+}
+
+impl EntityQueryResponse {
+    pub fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![Cell::new("Slug"), Cell::new("Type")]));
+
+        self.databases
+            .iter()
+            .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.db_type)]))
+            .for_each(|c| {
+                table.add_row(c);
+            });
+
+        table
+    }
+
+    pub fn generate_table(&self) -> Result<(), std::io::Error> {
+        let mut table = self.to_table();
+        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+        table.print(&mut std::io::stdout())?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]

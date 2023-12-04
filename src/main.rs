@@ -118,6 +118,12 @@ async fn main() -> std::io::Result<()> {
                         .arg(arg!(<entity> "The entity to log in as")
                              .required(true))
                 )
+                .subcommand(
+                    Command::new("entity")
+                        .about("Retrieve the information of a given entity")
+                        .arg(arg!(<entity> "The entity to query")
+                            .required(true))
+                )
         )
         .get_matches();
 
@@ -197,6 +203,18 @@ async fn main() -> std::io::Result<()> {
                     match client.log_in(entity).await {
                         Ok(_response) => {
                             println!("Check your email to finish logging in {}", entity);
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("entity") {
+                if let Some(entity) = matches.get_one::<String>("entity") {
+                    match client.query_entity(entity).await {
+                        Ok(response) => {
+                            println!("Queryable databases owned by {}:\n", entity);
+                            response.generate_table()?;
                         }
                         Err(err) => {
                             println!("Error: {}", err);

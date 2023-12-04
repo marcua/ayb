@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIToken, Database, EmptyResponse};
+use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -103,6 +103,20 @@ impl AybClient {
 
         let response = reqwest::Client::new()
             .post(self.make_url("log_in".to_owned()))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn query_entity(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url(format!("entity/{}", entity)))
             .headers(headers)
             .send()
             .await?;

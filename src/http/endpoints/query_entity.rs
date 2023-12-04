@@ -1,10 +1,10 @@
-use actix_web::{get, web};
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
 use crate::http::permissions::can_query;
 use crate::http::structs::{EntityDatabase, EntityQueryPath, EntityQueryResponse};
 use crate::http::utils::unwrap_authenticated_entity;
+use actix_web::{get, web};
 
 #[get("/v1/entity/{entity}")]
 pub async fn query_entity(
@@ -16,7 +16,8 @@ pub async fn query_entity(
     let entity_slug = &path.entity;
     let desired_entity = ayb_db.get_entity_by_slug(entity_slug).await?;
 
-    let databases = ayb_db.list_databases_by_entity(&desired_entity)
+    let databases = ayb_db
+        .list_databases_by_entity(&desired_entity)
         .await?
         .into_iter()
         .filter(|v| can_query(&authenticated_entity, v))
