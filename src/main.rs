@@ -119,8 +119,8 @@ async fn main() -> std::io::Result<()> {
                              .required(true))
                 )
                 .subcommand(
-                    Command::new("entity")
-                        .about("Retrieve the information of a given entity")
+                    Command::new("list")
+                        .about("List the databases of a given entity")
                         .arg(arg!(<entity> "The entity to query")
                             .required(true))
                 )
@@ -209,9 +209,9 @@ async fn main() -> std::io::Result<()> {
                         }
                     }
                 }
-            } else if let Some(matches) = matches.subcommand_matches("entity") {
+            } else if let Some(matches) = matches.subcommand_matches("list") {
                 if let Some(entity) = matches.get_one::<String>("entity") {
-                    match client.query_entity(entity).await {
+                    match client.list_databases(entity).await {
                         Ok(response) => {
                             println!("Queryable databases owned by {}:\n", entity);
                             response.generate_table()?;

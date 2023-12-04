@@ -111,7 +111,7 @@ impl AybClient {
             .await
     }
 
-    pub async fn query_entity(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
+    pub async fn list_databases(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers)?;
 

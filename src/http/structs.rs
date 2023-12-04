@@ -113,7 +113,7 @@ pub struct EntityQueryResponse {
 impl EntityQueryResponse {
     pub fn to_table(&self) -> Table {
         let mut table = Table::new();
-        table.set_titles(Row::new(vec![Cell::new("Slug"), Cell::new("Type")]));
+        table.set_titles(Row::new(vec![Cell::new("Database slug"), Cell::new("Type")]));
 
         self.databases
             .iter()
