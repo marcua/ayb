@@ -123,6 +123,11 @@ async fn main() -> std::io::Result<()> {
                         .about("List the databases of a given entity")
                         .arg(arg!(<entity> "The entity to query")
                             .required(true))
+                        .arg(
+                            arg!(--format <type> "The format in which to output the result")
+                                .value_parser(value_parser!(OutputFormat))
+                                .default_value(OutputFormat::Table.to_str())
+                                .required(false)),
                 )
         )
         .get_matches();
@@ -210,11 +215,18 @@ async fn main() -> std::io::Result<()> {
                     }
                 }
             } else if let Some(matches) = matches.subcommand_matches("list") {
-                if let Some(entity) = matches.get_one::<String>("entity") {
+                if let (Some(entity), Some(format)) = (matches.get_one::<String>("entity"), matches.get_one::<OutputFormat>("format")) {
                     match client.list_databases(entity).await {
                         Ok(response) => {
-                            println!("Queryable databases owned by {}:\n", entity);
-                            response.generate_table()?;
+                            if response.databases.is_empty() {
+                                println!("No queryable databases owned by {}", entity);
+                            } else {
+                                println!("Queryable databases owned by {}:\n", entity);
+                                match format {
+                                    OutputFormat::Table => response.generate_table()?,
+                                    OutputFormat::Csv => response.generate_csv()?,
+                                }
+                            }
                         }
                         Err(err) => {
                             println!("Error: {}", err);

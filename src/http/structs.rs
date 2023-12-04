@@ -131,6 +131,12 @@ impl EntityQueryResponse {
         table.print(&mut std::io::stdout())?;
         Ok(())
     }
+
+    pub fn generate_csv(&self) -> Result<(), std::io::Error> {
+        let table = self.to_table();
+        table.to_csv(std::io::stdout())?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
