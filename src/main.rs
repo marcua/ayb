@@ -215,7 +215,10 @@ async fn main() -> std::io::Result<()> {
                     }
                 }
             } else if let Some(matches) = matches.subcommand_matches("list") {
-                if let (Some(entity), Some(format)) = (matches.get_one::<String>("entity"), matches.get_one::<OutputFormat>("format")) {
+                if let (Some(entity), Some(format)) = (
+                    matches.get_one::<String>("entity"),
+                    matches.get_one::<OutputFormat>("format"),
+                ) {
                     match client.list_databases(entity).await {
                         Ok(response) => {
                             if response.databases.is_empty() {
