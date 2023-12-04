@@ -1,7 +1,4 @@
-use crate::ayb_db::models::{
-    DBType, EntityType, InstantiatedDatabase as PersistedDatabase,
-    InstantiatedEntity as PersistedEntity,
-};
+use crate::ayb_db::models::{DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase, InstantiatedEntity as PersistedEntity};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -96,6 +93,32 @@ impl Entity {
 pub struct EntityDatabasePath {
     pub entity: String,
     pub database: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityQueryPath {
+    pub entity: String
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityQueryResponse {
+    pub slug: String,
+    pub databases: Vec<EntityDatabase>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityDatabase {
+    pub slug: String,
+    pub db_type: String,
+}
+
+impl From<InstantiatedDatabase> for EntityDatabase {
+    fn from(value: InstantiatedDatabase) -> Self {
+        Self {
+            slug: value.slug,
+            db_type: DBType::try_from(value.db_type).unwrap().to_str().into(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

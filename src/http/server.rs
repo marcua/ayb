@@ -2,9 +2,7 @@ use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::http::config::read_config;
-use crate::http::endpoints::{
-    confirm_endpoint, create_db_endpoint, log_in_endpoint, query_endpoint, register_endpoint,
-};
+use crate::http::endpoints::{confirm_endpoint, create_db_endpoint, log_in_endpoint, query_endpoint, query_entity_endpoint, register_endpoint};
 use crate::http::tokens::retrieve_and_validate_api_token;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
@@ -24,7 +22,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("")
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_db_endpoint)
-            .service(query_endpoint),
+            .service(query_endpoint)
+            .service(query_entity_endpoint),
     );
 }
 
