@@ -13,6 +13,8 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
 use std::fs;
 use std::path::PathBuf;
+use actix_cors::Cors;
+use crate::http::structs::AybConfigCors;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(confirm_endpoint);
@@ -57,6 +59,20 @@ async fn entity_validator(
     }
 }
 
+fn build_cors(ayb_cors: Option<AybConfigCors>) -> Cors {
+    let mut cors = Cors::default()
+        .allow_any_header()
+        .allow_any_method();
+
+    if ayb_cors.as_ref().is_some_and(|conf| conf.origin.trim() == "*") || ayb_cors.is_none() {
+        cors = cors.allow_any_origin()
+    } else {
+        cors = cors.allowed_origin(ayb_cors.as_ref().unwrap().origin.trim());
+    }
+
+    cors
+}
+
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
 
@@ -67,8 +83,11 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     HttpServer::new(move || {
+        let cors = build_cors(ayb_conf.cors.clone());
+
         App::new()
             .wrap(middleware::Compress::default())
+            .wrap(cors)
             .configure(config)
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))

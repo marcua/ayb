@@ -5,6 +5,11 @@ use crate::ayb_db::models::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigCors {
+    pub origin: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigAuthentication {
     pub fernet_key: String,
     pub token_expiration_seconds: u64,
@@ -40,6 +45,7 @@ pub struct AybConfig {
     pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
     pub email: AybConfigEmail,
+    pub cors: Option<AybConfigCors>,
 }
 
 impl AybConfig {

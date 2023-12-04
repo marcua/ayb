@@ -30,6 +30,7 @@ pub fn default_server_config() -> AybConfig {
             smtp_password: "the_password".to_string(),
             templates: None,
         },
+        cors: None,
     }
 }
 
