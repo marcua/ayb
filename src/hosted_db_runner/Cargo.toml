@@ -6,6 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# Until this PR is merged: https://github.com/rusqlite/rusqlite/pull/1332
-rusqlite = { git = "https://github.com/marcua/rusqlite.git", branch = "wasi-example", features = ["bundled"] }
+rusqlite = { version = "0.30.0" }
 serde = { version = "1.0", features = ["derive"] }
