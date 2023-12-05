@@ -15,3 +15,6 @@ smtp_password = "the_password"
 [authentication]
 fernet_key = "y3UdMqGh6si7pvQb8wsuW3ryiJcacp0H1QoHUPfsjb0="
 token_expiration_seconds = 3600
+
+[cors]
+origin = "*"

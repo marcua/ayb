@@ -120,6 +120,21 @@ fn register(
     Ok(())
 }
 
+fn list_databases(
+    server_url: &str,
+    api_key: &str,
+    entity: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "list", entity, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
 #[test]
 fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
     client_server_integration("postgres", "http://127.0.0.1:5433", 10025)
@@ -150,6 +165,9 @@ smtp_port = 465
 smtp_username = "login@example.org"
 smtp_password = "the_password"
 
+[cors]
+origin = "*"
+
 "#;
     let cmd = ayb_assert_cmd!("default_server_config"; {});
     let output = std::str::from_utf8(&cmd.get_output().stdout)?;
@@ -177,10 +195,12 @@ fn client_server_integration(
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
 
+    let first_entity_0 = "e2e-first";
+
     // Register an entity.
     register(
         server_url,
-        "e2e-first",
+        first_entity_0,
         "e2e@example.org",
         "Check your email to finish registering e2e-first",
     )?;
@@ -188,7 +208,7 @@ fn client_server_integration(
     // Register the same entity with the same email address.
     register(
         server_url,
-        "e2e-first",
+        first_entity_0,
         "e2e@example.org",
         "Check your email to finish registering e2e-first",
     )?;
@@ -197,15 +217,17 @@ fn client_server_integration(
     // addresses as long as you don't complete the process.
     register(
         server_url,
-        "e2e-first",
+        first_entity_0,
         "e2e-another@example.org",
         "Check your email to finish registering e2e-first",
     )?;
 
+    let second_entity_0 = "e2e-second";
+
     // Start the registration process for a second user (e2e-second)
     register(
         server_url,
-        "e2e-second",
+        second_entity_0,
         "e2e-another@example.org",
         "Check your email to finish registering e2e-second",
     )?;
@@ -360,6 +382,24 @@ fn client_server_integration(
         "SELECT * FROM test_table;",
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
+    )?;
+
+    // List databases from first account using its API key
+    list_databases(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        "csv",
+        "Database slug,Type\ntest.sqlite,sqlite",
+    )?;
+
+    // List databases from first account using the API key of the second account
+    list_databases(
+        server_url,
+        &second_api_key0,
+        first_entity_0,
+        "csv",
+        &format!("No queryable databases owned by {}", first_entity_0),
     )?;
 
     Ok(())

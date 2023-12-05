@@ -76,6 +76,11 @@ $ export AYB_API_TOKEN=<API_TOKEN_FROM_PREVIOUS_COMMAND>
 $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
 
+$ ayb client list marcua
+ Database slug | Type 
+---------------+--------
+ test.sqlite   | sqlite 
+
 $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 
 Rows: 0
@@ -115,6 +120,10 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/confirm -H "authentication-token
 $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/create -H "db-type: sqlite" -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>"
 
 {"entity":"marcua","database":"test.sqlite","database_type":"sqlite"}
+
+$ curl -w "\n" -X GET http://localhost:5433/v1/entity/marcua -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>"
+
+{"slug":"marcua","databases":[{"slug":"test.sqlite","database_type":"sqlite"}]}
 
 $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d 'CREATE TABLE favorite_databases(name varchar, score integer);'
 

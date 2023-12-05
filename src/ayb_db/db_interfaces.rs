@@ -17,7 +17,7 @@ use std::str::FromStr;
 // metadata. To support different databases (e.g., SQLite and
 // Postgres) via `sqlx`, which requires static types for connection
 // pools and query execution, the AybDb trait is implemented for each
-// database, with shared coe provided by the `implement_ayb_db`
+// database, with shared code provided by the `implement_ayb_db`
 // macro. This is inspired by the `seafowl` project's implementation,
 // the details of which can be found here:
 // https://github.com/splitgraph/seafowl/blob/542159ebb42cada59cea6bd82fef4ab9e9724a94/src/repository/default.rs#L28
@@ -43,6 +43,10 @@ pub trait AybDb: DynClone + Send + Sync {
         &self,
         entity: &InstantiatedEntity,
     ) -> Result<Vec<InstantiatedAuthenticationMethod>, AybError>;
+    async fn list_databases_by_entity(
+        &self,
+        entity: &InstantiatedEntity,
+    ) -> Result<Vec<InstantiatedDatabase>, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -291,6 +295,28 @@ WHERE entity_id = $1
                 .await?;
 
                 Ok(methods)
+            }
+
+            async fn list_databases_by_entity(
+                &self,
+                entity: &InstantiatedEntity,
+            ) -> Result<Vec<InstantiatedDatabase>, AybError> {
+                let databases: Vec<InstantiatedDatabase> = sqlx::query_as(
+                    r#"
+SELECT
+    id,
+    entity_id,
+    slug,
+    db_type
+FROM database
+WHERE database.entity_id = $1
+                    "#,
+                )
+                .bind(entity.id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                Ok(databases)
             }
         }
     };

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use toml;
 
 use crate::error::AybError;
-use crate::http::structs::{AybConfig, AybConfigAuthentication, AybConfigEmail};
+use crate::http::structs::{AybConfig, AybConfigAuthentication, AybConfigCors, AybConfigEmail};
 
 pub fn config_to_toml(ayb_config: AybConfig) -> Result<String, AybError> {
     Ok(toml::to_string(&ayb_config)?)
@@ -29,6 +29,9 @@ pub fn default_server_config() -> AybConfig {
             smtp_username: "login@example.org".to_string(),
             smtp_password: "the_password".to_string(),
             templates: None,
+        },
+        cors: AybConfigCors {
+            origin: "*".to_string(),
         },
     }
 }

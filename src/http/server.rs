@@ -3,9 +3,12 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::http::config::read_config;
 use crate::http::endpoints::{
-    confirm_endpoint, create_db_endpoint, log_in_endpoint, query_endpoint, register_endpoint,
+    confirm_endpoint, create_db_endpoint, entity_details_endpoint, log_in_endpoint, query_endpoint,
+    register_endpoint,
 };
+use crate::http::structs::AybConfigCors;
 use crate::http::tokens::retrieve_and_validate_api_token;
+use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
@@ -22,7 +25,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("")
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_db_endpoint)
-            .service(query_endpoint),
+            .service(query_endpoint)
+            .service(entity_details_endpoint),
     );
 }
 
@@ -57,6 +61,18 @@ async fn entity_validator(
     }
 }
 
+fn build_cors(ayb_cors: AybConfigCors) -> Cors {
+    let mut cors = Cors::default().allow_any_header().allow_any_method();
+
+    if ayb_cors.origin.trim() == "*" {
+        cors = cors.allow_any_origin()
+    } else {
+        cors = cors.allowed_origin(ayb_cors.origin.trim());
+    }
+
+    cors
+}
+
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
 
@@ -67,8 +83,11 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     HttpServer::new(move || {
+        let cors = build_cors(ayb_conf.cors.clone());
+
         App::new()
             .wrap(middleware::Compress::default())
+            .wrap(cors)
             .configure(config)
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
