@@ -224,7 +224,6 @@ async fn main() -> std::io::Result<()> {
                             if response.databases.is_empty() {
                                 println!("No queryable databases owned by {}", entity);
                             } else {
-                                println!("Queryable databases owned by {}:\n", entity);
                                 match format {
                                     OutputFormat::Table => response.generate_table()?,
                                     OutputFormat::Csv => response.generate_csv()?,

@@ -46,7 +46,7 @@ pub struct AybConfig {
     pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
     pub email: AybConfigEmail,
-    pub cors: Option<AybConfigCors>,
+    pub cors: AybConfigCors,
 }
 
 impl AybConfig {
@@ -100,7 +100,7 @@ pub struct EntityDatabasePath {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct EntityQueryPath {
+pub struct EntityPath {
     pub entity: String,
 }
 
@@ -120,7 +120,7 @@ impl EntityQueryResponse {
 
         self.databases
             .iter()
-            .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.db_type)]))
+            .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.database_type)]))
             .for_each(|c| {
                 table.add_row(c);
             });
@@ -145,14 +145,14 @@ impl EntityQueryResponse {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityDatabase {
     pub slug: String,
-    pub db_type: String,
+    pub database_type: String,
 }
 
 impl From<InstantiatedDatabase> for EntityDatabase {
     fn from(value: InstantiatedDatabase) -> Self {
         Self {
             slug: value.slug,
-            db_type: DBType::try_from(value.db_type).unwrap().to_str().into(),
+            database_type: DBType::try_from(value.db_type).unwrap().to_str().into(),
         }
     }
 }

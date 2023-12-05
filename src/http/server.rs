@@ -3,7 +3,7 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::http::config::read_config;
 use crate::http::endpoints::{
-    confirm_endpoint, create_db_endpoint, log_in_endpoint, query_endpoint, query_entity_endpoint,
+    confirm_endpoint, create_db_endpoint, entity_details_endpoint, log_in_endpoint, query_endpoint,
     register_endpoint,
 };
 use crate::http::structs::AybConfigCors;
@@ -26,7 +26,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_db_endpoint)
             .service(query_endpoint)
-            .service(query_entity_endpoint),
+            .service(entity_details_endpoint),
     );
 }
 
@@ -61,17 +61,13 @@ async fn entity_validator(
     }
 }
 
-fn build_cors(ayb_cors: Option<AybConfigCors>) -> Cors {
+fn build_cors(ayb_cors: AybConfigCors) -> Cors {
     let mut cors = Cors::default().allow_any_header().allow_any_method();
 
-    if ayb_cors
-        .as_ref()
-        .is_some_and(|conf| conf.origin.trim() == "*")
-        || ayb_cors.is_none()
-    {
+    if ayb_cors.origin.trim() == "*" {
         cors = cors.allow_any_origin()
     } else {
-        cors = cors.allowed_origin(ayb_cors.as_ref().unwrap().origin.trim());
+        cors = cors.allowed_origin(ayb_cors.origin.trim());
     }
 
     cors

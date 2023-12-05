@@ -387,10 +387,7 @@ fn client_server_integration(
         &first_api_key0,
         first_entity_0,
         "csv",
-        &format!(
-            "Queryable databases owned by {}:\n\nDatabase slug,Type\ntest.sqlite,sqlite",
-            first_entity_0
-        ),
+        "Database slug,Type\ntest.sqlite,sqlite",
     )?;
 
     // List databases from first account using the API key of the second account
