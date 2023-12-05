@@ -165,6 +165,9 @@ smtp_port = 465
 smtp_username = "login@example.org"
 smtp_password = "the_password"
 
+[cors]
+origin = "*"
+
 "#;
     let cmd = ayb_assert_cmd!("default_server_config"; {});
     let output = std::str::from_utf8(&cmd.get_output().stdout)?;
