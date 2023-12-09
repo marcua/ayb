@@ -1,4 +1,6 @@
 use rusqlite;
+use rusqlite::config::DbConfig;
+use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -58,6 +60,14 @@ impl From<string::FromUtf8Error> for AybError {
 
 pub fn query_sqlite(path: &PathBuf, query: &str) -> Result<QueryResult, AybError> {
     let conn = rusqlite::Connection::open(path)?;
+
+    // Disable the usage of ATTACH
+    // https://www.sqlite.org/lang_attach.html
+    conn.set_limit(Limit::SQLITE_LIMIT_ATTACHED, 0);
+    // Prevent queries from deliberately corrupting the database
+    // https://www.sqlite.org/c3ref/c_dbconfig_defensive.html
+    conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE)?;
+
     let mut prepared = conn.prepare(query)?;
     let num_columns = prepared.column_count();
     let mut fields: Vec<String> = Vec::new();
