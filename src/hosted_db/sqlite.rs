@@ -1,11 +1,21 @@
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use rusqlite;
+use rusqlite::config::DbConfig;
+use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
 use std::path::PathBuf;
 
 pub fn run_sqlite_query(path: &PathBuf, query: &str) -> Result<QueryResult, AybError> {
     let conn = rusqlite::Connection::open(path)?;
+
+    // Disable the usage of ATTACH
+    // https://www.sqlite.org/lang_attach.html
+    conn.set_limit(Limit::SQLITE_LIMIT_ATTACHED, 0);
+    // Prevent queries from deliberately corrupting the database
+    // https://www.sqlite.org/c3ref/c_dbconfig_defensive.html
+    conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE)?;
+
     let mut prepared = conn.prepare(query)?;
     let num_columns = prepared.column_count();
     let mut fields: Vec<String> = Vec::new();
