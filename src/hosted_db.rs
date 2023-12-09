@@ -4,6 +4,7 @@ mod sqlite;
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::hosted_db::sqlite::run_sqlite_query;
+use crate::http::structs::AybConfigIsolation;
 use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -53,9 +54,24 @@ impl QueryResult {
     }
 }
 
-pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryResult, AybError> {
+// TODO(marcua): Consider a shared library so QueryResult can be the same in both crates, or move into the runner library.
+impl From<ayb_hosted_db_runner::QueryResult> for QueryResult {
+    fn from(results: ayb_hosted_db_runner::QueryResult) -> Self {
+        QueryResult {
+            fields: results.fields,
+            rows: results.rows,
+        }
+    }
+}
+
+pub fn run_query(
+    path: &PathBuf,
+    query: &str,
+    db_type: &DBType,
+    isolation: &Option<AybConfigIsolation>,
+) -> Result<QueryResult, AybError> {
     match db_type {
-        DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
+        DBType::Sqlite => Ok(run_sqlite_query(path, query, isolation)?),
         _ => Err(AybError {
             message: "Unsupported DB type".to_string(),
         }),

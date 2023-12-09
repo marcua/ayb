@@ -56,7 +56,7 @@ impl From<string::FromUtf8Error> for AybError {
     }
 }
 
-pub fn run_sqlite_query(path: &PathBuf, query: &str) -> Result<QueryResult, AybError> {
+pub fn query_sqlite(path: &PathBuf, query: &str) -> Result<QueryResult, AybError> {
     let conn = rusqlite::Connection::open(path)?;
     let mut prepared = conn.prepare(query)?;
     let num_columns = prepared.column_count();

@@ -29,6 +29,7 @@ pub fn default_server_config() -> AybConfig {
             smtp_username: "login@example.org".to_string(),
             smtp_password: "the_password".to_string(),
         },
+        isolation: None,
     }
 }
 
