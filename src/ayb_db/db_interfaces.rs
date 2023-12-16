@@ -41,7 +41,10 @@ pub trait AybDb: DynClone + Send + Sync {
         &self,
         entity_slug: &str,
     ) -> Result<Option<InstantiatedEntity>, AybError>;
-    async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_by_id(
+        &self,
+        entity_id: i32,
+    ) -> Result<Option<InstantiatedEntity>, AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -221,8 +224,8 @@ WHERE slug = $1
             async fn get_entity_by_id(
                 &self,
                 entity_id: i32,
-            ) -> Result<InstantiatedEntity, AybError> {
-                let entity: InstantiatedEntity = sqlx::query_as(
+            ) -> Result<Option<InstantiatedEntity>, AybError> {
+                let entity: sqlx::Result<InstantiatedEntity> = sqlx::query_as(
                     r#"
 SELECT
     id,
@@ -234,15 +237,13 @@ WHERE id = $1
                 )
                 .bind(entity_id)
                 .fetch_one(&self.pool)
-                .await
-                .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError {
-                        message: format!("Entity not found: {:?}", entity_id),
-                    }),
-                    _ => Err(AybError::from(err)),
-                })?;
+                .await;
 
-                Ok(entity)
+                if entity.as_ref().is_err_and(|e| matches!(e, sqlx::Error::RowNotFound)) {
+                    return Ok(None)
+                }
+
+                Ok(Some(entity?))
             }
 
             async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError> {

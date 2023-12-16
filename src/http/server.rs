@@ -41,10 +41,17 @@ async fn entity_validator(
                 Ok(api_token) => {
                     let entity = ayb_db.get_entity_by_id(api_token.entity_id).await;
                     match entity {
-                        Ok(entity) => {
+                        Ok(Some(entity)) => {
                             req.extensions_mut().insert(entity);
                             Ok(req)
                         }
+                        Ok(None) => Err((
+                            AybError {
+                                message: format!("Entity not found: {:?}", api_token.entity_id),
+                            }
+                            .into(),
+                            req,
+                        )),
                         Err(e) => Err((e.into(), req)),
                     }
                 }
