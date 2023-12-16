@@ -31,7 +31,7 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
-    async fn get_api_token(&self, short_token: &str) -> Result<APIToken, AybError>;
+    async fn get_api_token(&self, short_token: &str) -> Result<Option<APIToken>, AybError>;
     async fn get_database(
         &self,
         entity_slug: &str,
@@ -144,8 +144,8 @@ RETURNING entity_id, short_token, hash, status
             async fn get_api_token(
                 &self,
                 short_token: &str,
-            ) -> Result<APIToken, AybError> {
-                let api_token: APIToken = sqlx::query_as(
+            ) -> Result<Option<APIToken>, AybError> {
+                let api_token: sqlx::Result<APIToken> = sqlx::query_as(
                     r#"
 SELECT
     short_token,
@@ -158,15 +158,13 @@ WHERE short_token = $1
                 )
                 .bind(short_token)
                 .fetch_one(&self.pool)
-                .await
-                .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError {
-                        message: format!("API Token not found: {:?}", short_token),
-                    }),
-                    _ => Err(AybError::from(err)),
-                })?;
+                .await;
 
-                Ok(api_token)
+                if api_token.as_ref().is_err_and(|e| matches!(e, sqlx::Error::RowNotFound)) {
+                    return Ok(None)
+                }
+
+                Ok(Some(api_token?))
             }
 
             async fn get_database(

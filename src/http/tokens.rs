@@ -66,7 +66,14 @@ pub async fn retrieve_and_validate_api_token(
 ) -> Result<APIToken, AybError> {
     let controller = api_key_controller()?;
     let pak = PrefixedApiKey::from_string(token)?;
-    let api_token = (ayb_db.get_api_token(pak.short_token())).await?;
+    let api_token = ayb_db.get_api_token(pak.short_token()).await?;
+    if api_token.is_none() {
+        return Err(AybError {
+            message: format!("API Token not found {:?}", pak.short_token()),
+        });
+    }
+
+    let api_token = api_token.unwrap();
     if !controller.check_hash(&pak, &api_token.hash) {
         return Err(AybError {
             message: "Invalid API token".to_string(),
