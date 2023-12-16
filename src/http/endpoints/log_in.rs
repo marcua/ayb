@@ -17,7 +17,7 @@ async fn log_in(
     let entity = get_lowercased_header(&req, "entity")?;
     let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
 
-    if let Ok(instantiated_entity) = desired_entity {
+    if let Ok(Some(instantiated_entity)) = desired_entity {
         let auth_methods = ayb_db
             .list_authentication_methods(&instantiated_entity)
             .await?;

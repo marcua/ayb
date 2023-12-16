@@ -21,7 +21,7 @@ async fn register(
     // Ensure that there are no authentication methods aside from
     // perhaps the currently requested one.
     let mut already_verified = false;
-    if let Ok(instantiated_entity) = desired_entity {
+    if let Ok(Some(instantiated_entity)) = desired_entity {
         let auth_methods = ayb_db
             .list_authentication_methods(&instantiated_entity)
             .await?;

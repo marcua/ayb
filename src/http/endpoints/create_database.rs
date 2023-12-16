@@ -20,6 +20,14 @@ async fn create_database(
     let entity_slug = &path.entity;
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let db_type = get_header(&req, "db-type")?;
+
+    if entity.is_none() {
+        return Err(AybError {
+            message: format!("Entity not found: {:?}", entity_slug),
+        })
+    }
+
+    let entity = entity.unwrap();
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),

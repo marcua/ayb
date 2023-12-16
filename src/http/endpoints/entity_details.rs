@@ -16,6 +16,13 @@ pub async fn entity_details(
     let entity_slug = &path.entity;
     let desired_entity = ayb_db.get_entity_by_slug(entity_slug).await?;
 
+    if desired_entity.is_none() {
+        return Err(AybError {
+            message: format!("Entity not found {:?}", entity_slug),
+        })
+    }
+
+    let desired_entity = desired_entity.unwrap();
     let databases = ayb_db
         .list_databases_by_entity(&desired_entity)
         .await?
