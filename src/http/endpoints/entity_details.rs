@@ -19,7 +19,7 @@ pub async fn entity_details(
     if desired_entity.is_none() {
         return Err(AybError {
             message: format!("Entity not found {:?}", entity_slug),
-        })
+        });
     }
 
     let desired_entity = desired_entity.unwrap();

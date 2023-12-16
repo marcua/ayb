@@ -37,7 +37,10 @@ pub trait AybDb: DynClone + Send + Sync {
         entity_slug: &str,
         database_slug: &str,
     ) -> Result<InstantiatedDatabase, AybError>;
-    async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<Option<InstantiatedEntity>, AybError>;
+    async fn get_entity_by_slug(
+        &self,
+        entity_slug: &str,
+    ) -> Result<Option<InstantiatedEntity>, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
         &self,

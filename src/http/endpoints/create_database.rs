@@ -24,7 +24,7 @@ async fn create_database(
     if entity.is_none() {
         return Err(AybError {
             message: format!("Entity not found: {:?}", entity_slug),
-        })
+        });
     }
 
     let entity = entity.unwrap();
