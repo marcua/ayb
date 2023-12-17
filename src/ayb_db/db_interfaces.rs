@@ -154,7 +154,10 @@ WHERE short_token = $1
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound),
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                        id: short_token.into(),
+                        record_type: "api_token".into(),
+                    }),
                     _ => Err(AybError::from(err)),
                 })?;
 
@@ -206,7 +209,10 @@ WHERE slug = $1
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound),
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                        id: entity_slug.into(),
+                        record_type: "entity".into(),
+                    }),
                     _ => Err(AybError::from(err)),
                 })?;
 
@@ -231,7 +237,10 @@ WHERE id = $1
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound),
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                        id: entity_id.to_string(),
+                        record_type: "entity".into(),
+                    }),
                     _ => Err(AybError::from(err)),
                 })?;
 

@@ -1,5 +1,5 @@
 use actix_web;
-use derive_more::{Display, Error};
+use derive_more::Error;
 use fernet;
 use lettre;
 use prefixed_api_key;
@@ -9,14 +9,21 @@ use rusqlite;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use sqlx;
+use std::fmt::{Display, Formatter};
 use std::string;
 use toml;
 
-#[derive(Debug, Deserialize, Display, Error, Serialize)]
+#[derive(Debug, Deserialize, Error, Serialize)]
 #[serde(tag = "type", content = "value")]
 pub enum AybError {
-    RecordNotFound,
+    RecordNotFound { id: String, record_type: String },
     Other { message: String },
+}
+
+impl Display for AybError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl actix_web::error::ResponseError for AybError {
