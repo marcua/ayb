@@ -64,3 +64,35 @@ impl From<String> for TemplateString {
         Self { string: value }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::templating::TemplateString;
+
+    #[test]
+    fn deserializes_properly() {
+        let str = TemplateString {
+            string: "Hi {name}!".into(),
+        };
+
+        assert_eq!(
+            serde_json::to_string(&str).unwrap(),
+            "\"Hi {name}!\"".to_string()
+        );
+    }
+
+    #[test]
+    fn serializes_properly() {
+        let str: TemplateString = serde_json::from_str("\"Hi {name}!\"").unwrap();
+
+        assert_eq!(str.string, "Hi {name}!".to_string());
+    }
+
+    #[test]
+    fn executes_properly() {
+        let str = TemplateString::from("Hello, {name1} and {name2}!".to_string());
+        let result = str.execute(vec![("name1", "Alice"), ("name2", "Bob")]);
+
+        assert_eq!(result, "Hello, Alice and Bob!".to_string())
+    }
+}
