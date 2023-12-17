@@ -21,5 +21,5 @@ pub fn render_confirmation_template(config: &AybConfigEmail, token: &str) -> Str
         }
     }
 
-    cli_confirm_tmpl.execute(vec![("token", &urlencoding::encode(token))])
+    cli_confirm_tmpl.execute(vec![("token", token)])
 }
