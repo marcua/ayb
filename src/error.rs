@@ -119,7 +119,7 @@ impl From<sqlx::Error> for AybError {
             sqlx::Error::RowNotFound => Self::RecordNotFound,
             _ => Self::Other {
                 message: format!("{:?}", cause),
-            }
+            },
         }
     }
 }
