@@ -56,7 +56,7 @@ impl QueryResult {
 pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryResult, AybError> {
     match db_type {
         DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
-        _ => Err(AybError {
+        _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),
     }

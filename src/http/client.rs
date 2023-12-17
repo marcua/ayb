@@ -23,7 +23,7 @@ impl AybClient {
             );
             Ok(())
         } else {
-            Err(AybError {
+            Err(AybError::Other {
                 message: "Calling endpoint that requires client API token, but none provided"
                     .to_string(),
             })
@@ -37,7 +37,7 @@ impl AybClient {
     ) -> Result<T, AybError> {
         let status = response.status();
         if status == expected_status {
-            response.json::<T>().await.map_err(|err| AybError {
+            response.json::<T>().await.map_err(|err| AybError::Other {
                 message: format!("Unable to parse successful response: {}", err),
             })
         } else {
@@ -45,7 +45,7 @@ impl AybClient {
                 .json::<AybError>()
                 .await
                 .map(|v| Err(v))
-                .map_err(|error| AybError {
+                .map_err(|error| AybError::Other {
                     message: format!(
                         "Unable to parse error response: {:#?}, response code: {}",
                         error, status

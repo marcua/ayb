@@ -14,7 +14,7 @@ const API_TOKEN_PREFIX: &str = "ayb";
 fn get_fernet_generator(auth_config: &AybConfigAuthentication) -> Result<Fernet, AybError> {
     match Fernet::new(&auth_config.fernet_key) {
         Some(token_generator) => Ok(token_generator),
-        None => Err(AybError {
+        None => Err(AybError::Other {
             message: "Missing or invalid Fernet key".to_string(),
         }),
     }
@@ -68,7 +68,7 @@ pub async fn retrieve_and_validate_api_token(
     let pak = PrefixedApiKey::from_string(token)?;
     let api_token = (ayb_db.get_api_token(pak.short_token())).await?;
     if !controller.check_hash(&pak, &api_token.hash) {
-        return Err(AybError {
+        return Err(AybError::Other {
             message: "Invalid API token".to_string(),
         });
     }

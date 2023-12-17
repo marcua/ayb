@@ -24,7 +24,7 @@ pub fn extract_api_key(output: &Output) -> Result<String, AybError> {
         let captures = re.captures(output_str).unwrap();
         Ok(captures.get(1).map_or("", |m| m.as_str()).to_string())
     } else {
-        Err(AybError {
+        Err(AybError::Other {
             message: "No API key".to_string(),
         })
     }
@@ -41,7 +41,7 @@ pub fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
             )?)?);
         }
     }
-    Err(AybError {
+    Err(AybError::Other {
         message: "No token found in email".to_string(),
     })
 }

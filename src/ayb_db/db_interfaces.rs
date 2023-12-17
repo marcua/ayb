@@ -125,7 +125,7 @@ RETURNING entity_id, short_token, hash, status
                     sqlx::Error::Database(db_error)
                         if self.is_duplicate_constraint_error(&*db_error) =>
                     {
-                        Err(AybError {
+                        Err(AybError::Other {
                             message: format!("Database already exists"),
                         })
                     }
@@ -154,9 +154,7 @@ WHERE short_token = $1
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError {
-                        message: format!("API Token not found: {:?}", short_token),
-                    }),
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound),
                     _ => Err(AybError::from(err)),
                 })?;
 
@@ -208,9 +206,7 @@ WHERE slug = $1
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError {
-                        message: format!("Entity not found: {:?}", entity_slug),
-                    }),
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound),
                     _ => Err(AybError::from(err)),
                 })?;
 
@@ -235,9 +231,7 @@ WHERE id = $1
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError {
-                        message: format!("Entity not found: {:?}", entity_id),
-                    }),
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound),
                     _ => Err(AybError::from(err)),
                 })?;
 
@@ -378,7 +372,7 @@ pub async fn connect_to_ayb_db(url: String) -> Result<Box<dyn AybDb>, AybError> 
     } else if url.starts_with("postgres") {
         Ok(Box::new(PostgresAybDb::connect(url).await))
     } else {
-        Err(AybError {
+        Err(AybError::Other {
             message: format!(
                 "Database type for {} is not supported (currently only SQLite and PostgreSQL)",
                 url

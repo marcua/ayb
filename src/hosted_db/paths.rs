@@ -9,7 +9,7 @@ pub fn database_path(
 ) -> Result<PathBuf, AybError> {
     let mut path: PathBuf = [data_path, entity_slug].iter().collect();
     if let Err(e) = fs::create_dir_all(&path) {
-        return Err(AybError {
+        return Err(AybError::Other {
             message: format!("Unable to create entity path for {}: {}", entity_slug, e),
         });
     }

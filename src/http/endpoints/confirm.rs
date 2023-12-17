@@ -47,7 +47,7 @@ async fn confirm(
         // if it was previously created, or if there is no other
         // verification method already verified.
         if already_verified {
-            return Err(AybError {
+            return Err(AybError::Other {
                 message: format!("{} has already been registered", created_entity.slug),
             });
         }

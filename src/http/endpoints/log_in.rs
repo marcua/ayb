@@ -48,7 +48,7 @@ async fn log_in(
         }
     }
 
-    Err(AybError {
+    Err(AybError::Other {
         message: format!("No account or email authentication method for {}", entity),
     })
 }

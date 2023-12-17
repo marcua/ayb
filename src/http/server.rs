@@ -52,7 +52,7 @@ async fn entity_validator(
             }
         }
         None => Err((
-            AybError {
+            AybError::Other {
                 message: "Misconfigured server: no database".to_string(),
             }
             .into(),
