@@ -115,8 +115,11 @@ impl From<std::io::Error> for AybError {
 
 impl From<sqlx::Error> for AybError {
     fn from(cause: sqlx::Error) -> Self {
-        AybError::Other {
-            message: format!("{:?}", cause),
+        match cause {
+            sqlx::Error::RowNotFound => Self::RecordNotFound,
+            _ => Self::Other {
+                message: format!("{:?}", cause),
+            }
         }
     }
 }
