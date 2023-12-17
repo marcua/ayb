@@ -2,6 +2,7 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
+use crate::templating::TemplateString;
 use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +19,7 @@ pub struct AybConfigAuthentication {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigEmailTemplatesConfirm {
-    pub confirmation_url: String,
+    pub confirmation_url: TemplateString,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

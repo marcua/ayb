@@ -1,19 +1,25 @@
 use crate::http::structs::AybConfigEmail;
-
-const CLI_CONFIRM_TMPL: &str = "To complete your registration, type\n\tayb client confirm {token}";
-const WEB_CONFIRM_TMPL: &str = "To complete your registration, visit\n\t {url}";
+use crate::templating::TemplateString;
 
 pub fn render_confirmation_template(config: &AybConfigEmail, token: &str) -> String {
+    let cli_confirm_tmpl: TemplateString =
+        "To complete your registration, type\n\tayb client confirm {token}"
+            .to_string()
+            .into();
+    let web_confirm_tmpl: TemplateString = "To complete your registration, visit\n\t {url}"
+        .to_string()
+        .into();
+
     if let Some(tmpl_conf) = &config.templates {
         if let Some(confirm_conf) = &tmpl_conf.confirm {
-            return WEB_CONFIRM_TMPL.replace(
-                "{url}",
+            return web_confirm_tmpl.execute(vec![(
+                "url",
                 &confirm_conf
                     .confirmation_url
-                    .replace("{token}", &urlencoding::encode(token)),
-            );
+                    .execute(vec![("token", &urlencoding::encode(token))]),
+            )]);
         }
     }
 
-    CLI_CONFIRM_TMPL.replace("{token}", token)
+    cli_confirm_tmpl.execute(vec![("token", &urlencoding::encode(token))])
 }
