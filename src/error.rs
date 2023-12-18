@@ -22,7 +22,10 @@ pub enum AybError {
 
 impl Display for AybError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            AybError::Other { message } => write!(f, "{}", message),
+            _ => write!(f, "{:?}", self),
+        }
     }
 }
 
