@@ -70,7 +70,7 @@ async fn send_email(
     }
 
     if let Err(e) = mailer.send(email).await {
-        return Err(AybError {
+        return Err(AybError::Other {
             message: format!("Could not send email: {e:?}"),
         });
     }

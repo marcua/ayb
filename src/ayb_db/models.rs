@@ -13,7 +13,7 @@ macro_rules! try_from_i16 {
             fn try_from(value: i16) -> Result<Self, Self::Error> {
                 match value {
                     $($left => Ok($right),)*
-                    _ => Err(Self::Error {
+                    _ => Err(Self::Error::Other {
                         message: format!("Unknown value: {}", value),
                     }),
                 }
@@ -30,7 +30,7 @@ macro_rules! from_str {
             fn from_str(value: &str) -> Result<Self, Self::Err> {
                 match value {
                     $($left => Ok($right),)*
-                    _ => Err(Self::Err {
+                    _ => Err(Self::Err::Other {
                         message: format!("Unknown value: {}", value),
                     }),
                 }

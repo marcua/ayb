@@ -30,7 +30,7 @@ async fn create_database(
         let created_database = ayb_db.create_database(&database).await?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
     } else {
-        Err(AybError {
+        Err(AybError::Other {
             message: format!(
                 "Authenticated entity {} can not create a database for entity {}",
                 authenticated_entity.slug, entity_slug
