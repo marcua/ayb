@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "https://raw.githubusercontent.com/marcua/ayb/main/docs/config/endpoints/schema.json",
+  "title": "ayb web information",
+  "description": "Information used by the ayb server to interact with the UI",
+  "type": "object",
+  "properties": {
+    "base_url": {
+      "description": "The base URL",
+      "examples": ["https://aybWeb.sofiaritz.com/"],
+      "type": "string"
+    },
+    "endpoints": {
+      "description": "The endpoints of the frontend",
+      "type": "object",
+      "properties": {
+        "profile": {
+          "description": "The profile page",
+          "examples": ["/u/{entity}"],
+          "type": "string"
+        },
+        "confirmation": {
+          "description": "The confirmation endpoint",
+          "examples": ["/auth/confirm/{entity}"],
+          "type": "string"
+        }
+      },
+      "required": ["profile", "confirmation"]
+    }
+  },
+  "required": ["endpoints"]
+}
