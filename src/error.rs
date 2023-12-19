@@ -14,7 +14,7 @@ use std::string;
 use toml;
 
 #[derive(Debug, Deserialize, Error, Serialize)]
-#[serde(tag = "type", content = "value")]
+#[serde(tag = "type")]
 pub enum AybError {
     RecordNotFound { id: String, record_type: String },
     Other { message: String },
