@@ -2,9 +2,14 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
-use crate::templating::TemplateString;
 use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
+use url::Url;
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigWeb {
+    pub info_url: Url,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigCors {
@@ -18,16 +23,6 @@ pub struct AybConfigAuthentication {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigEmailTemplatesConfirm {
-    pub confirmation_url: TemplateString,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigEmailTemplates {
-    pub confirm: Option<AybConfigEmailTemplatesConfirm>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigEmail {
     pub from: String,
     pub reply_to: String,
@@ -35,7 +30,6 @@ pub struct AybConfigEmail {
     pub smtp_port: u16,
     pub smtp_username: String,
     pub smtp_password: String,
-    pub templates: Option<AybConfigEmailTemplates>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -47,6 +41,7 @@ pub struct AybConfig {
     pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
     pub email: AybConfigEmail,
+    pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
 }
 

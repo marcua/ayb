@@ -1,6 +1,7 @@
 use crate::email::templating::render_confirmation_template;
 use crate::error::AybError;
 use crate::http::structs::AybConfigEmail;
+use crate::http::web_frontend::WebFrontendDetails;
 use lettre::{
     message::header::ContentType,
     transport::smtp::authentication::Credentials,
@@ -14,12 +15,13 @@ pub async fn send_registration_email(
     to: &str,
     token: &str,
     config: &AybConfigEmail,
+    web_details: &Option<WebFrontendDetails>,
     e2e_testing_on: bool,
 ) -> Result<(), AybError> {
     send_email(
         to,
         "Your login credentials",
-        render_confirmation_template(config, token),
+        render_confirmation_template(web_details, token),
         config,
         e2e_testing_on,
     )

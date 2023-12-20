@@ -6,3 +6,4 @@ pub mod server;
 pub mod structs;
 pub mod tokens;
 pub mod utils;
+pub mod web_frontend;
