@@ -5,7 +5,7 @@ use crate::error::AybError;
 use crate::http::structs::{AuthenticationDetails, AybConfig, EmptyResponse};
 use crate::http::tokens::encrypt_auth_token;
 use crate::http::utils::{get_header, get_lowercased_header};
-use crate::web_info::WebInfo;
+use crate::http::web_frontend::WebFrontendDetails;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::str::FromStr;
 
@@ -14,7 +14,7 @@ async fn register(
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
-    web_info: web::Data<Option<WebInfo>>,
+    web_info: web::Data<Option<WebFrontendDetails>>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
     let email_address = get_lowercased_header(&req, "email-address")?;

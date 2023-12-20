@@ -8,4 +8,3 @@ pub mod error;
 pub mod hosted_db;
 pub mod http;
 pub mod templating;
-pub mod web_info;

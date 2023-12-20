@@ -8,7 +8,7 @@ use crate::http::endpoints::{
 };
 use crate::http::structs::AybConfigCors;
 use crate::http::tokens::retrieve_and_validate_api_token;
-use crate::web_info::WebInfo;
+use crate::http::web_frontend::WebFrontendDetails;
 use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
@@ -81,9 +81,9 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     let ayb_conf_for_server = ayb_conf.clone();
     fs::create_dir_all(&ayb_conf.data_path).expect("Unable to create data directory");
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url).await.unwrap();
-    let web_info = if let Some(web_conf) = ayb_conf.web {
+    let web_details = if let Some(web_conf) = ayb_conf.web {
         Some(
-            WebInfo::from_url(&web_conf.info_url)
+            WebFrontendDetails::from_url(&web_conf.info_url)
                 .await
                 .expect("failed to retrieve information from the web frontend"),
         )
@@ -99,7 +99,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
             .wrap(middleware::Compress::default())
             .wrap(cors)
             .configure(config)
-            .app_data(web::Data::new(web_info.clone()))
+            .app_data(web::Data::new(web_details.clone()))
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
     })
