@@ -1,7 +1,10 @@
-use crate::templating::TemplateString;
 use crate::http::web_frontend::WebFrontendDetails;
+use crate::templating::TemplateString;
 
-pub fn render_confirmation_template(web_details: &Option<WebFrontendDetails>, token: &str) -> String {
+pub fn render_confirmation_template(
+    web_details: &Option<WebFrontendDetails>,
+    token: &str,
+) -> String {
     let cli_confirm_tmpl: TemplateString =
         "To complete your registration, type\n\tayb client confirm {token}"
             .to_string()
