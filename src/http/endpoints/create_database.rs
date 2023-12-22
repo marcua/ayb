@@ -4,9 +4,9 @@ use std::str::FromStr;
 
 use crate::error::AybError;
 
+use crate::hosted_db::paths::database_path;
 use crate::http::permissions::can_create_database;
-use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
-
+use crate::http::structs::{AybConfig, Database as APIDatabase, EntityDatabasePath};
 use crate::http::utils::{get_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
@@ -15,6 +15,7 @@ async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
+    ayb_config: web::Data<AybConfig>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
@@ -28,6 +29,8 @@ async fn create_database(
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     if can_create_database(&authenticated_entity, &entity) {
         let created_database = ayb_db.create_database(&database).await?;
+        // Create the database file at the appropriate path
+        let _ = database_path(entity_slug, &path.database, &ayb_config.data_path, true)?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
     } else {
         Err(AybError {
