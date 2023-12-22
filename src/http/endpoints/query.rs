@@ -26,7 +26,7 @@ async fn query(
     if can_query(&authenticated_entity, &database) {
         let db_type = DBType::try_from(database.db_type)?;
         let db_path = database_path(entity_slug, database_slug, &ayb_config.data_path)?;
-        let result = run_query(&db_path, &query, &db_type, &ayb_config.isolation)?;
+        let result = run_query(&db_path, &query, &db_type, &ayb_config.isolation).await?;
         Ok(web::Json(result))
     } else {
         Err(AybError {

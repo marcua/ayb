@@ -1,4 +1,5 @@
 pub mod paths;
+mod sandbox;
 mod sqlite;
 
 use crate::ayb_db::models::DBType;
@@ -64,14 +65,14 @@ impl From<ayb_hosted_db_runner::QueryResult> for QueryResult {
     }
 }
 
-pub fn run_query(
+pub async fn run_query(
     path: &PathBuf,
     query: &str,
     db_type: &DBType,
     isolation: &Option<AybConfigIsolation>,
 ) -> Result<QueryResult, AybError> {
     match db_type {
-        DBType::Sqlite => Ok(run_sqlite_query(path, query, isolation)?),
+        DBType::Sqlite => Ok(run_sqlite_query(path, query, isolation).await?),
         _ => Err(AybError {
             message: "Unsupported DB type".to_string(),
         }),

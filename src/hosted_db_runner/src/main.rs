@@ -1,13 +1,16 @@
-use hosted_db_runner::{run_sqlite_query, AybError, QueryResult};
+use ayb_hosted_db_runner::{query_sqlite};
+use serde_json;
 use std::env;
 use std::path::PathBuf;
 
-fn main() {
+fn main() -> Result<(), serde_json::Error> {
     let args: Vec<String> = env::args().collect();
     let db_file = &args[1];
     let query = (&args[2..]).to_vec();
-    match run_sqlite_query(&PathBuf::from(db_file), &query.join(" ")) {
-        Ok(result) => println!("{:?}", result),
-        Err(error) => eprintln!("{:?}", error),
+    let result = query_sqlite(&PathBuf::from(db_file), &query.join(" "));
+    match result {
+        Ok(result) => println!("{}", serde_json::to_string(&result)?),
+        Err(error) => eprintln!("{}", serde_json::to_string(&error)?),
     }
+    Ok(())
 }
