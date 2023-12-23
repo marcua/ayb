@@ -12,6 +12,7 @@ use sqlx;
 use std::fmt::{Display, Formatter};
 use std::string;
 use toml;
+use url;
 
 #[derive(Debug, Deserialize, Error, Serialize)]
 #[serde(tag = "type")]
@@ -151,6 +152,14 @@ impl From<toml::ser::Error> for AybError {
     fn from(cause: toml::ser::Error) -> Self {
         AybError::Other {
             message: format!("Unable to serialize toml string: {:?}", cause),
+        }
+    }
+}
+
+impl From<url::ParseError> for AybError {
+    fn from(cause: url::ParseError) -> Self {
+        AybError::Other {
+            message: format!("Failed to parse URL: {:?}", cause),
         }
     }
 }

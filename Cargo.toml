@@ -23,7 +23,7 @@ reqwest = { version = "0.11.22", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 regex = { version = "1.10.2"}
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.108" }
+serde_json = { version = "1.0.108", features = ["raw_value"] }
 serde_repr = { version = "0.1.17" }
 sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
 toml = { version = "0.8.8" }
@@ -33,6 +33,7 @@ prettytable-rs = { version = "0.10.0"}
 urlencoding = { version = "2.1.3" }
 actix-cors = { version = "0.6.5" }
 url = { version = "2.5.0", features = ["serde"] }
+html_parser = { version = "0.7.0" }
 
 [dev-dependencies]
 assert_cmd = "2.0"

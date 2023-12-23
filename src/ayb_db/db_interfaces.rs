@@ -39,6 +39,11 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    async fn update_entity_by_id(
+        &self,
+        entity: &Entity,
+        entity_id: i32,
+    ) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -200,7 +205,11 @@ WHERE
 SELECT
     id,
     slug,
-    entity_type
+    entity_type,
+    display_name,
+    description,
+    workplace,
+    links
 FROM entity
 WHERE slug = $1
         "#,
@@ -228,11 +237,45 @@ WHERE slug = $1
 SELECT
     id,
     slug,
-    entity_type
+    entity_type,
+    display_name,
+    description,
+    workplace,
+    links
 FROM entity
 WHERE id = $1
         "#,
                 )
+                .bind(entity_id)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                        id: entity_id.to_string(),
+                        record_type: "entity".into(),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(entity)
+            }
+
+            async fn update_entity_by_id(&self, entity: &Entity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
+                let entity: InstantiatedEntity = sqlx::query_as(
+                    r#"
+UPDATE entity SET
+    description = $1,
+    workplace = $2,
+    display_name = $3,
+    links = $4
+WHERE entity.id = $5
+RETURNING id, slug, entity_type, display_name, description, workplace, links
+                    "#
+                )
+                .bind(&entity.description)
+                .bind(&entity.workplace)
+                .bind(&entity.display_name)
+                .bind(serde_json::to_value(&entity.links).unwrap())
                 .bind(entity_id)
                 .fetch_one(&self.pool)
                 .await
@@ -265,7 +308,7 @@ ON CONFLICT (slug) DO UPDATE
                 .await?;
                 let entity: InstantiatedEntity = sqlx::query_as(
                     r#"
-SELECT id, slug, entity_type
+SELECT id, slug, entity_type, display_name, description, workplace, links
 FROM entity
 WHERE slug = $1;
                 "#,

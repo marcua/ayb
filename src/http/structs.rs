@@ -107,8 +107,23 @@ pub struct EntityPath {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct EntityProfileLink {
+    pub url: String,
+    pub verified: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityProfile {
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub workplace: Option<String>,
+    pub links: Vec<EntityProfileLink>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct EntityQueryResponse {
     pub slug: String,
+    pub profile: EntityProfile,
     pub databases: Vec<EntityDatabase>,
 }
 

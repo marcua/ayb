@@ -166,6 +166,16 @@ pub struct InstantiatedDatabase {
 pub struct Entity {
     pub slug: String,
     pub entity_type: i16,
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub workplace: Option<String>,
+    pub links: Option<Vec<Link>>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Link {
+    pub url: String,
+    pub verified: bool,
 }
 
 #[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
@@ -173,6 +183,10 @@ pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
     pub entity_type: i16,
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub workplace: Option<String>,
+    pub links: Option<sqlx::types::Json<Vec<Link>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

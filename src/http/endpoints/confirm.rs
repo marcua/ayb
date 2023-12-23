@@ -22,6 +22,10 @@ async fn confirm(
         .get_or_create_entity(&Entity {
             slug: auth_details.entity,
             entity_type: auth_details.entity_type,
+            display_name: None,
+            description: None,
+            workplace: None,
+            links: None,
         })
         .await?;
 
