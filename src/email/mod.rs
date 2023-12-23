@@ -1,5 +1,7 @@
+use crate::email::templating::render_confirmation_template;
 use crate::error::AybError;
 use crate::http::structs::AybConfigEmail;
+use crate::http::web_frontend::WebFrontendDetails;
 use lettre::{
     message::header::ContentType,
     transport::smtp::authentication::Credentials,
@@ -7,16 +9,19 @@ use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 
+mod templating;
+
 pub async fn send_registration_email(
     to: &str,
     token: &str,
     config: &AybConfigEmail,
+    web_details: &Option<WebFrontendDetails>,
     e2e_testing_on: bool,
 ) -> Result<(), AybError> {
     send_email(
         to,
         "Your login credentials",
-        format!("To log in, type\n\tayb client confirm {token}"),
+        render_confirmation_template(web_details, token),
         config,
         e2e_testing_on,
     )
@@ -67,7 +72,7 @@ async fn send_email(
     }
 
     if let Err(e) = mailer.send(email).await {
-        return Err(AybError {
+        return Err(AybError::Other {
             message: format!("Could not send email: {e:?}"),
         });
     }

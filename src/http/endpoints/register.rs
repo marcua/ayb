@@ -5,6 +5,7 @@ use crate::error::AybError;
 use crate::http::structs::{AuthenticationDetails, AybConfig, EmptyResponse};
 use crate::http::tokens::encrypt_auth_token;
 use crate::http::utils::{get_header, get_lowercased_header};
+use crate::http::web_frontend::WebFrontendDetails;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::str::FromStr;
 
@@ -13,6 +14,7 @@ async fn register(
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
+    web_info: web::Data<Option<WebFrontendDetails>>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
     let email_address = get_lowercased_header(&req, "email-address")?;
@@ -37,7 +39,7 @@ async fn register(
     }
 
     if already_verified {
-        return Err(AybError {
+        return Err(AybError::Other {
             message: format!("{} has already been registered", entity),
         });
     }
@@ -55,6 +57,7 @@ async fn register(
         &email_address,
         &token,
         &ayb_config.email,
+        web_info.get_ref(),
         ayb_config.e2e_testing_on(),
     )
     .await?;

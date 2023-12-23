@@ -29,7 +29,7 @@ async fn query(
         let result = run_query(&db_path, &query, &db_type, &ayb_config.isolation).await?;
         Ok(web::Json(result))
     } else {
-        Err(AybError {
+        Err(AybError::Other {
             message: format!(
                 "Authenticated entity {} can not query database {}/{}",
                 authenticated_entity.slug, entity_slug, database_slug

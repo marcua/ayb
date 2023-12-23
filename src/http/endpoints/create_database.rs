@@ -33,7 +33,7 @@ async fn create_database(
         let _ = database_path(entity_slug, &path.database, &ayb_config.data_path, true)?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
     } else {
-        Err(AybError {
+        Err(AybError::Other {
             message: format!(
                 "Authenticated entity {} can not create a database for entity {}",
                 authenticated_entity.slug, entity_slug

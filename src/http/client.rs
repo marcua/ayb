@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIToken, Database, EmptyResponse};
+use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -23,7 +23,7 @@ impl AybClient {
             );
             Ok(())
         } else {
-            Err(AybError {
+            Err(AybError::Other {
                 message: "Calling endpoint that requires client API token, but none provided"
                     .to_string(),
             })
@@ -37,7 +37,7 @@ impl AybClient {
     ) -> Result<T, AybError> {
         let status = response.status();
         if status == expected_status {
-            response.json::<T>().await.map_err(|err| AybError {
+            response.json::<T>().await.map_err(|err| AybError::Other {
                 message: format!("Unable to parse successful response: {}", err),
             })
         } else {
@@ -45,7 +45,7 @@ impl AybClient {
                 .json::<AybError>()
                 .await
                 .map(|v| Err(v))
-                .map_err(|error| AybError {
+                .map_err(|error| AybError::Other {
                     message: format!(
                         "Unable to parse error response: {:#?}, response code: {}",
                         error, status
@@ -103,6 +103,20 @@ impl AybClient {
 
         let response = reqwest::Client::new()
             .post(self.make_url("log_in".to_owned()))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn list_databases(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url(format!("entity/{}", entity)))
             .headers(headers)
             .send()
             .await?;

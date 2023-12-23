@@ -1,8 +1,20 @@
 use crate::ayb_db::models::{
-    DBType, EntityType, InstantiatedDatabase as PersistedDatabase,
+    DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
+use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
+use url::Url;
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigWeb {
+    pub info_url: Url,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigCors {
+    pub origin: String,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigAuthentication {
@@ -34,7 +46,9 @@ pub struct AybConfig {
     pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
     pub email: AybConfigEmail,
-    pub isolation: Option<AybConfigIsolation>,
+    pub web: Option<AybConfigWeb>,
+    pub cors: AybConfigCors,
+    pub isolation: Option<AybConfigIsolation>,    
 }
 
 impl AybConfig {
@@ -85,6 +99,64 @@ impl Entity {
 pub struct EntityDatabasePath {
     pub entity: String,
     pub database: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityPath {
+    pub entity: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityQueryResponse {
+    pub slug: String,
+    pub databases: Vec<EntityDatabase>,
+}
+
+impl EntityQueryResponse {
+    pub fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![
+            Cell::new("Database slug"),
+            Cell::new("Type"),
+        ]));
+
+        self.databases
+            .iter()
+            .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.database_type)]))
+            .for_each(|c| {
+                table.add_row(c);
+            });
+
+        table
+    }
+
+    pub fn generate_table(&self) -> Result<(), std::io::Error> {
+        let mut table = self.to_table();
+        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+        table.print(&mut std::io::stdout())?;
+        Ok(())
+    }
+
+    pub fn generate_csv(&self) -> Result<(), std::io::Error> {
+        let table = self.to_table();
+        table.to_csv(std::io::stdout())?;
+        Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityDatabase {
+    pub slug: String,
+    pub database_type: String,
+}
+
+impl From<InstantiatedDatabase> for EntityDatabase {
+    fn from(value: InstantiatedDatabase) -> Self {
+        Self {
+            slug: value.slug,
+            database_type: DBType::try_from(value.db_type).unwrap().to_str().into(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

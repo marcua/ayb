@@ -63,7 +63,7 @@ pub async fn run_query(
 ) -> Result<QueryResult, AybError> {
     match db_type {
         DBType::Sqlite => Ok(run_sqlite_query(path, query, isolation).await?),
-        _ => Err(AybError {
+        _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),
     }

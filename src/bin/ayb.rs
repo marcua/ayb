@@ -118,6 +118,17 @@ async fn main() -> std::io::Result<()> {
                         .arg(arg!(<entity> "The entity to log in as")
                              .required(true))
                 )
+                .subcommand(
+                    Command::new("list")
+                        .about("List the databases of a given entity")
+                        .arg(arg!(<entity> "The entity to query")
+                            .required(true))
+                        .arg(
+                            arg!(--format <type> "The format in which to output the result")
+                                .value_parser(value_parser!(OutputFormat))
+                                .default_value(OutputFormat::Table.to_str())
+                                .required(false)),
+                )
         )
         .get_matches();
 
@@ -197,6 +208,27 @@ async fn main() -> std::io::Result<()> {
                     match client.log_in(entity).await {
                         Ok(_response) => {
                             println!("Check your email to finish logging in {}", entity);
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("list") {
+                if let (Some(entity), Some(format)) = (
+                    matches.get_one::<String>("entity"),
+                    matches.get_one::<OutputFormat>("format"),
+                ) {
+                    match client.list_databases(entity).await {
+                        Ok(response) => {
+                            if response.databases.is_empty() {
+                                println!("No queryable databases owned by {}", entity);
+                            } else {
+                                match format {
+                                    OutputFormat::Table => response.generate_table()?,
+                                    OutputFormat::Csv => response.generate_csv()?,
+                                }
+                            }
                         }
                         Err(err) => {
                             println!("Error: {}", err);

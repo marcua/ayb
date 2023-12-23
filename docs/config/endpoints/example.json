@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/marcua/ayb/main/docs/config/endpoints/schema.json",
+  "base_url": "https://aybWeb.sofiaritz.com",
+  "endpoints": {
+    "profile": "/u/{entity}",
+    "confirmation": "/auth/confirm/{token}"
+  }
+}
