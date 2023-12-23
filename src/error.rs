@@ -17,15 +17,6 @@ pub struct AybError {
     pub message: String,
 }
 
-// TODO(marcua): Consider a shared library so AybError can be the same in both crates, or move into the runner library.
-impl From<ayb_hosted_db_runner::AybError> for AybError {
-    fn from(error: ayb_hosted_db_runner::AybError) -> Self {
-        AybError {
-            message: error.message,
-        }
-    }
-}
-
 impl actix_web::error::ResponseError for AybError {
     fn error_response(&self) -> actix_web::HttpResponse {
         actix_web::HttpResponse::InternalServerError().json(self)

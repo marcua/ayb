@@ -6,12 +6,12 @@ description = "ayb makes it easy to create, host, and share embedded databases l
 homepage = "https://github.com/marcua/ayb"
 documentation = "https://github.com/marcua/ayb#readme"
 license = "Apache-2.0"
+default-run = "ayb"
 
 [dependencies]
 actix-web = { version = "4.4.0" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.74" }
-ayb-hosted-db-runner = { path = "src/hosted_db_runner" }
 clap = { version = "4.4.8", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 dyn-clone = { version = "1.0.16" }
@@ -34,3 +34,11 @@ prettytable-rs = { version = "0.10.0"}
 [dev-dependencies]
 assert_cmd = "2.0"
 assert-json-diff = "2.0.2"
+
+[[bin]]
+name = "ayb"
+path = "src/bin/ayb.rs"
+
+[[bin]]
+name = "ayb_isolated_runner"
+path = "src/bin/ayb_isolated_runner.rs"

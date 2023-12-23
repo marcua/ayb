@@ -1,6 +1,6 @@
 pub mod paths;
 mod sandbox;
-mod sqlite;
+pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
@@ -52,16 +52,6 @@ impl QueryResult {
         let table = self.to_table();
         table.to_csv(std::io::stdout())?;
         Ok(())
-    }
-}
-
-// TODO(marcua): Consider a shared library so QueryResult can be the same in both crates, or move into the runner library.
-impl From<ayb_hosted_db_runner::QueryResult> for QueryResult {
-    fn from(results: ayb_hosted_db_runner::QueryResult) -> Self {
-        QueryResult {
-            fields: results.fields,
-            rows: results.rows,
-        }
     }
 }
 

@@ -5,13 +5,13 @@
 */
 
 use crate::error::AybError;
+use serde::{Deserialize, Serialize};
+use std::env::current_exe;
 use std::fs::canonicalize;
 use std::{
     path::{Path, PathBuf},
     process::Stdio,
 };
-
-use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, BufReader};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -60,14 +60,30 @@ pub async fn run_in_sandbox(
         })?;
     let tmp_db_path = Path::new("/tmp").join(db_file_name);
     let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
-
-    // TODO(marcua): Figure out how to pass path to program command
-    cmd.args(["--bindmount_ro", "/home/marcua/ayb/src/hosted_db_runner/target/release/ayb-hosted-db-runner:/tmp/ayb-hosted-db-runner"]);
     cmd.args(["--bindmount", &db_file_mapping]);
+
+    // Generate a /local/path/to/ayb_isolated_runner:/tmp/ayb_isolated_runner mapping.
+    let ayb_path = current_exe()?;
+    let isolated_runner_path = ayb_path
+        .parent()
+        .ok_or(AybError {
+            message: format!(
+                "Unable to find parent directory of ayb from {}",
+                ayb_path.display()
+            ),
+        })?
+        .join("ayb_isolated_runner");
+    cmd.args([
+        "--bindmount_ro",
+        &format!(
+            "{}:/tmp/ayb_isolated_runner",
+            isolated_runner_path.display()
+        ),
+    ]);
 
     let mut child = cmd
         .arg("--")
-        .arg("/tmp/ayb-hosted-db-runner")
+        .arg("/tmp/ayb_isolated_runner")
         .arg(tmp_db_path)
         .arg(query)
         .stdout(Stdio::piped())

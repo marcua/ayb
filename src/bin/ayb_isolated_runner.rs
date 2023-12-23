@@ -1,4 +1,4 @@
-use ayb_hosted_db_runner::{query_sqlite};
+use ayb::hosted_db::sqlite::query_sqlite;
 use serde_json;
 use std::env;
 use std::path::PathBuf;

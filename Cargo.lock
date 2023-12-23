@@ -367,7 +367,6 @@ dependencies = [
  "assert-json-diff",
  "assert_cmd",
  "async-trait",
- "ayb-hosted-db-runner",
  "clap",
  "derive_more",
  "dyn-clone",
@@ -386,15 +385,6 @@ dependencies = [
  "sqlx",
  "tokio",
  "toml",
-]
-
-[[package]]
-name = "ayb-hosted-db-runner"
-version = "0.1.0"
-dependencies = [
- "rusqlite",
- "serde",
- "serde_json",
 ]
 
 [[package]]
