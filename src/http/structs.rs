@@ -48,7 +48,7 @@ pub struct AybConfig {
     pub email: AybConfigEmail,
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
-    pub isolation: Option<AybConfigIsolation>,    
+    pub isolation: Option<AybConfigIsolation>,
 }
 
 impl AybConfig {
