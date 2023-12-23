@@ -61,7 +61,7 @@ pub async fn run_sqlite_query(
                 let error: AybError = serde_json::from_str(&result.stderr)?;
                 Err(error)
             } else if result.status != 0 {
-                Err(AybError {
+                Err(AybError::Other {
                     message: format!(
                         "Error status from sandboxed query runner: {}",
                         result.status.to_string()
@@ -71,7 +71,7 @@ pub async fn run_sqlite_query(
                 let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
                 Ok(query_result)
             } else {
-                Err(AybError {
+                Err(AybError::Other {
                     message: "No results from sandboxed query runner".to_string(),
                 })
             }

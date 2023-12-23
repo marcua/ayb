@@ -51,11 +51,11 @@ pub async fn run_in_sandbox(
     let absolute_db_path = canonicalize(db_path)?;
     let db_file_name = absolute_db_path
         .file_name()
-        .ok_or(AybError {
+        .ok_or(AybError::Other {
             message: format!("Invalid DB path {}", absolute_db_path.display()),
         })?
         .to_str()
-        .ok_or(AybError {
+        .ok_or(AybError::Other {
             message: format!("Invalid DB path {}", absolute_db_path.display()),
         })?;
     let tmp_db_path = Path::new("/tmp").join(db_file_name);
@@ -66,7 +66,7 @@ pub async fn run_in_sandbox(
     let ayb_path = current_exe()?;
     let isolated_runner_path = ayb_path
         .parent()
-        .ok_or(AybError {
+        .ok_or(AybError::Other {
             message: format!(
                 "Unable to find parent directory of ayb from {}",
                 ayb_path.display()
@@ -111,7 +111,7 @@ pub async fn run_in_sandbox(
     let stderr = String::from_utf8_lossy(&stderr).into_owned();
 
     Ok(RunResult {
-        status: output.status.code().ok_or(AybError {
+        status: output.status.code().ok_or(AybError::Other {
             message: "Process exited with signal".to_string(),
         })?,
         stdout,
