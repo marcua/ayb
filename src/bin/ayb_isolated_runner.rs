@@ -3,6 +3,14 @@ use serde_json;
 use std::env;
 use std::path::PathBuf;
 
+/// This binary runs a query against a database and returns the
+/// result in QueryResults format. To run it, you would type:
+/// $ ayb_isolated_runner database.sqlite SELECT xyz FROM ...
+///
+/// This command is meant to be run inside a sandbox that isolates
+/// parallel invocations of the command from accessing each
+/// others' data, memory, and resources. That sandbox can be found
+/// in src/hosted_db/sandbox.rs.
 fn main() -> Result<(), serde_json::Error> {
     let args: Vec<String> = env::args().collect();
     let db_file = &args[1];

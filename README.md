@@ -146,6 +146,37 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```
 
+### Isolation (optional)
+`ayb` allows multiple users to run queries against databases that are
+stored on the same machine. Isolation enables you to prevent one user
+from accessing another user's data, and allows you to restrict the
+resources any one user is able to utilize.
+
+By default, `ayb` uses
+[SQLITE_DBCONFIG_DEFENSIVE](https://www.sqlite.org/c3ref/c_dbconfig_defensive.html)
+flag and sets
+[SQLITE_LIMIT_ATTACHED](https://www.sqlite.org/c3ref/c_limit_attached.html#sqlitelimitattached)
+to `0` in order to prevent users from corrupting the database or
+attaching to other databases on the filesystem.
+
+For further isolation (which is recommended by the [SQLite
+community](https://sqlite.org/forum/forumpost?udc=1&name=0f77e9f96e),
+`ayb` uses [nsjail](https://nsjail.dev/) to isolate each query's
+filesystem access and resources. When this form of isolation is
+enabled, `ayb` starts a new `nsjail`-managed process to execute the
+query against the database. We have not yet benchmarked the
+performance overhead of this approach.
+
+To enable isolation, you must first build `nsjail`, which you can do
+through [scripts/build_nsjail.sh](scripts/build_nsjail.sh). once you
+have a path to the `nsjail` binary, add the following to your
+`ayb.toml`:
+
+```toml
+[isolation]
+nsjail_path = "path/to/nsjail"
+```
+
 ## FAQ
 
 ### Who is `ayb` for?

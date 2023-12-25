@@ -6,4 +6,3 @@ make
 mv nsjail ..
 cd ..
 rm -rf nsjail-checkout
-

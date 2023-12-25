@@ -1,7 +1,29 @@
 /* Retrieved and modified from
   https://raw.githubusercontent.com/Defelo/sandkasten/83f629175d02ebc70fbb16b8b9e05663ea67ccc7/src/sandbox.rs
   On December 6, 2023.
-  Original license: MIT.
+  Original license:
+
+    MIT License
+
+    Copyright (c) 2023 Defelo
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
 use crate::error::AybError;
@@ -37,32 +59,37 @@ pub async fn run_in_sandbox(
         .args(["--hostname", "ayb"])
         .args(["--bindmount_ro", "/lib:/lib"])
         .args(["--bindmount_ro", "/lib64:/lib64"])
-        .args(["--bindmount_ro", "/usr:/usr"])
-        .args(["--mount", "none:/tmp:tmpfs:size=100000000"]) // TODO(marcua): Restrict disk size more configurably?
-        // TODO(marcua): Set resource limits more configurably?
-        .args(["--max_cpus", "1"])
-        .args(["--rlimit_as", "64"]) // in MB
-        .args(["--time_limit", "10"]) // in seconds
-        .args(["--rlimit_fsize", "75"]) // in MB
-        .args(["--rlimit_nofile", "10"])
-        .args(["--rlimit_nproc", "2"]);
+        .args(["--bindmount_ro", "/usr:/usr"]);
+
+    // Set resource limits for the process. In the future, we will
+    // allow entities to control the resources they dedicate to
+    // different databases/queries.
+    cmd.args(["--mount", "none:/tmp:tmpfs:size=100000000"]) // ~95 MB tmpfs
+        .args(["--max_cpus", "1"]) // One CPU
+        .args(["--rlimit_as", "64"]) // 64 MB memory limit
+        .args(["--time_limit", "10"]) // 10 second maximum run
+        .args(["--rlimit_fsize", "75"]) // 75 MB file size limit
+        .args(["--rlimit_nofile", "10"]) // 10 files maximum
+        .args(["--rlimit_nproc", "2"]); // 2 processes maximum
 
     // Generate a /local/path/to/file:/tmp/file mapping.
     let absolute_db_path = canonicalize(db_path)?;
     let db_file_name = absolute_db_path
         .file_name()
         .ok_or(AybError::Other {
-            message: format!("Invalid DB path {}", absolute_db_path.display()),
+            message: format!("Could not parse file name from path: {}", absolute_db_path.display()),
         })?
         .to_str()
         .ok_or(AybError::Other {
-            message: format!("Invalid DB path {}", absolute_db_path.display()),
+            message: format!("Could not convert path to string: {}", absolute_db_path.display()),
         })?;
     let tmp_db_path = Path::new("/tmp").join(db_file_name);
     let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
     cmd.args(["--bindmount", &db_file_mapping]);
 
     // Generate a /local/path/to/ayb_isolated_runner:/tmp/ayb_isolated_runner mapping.
+    // We assume `ayb` and `ayb_isolated_runner` will always be in the same directory,
+    // so we see what the path to the current `ayb` executable is to build the path.
     let ayb_path = current_exe()?;
     let isolated_runner_path = ayb_path
         .parent()
@@ -88,11 +115,10 @@ pub async fn run_in_sandbox(
         .arg(query)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .stdin(Stdio::piped())
         .spawn()?;
 
-    let stdout_reader = BufReader::new(child.stdout.take().unwrap());
-    let stderr_reader = BufReader::new(child.stderr.take().unwrap());
+    let mut stdout_reader = BufReader::new(child.stdout.take().unwrap());
+    let mut stderr_reader = BufReader::new(child.stderr.take().unwrap());
 
     let output = child.wait_with_output().await?;
 
@@ -100,11 +126,9 @@ pub async fn run_in_sandbox(
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
     stdout_reader
-        .take(1024 * 1024 * 1024)
         .read_to_end(&mut stdout)
         .await?;
     stderr_reader
-        .take(1024 * 1024 * 1024)
         .read_to_end(&mut stderr)
         .await?;
     let stdout = String::from_utf8_lossy(&stdout).into_owned();
