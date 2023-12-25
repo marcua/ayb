@@ -166,9 +166,14 @@ to execute the query against the database. We have not yet benchmarked
 the performance overhead of this approach.
 
 To enable isolation, you must first build `nsjail`, which you can do
-through [scripts/build_nsjail.sh](scripts/build_nsjail.sh). once you
-have a path to the `nsjail` binary, add the following to your
-`ayb.toml`:
+through [scripts/build_nsjail.sh](scripts/build_nsjail.sh). Note that
+`nsjail` depends on a few other packages. If you run into issues
+building it, it might be helpful to see its
+[Dockerfile](https://github.com/google/nsjail/blob/master/Dockerfile)
+to get a sense of those requirements.
+
+Once you have a path to the
+`nsjail` binary, add the following to your `ayb.toml`:
 
 ```toml
 [isolation]
@@ -192,11 +197,6 @@ in the appropriate directory, run:
 ```bash
 scripts/build_nsjail.sh && mv nsjail tests/
 ```
-
-Note that `nsjail` depends on a few other packages. If you run into
-issues building it, it might be helpful to see its
-[Dockerfile](https://github.com/google/nsjail/blob/master/Dockerfile)
-to get a sense fo those requirements.
 
 ## FAQ
 
