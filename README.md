@@ -175,6 +175,29 @@ have a path to the `nsjail` binary, add the following to your
 nsjail_path = "path/to/nsjail"
 ```
 
+## Testing
+`ayb` is largely tested through [end-to-end
+tests](tests/e2e.rs) that mimic as realistic an environment as
+possible. Individual modules may also provide more specific unit
+tests. To run the tests, type:
+
+```bash
+cargo test --verbose
+```
+
+Because the tests cover [isolation](#isolation), an `nsjail` binary is
+required for running the end-to-end tests. To build and place `nsjail`
+in the appropriate directory, run:
+
+```bash
+scripts/build_nsjail.sh && mv nsjail tests
+```
+
+Note that `nsjail` depends on a few other packages. If you run into
+issues building it, it might be helpful to see its
+[Dockerfile](https://github.com/google/nsjail/blob/master/Dockerfile)
+to get a sense fo those requirements.
+
 ## FAQ
 
 ### Who is `ayb` for?

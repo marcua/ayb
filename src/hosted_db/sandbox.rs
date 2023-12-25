@@ -77,11 +77,17 @@ pub async fn run_in_sandbox(
     let db_file_name = absolute_db_path
         .file_name()
         .ok_or(AybError::Other {
-            message: format!("Could not parse file name from path: {}", absolute_db_path.display()),
+            message: format!(
+                "Could not parse file name from path: {}",
+                absolute_db_path.display()
+            ),
         })?
         .to_str()
         .ok_or(AybError::Other {
-            message: format!("Could not convert path to string: {}", absolute_db_path.display()),
+            message: format!(
+                "Could not convert path to string: {}",
+                absolute_db_path.display()
+            ),
         })?;
     let tmp_db_path = Path::new("/tmp").join(db_file_name);
     let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
@@ -125,12 +131,8 @@ pub async fn run_in_sandbox(
     // read stdout and stderr from process
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
-    stdout_reader
-        .read_to_end(&mut stdout)
-        .await?;
-    stderr_reader
-        .read_to_end(&mut stderr)
-        .await?;
+    stdout_reader.read_to_end(&mut stdout).await?;
+    stderr_reader.read_to_end(&mut stderr).await?;
     let stdout = String::from_utf8_lossy(&stdout).into_owned();
     let stderr = String::from_utf8_lossy(&stderr).into_owned();
 
