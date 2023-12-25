@@ -38,6 +38,6 @@ jobs:
     - name: Ensure clippy finds no issues
       run: cargo clippy
     - name: Build nsjail
-      run: scripts/build_nsjail && mv nsjail tests/
+      run: scripts/build_nsjail.sh && mv nsjail tests/
     - name: Run tests
       run: cargo test --verbose
