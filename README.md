@@ -190,7 +190,7 @@ required for running the end-to-end tests. To build and place `nsjail`
 in the appropriate directory, run:
 
 ```bash
-scripts/build_nsjail.sh && mv nsjail tests
+scripts/build_nsjail.sh && mv nsjail tests/
 ```
 
 Note that `nsjail` depends on a few other packages. If you run into
