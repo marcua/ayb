@@ -37,5 +37,7 @@ jobs:
       run: cargo fmt --check
     - name: Ensure clippy finds no issues
       run: cargo clippy
+    - name: Build nsjail
+      run: scripts/build_nsjail && mv nsjail tests/
     - name: Run tests
       run: cargo test --verbose

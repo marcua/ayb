@@ -146,7 +146,7 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```
 
-### Isolation (optional)
+### Isolation
 `ayb` allows multiple users to run queries against databases that are
 stored on the same machine. Isolation enables you to prevent one user
 from accessing another user's data, and allows you to restrict the
@@ -159,13 +159,11 @@ flag and sets
 to `0` in order to prevent users from corrupting the database or
 attaching to other databases on the filesystem.
 
-For further isolation (which is recommended by the [SQLite
-community](https://sqlite.org/forum/forumpost?udc=1&name=0f77e9f96e),
-`ayb` uses [nsjail](https://nsjail.dev/) to isolate each query's
-filesystem access and resources. When this form of isolation is
-enabled, `ayb` starts a new `nsjail`-managed process to execute the
-query against the database. We have not yet benchmarked the
-performance overhead of this approach.
+For further isolation, `ayb` uses [nsjail](https://nsjail.dev/) to
+isolate each query's filesystem access and resources. When this form
+of isolation is enabled, `ayb` starts a new `nsjail`-managed process
+to execute the query against the database. We have not yet benchmarked
+the performance overhead of this approach.
 
 To enable isolation, you must first build `nsjail`, which you can do
 through [scripts/build_nsjail.sh](scripts/build_nsjail.sh). once you
