@@ -38,7 +38,7 @@ jobs:
     - name: Ensure clippy finds no issues
       run: cargo clippy
     - name: Install nsjail requirements
-      run: sudo apt-get install -y libprotobuf-dev protobuf-compiler
+      run: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
     - name: Build nsjail
       run: scripts/build_nsjail.sh && mv nsjail tests/
     - name: Run tests
