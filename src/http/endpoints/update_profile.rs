@@ -2,10 +2,10 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{Entity, InstantiatedEntity, Link};
 use crate::error::AybError;
 use crate::http::structs::EntityPath;
+use crate::http::url_verification::is_verified_url;
 use crate::http::utils::unwrap_authenticated_entity;
-use crate::http::verification::is_verified;
 use crate::http::web_frontend::WebFrontendDetails;
-use actix_web::{post, web, HttpResponse};
+use actix_web::{patch, web, HttpResponse};
 use serde::Deserialize;
 use std::str::FromStr;
 use url::Url;
@@ -19,11 +19,12 @@ struct ProfileLinkUpdate {
 struct ProfileUpdate {
     pub display_name: Option<String>,
     pub description: Option<String>,
-    pub workplace: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
     pub links: Vec<ProfileLinkUpdate>,
 }
 
-#[post("/v1/entity/{entity}")]
+#[patch("/v1/entity/{entity}")]
 pub async fn update_profile(
     path: web::Path<EntityPath>,
     profile: web::Json<ProfileUpdate>,
@@ -41,12 +42,13 @@ pub async fn update_profile(
 
     let instantiated_entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let links = if let Some(web_info) = Option::as_ref(&**web_info) {
+        // If there's a known web frontend, we verify the identity of the links.
         let mut links = vec![];
         for link in profile.links.into_iter() {
             let url = Url::parse(&link.url)?;
             links.push(Link {
                 url: link.url,
-                verified: is_verified(
+                verified: is_verified_url(
                     url,
                     Url::from_str(&web_info.profile(entity_slug))
                         .expect("invalid web frontend url"),
@@ -57,6 +59,7 @@ pub async fn update_profile(
 
         Some(links)
     } else {
+        // If there is no known web frontend, we save links to the profile without verification.
         Some(
             profile
                 .links
@@ -74,7 +77,8 @@ pub async fn update_profile(
         entity_type: instantiated_entity.entity_type,
         display_name: profile.display_name,
         description: profile.description,
-        workplace: profile.workplace,
+        organization: profile.organization,
+        location: profile.location,
         links,
     };
 

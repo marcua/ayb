@@ -168,7 +168,8 @@ pub struct Entity {
     pub entity_type: i16,
     pub display_name: Option<String>,
     pub description: Option<String>,
-    pub workplace: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
     pub links: Option<Vec<Link>>,
 }
 
@@ -185,7 +186,8 @@ pub struct InstantiatedEntity {
     pub entity_type: i16,
     pub display_name: Option<String>,
     pub description: Option<String>,
-    pub workplace: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
     pub links: Option<sqlx::types::Json<Vec<Link>>>,
 }
 

@@ -24,7 +24,8 @@ async fn confirm(
             entity_type: auth_details.entity_type,
             display_name: None,
             description: None,
-            workplace: None,
+            organization: None,
+            location: None,
             links: None,
         })
         .await?;

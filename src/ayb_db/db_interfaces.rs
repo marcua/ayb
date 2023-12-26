@@ -208,7 +208,8 @@ SELECT
     entity_type,
     display_name,
     description,
-    workplace,
+    organization,
+    location,
     links
 FROM entity
 WHERE slug = $1
@@ -240,7 +241,8 @@ SELECT
     entity_type,
     display_name,
     description,
-    workplace,
+    organization,
+    location,
     links
 FROM entity
 WHERE id = $1
@@ -265,17 +267,19 @@ WHERE id = $1
                     r#"
 UPDATE entity SET
     description = $1,
-    workplace = $2,
-    display_name = $3,
-    links = $4
-WHERE entity.id = $5
-RETURNING id, slug, entity_type, display_name, description, workplace, links
+    organization = $2,
+    location = $3,
+    display_name = $4,
+    links = $5
+WHERE entity.id = $6
+RETURNING id, slug, entity_type, display_name, description, organization, location, links
                     "#
                 )
                 .bind(&entity.description)
-                .bind(&entity.workplace)
+                .bind(&entity.organization)
+                .bind(&entity.location)
                 .bind(&entity.display_name)
-                .bind(serde_json::to_value(&entity.links).unwrap())
+                .bind(serde_json::to_value(&entity.links)?)
                 .bind(entity_id)
                 .fetch_one(&self.pool)
                 .await
@@ -308,7 +312,7 @@ ON CONFLICT (slug) DO UPDATE
                 .await?;
                 let entity: InstantiatedEntity = sqlx::query_as(
                     r#"
-SELECT id, slug, entity_type, display_name, description, workplace, links
+SELECT id, slug, entity_type, display_name, description, organization, location, links
 FROM entity
 WHERE slug = $1;
                 "#,

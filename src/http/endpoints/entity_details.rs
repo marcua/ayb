@@ -40,7 +40,8 @@ pub async fn entity_details(
         profile: EntityProfile {
             display_name: desired_entity.display_name,
             description: desired_entity.description,
-            workplace: desired_entity.workplace,
+            organization: desired_entity.organization,
+            location: desired_entity.location,
             links,
         },
         databases,

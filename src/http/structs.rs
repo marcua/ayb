@@ -116,7 +116,8 @@ pub struct EntityProfileLink {
 pub struct EntityProfile {
     pub display_name: Option<String>,
     pub description: Option<String>,
-    pub workplace: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
     pub links: Vec<EntityProfileLink>,
 }
 
