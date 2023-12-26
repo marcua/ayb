@@ -92,6 +92,9 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     };
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
+    if ayb_conf.isolation.is_none() {
+        println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
+    }
     HttpServer::new(move || {
         let cors = build_cors(ayb_conf.cors.clone());
 
