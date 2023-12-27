@@ -4,6 +4,10 @@ use url::Url;
 /// Verifies that the HTML website located at `input_url` contains an anchor tag whose `rel` attribute is set to `me`
 /// and whose `href` attribute is equal to the value of `expected_url`.
 pub async fn is_verified_url(input_url: Url, expected_url: Url) -> bool {
+    if input_url.scheme() != "https" {
+        return false;
+    }
+
     if let Ok(website) = reqwest::get(input_url.to_string()).await {
         if let Ok(website) = website.text().await {
             let website = Html::parse_document(&website);
