@@ -55,29 +55,29 @@ pub async fn potentially_isolated_sqlite_query(
     query: &str,
     isolation: &Option<AybConfigIsolation>,
 ) -> Result<QueryResult, AybError> {
-    match isolation {
-        Some(isolation) => {
-            let result = run_in_sandbox(Path::new(&isolation.nsjail_path), path, query).await?;
+    if let Some(isolation) = isolation {
+        let result = run_in_sandbox(Path::new(&isolation.nsjail_path), path, query).await?;
 
-            if !result.stderr.is_empty() {
-                let error: AybError = serde_json::from_str(&result.stderr)?;
-                Err(error)
-            } else if result.status != 0 {
-                Err(AybError::Other {
-                    message: format!(
-                        "Error status from sandboxed query runner: {}",
-                        result.status
-                    ),
-                })
-            } else if !result.stdout.is_empty() {
-                let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
-                Ok(query_result)
-            } else {
-                Err(AybError::Other {
-                    message: "No results from sandboxed query runner".to_string(),
-                })
-            }
+        if !result.stderr.is_empty() {
+            let error: AybError = serde_json::from_str(&result.stderr)?;
+            return Err(error);
+        } else if result.status != 0 {
+            return Err(AybError::Other {
+                message: format!(
+                    "Error status from sandboxed query runner: {}",
+                    result.status
+                ),
+            });
+        } else if !result.stdout.is_empty() {
+            let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
+            return Ok(query_result);
+        } else {
+            return Err(AybError::Other {
+                message: "No results from sandboxed query runner".to_string(),
+            });
         }
-        None => Ok(query_sqlite(path, query)?),
     }
+
+    // No isolation configuration, so run the query without a sandbox.
+    Ok(query_sqlite(path, query)?)
 }
