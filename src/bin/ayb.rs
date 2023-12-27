@@ -1,8 +1,9 @@
+use ayb::FormatResponse;
 use ayb::ayb_db::models::{DBType, EntityType};
 use ayb::http::client::AybClient;
 use ayb::http::config::{config_to_toml, default_server_config};
 use ayb::http::server::run_server;
-use ayb::http::structs::EntityDatabasePath;
+use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate, ProfileUpdate};
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use regex::Regex;
@@ -129,6 +130,27 @@ async fn main() -> std::io::Result<()> {
                                 .default_value(OutputFormat::Table.to_str())
                                 .required(false)),
                 )
+                .subcommand(
+                    Command::new("profile")
+                        .about("Show the profile of the an entity")
+                        .arg(arg!(<entity> "The entity to query")
+                            .required(true))
+                        .arg(
+                            arg!(--format <type> "The format in which to output the result")
+                                .value_parser(value_parser!(OutputFormat))
+                                .default_value(OutputFormat::Table.to_str())
+                                .required(false))
+                )
+                .subcommand(
+                    Command::new("update_profile")
+                        .about("Update the profile of an entity")
+                        .arg(arg!(<entity> "The entity to update").required(true))
+                        .arg(arg!(--display_name <value> "New display name").required(false))
+                        .arg(arg!(--description <value> "New description").required(false))
+                        .arg(arg!(--organization <value> "New organization").required(false))
+                        .arg(arg!(--location <value> "New location").required(false))
+                        .arg(arg!(--link <value> "New URL, will overwrite previous ones").required(false))
+                )
         )
         .get_matches();
 
@@ -214,19 +236,80 @@ async fn main() -> std::io::Result<()> {
                         }
                     }
                 }
+            } else if let Some(matches) = matches.subcommand_matches("profile") {
+                if let (Some(entity), Some(format)) = (
+                    matches.get_one::<String>("entity"),
+                    matches.get_one::<OutputFormat>("format"),
+                ) {
+                    match client.entity_details(entity).await {
+                        Ok(response) => {
+                            match format {
+                                OutputFormat::Table => response.profile.generate_table()?,
+                                OutputFormat::Csv => response.profile.generate_csv()?,
+                            }
+                        }
+                        Err(err) => println!("Error: {}", err),
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("update_profile") {
+                if let Some(entity) = matches.get_one::<String>("entity") {
+                    let update_profile = {
+                        match client.entity_details(entity).await {
+                            Ok(response) => {
+                                let current_profile = response.profile;
+                                let update_profile = ProfileUpdate {
+                                    display_name: matches
+                                        .get_one::<String>("display_name")
+                                        .cloned()
+                                        .or(current_profile.display_name),
+                                    description: matches
+                                        .get_one::<String>("description")
+                                        .cloned()
+                                        .or(current_profile.description),
+                                    organization: matches
+                                        .get_one::<String>("organization")
+                                        .cloned()
+                                        .or(current_profile.organization),
+                                    location: matches
+                                        .get_one::<String>("location")
+                                        .cloned()
+                                        .or(current_profile.location),
+                                    links: matches
+                                        .get_many::<String>("link")
+                                        .map(|v| v.into_iter().collect::<Vec<&String>>())
+                                        .unwrap_or_else(std::vec::Vec::new)
+                                        .into_iter()
+                                        .map(|v| ProfileLinkUpdate { url: v.into() })
+                                        .collect::<Vec<ProfileLinkUpdate>>(),
+                                };
+
+                                update_profile
+                            }
+                            Err(err) => {
+                                println!("Error: {}", err);
+                                panic!();
+                            }
+                        }
+                    };
+
+                    match client.update_profile(entity, &update_profile).await {
+                        Ok(_) => println!("Successfully updated profile"),
+                        Err(err) => println!("Error: {}", err),
+                    }
+                }
             } else if let Some(matches) = matches.subcommand_matches("list") {
                 if let (Some(entity), Some(format)) = (
                     matches.get_one::<String>("entity"),
                     matches.get_one::<OutputFormat>("format"),
                 ) {
-                    match client.list_databases(entity).await {
+                    match client.entity_details(entity).await {
                         Ok(response) => {
                             if response.databases.is_empty() {
                                 println!("No queryable databases owned by {}", entity);
                             } else {
                                 match format {
-                                    OutputFormat::Table => response.generate_table()?,
-                                    OutputFormat::Csv => response.generate_csv()?,
+                                    OutputFormat::Table => response.databases.generate_table()?,
+                                    OutputFormat::Csv => response.databases.generate_csv()?,
                                 }
                             }
                         }

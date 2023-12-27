@@ -10,6 +10,7 @@ use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
+use crate::FormatResponse;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {
@@ -17,7 +18,7 @@ pub struct QueryResult {
     pub rows: Vec<Vec<Option<String>>>,
 }
 
-impl QueryResult {
+impl FormatResponse for QueryResult {
     fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(
@@ -41,16 +42,10 @@ impl QueryResult {
         table
     }
 
-    pub fn generate_table(&self) -> Result<(), std::io::Error> {
+    fn generate_table(&self) -> Result<(), std::io::Error> {
         let mut table = self.to_table();
         table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
         table.print(&mut std::io::stdout())?;
-        Ok(())
-    }
-
-    pub fn generate_csv(&self) -> Result<(), std::io::Error> {
-        let table = self.to_table();
-        table.to_csv(std::io::stdout())?;
         Ok(())
     }
 }

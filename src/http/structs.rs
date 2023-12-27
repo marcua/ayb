@@ -2,9 +2,10 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
-use prettytable::{format, Cell, Row, Table};
+use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use url::Url;
+use crate::FormatResponse;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigWeb {
@@ -106,6 +107,20 @@ pub struct EntityPath {
     pub entity: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProfileLinkUpdate {
+    pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProfileUpdate {
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
+    pub links: Vec<ProfileLinkUpdate>,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityProfileLink {
     pub url: String,
@@ -128,15 +143,38 @@ pub struct EntityQueryResponse {
     pub databases: Vec<EntityDatabase>,
 }
 
-impl EntityQueryResponse {
-    pub fn to_table(&self) -> Table {
+impl FormatResponse for EntityProfile {
+    fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![
+            Cell::new("Display name"),
+            Cell::new("Description"),
+            Cell::new("Organization"),
+            Cell::new("Location"),
+            Cell::new("Links"),
+        ]));
+
+        table.add_row(Row::new(vec![
+            Cell::new(&self.display_name.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
+            Cell::new(&self.description.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
+            Cell::new(&self.organization.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
+            Cell::new(&self.location.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
+            Cell::new(&self.links.clone().iter().map(|v| v.url.as_str()).collect::<Vec<&str>>().join("\\,")),
+        ]));
+
+        table
+    }
+}
+
+impl FormatResponse for Vec<EntityDatabase> {
+    fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(vec![
             Cell::new("Database slug"),
             Cell::new("Type"),
         ]));
 
-        self.databases
+        self
             .iter()
             .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.database_type)]))
             .for_each(|c| {
@@ -144,19 +182,6 @@ impl EntityQueryResponse {
             });
 
         table
-    }
-
-    pub fn generate_table(&self) -> Result<(), std::io::Error> {
-        let mut table = self.to_table();
-        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-        table.print(&mut std::io::stdout())?;
-        Ok(())
-    }
-
-    pub fn generate_csv(&self) -> Result<(), std::io::Error> {
-        let table = self.to_table();
-        table.to_csv(std::io::stdout())?;
-        Ok(())
     }
 }
 

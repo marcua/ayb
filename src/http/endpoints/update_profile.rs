@@ -1,28 +1,13 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{Entity, InstantiatedEntity, Link};
 use crate::error::AybError;
-use crate::http::structs::EntityPath;
+use crate::http::structs::{EntityPath, ProfileUpdate};
 use crate::http::url_verification::is_verified_url;
 use crate::http::utils::unwrap_authenticated_entity;
 use crate::http::web_frontend::WebFrontendDetails;
 use actix_web::{patch, web, HttpResponse};
-use serde::Deserialize;
 use std::str::FromStr;
 use url::Url;
-
-#[derive(Deserialize)]
-struct ProfileLinkUpdate {
-    pub url: String,
-}
-
-#[derive(Deserialize)]
-struct ProfileUpdate {
-    pub display_name: Option<String>,
-    pub description: Option<String>,
-    pub organization: Option<String>,
-    pub location: Option<String>,
-    pub links: Vec<ProfileLinkUpdate>,
-}
 
 #[patch("/v1/entity/{entity}")]
 pub async fn update_profile(

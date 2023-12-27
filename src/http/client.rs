@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse};
+use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse, ProfileUpdate};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 
@@ -45,6 +45,28 @@ impl AybClient {
                 .json::<AybError>()
                 .await
                 .map(|v| Err(v))
+                .map_err(|error| AybError::Other {
+                    message: format!(
+                        "Unable to parse error response: {:#?}, response code: {}",
+                        error, status
+                    ),
+                })?
+        }
+    }
+
+    async fn handle_empty_response(
+        &self,
+        response: reqwest::Response,
+        expected_status: reqwest::StatusCode,
+    ) -> Result<(), AybError> {
+        let status = response.status();
+        if status == expected_status {
+            Ok(())
+        } else {
+            response
+                .json::<AybError>()
+                .await
+                .map(Err)
                 .map_err(|error| AybError::Other {
                     message: format!(
                         "Unable to parse error response: {:#?}, response code: {}",
@@ -111,7 +133,7 @@ impl AybClient {
             .await
     }
 
-    pub async fn list_databases(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
+    pub async fn entity_details(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers)?;
 
@@ -172,6 +194,32 @@ impl AybClient {
             .await?;
 
         self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn update_profile(
+        &self,
+        entity: &str,
+        profile_update: &ProfileUpdate,
+    ) -> Result<(), AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        headers.insert(
+            "Content-Type",
+            "application/json"
+                .parse()
+                .expect("const value must be valid"),
+        );
+
+        let response = reqwest::Client::new()
+            .patch(self.make_url(format!("entity/{}", entity)))
+            .headers(headers)
+            .body(serde_json::to_string(profile_update)?)
+            .send()
+            .await?;
+
+        self.handle_empty_response(response, reqwest::StatusCode::OK)
             .await
     }
 }
