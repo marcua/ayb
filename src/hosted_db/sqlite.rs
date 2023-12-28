@@ -79,5 +79,5 @@ pub async fn potentially_isolated_sqlite_query(
     }
 
     // No isolation configuration, so run the query without a sandbox.
-    Ok(query_sqlite(path, query)?)
+    query_sqlite(path, query)
 }

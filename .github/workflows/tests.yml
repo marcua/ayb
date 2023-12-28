@@ -36,7 +36,7 @@ jobs:
     - name: Ensure fmt finds no changes
       run: cargo fmt --check
     - name: Ensure clippy finds no issues
-      run: cargo clippy
+      run: cargo clippy -- -D warnings
     - name: Install nsjail requirements
       run: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
     - name: Build nsjail
