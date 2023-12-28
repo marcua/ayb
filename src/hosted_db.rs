@@ -1,9 +1,11 @@
 pub mod paths;
-mod sqlite;
+mod sandbox;
+pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
-use crate::hosted_db::sqlite::run_sqlite_query;
+use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
+use crate::http::structs::AybConfigIsolation;
 use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -53,9 +55,14 @@ impl QueryResult {
     }
 }
 
-pub fn run_query(path: &PathBuf, query: &str, db_type: &DBType) -> Result<QueryResult, AybError> {
+pub async fn run_query(
+    path: &PathBuf,
+    query: &str,
+    db_type: &DBType,
+    isolation: &Option<AybConfigIsolation>,
+) -> Result<QueryResult, AybError> {
     match db_type {
-        DBType::Sqlite => Ok(run_sqlite_query(path, query)?),
+        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(path, query, isolation).await?),
         _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),

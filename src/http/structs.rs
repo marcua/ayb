@@ -33,6 +33,11 @@ pub struct AybConfigEmail {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigIsolation {
+    pub nsjail_path: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfig {
     pub host: String,
     pub port: u16,
@@ -43,6 +48,7 @@ pub struct AybConfig {
     pub email: AybConfigEmail,
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
+    pub isolation: Option<AybConfigIsolation>,
 }
 
 impl AybConfig {

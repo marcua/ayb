@@ -33,6 +33,7 @@ pub fn default_server_config() -> AybConfig {
             origin: "*".to_string(),
         },
         web: None,
+        isolation: None,
     }
 }
 
