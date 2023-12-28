@@ -68,7 +68,7 @@ pub async fn potentially_isolated_sqlite_query(
                     result.status
                 ),
             });
-        } else if !result.stdout.is_empty() {
+        } else if result.stdout.len() > 0 {
             let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
             return Ok(query_result);
         } else {
