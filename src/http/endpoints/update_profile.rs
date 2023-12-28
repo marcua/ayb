@@ -1,7 +1,7 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{Entity, InstantiatedEntity, Link};
 use crate::error::AybError;
-use crate::http::structs::{EntityPath, ProfileUpdate};
+use crate::http::structs::{EmptyResponse, EntityPath, ProfileUpdate};
 use crate::http::url_verification::is_verified_url;
 use crate::http::utils::unwrap_authenticated_entity;
 use crate::http::web_frontend::WebFrontendDetails;
@@ -71,5 +71,5 @@ pub async fn update_profile(
         .update_entity_by_id(&entity, instantiated_entity.id)
         .await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Ok().json(EmptyResponse {}))
 }
