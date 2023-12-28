@@ -285,7 +285,7 @@ async fn main() -> std::io::Result<()> {
                             }
                             Err(err) => {
                                 println!("Error: {}", err);
-                                panic!();
+                                return Ok(());
                             }
                         }
                     };
