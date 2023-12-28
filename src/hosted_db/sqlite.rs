@@ -68,7 +68,7 @@ pub async fn potentially_isolated_sqlite_query(
                     result.status
                 ),
             });
-        } else if result.stdout.len() > 0 {
+        } else if !result.stdout.is_empty() {
             let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
             return Ok(query_result);
         } else {
@@ -79,5 +79,5 @@ pub async fn potentially_isolated_sqlite_query(
     }
 
     // No isolation configuration, so run the query without a sandbox.
-    Ok(query_sqlite(path, query)?)
+    query_sqlite(path, query)
 }
