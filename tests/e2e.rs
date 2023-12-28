@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use assert_cmd::prelude::*;
 use regex::Regex;
 use std::fs;
