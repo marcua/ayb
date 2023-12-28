@@ -6,11 +6,11 @@ use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
 use crate::http::structs::AybConfigIsolation;
+use crate::FormatResponse;
 use prettytable::{format, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
-use crate::FormatResponse;
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {

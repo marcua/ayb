@@ -2,10 +2,10 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
+use crate::FormatResponse;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use url::Url;
-use crate::FormatResponse;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigWeb {
@@ -155,11 +155,43 @@ impl FormatResponse for EntityProfile {
         ]));
 
         table.add_row(Row::new(vec![
-            Cell::new(&self.display_name.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
-            Cell::new(&self.description.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
-            Cell::new(&self.organization.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
-            Cell::new(&self.location.as_ref().map(String::as_str).unwrap_or_else(|| "null").replace(",", "\\,")),
-            Cell::new(&self.links.clone().iter().map(|v| v.url.as_str()).collect::<Vec<&str>>().join("\\,")),
+            Cell::new(
+                &self
+                    .display_name
+                    .as_deref()
+                    .unwrap_or("null")
+                    .replace(',', "\\,"),
+            ),
+            Cell::new(
+                &self
+                    .description
+                    .as_deref()
+                    .unwrap_or("null")
+                    .replace(',', "\\,"),
+            ),
+            Cell::new(
+                &self
+                    .organization
+                    .as_deref()
+                    .unwrap_or("null")
+                    .replace(',', "\\,"),
+            ),
+            Cell::new(
+                &self
+                    .location
+                    .as_deref()
+                    .unwrap_or("null")
+                    .replace(',', "\\,"),
+            ),
+            Cell::new(
+                &self
+                    .links
+                    .clone()
+                    .iter()
+                    .map(|v| v.url.as_str())
+                    .collect::<Vec<&str>>()
+                    .join("\\,"),
+            ),
         ]));
 
         table
@@ -174,8 +206,7 @@ impl FormatResponse for Vec<EntityDatabase> {
             Cell::new("Type"),
         ]));
 
-        self
-            .iter()
+        self.iter()
             .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.database_type)]))
             .for_each(|c| {
                 table.add_row(c);

@@ -162,8 +162,7 @@ fn update_profile(
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("ayb")?;
-    cmd
-        .args(["client", "--url", server_url, "update_profile", entity])
+    cmd.args(["client", "--url", server_url, "update_profile", entity])
         .env("AYB_API_TOKEN", api_key);
 
     if let Some(display_name) = display_name {
@@ -466,7 +465,7 @@ fn client_server_integration(
         Some("Entity 0 organization"),
         Some("Entity 0 location"),
         vec!["http://example.com"],
-        "Successfully updated profile"
+        "Successfully updated profile",
     )?;
 
     profile(

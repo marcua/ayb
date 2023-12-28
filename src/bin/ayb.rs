@@ -1,9 +1,9 @@
-use ayb::FormatResponse;
 use ayb::ayb_db::models::{DBType, EntityType};
 use ayb::http::client::AybClient;
 use ayb::http::config::{config_to_toml, default_server_config};
 use ayb::http::server::run_server;
 use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate, ProfileUpdate};
+use ayb::FormatResponse;
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use regex::Regex;
@@ -242,12 +242,10 @@ async fn main() -> std::io::Result<()> {
                     matches.get_one::<OutputFormat>("format"),
                 ) {
                     match client.entity_details(entity).await {
-                        Ok(response) => {
-                            match format {
-                                OutputFormat::Table => response.profile.generate_table()?,
-                                OutputFormat::Csv => response.profile.generate_csv()?,
-                            }
-                        }
+                        Ok(response) => match format {
+                            OutputFormat::Table => response.profile.generate_table()?,
+                            OutputFormat::Csv => response.profile.generate_csv()?,
+                        },
                         Err(err) => println!("Error: {}", err),
                     }
                 }
