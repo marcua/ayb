@@ -132,7 +132,7 @@ async fn main() -> std::io::Result<()> {
                 )
                 .subcommand(
                     Command::new("profile")
-                        .about("Show the profile of the an entity")
+                        .about("Show the profile of an entity")
                         .arg(arg!(<entity> "The entity to query")
                             .required(true))
                         .arg(
