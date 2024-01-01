@@ -184,6 +184,12 @@ pub struct PartialEntity {
     pub links: Option<Option<Vec<Link>>>,
 }
 
+impl Default for PartialEntity {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PartialEntity {
     pub fn new() -> Self {
         Self {

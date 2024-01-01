@@ -263,7 +263,7 @@ async fn main() -> std::io::Result<()> {
                                 v.into_iter()
                                     .map(|v| ProfileLinkUpdate { url: v.clone() })
                                     .collect::<Vec<ProfileLinkUpdate>>()
-                            })
+                            }),
                     };
 
                     match client.update_profile(entity, &profile_update).await {

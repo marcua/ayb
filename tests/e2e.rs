@@ -477,7 +477,7 @@ fn client_server_integration(
         &first_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,null"
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,"
     )?;
 
     profile(
@@ -485,7 +485,7 @@ fn client_server_integration(
         &second_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,null"
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,"
     )?;
 
     update_profile(
@@ -505,7 +505,7 @@ fn client_server_integration(
         &first_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,null"
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,"
     )?;
 
     profile(
@@ -513,7 +513,7 @@ fn client_server_integration(
         &second_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,null"
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,"
     )?;
 
     Ok(())

@@ -267,25 +267,33 @@ WHERE id = $1
                 if let Some(description) = &entity.description {
                     query.push(" description = ");
                     query.push_bind(description);
-                    query.push(",");
+                    if entity.links.is_some() || entity.display_name.is_some() || entity.location.is_some() || entity.organization.is_some() {
+                        query.push(",");
+                    }
                 }
 
                 if let Some(organization) = &entity.organization {
                     query.push(" organization = ");
                     query.push_bind(organization);
-                    query.push(",");
+                    if entity.links.is_some() || entity.display_name.is_some() || entity.location.is_some() {
+                        query.push(",");
+                    }
                 }
 
                 if let Some(location) = &entity.location {
                     query.push(" location = ");
                     query.push_bind(location);
-                    query.push(",");
+                    if entity.links.is_some() || entity.display_name.is_some() {
+                        query.push(",");
+                    }
                 }
 
                 if let Some(display_name) = &entity.display_name {
                     query.push(" display_name = ");
                     query.push_bind(display_name);
-                    query.push(",");
+                    if entity.links.is_some() {
+                        query.push(",");
+                    }
                 }
 
                 if let Some(links) = &entity.links {
@@ -297,7 +305,7 @@ WHERE id = $1
                     }
                 }
 
-                query.push("WHERE entity.id = ");
+                query.push(" WHERE entity.id = ");
                 query.push_bind(entity_id);
                 query.push(" RETURNING id, slug, entity_type, display_name, description, organization, location, links;");
 
