@@ -2,7 +2,7 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
-use crate::FormatResponse;
+use crate::formatting::TabularFormatter;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -118,7 +118,7 @@ pub struct ProfileUpdate {
     pub description: Option<String>,
     pub organization: Option<String>,
     pub location: Option<String>,
-    pub links: Vec<ProfileLinkUpdate>,
+    pub links: Option<Vec<ProfileLinkUpdate>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -143,7 +143,7 @@ pub struct EntityQueryResponse {
     pub databases: Vec<EntityDatabase>,
 }
 
-impl FormatResponse for EntityProfile {
+impl TabularFormatter for EntityProfile {
     fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(vec![
@@ -187,9 +187,15 @@ impl FormatResponse for EntityProfile {
                 &self
                     .links
                     .clone()
-                    .iter()
-                    .map(|v| v.url.as_str())
-                    .collect::<Vec<&str>>()
+                    .into_iter()
+                    .map(|v| {
+                        if v.verified {
+                            format!("{} (verified)", v.url)
+                        } else {
+                            v.url
+                        }
+                    })
+                    .collect::<Vec<String>>()
                     .join("\\,"),
             ),
         ]));
@@ -198,7 +204,7 @@ impl FormatResponse for EntityProfile {
     }
 }
 
-impl FormatResponse for Vec<EntityDatabase> {
+impl TabularFormatter for Vec<EntityDatabase> {
     fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(vec![

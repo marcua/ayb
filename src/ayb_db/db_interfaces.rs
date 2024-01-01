@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
     APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
-    InstantiatedDatabase, InstantiatedEntity,
+    InstantiatedDatabase, InstantiatedEntity, PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -9,7 +9,7 @@ use sqlx::{
     migrate,
     postgres::PgPoolOptions,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    Pool, Postgres, Sqlite,
+    Pool, Postgres, QueryBuilder, Sqlite,
 };
 use std::str::FromStr;
 
@@ -41,7 +41,7 @@ pub trait AybDb: DynClone + Send + Sync {
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
     async fn update_entity_by_id(
         &self,
-        entity: &Entity,
+        entity: &PartialEntity,
         entity_id: i32,
     ) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
@@ -262,34 +262,55 @@ WHERE id = $1
                 Ok(entity)
             }
 
-            async fn update_entity_by_id(&self, entity: &Entity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
-                let entity: InstantiatedEntity = sqlx::query_as(
-                    r#"
-UPDATE entity SET
-    description = $1,
-    organization = $2,
-    location = $3,
-    display_name = $4,
-    links = $5
-WHERE entity.id = $6
-RETURNING id, slug, entity_type, display_name, description, organization, location, links
-                    "#
-                )
-                .bind(&entity.description)
-                .bind(&entity.organization)
-                .bind(&entity.location)
-                .bind(&entity.display_name)
-                .bind(serde_json::to_value(&entity.links)?)
-                .bind(entity_id)
-                .fetch_one(&self.pool)
-                .await
-                .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
-                        id: entity_id.to_string(),
-                        record_type: "entity".into(),
-                    }),
-                    _ => Err(AybError::from(err)),
-                })?;
+            async fn update_entity_by_id(&self, entity: &PartialEntity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
+                let mut query = QueryBuilder::new("UPDATE entity SET");
+                if let Some(description) = &entity.description {
+                    query.push(" description = ");
+                    query.push_bind(description);
+                    query.push(",");
+                }
+
+                if let Some(organization) = &entity.organization {
+                    query.push(" organization = ");
+                    query.push_bind(organization);
+                    query.push(",");
+                }
+
+                if let Some(location) = &entity.location {
+                    query.push(" location = ");
+                    query.push_bind(location);
+                    query.push(",");
+                }
+
+                if let Some(display_name) = &entity.display_name {
+                    query.push(" display_name = ");
+                    query.push_bind(display_name);
+                    query.push(",");
+                }
+
+                if let Some(links) = &entity.links {
+                    query.push(" links = ");
+                    if links.is_none() {
+                        query.push("NULL");
+                    } else {
+                        query.push_bind(serde_json::to_value(links)?);
+                    }
+                }
+
+                query.push("WHERE entity.id = ");
+                query.push_bind(entity_id);
+                query.push(" RETURNING id, slug, entity_type, display_name, description, organization, location, links;");
+
+                let entity: InstantiatedEntity = query.build_query_as()
+                    .fetch_one(&self.pool)
+                    .await
+                    .or_else(|err| match err {
+                        sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                            id: entity_id.to_string(),
+                            record_type: "entity".into(),
+                        }),
+                        _ => Err(AybError::from(err)),
+                    })?;
 
                 Ok(entity)
             }

@@ -173,6 +173,31 @@ pub struct Entity {
     pub links: Option<Vec<Link>>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PartialEntity {
+    pub slug: Option<String>,
+    pub entity_type: Option<i16>,
+    pub display_name: Option<Option<String>>,
+    pub description: Option<Option<String>>,
+    pub organization: Option<Option<String>>,
+    pub location: Option<Option<String>>,
+    pub links: Option<Option<Vec<Link>>>,
+}
+
+impl PartialEntity {
+    pub fn new() -> Self {
+        Self {
+            slug: None,
+            entity_type: None,
+            display_name: None,
+            description: None,
+            organization: None,
+            location: None,
+            links: None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Link {
     pub url: String,

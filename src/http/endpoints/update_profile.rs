@@ -1,5 +1,5 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{Entity, InstantiatedEntity, Link};
+use crate::ayb_db::models::{InstantiatedEntity, Link, PartialEntity};
 use crate::error::AybError;
 use crate::http::structs::{EmptyResponse, EntityPath, ProfileUpdate};
 use crate::http::url_verification::is_verified_url;
@@ -25,50 +25,63 @@ pub async fn update_profile(
         return Ok(HttpResponse::Unauthorized().finish());
     }
 
-    let instantiated_entity = ayb_db.get_entity_by_slug(entity_slug).await?;
-    let links = if let Some(web_info) = Option::as_ref(&**web_info) {
-        // If there's a known web frontend, we verify the identity of the links.
-        let mut links = vec![];
-        for link in profile.links.into_iter() {
-            let url = Url::parse(&link.url)?;
-            links.push(Link {
-                url: link.url,
-                verified: is_verified_url(
-                    url,
-                    Url::from_str(&web_info.profile(entity_slug))
-                        .expect("invalid web frontend url"),
-                )
-                .await,
-            })
-        }
-
-        Some(links)
-    } else {
-        // If there is no known web frontend, we save links to the profile without verification.
-        Some(
-            profile
-                .links
-                .into_iter()
-                .map(|l| Link {
-                    url: l.url,
-                    verified: false,
+    let links = if let Some(profile_links) = profile.links {
+        if let Some(web_info) = Option::as_ref(&**web_info) {
+            // If there's a known web frontend, we verify the identity of the links.
+            let mut links = vec![];
+            for link in profile_links.into_iter() {
+                let url = Url::parse(&link.url)?;
+                links.push(Link {
+                    url: link.url,
+                    verified: is_verified_url(
+                        url,
+                        Url::from_str(&web_info.profile(entity_slug))
+                            .expect("invalid web frontend url"),
+                    )
+                    .await,
                 })
-                .collect(),
-        )
+            }
+
+            Some(links)
+        } else {
+            // If there is no known web frontend, we save links to the profile without verification.
+            Some(
+                profile_links
+                    .into_iter()
+                    .map(|l| Link {
+                        url: l.url,
+                        verified: false,
+                    })
+                    .collect(),
+            )
+        }
+    } else {
+        None
     };
 
-    let entity = Entity {
-        slug: instantiated_entity.slug,
-        entity_type: instantiated_entity.entity_type,
-        display_name: profile.display_name,
-        description: profile.description,
-        organization: profile.organization,
-        location: profile.location,
-        links,
-    };
+    let mut partial = PartialEntity::new();
+    if let Some(display_name) = profile.display_name {
+        partial.display_name = Some(Some(display_name));
+    }
+
+    if let Some(description) = profile.description {
+        partial.description = Some(Some(description));
+    }
+
+    if let Some(organization) = profile.organization {
+        partial.organization = Some(Some(organization));
+    }
+
+    if let Some(location) = profile.location {
+        partial.location = Some(Some(location));
+    }
+
+    if let Some(links) = links {
+        partial.links = Some(Some(links))
+    }
 
     ayb_db
-        .update_entity_by_id(&entity, instantiated_entity.id)
+        .update_entity_by_id(&partial, authenticated_entity.id)
         .await?;
 
     Ok(HttpResponse::Ok().json(EmptyResponse {}))
