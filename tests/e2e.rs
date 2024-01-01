@@ -160,7 +160,7 @@ fn update_profile(
     description: Option<&str>,
     organization: Option<&str>,
     location: Option<&str>,
-    links: Vec<&str>,
+    links: Option<Vec<&str>>,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("ayb")?;
@@ -183,8 +183,10 @@ fn update_profile(
         cmd.arg("--location").arg(location);
     }
 
-    for link in links {
-        cmd.arg("--link").arg(link);
+    if let Some(links) = links {
+        for link in links {
+            cmd.arg("--link").arg(link);
+        }
     }
 
     cmd.assert().success().stdout(format!("{}\n", result));
@@ -464,9 +466,9 @@ fn client_server_integration(
         first_entity_0,
         Some("Entity 0"),
         Some("Entity 0 description"),
-        Some("Entity 0 organization"),
-        Some("Entity 0 location"),
-        vec!["http://example.com"],
+        None,
+        None,
+        None,
         "Successfully updated profile",
     )?;
 
@@ -475,7 +477,7 @@ fn client_server_integration(
         &first_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,Entity 0 organization,Entity 0 location,http://example.com"
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,null"
     )?;
 
     profile(
@@ -483,7 +485,35 @@ fn client_server_integration(
         &second_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,Entity 0 organization,Entity 0 location,http://example.com"
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,null"
+    )?;
+
+    update_profile(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        None,
+        Some("Entity 0 NEW description"),
+        Some("Entity 0 organization"),
+        None,
+        None,
+        "Successfully updated profile",
+    )?;
+
+    profile(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,null"
+    )?;
+
+    profile(
+        server_url,
+        &second_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,null"
     )?;
 
     Ok(())
