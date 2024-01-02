@@ -150,7 +150,7 @@ async fn main() -> std::io::Result<()> {
                         .arg(arg!(--organization <value> "New organization").required(false))
                         .arg(arg!(--location <value> "New location").required(false))
                         .arg(
-                            arg!(--link <value> "One of several links, all of which together will overwrite previously saved ones")
+                            arg!(--links <value> "New links")
                                 .required(false)
                                 .num_args(0..)
                         )
@@ -261,7 +261,7 @@ async fn main() -> std::io::Result<()> {
                         organization: matches.get_one::<String>("organization").cloned(),
                         location: matches.get_one::<String>("location").cloned(),
                         links: matches
-                            .get_many::<String>("link")
+                            .get_many::<String>("links")
                             .map(|v| v.into_iter().collect::<Vec<&String>>())
                             .map(|v| {
                                 v.into_iter()

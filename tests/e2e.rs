@@ -184,9 +184,7 @@ fn update_profile(
     }
 
     if let Some(links) = links {
-        for link in links {
-            cmd.arg("--link").arg(link);
-        }
+        cmd.arg("--links").arg(links.join(","));
     }
 
     cmd.assert().success().stdout(format!("{}\n", result));
