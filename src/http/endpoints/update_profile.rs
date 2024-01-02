@@ -60,25 +60,11 @@ pub async fn update_profile(
     };
 
     let mut partial = PartialEntity::new();
-    if let Some(display_name) = profile.display_name {
-        partial.display_name = Some(Some(display_name));
-    }
-
-    if let Some(description) = profile.description {
-        partial.description = Some(Some(description));
-    }
-
-    if let Some(organization) = profile.organization {
-        partial.organization = Some(Some(organization));
-    }
-
-    if let Some(location) = profile.location {
-        partial.location = Some(Some(location));
-    }
-
-    if let Some(links) = links {
-        partial.links = Some(Some(links))
-    }
+    partial.display_name = profile.display_name.map(Some);
+    partial.description = profile.description.map(Some);
+    partial.organization = profile.organization.map(Some);
+    partial.location = profile.location.map(Some);
+    partial.links = links.map(Some);
 
     ayb_db
         .update_entity_by_id(&partial, authenticated_entity.id)

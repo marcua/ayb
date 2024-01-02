@@ -175,8 +175,6 @@ pub struct Entity {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PartialEntity {
-    pub slug: Option<String>,
-    pub entity_type: Option<i16>,
     pub display_name: Option<Option<String>>,
     pub description: Option<Option<String>>,
     pub organization: Option<Option<String>>,
@@ -193,8 +191,6 @@ impl Default for PartialEntity {
 impl PartialEntity {
     pub fn new() -> Self {
         Self {
-            slug: None,
-            entity_type: None,
             display_name: None,
             description: None,
             organization: None,

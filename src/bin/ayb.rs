@@ -149,7 +149,7 @@ async fn main() -> std::io::Result<()> {
                         .arg(arg!(--description <value> "New description").required(false))
                         .arg(arg!(--organization <value> "New organization").required(false))
                         .arg(arg!(--location <value> "New location").required(false))
-                        .arg(arg!(--link <value> "Adds a link, will overwrite previous ones").required(false))
+                        .arg(arg!(--link <value> "One of several links, all of which together will overwrite previously saved ones").required(false))
                 )
         )
         .get_matches();
