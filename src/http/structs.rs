@@ -155,34 +155,10 @@ impl TabularFormatter for EntityProfile {
         ]));
 
         table.add_row(Row::new(vec![
-            Cell::new(
-                &self
-                    .display_name
-                    .as_deref()
-                    .unwrap_or("null")
-                    .replace(',', "\\,"),
-            ),
-            Cell::new(
-                &self
-                    .description
-                    .as_deref()
-                    .unwrap_or("null")
-                    .replace(',', "\\,"),
-            ),
-            Cell::new(
-                &self
-                    .organization
-                    .as_deref()
-                    .unwrap_or("null")
-                    .replace(',', "\\,"),
-            ),
-            Cell::new(
-                &self
-                    .location
-                    .as_deref()
-                    .unwrap_or("null")
-                    .replace(',', "\\,"),
-            ),
+            Cell::new(&self.display_name.as_deref().unwrap_or("null")),
+            Cell::new(&self.description.as_deref().unwrap_or("null")),
+            Cell::new(&self.organization.as_deref().unwrap_or("null")),
+            Cell::new(&self.location.as_deref().unwrap_or("null")),
             Cell::new(
                 &self
                     .links
@@ -196,7 +172,7 @@ impl TabularFormatter for EntityProfile {
                         }
                     })
                     .collect::<Vec<String>>()
-                    .join("\\,"),
+                    .join(","),
             ),
         ]));
 
