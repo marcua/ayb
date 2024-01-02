@@ -264,39 +264,34 @@ WHERE id = $1
 
             async fn update_entity_by_id(&self, entity: &PartialEntity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
                 let mut query = QueryBuilder::new("UPDATE entity SET");
-                if let Some(description) = &entity.description {
-                    query.push(" description = ");
-                    query.push_bind(description);
-                    if entity.links.is_some() || entity.display_name.is_some() || entity.location.is_some() || entity.organization.is_some() {
-                        query.push(",");
-                    }
-                }
+                let mut prev_to_links = false;
+                let pairs = vec![
+                    ("description", &entity.description),
+                    ("organization", &entity.organization),
+                    ("location", &entity.location),
+                    ("display_name", &entity.display_name),
+                ];
 
-                if let Some(organization) = &entity.organization {
-                    query.push(" organization = ");
-                    query.push_bind(organization);
-                    if entity.links.is_some() || entity.display_name.is_some() || entity.location.is_some() {
-                        query.push(",");
-                    }
-                }
+                for (i, (key, current)) in pairs.iter().enumerate() {
+                    let Some(current) = current else {
+                        continue;
+                    };
 
-                if let Some(location) = &entity.location {
-                    query.push(" location = ");
-                    query.push_bind(location);
-                    if entity.links.is_some() || entity.display_name.is_some() {
+                    if i != 0 {
                         query.push(",");
                     }
-                }
 
-                if let Some(display_name) = &entity.display_name {
-                    query.push(" display_name = ");
-                    query.push_bind(display_name);
-                    if entity.links.is_some() {
-                        query.push(",");
-                    }
+                    // Keys are hardcoded an thus there is no risk of SQL injection
+                    query.push(format!(" {} = ", key));
+                    query.push_bind(current);
+                    prev_to_links = true;
                 }
 
                 if let Some(links) = &entity.links {
+                    if prev_to_links {
+                        query.push(",");
+                    }
+
                     query.push(" links = ");
                     if links.is_none() {
                         query.push("NULL");
