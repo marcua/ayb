@@ -256,41 +256,38 @@ async fn main() -> std::io::Result<()> {
                 }
             } else if let Some(matches) = matches.subcommand_matches("update_profile") {
                 if let Some(entity) = matches.get_one::<String>("entity") {
-                    let profile_update = HashMap::from([
-                        (
-                            "display_name".to_owned(),
-                            matches.get_one::<String>("display_name").cloned(),
-                        ),
-                        (
-                            "description".to_owned(),
-                            matches.get_one::<String>("description").cloned(),
-                        ),
-                        (
-                            "organization".to_owned(),
-                            matches.get_one::<String>("organization").cloned(),
-                        ),
-                        (
-                            "location".to_owned(),
-                            matches.get_one::<String>("location").cloned(),
-                        ),
-                        (
+                    let mut profile_update = HashMap::new();
+                    if let Some(display_name) = matches.get_one::<String>("display_name").cloned() {
+                        profile_update.insert("display_name".to_owned(), Some(display_name));
+                    }
+
+                    if let Some(description) = matches.get_one::<String>("description").cloned() {
+                        profile_update.insert("description".to_owned(), Some(description));
+                    }
+
+                    if let Some(organization) = matches.get_one::<String>("organization").cloned() {
+                        profile_update.insert("organization".to_owned(), Some(organization));
+                    }
+
+                    if let Some(location) = matches.get_one::<String>("location").cloned() {
+                        profile_update.insert("location".to_owned(), Some(location));
+                    }
+
+                    if matches.get_many::<String>("links").is_some() {
+                        profile_update.insert(
                             "links".to_owned(),
-                            if let None = &matches.get_many::<String>("links") {
-                                None
-                            } else {
-                                Some(serde_json::to_string(
-                                    &matches
-                                        .get_many::<String>("links")
-                                        .map(|v| v.into_iter().collect::<Vec<&String>>())
-                                        .map(|v| {
-                                            v.into_iter()
-                                                .map(|v| ProfileLinkUpdate { url: v.clone() })
-                                                .collect::<Vec<ProfileLinkUpdate>>()
-                                        }),
-                                )?)
-                            },
-                        ),
-                    ]);
+                            Some(serde_json::to_string(
+                                &matches
+                                    .get_many::<String>("links")
+                                    .map(|v| v.into_iter().collect::<Vec<&String>>())
+                                    .map(|v| {
+                                        v.into_iter()
+                                            .map(|v| ProfileLinkUpdate { url: v.clone() })
+                                            .collect::<Vec<ProfileLinkUpdate>>()
+                                    }),
+                            )?),
+                        );
+                    }
 
                     match client.update_profile(entity, &profile_update).await {
                         Ok(_) => println!("Successfully updated profile"),
