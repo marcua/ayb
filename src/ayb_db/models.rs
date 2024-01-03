@@ -173,6 +173,10 @@ pub struct Entity {
     pub links: Option<Vec<Link>>,
 }
 
+/// The fields of this struct mean the following:
+/// * `None` means that nothing should be changed
+/// * `Some(None)` means that the value should be set to `NULL`
+/// * `Some(Some(v))` means that the value should be set to `v`
 #[derive(Debug)]
 pub struct PartialEntity {
     pub display_name: Option<Option<String>>,
