@@ -3,7 +3,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
 macro_rules! try_from_i16 {
     ($struct:ident, { $($left:literal => $right:expr),+ }) => {

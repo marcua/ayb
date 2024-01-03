@@ -28,7 +28,7 @@ pub async fn update_profile(
 
     let links = if let Some(profile_links) = profile.get("links") {
         if let Some(profile_links) = profile_links {
-            let profile_links: Vec<ProfileLinkUpdate> = serde_json::from_str(&profile_links)?;
+            let profile_links: Vec<ProfileLinkUpdate> = serde_json::from_str(profile_links)?;
 
             if let Some(web_info) = Option::as_ref(&**web_info) {
                 // If there's a known web frontend, we verify the identity of the links.
