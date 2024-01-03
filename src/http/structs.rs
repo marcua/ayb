@@ -112,15 +112,6 @@ pub struct ProfileLinkUpdate {
     pub url: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ProfileUpdate {
-    pub display_name: Option<String>,
-    pub description: Option<String>,
-    pub organization: Option<String>,
-    pub location: Option<String>,
-    pub links: Option<Vec<ProfileLinkUpdate>>,
-}
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityProfileLink {
     pub url: String,

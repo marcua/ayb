@@ -1,9 +1,10 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse, ProfileUpdate};
+use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
+use std::collections::HashMap;
 
 pub struct AybClient {
     pub base_url: String,
@@ -200,7 +201,7 @@ impl AybClient {
     pub async fn update_profile(
         &self,
         entity: &str,
-        profile_update: &ProfileUpdate,
+        profile_update: &HashMap<String, Option<String>>,
     ) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers)?;

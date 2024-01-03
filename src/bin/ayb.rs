@@ -3,10 +3,11 @@ use ayb::formatting::TabularFormatter;
 use ayb::http::client::AybClient;
 use ayb::http::config::{config_to_toml, default_server_config};
 use ayb::http::server::run_server;
-use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate, ProfileUpdate};
+use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use regex::Regex;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
@@ -255,20 +256,41 @@ async fn main() -> std::io::Result<()> {
                 }
             } else if let Some(matches) = matches.subcommand_matches("update_profile") {
                 if let Some(entity) = matches.get_one::<String>("entity") {
-                    let profile_update = ProfileUpdate {
-                        display_name: matches.get_one::<String>("display_name").cloned(),
-                        description: matches.get_one::<String>("description").cloned(),
-                        organization: matches.get_one::<String>("organization").cloned(),
-                        location: matches.get_one::<String>("location").cloned(),
-                        links: matches
-                            .get_many::<String>("links")
-                            .map(|v| v.into_iter().collect::<Vec<&String>>())
-                            .map(|v| {
-                                v.into_iter()
-                                    .map(|v| ProfileLinkUpdate { url: v.clone() })
-                                    .collect::<Vec<ProfileLinkUpdate>>()
-                            }),
-                    };
+                    let profile_update = HashMap::from([
+                        (
+                            "display_name".to_owned(),
+                            matches.get_one::<String>("display_name").cloned(),
+                        ),
+                        (
+                            "description".to_owned(),
+                            matches.get_one::<String>("description").cloned(),
+                        ),
+                        (
+                            "organization".to_owned(),
+                            matches.get_one::<String>("organization").cloned(),
+                        ),
+                        (
+                            "location".to_owned(),
+                            matches.get_one::<String>("location").cloned(),
+                        ),
+                        (
+                            "links".to_owned(),
+                            if let None = &matches.get_many::<String>("links") {
+                                None
+                            } else {
+                                Some(serde_json::to_string(
+                                    &matches
+                                        .get_many::<String>("links")
+                                        .map(|v| v.into_iter().collect::<Vec<&String>>())
+                                        .map(|v| {
+                                            v.into_iter()
+                                                .map(|v| ProfileLinkUpdate { url: v.clone() })
+                                                .collect::<Vec<ProfileLinkUpdate>>()
+                                        }),
+                                )?)
+                            },
+                        ),
+                    ]);
 
                     match client.update_profile(entity, &profile_update).await {
                         Ok(_) => println!("Successfully updated profile"),

@@ -3,7 +3,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 macro_rules! try_from_i16 {
     ($struct:ident, { $($left:literal => $right:expr),+ }) => {
@@ -173,7 +173,7 @@ pub struct Entity {
     pub links: Option<Vec<Link>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct PartialEntity {
     pub display_name: Option<Option<String>>,
     pub description: Option<Option<String>>,
