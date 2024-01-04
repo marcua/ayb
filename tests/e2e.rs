@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use assert_cmd::prelude::*;
 use regex::Regex;
 use std::fs;
@@ -132,6 +134,60 @@ fn list_databases(
     });
 
     cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
+fn profile(
+    server_url: &str,
+    api_key: &str,
+    entity: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "profile", entity, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
+fn update_profile(
+    server_url: &str,
+    api_key: &str,
+    entity: &str,
+    display_name: Option<&str>,
+    description: Option<&str>,
+    organization: Option<&str>,
+    location: Option<&str>,
+    links: Option<Vec<&str>>,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut cmd = Command::cargo_bin("ayb")?;
+    cmd.args(["client", "--url", server_url, "update_profile", entity])
+        .env("AYB_API_TOKEN", api_key);
+
+    if let Some(display_name) = display_name {
+        cmd.arg("--display_name").arg(display_name);
+    }
+
+    if let Some(description) = description {
+        cmd.arg("--description").arg(description);
+    }
+
+    if let Some(organization) = organization {
+        cmd.arg("--organization").arg(organization);
+    }
+
+    if let Some(location) = location {
+        cmd.arg("--location").arg(location);
+    }
+
+    if let Some(links) = links {
+        cmd.arg("--links").arg(links.join(","));
+    }
+
+    cmd.assert().success().stdout(format!("{}\n", result));
     Ok(())
 }
 
@@ -400,6 +456,62 @@ fn client_server_integration(
         first_entity_0,
         "csv",
         &format!("No queryable databases owned by {}", first_entity_0),
+    )?;
+
+    update_profile(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        Some("Entity 0"),
+        Some("Entity 0 description"),
+        None,
+        None,
+        None,
+        "Successfully updated profile",
+    )?;
+
+    profile(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,"
+    )?;
+
+    profile(
+        server_url,
+        &second_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,"
+    )?;
+
+    update_profile(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        None,
+        Some("Entity 0 NEW description"),
+        Some("Entity 0 organization"),
+        None,
+        Some(vec!["http://ayb.host/", "http://ayb2.host"]),
+        "Successfully updated profile",
+    )?;
+
+    profile(
+        server_url,
+        &first_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,\"http://ayb.host/,http://ayb2.host\""
+    )?;
+
+    profile(
+        server_url,
+        &second_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,\"http://ayb.host/,http://ayb2.host\""
     )?;
 
     Ok(())

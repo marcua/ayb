@@ -4,7 +4,7 @@ use crate::error::AybError;
 use crate::http::config::read_config;
 use crate::http::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, log_in_endpoint, query_endpoint,
-    register_endpoint,
+    register_endpoint, update_profile_endpoint,
 };
 use crate::http::structs::AybConfigCors;
 use crate::http::tokens::retrieve_and_validate_api_token;
@@ -27,7 +27,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_db_endpoint)
             .service(query_endpoint)
-            .service(entity_details_endpoint),
+            .service(entity_details_endpoint)
+            .service(update_profile_endpoint),
     );
 }
 

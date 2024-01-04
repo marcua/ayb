@@ -105,6 +105,15 @@ $ ayb client query marcua/test.sqlite "SELECT * FROM favorite_databases;"
  DuckDB     | 9 
 
 Rows: 3
+
+$ ayb client update_profile marcua --display_name 'Adam Marcus' --link 'http://marcua.net'
+
+Successfully updated profile
+
+$ ayb client profile marcua
+ Display name | Description | Organization | Location | Links 
+--------------+-------------+--------------+----------+-------------------
+ Adam Marcus  |             |              |          | http://marcua.net 
 ```
 
 The command line invocations above are a thin wrapper around `ayb`'s HTTP API. Here are the same commands as above, but with `curl`:
@@ -121,9 +130,13 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/create -H "db
 
 {"entity":"marcua","database":"test.sqlite","database_type":"sqlite"}
 
+$ curl -w "\n" -X PATCH http://127.0.0.1:5433/v1/entity/marcua -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "{\"display_name\": \"Adam Marcus\"}"
+
+{}
+
 $ curl -w "\n" -X GET http://localhost:5433/v1/entity/marcua -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>"
 
-{"slug":"marcua","databases":[{"slug":"test.sqlite","database_type":"sqlite"}]}
+{"slug":"marcua","databases":[{"slug":"test.sqlite","database_type":"sqlite"}],"profile":{"display_name":"Adam Marcus"}}
 
 $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d 'CREATE TABLE favorite_databases(name varchar, score integer);'
 

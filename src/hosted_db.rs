@@ -4,9 +4,10 @@ pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
+use crate::formatting::TabularFormatter;
 use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
 use crate::http::structs::AybConfigIsolation;
-use prettytable::{format, Cell, Row, Table};
+use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
@@ -17,7 +18,7 @@ pub struct QueryResult {
     pub rows: Vec<Vec<Option<String>>>,
 }
 
-impl QueryResult {
+impl TabularFormatter for QueryResult {
     fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(
@@ -39,19 +40,6 @@ impl QueryResult {
             table.add_row(Row::new(cells));
         }
         table
-    }
-
-    pub fn generate_table(&self) -> Result<(), std::io::Error> {
-        let mut table = self.to_table();
-        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-        table.print(&mut std::io::stdout())?;
-        Ok(())
-    }
-
-    pub fn generate_csv(&self) -> Result<(), std::io::Error> {
-        let table = self.to_table();
-        table.to_csv(std::io::stdout())?;
-        Ok(())
     }
 }
 

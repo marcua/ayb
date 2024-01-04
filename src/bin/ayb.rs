@@ -1,11 +1,13 @@
 use ayb::ayb_db::models::{DBType, EntityType};
+use ayb::formatting::TabularFormatter;
 use ayb::http::client::AybClient;
 use ayb::http::config::{config_to_toml, default_server_config};
 use ayb::http::server::run_server;
-use ayb::http::structs::EntityDatabasePath;
+use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use regex::Regex;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
@@ -129,6 +131,31 @@ async fn main() -> std::io::Result<()> {
                                 .default_value(OutputFormat::Table.to_str())
                                 .required(false)),
                 )
+                .subcommand(
+                    Command::new("profile")
+                        .about("Show the profile of an entity")
+                        .arg(arg!(<entity> "The entity to query")
+                            .required(true))
+                        .arg(
+                            arg!(--format <type> "The format in which to output the result")
+                                .value_parser(value_parser!(OutputFormat))
+                                .default_value(OutputFormat::Table.to_str())
+                                .required(false))
+                )
+                .subcommand(
+                    Command::new("update_profile")
+                        .about("Update the profile of an entity")
+                        .arg(arg!(<entity> "The entity to update").required(true))
+                        .arg(arg!(--display_name <value> "New display name").required(false))
+                        .arg(arg!(--description <value> "New description").required(false))
+                        .arg(arg!(--organization <value> "New organization").required(false))
+                        .arg(arg!(--location <value> "New location").required(false))
+                        .arg(
+                            arg!(--links <value> "New links")
+                                .required(false)
+                                .num_args(0..)
+                        )
+                )
         )
         .get_matches();
 
@@ -214,19 +241,72 @@ async fn main() -> std::io::Result<()> {
                         }
                     }
                 }
+            } else if let Some(matches) = matches.subcommand_matches("profile") {
+                if let (Some(entity), Some(format)) = (
+                    matches.get_one::<String>("entity"),
+                    matches.get_one::<OutputFormat>("format"),
+                ) {
+                    match client.entity_details(entity).await {
+                        Ok(response) => match format {
+                            OutputFormat::Table => response.profile.generate_table()?,
+                            OutputFormat::Csv => response.profile.generate_csv()?,
+                        },
+                        Err(err) => println!("Error: {}", err),
+                    }
+                }
+            } else if let Some(matches) = matches.subcommand_matches("update_profile") {
+                if let Some(entity) = matches.get_one::<String>("entity") {
+                    let mut profile_update = HashMap::new();
+                    if let Some(display_name) = matches.get_one::<String>("display_name").cloned() {
+                        profile_update.insert("display_name".to_owned(), Some(display_name));
+                    }
+
+                    if let Some(description) = matches.get_one::<String>("description").cloned() {
+                        profile_update.insert("description".to_owned(), Some(description));
+                    }
+
+                    if let Some(organization) = matches.get_one::<String>("organization").cloned() {
+                        profile_update.insert("organization".to_owned(), Some(organization));
+                    }
+
+                    if let Some(location) = matches.get_one::<String>("location").cloned() {
+                        profile_update.insert("location".to_owned(), Some(location));
+                    }
+
+                    if matches.get_many::<String>("links").is_some() {
+                        profile_update.insert(
+                            "links".to_owned(),
+                            Some(serde_json::to_string(
+                                &matches
+                                    .get_many::<String>("links")
+                                    .map(|v| v.into_iter().collect::<Vec<&String>>())
+                                    .map(|v| {
+                                        v.into_iter()
+                                            .map(|v| ProfileLinkUpdate { url: v.clone() })
+                                            .collect::<Vec<ProfileLinkUpdate>>()
+                                    }),
+                            )?),
+                        );
+                    }
+
+                    match client.update_profile(entity, &profile_update).await {
+                        Ok(_) => println!("Successfully updated profile"),
+                        Err(err) => println!("Error: {}", err),
+                    }
+                }
             } else if let Some(matches) = matches.subcommand_matches("list") {
                 if let (Some(entity), Some(format)) = (
                     matches.get_one::<String>("entity"),
                     matches.get_one::<OutputFormat>("format"),
                 ) {
-                    match client.list_databases(entity).await {
+                    match client.entity_details(entity).await {
                         Ok(response) => {
                             if response.databases.is_empty() {
                                 println!("No queryable databases owned by {}", entity);
                             } else {
                                 match format {
-                                    OutputFormat::Table => response.generate_table()?,
-                                    OutputFormat::Csv => response.generate_csv()?,
+                                    OutputFormat::Table => response.databases.generate_table()?,
+                                    OutputFormat::Csv => response.databases.generate_csv()?,
                                 }
                             }
                         }

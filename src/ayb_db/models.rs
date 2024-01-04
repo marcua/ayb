@@ -166,6 +166,48 @@ pub struct InstantiatedDatabase {
 pub struct Entity {
     pub slug: String,
     pub entity_type: i16,
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
+    pub links: Option<Vec<Link>>,
+}
+
+/// The fields of this struct mean the following:
+/// * `None` means that nothing should be changed
+/// * `Some(None)` means that the value should be set to `NULL`
+/// * `Some(Some(v))` means that the value should be set to `v`
+#[derive(Debug)]
+pub struct PartialEntity {
+    pub display_name: Option<Option<String>>,
+    pub description: Option<Option<String>>,
+    pub organization: Option<Option<String>>,
+    pub location: Option<Option<String>>,
+    pub links: Option<Option<Vec<Link>>>,
+}
+
+impl Default for PartialEntity {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl PartialEntity {
+    pub fn new() -> Self {
+        Self {
+            display_name: None,
+            description: None,
+            organization: None,
+            location: None,
+            links: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Link {
+    pub url: String,
+    pub verified: bool,
 }
 
 #[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
@@ -173,6 +215,11 @@ pub struct InstantiatedEntity {
     pub id: i32,
     pub slug: String,
     pub entity_type: i16,
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
+    pub links: Option<sqlx::types::Json<Vec<Link>>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
