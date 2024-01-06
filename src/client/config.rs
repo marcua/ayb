@@ -8,7 +8,7 @@ use std::path::PathBuf;
 pub struct ClientConfig {
     version: u64,
     pub authentication: HashMap<String, String>,
-    //default_url: Option<Url>
+    pub default_url: Option<String>,
 }
 
 impl ClientConfig {
@@ -16,6 +16,7 @@ impl ClientConfig {
         ClientConfig {
             version: 1,
             authentication: HashMap::new(),
+            default_url: None,
         }
     }
 
@@ -36,10 +37,4 @@ impl ClientConfig {
         writer.flush()?;
         Ok(())
     }
-
-    /*pub fn update_default_url(&mut self, url: &Url, force: bool) -> () {
-        if self.default_url.is_none() || force {
-            self.default_url = Some(url.clone());
-        }
-    }*/
 }
