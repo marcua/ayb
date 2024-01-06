@@ -15,10 +15,10 @@ impl ClientConfig {
     fn default_config() -> ClientConfig {
         ClientConfig {
             version: 1,
-            authentication: HashMap::new()
+            authentication: HashMap::new(),
         }
     }
-    
+
     pub fn from_file(file_path: &PathBuf) -> Result<ClientConfig, std::io::Error> {
         if file_path.exists() {
             let file = File::open(file_path)?;
@@ -28,7 +28,7 @@ impl ClientConfig {
 
         Ok(ClientConfig::default_config())
     }
-    
+
     pub fn to_file(&self, file_path: &PathBuf) -> Result<(), std::io::Error> {
         let file = File::create(file_path)?;
         let mut writer = BufWriter::new(file);
@@ -36,7 +36,6 @@ impl ClientConfig {
         writer.flush()?;
         Ok(())
     }
-
 
     /*pub fn update_default_url(&mut self, url: &Url, force: bool) -> () {
         if self.default_url.is_none() || force {

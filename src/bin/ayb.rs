@@ -152,12 +152,17 @@ async fn main() -> std::io::Result<()> {
         let config_path = if let Some(path) = matches.get_one::<PathBuf>("config") {
             path.clone()
         } else {
-            home_dir().expect("can't determine home directory").join(".ayb.json")
+            home_dir()
+                .expect("can't determine home directory")
+                .join(".ayb.json")
         };
         let mut config = ClientConfig::from_file(&config_path)?;
-                
+
         if let Some(url) = matches.get_one::<String>("url") {
-            let token = matches.get_one::<String>("token").or(config.authentication.get(url)).cloned();
+            let token = matches
+                .get_one::<String>("token")
+                .or(config.authentication.get(url))
+                .cloned();
             let client = AybClient {
                 base_url: url.to_string(),
                 api_token: token,
@@ -207,7 +212,9 @@ async fn main() -> std::io::Result<()> {
                 {
                     match client.confirm(authentication_token).await {
                         Ok(api_token) => {
-                            config.authentication.insert(url.clone(), api_token.token.clone());
+                            config
+                                .authentication
+                                .insert(url.clone(), api_token.token.clone());
                             config.to_file(&config_path)?;
                             println!(
                                 "Successfully authenticated and saved token {}",
