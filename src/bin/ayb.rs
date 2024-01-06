@@ -163,6 +163,12 @@ async fn main() -> std::io::Result<()> {
                                 .num_args(0..)
                         )
                 )
+                .subcommand(
+                    Command::new("set_default_url")
+                        .about("Set the default server URL for future requests in .ayb.json")
+                        .arg(arg!(<url> "The URL to use in the future")
+                             .required(true))
+                )
         )
         .get_matches();
 
@@ -185,6 +191,15 @@ async fn main() -> std::io::Result<()> {
         };
         let mut config = ClientConfig::from_file(&config_path)?;
 
+        if let Some(matches) = matches.subcommand_matches("set_default_url") {
+            if let Some(url) = matches.get_one::<String>("url") {
+                config.default_url = Some(url.to_string());
+                config.to_file(&config_path)?;
+                println!("Saved {} as new default_url", url);
+                return Ok(());
+            }
+        }
+
         let url = if let Some(server_url) = matches.get_one::<String>("url") {
             if config.default_url.is_none() {
                 config.default_url = Some(server_url.to_string());
@@ -194,7 +209,7 @@ async fn main() -> std::io::Result<()> {
         } else if let Some(ref server_url) = config.default_url {
             server_url.to_string()
         } else {
-            panic!("Server URL is required through --url parameter, AYB_SERVER_URL environment variable, or default_url in ayb.json");
+            panic!("Server URL is required through --url parameter, AYB_SERVER_URL environment variable, or default_url in .ayb.json");
         };
 
         let token = matches
