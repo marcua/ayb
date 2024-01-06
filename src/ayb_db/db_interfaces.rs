@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
     APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
-    InstantiatedDatabase, InstantiatedEntity,
+    InstantiatedDatabase, InstantiatedEntity, PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -9,7 +9,7 @@ use sqlx::{
     migrate,
     postgres::PgPoolOptions,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    Pool, Postgres, Sqlite,
+    Pool, Postgres, QueryBuilder, Sqlite,
 };
 use std::str::FromStr;
 
@@ -39,6 +39,11 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    async fn update_entity_by_id(
+        &self,
+        entity: &PartialEntity,
+        entity_id: i32,
+    ) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -200,7 +205,12 @@ WHERE
 SELECT
     id,
     slug,
-    entity_type
+    entity_type,
+    display_name,
+    description,
+    organization,
+    location,
+    links
 FROM entity
 WHERE slug = $1
         "#,
@@ -228,7 +238,12 @@ WHERE slug = $1
 SELECT
     id,
     slug,
-    entity_type
+    entity_type,
+    display_name,
+    description,
+    organization,
+    location,
+    links
 FROM entity
 WHERE id = $1
         "#,
@@ -243,6 +258,62 @@ WHERE id = $1
                     }),
                     _ => Err(AybError::from(err)),
                 })?;
+
+                Ok(entity)
+            }
+
+            async fn update_entity_by_id(&self, entity: &PartialEntity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
+                let mut query = QueryBuilder::new("UPDATE entity SET");
+                let mut prev_to_links = false;
+                let pairs = vec![
+                    ("description", &entity.description),
+                    ("organization", &entity.organization),
+                    ("location", &entity.location),
+                    ("display_name", &entity.display_name),
+                ];
+
+                for (i, (key, current)) in pairs.iter().enumerate() {
+                    let Some(current) = current else {
+                        continue;
+                    };
+
+                    if i != 0 {
+                        query.push(",");
+                    }
+
+                    // Keys are hardcoded an thus there is no risk of SQL injection
+                    query.push(format!(" {} = ", key));
+                    query.push_bind(current);
+                    prev_to_links = true;
+                }
+
+                if let Some(links) = &entity.links {
+                    if prev_to_links {
+                        query.push(",");
+                    }
+
+                    query.push(" links = ");
+                    if links.is_none() {
+                        query.push("NULL");
+                    } else {
+                        query.push_bind(serde_json::to_value(links)?);
+                    }
+                }
+
+                query.push(" WHERE entity.id = ");
+                query.push_bind(entity_id);
+                query.push(" RETURNING id, slug, entity_type, display_name, description, organization, location, links;");
+
+                let entity: InstantiatedEntity = query.build_query_as()
+                    .fetch_one(&self.pool)
+                    .await
+                    .or_else(|err| match err {
+                        sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                            id: entity_id.to_string(),
+                            record_type: "entity".into(),
+                        }),
+                        _ => Err(AybError::from(err)),
+                    })?;
 
                 Ok(entity)
             }
@@ -265,7 +336,7 @@ ON CONFLICT (slug) DO UPDATE
                 .await?;
                 let entity: InstantiatedEntity = sqlx::query_as(
                     r#"
-SELECT id, slug, entity_type
+SELECT id, slug, entity_type, display_name, description, organization, location, links
 FROM entity
 WHERE slug = $1;
                 "#,

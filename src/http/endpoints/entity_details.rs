@@ -2,7 +2,9 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
 use crate::http::permissions::can_query;
-use crate::http::structs::{EntityDatabase, EntityPath, EntityQueryResponse};
+use crate::http::structs::{
+    EntityDatabase, EntityPath, EntityProfile, EntityProfileLink, EntityQueryResponse,
+};
 use crate::http::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
@@ -24,8 +26,24 @@ pub async fn entity_details(
         .map(From::from)
         .collect::<Vec<EntityDatabase>>();
 
+    let links: Vec<EntityProfileLink> = desired_entity.links.map_or_else(Vec::new, |l| {
+        l.iter()
+            .map(|l| EntityProfileLink {
+                url: l.url.to_string(),
+                verified: l.verified,
+            })
+            .collect()
+    });
+
     Ok(web::Json(EntityQueryResponse {
         slug: entity_slug.to_string(),
+        profile: EntityProfile {
+            display_name: desired_entity.display_name,
+            description: desired_entity.description,
+            organization: desired_entity.organization,
+            location: desired_entity.location,
+            links,
+        },
         databases,
     }))
 }

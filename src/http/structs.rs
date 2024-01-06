@@ -2,7 +2,8 @@ use crate::ayb_db::models::{
     DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
-use prettytable::{format, Cell, Row, Table};
+use crate::formatting::TabularFormatter;
+use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -106,41 +107,85 @@ pub struct EntityPath {
     pub entity: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProfileLinkUpdate {
+    pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityProfileLink {
+    pub url: String,
+    pub verified: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EntityProfile {
+    pub display_name: Option<String>,
+    pub description: Option<String>,
+    pub organization: Option<String>,
+    pub location: Option<String>,
+    pub links: Vec<EntityProfileLink>,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityQueryResponse {
     pub slug: String,
+    pub profile: EntityProfile,
     pub databases: Vec<EntityDatabase>,
 }
 
-impl EntityQueryResponse {
-    pub fn to_table(&self) -> Table {
+impl TabularFormatter for EntityProfile {
+    fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![
+            Cell::new("Display name"),
+            Cell::new("Description"),
+            Cell::new("Organization"),
+            Cell::new("Location"),
+            Cell::new("Links"),
+        ]));
+
+        table.add_row(Row::new(vec![
+            Cell::new(self.display_name.as_deref().unwrap_or("null")),
+            Cell::new(self.description.as_deref().unwrap_or("null")),
+            Cell::new(self.organization.as_deref().unwrap_or("null")),
+            Cell::new(self.location.as_deref().unwrap_or("null")),
+            Cell::new(
+                &self
+                    .links
+                    .clone()
+                    .into_iter()
+                    .map(|v| {
+                        if v.verified {
+                            format!("{} (verified)", v.url)
+                        } else {
+                            v.url
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join(","),
+            ),
+        ]));
+
+        table
+    }
+}
+
+impl TabularFormatter for Vec<EntityDatabase> {
+    fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(vec![
             Cell::new("Database slug"),
             Cell::new("Type"),
         ]));
 
-        self.databases
-            .iter()
+        self.iter()
             .map(|v| Row::new(vec![Cell::new(&v.slug), Cell::new(&v.database_type)]))
             .for_each(|c| {
                 table.add_row(c);
             });
 
         table
-    }
-
-    pub fn generate_table(&self) -> Result<(), std::io::Error> {
-        let mut table = self.to_table();
-        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
-        table.print(&mut std::io::stdout())?;
-        Ok(())
-    }
-
-    pub fn generate_csv(&self) -> Result<(), std::io::Error> {
-        let table = self.to_table();
-        table.to_csv(std::io::stdout())?;
-        Ok(())
     }
 }
 
