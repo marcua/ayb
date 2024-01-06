@@ -1,10 +1,12 @@
 use ayb::ayb_db::models::{DBType, EntityType};
-use ayb::http::client::AybClient;
+use ayb::client::config::ClientConfig;
+use ayb::client::http::AybClient;
 use ayb::http::config::{config_to_toml, default_server_config};
 use ayb::http::server::run_server;
 use ayb::http::structs::EntityDatabasePath;
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
+use home::home_dir;
 use regex::Regex;
 use std::path::PathBuf;
 
@@ -54,6 +56,11 @@ async fn main() -> std::io::Result<()> {
         .subcommand(
             Command::new("client")
                 .about("Connect to an HTTP server")
+                .arg(
+                    arg!(--config <FILE> "Path to the client's configuration file")
+                        .value_parser(value_parser!(PathBuf))
+                        .env("AYB_CLIENT_CONFIG_FILE")
+                )
                 .arg(
                     arg!(--url <VALUE> "The server URL")
                         .env("AYB_SERVER_URL")
@@ -142,10 +149,18 @@ async fn main() -> std::io::Result<()> {
             Err(err) => println!("Error: {}", err),
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
+        let config_path = if let Some(path) = matches.get_one::<PathBuf>("config") {
+            path.clone()
+        } else {
+            home_dir().expect("can't determine home directory").join(".ayb.json")
+        };
+        let mut config = ClientConfig::from_file(&config_path)?;
+                
         if let Some(url) = matches.get_one::<String>("url") {
+            let token = matches.get_one::<String>("token").or(config.authentication.get(url)).cloned();
             let client = AybClient {
                 base_url: url.to_string(),
-                api_token: matches.get_one::<String>("token").cloned(),
+                api_token: token,
             };
             if let Some(matches) = matches.subcommand_matches("create_database") {
                 if let (Some(entity_database), Some(db_type)) = (
@@ -192,7 +207,8 @@ async fn main() -> std::io::Result<()> {
                 {
                     match client.confirm(authentication_token).await {
                         Ok(api_token) => {
-                            // TODO(marcua): Save the token and use it for future requests.
+                            config.authentication.insert(url.clone(), api_token.token.clone());
+                            config.to_file(&config_path)?;
                             println!(
                                 "Successfully authenticated and saved token {}",
                                 api_token.token
