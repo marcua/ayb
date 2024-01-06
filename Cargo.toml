@@ -9,7 +9,7 @@ license = "Apache-2.0"
 default-run = "ayb"
 
 [dependencies]
-actix-web = { version = "4.4.0" }
+actix-web = { version = "4.4.1" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.74" }
 clap = { version = "4.4.13", features = ["cargo", "derive", "env"] }
