@@ -59,19 +59,15 @@ $ ayb server
 
 
 ### Running a client
-Once the server is running, you can set its URL as an environment variable called `AYB_SERVER_URL`, register a user (in this case, `marcua`), create a database `marcua/test.sqlite`, and issue SQL as you like. Here's how to do that at the command line:
+Once the server is running, you can register a user (in this case, `marcua`), create a database `marcua/test.sqlite`, and issue SQL as you like. Here's how to do that at the command line:
 
 ```bash
-$ export AYB_SERVER_URL=http://127.0.0.1:5433
-
-$ ayb client register marcua you@example.com
+$ ayb client --url http://127.0.0.1:5433 register marcua you@example.com
 Check your email to finish registering marcua
 
 # You will receive an email at you@example.com instructing you to type the next command
 $ ayb client confirm <TOKEN_FROM_EMAIL>
 Successfully authenticated and saved token <API_TOKEN>
-
-$ export AYB_API_TOKEN=<API_TOKEN_FROM_PREVIOUS_COMMAND>
 
 $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
@@ -115,6 +111,13 @@ $ ayb client profile marcua
 --------------+-------------+--------------+----------+-------------------
  Adam Marcus  |             |              |          | http://marcua.net 
 ```
+
+Note that the command line also saved a configuration file (on linux,
+to a place like `$HOME/.config/ayb/ayb.json`) for your convenience so
+you don't have to keep entering a server URL or API token. If you ever
+want to set these explicitly, the `--url`/`--token` command-line flags
+and `AYB_SERVER_URL`/`AYB_API_TOKEN` environment variables will
+override whatever is in the saved configuration.
 
 The command line invocations above are a thin wrapper around `ayb`'s HTTP API. Here are the same commands as above, but with `curl`:
 ```bash
