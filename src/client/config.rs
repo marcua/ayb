@@ -38,3 +38,9 @@ impl ClientConfig {
         Ok(())
     }
 }
+
+impl Default for ClientConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
