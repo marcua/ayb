@@ -7,7 +7,7 @@ use ayb::http::server::run_server;
 use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
-use home::home_dir;
+use directories::ProjectDirs;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -185,8 +185,9 @@ async fn main() -> std::io::Result<()> {
         let config_path = if let Some(path) = matches.get_one::<PathBuf>("config") {
             path.clone()
         } else {
-            home_dir()
-                .expect("can't determine home directory")
+            ProjectDirs::from("org", "ayb", "ayb")
+                .expect("can't determine ayb project directory directory")
+                .config_dir()
                 .join(".ayb.json")
         };
         let mut config = ClientConfig::from_file(&config_path)?;
