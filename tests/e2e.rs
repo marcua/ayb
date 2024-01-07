@@ -1,6 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use assert_cmd::prelude::*;
+use ayb::client::config::ClientConfig;
 use regex::Regex;
 use std::fs;
 use std::process::{Child, Command};
@@ -103,6 +104,29 @@ fn query(
     let cmd = ayb_assert_cmd!("client", "--config", config, "query", "e2e-first/test.sqlite", "--format", format, query; {
         "AYB_API_TOKEN" => api_key,
     });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
+fn query_no_api_token(
+    config: &str,
+    query: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "query", "e2e-first/test.sqlite", "--format", format, query; {});
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
+fn set_default_url(
+    config: &str,
+    server_url: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "set_default_url", server_url; {});
 
     cmd.stdout(format!("{}\n", result));
     Ok(())
@@ -239,6 +263,7 @@ fn client_server_integration(
     smtp_port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config_path = format!("tests/ayb_data_{}/ayb.json", db_type);
+    let mut expected_config = ClientConfig::new();
     let _cleanup = Cleanup;
 
     Command::new(format!("tests/reset_db_{}.sh", db_type))
@@ -272,7 +297,11 @@ fn client_server_integration(
     )?;
 
     // The configuration file should register the server URL.
-    assert_eq!(fs::read_to_string(&config_path).unwrap(), "{}");
+    expected_config.default_url = Some(server_url.to_string());
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
 
     // Register the same entity with the same email address.
     register(
@@ -322,6 +351,10 @@ fn client_server_integration(
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     cmd.stdout("Error: Invalid or expired token\n");
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
 
     // Using either token first will register the account. The second
     // token, which has the same email address, will still work
@@ -333,16 +366,34 @@ fn client_server_integration(
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let first_api_key0 = utils::extract_api_key(cmd.get_output())?;
+    expected_config
+        .authentication
+        .insert(server_url.to_string(), first_api_key0.clone());
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
 
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token1; {
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let first_api_key1 = utils::extract_api_key(cmd.get_output())?;
+    expected_config
+        .authentication
+        .insert(server_url.to_string(), first_api_key1.clone());
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
 
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token2; {
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     cmd.stdout("Error: e2e-first has already been registered\n");
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
 
     // And for the second account, we can still confirm using the only
     // authentication token we've requested so far.
@@ -350,6 +401,13 @@ fn client_server_integration(
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let second_api_key0 = utils::extract_api_key(cmd.get_output())?;
+    expected_config
+        .authentication
+        .insert(server_url.to_string(), second_api_key0.clone());
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
 
     // Logging in as the user emails the first email address, which
     // can confirm using the token it received.
@@ -367,7 +425,13 @@ fn client_server_integration(
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let first_api_key2 = utils::extract_api_key(cmd.get_output())?;
-
+    expected_config
+        .authentication
+        .insert(server_url.to_string(), first_api_key2.clone());
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
     // To summarize where we are at this point
     // * User e2e-first has three API tokens (first_api_key[0...2]). We'll use these
     //   interchangeably below.
@@ -456,6 +520,52 @@ fn client_server_integration(
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
 
+    // Querying with no API token also works, because the first
+    // account is saved in the configuration file.
+    query_no_api_token(
+        &config_path,
+        "SELECT * FROM test_table;",
+        "csv",
+        "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
+    )?;
+
+    // Testing setting the default server URL: we set it to something
+    // nonsensical and it breaks connections.
+    set_default_url(
+        &config_path,
+        &format!("{}badport", server_url),
+        &format!("Saved {}badport as new default_url", server_url),
+    )?;
+    expected_config.default_url = Some(format!("{}badport", server_url));
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
+    query(
+        &config_path,
+        &first_api_key0,
+        "SELECT * FROM test_table;",
+        "csv",
+        "Error: reqwest::Error { kind: Builder, source: InvalidPort }",
+    )?;
+    set_default_url(
+        &config_path,
+        server_url,
+        &format!("Saved {} as new default_url", server_url),
+    )?;
+    expected_config.default_url = Some(server_url.to_string());
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap(),
+        serde_json::to_string(&expected_config)?
+    );
+    query(
+        &config_path,
+        &first_api_key0,
+        "SELECT * FROM test_table;",
+        "csv",
+        "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
+    )?;
+
     // List databases from first account using its API key
     list_databases(
         &config_path,
@@ -474,6 +584,7 @@ fn client_server_integration(
         &format!("No queryable databases owned by {}", first_entity_0),
     )?;
 
+    // Make some partial profile updates and verify profile details upon retrieval
     update_profile(
         &config_path,
         &first_api_key0,

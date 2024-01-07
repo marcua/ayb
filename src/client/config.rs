@@ -12,7 +12,7 @@ pub struct ClientConfig {
 }
 
 impl ClientConfig {
-    fn default_config() -> ClientConfig {
+    pub fn new() -> ClientConfig {
         ClientConfig {
             version: 1,
             authentication: HashMap::new(),
@@ -27,7 +27,7 @@ impl ClientConfig {
             return Ok(serde_json::from_reader(&mut reader)?);
         }
 
-        Ok(ClientConfig::default_config())
+        Ok(ClientConfig::new())
     }
 
     pub fn to_file(&self, file_path: &PathBuf) -> Result<(), std::io::Error> {
