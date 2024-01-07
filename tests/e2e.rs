@@ -81,11 +81,11 @@ impl Drop for SmtpServer {
 }
 
 fn create_database(
-    server_url: &str,
+    config: &str,
     api_key: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--url", server_url, "create_database", "e2e-first/test.sqlite", "sqlite"; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", "e2e-first/test.sqlite", "sqlite"; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -94,13 +94,13 @@ fn create_database(
 }
 
 fn query(
-    server_url: &str,
+    config: &str,
     api_key: &str,
     query: &str,
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--url", server_url, "query", "e2e-first/test.sqlite", "--format", format, query; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "query", "e2e-first/test.sqlite", "--format", format, query; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -109,12 +109,14 @@ fn query(
 }
 
 fn register(
+    config: &str,
     server_url: &str,
     slug: &str,
     email: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "register", slug, email; {
+        "AYB_CLIENT_CONFIG_FILE" => config,
         "AYB_SERVER_URL" => server_url,
     });
 
@@ -123,13 +125,13 @@ fn register(
 }
 
 fn list_databases(
-    server_url: &str,
+    config: &str,
     api_key: &str,
     entity: &str,
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--url", server_url, "list", entity, "--format", format; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "list", entity, "--format", format; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -138,13 +140,13 @@ fn list_databases(
 }
 
 fn profile(
-    server_url: &str,
+    config: &str,
     api_key: &str,
     entity: &str,
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--url", server_url, "profile", entity, "--format", format; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "profile", entity, "--format", format; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -153,7 +155,7 @@ fn profile(
 }
 
 fn update_profile(
-    server_url: &str,
+    config: &str,
     api_key: &str,
     entity: &str,
     display_name: Option<&str>,
@@ -164,7 +166,7 @@ fn update_profile(
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("ayb")?;
-    cmd.args(["client", "--url", server_url, "update_profile", entity])
+    cmd.args(["client", "--config", config, "update_profile", entity])
         .env("AYB_API_TOKEN", api_key);
 
     if let Some(display_name) = display_name {
@@ -236,6 +238,7 @@ fn client_server_integration(
     server_url: &str,
     smtp_port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = format!("tests/ayb_data_{}/ayb.json", db_type);
     let _cleanup = Cleanup;
 
     Command::new(format!("tests/reset_db_{}.sh", db_type))
@@ -253,16 +256,27 @@ fn client_server_integration(
 
     let first_entity_0 = "e2e-first";
 
+    // Before running commands, we have no configuration file
+    assert_eq!(
+        fs::read_to_string(&config_path).unwrap_err().kind(),
+        std::io::ErrorKind::NotFound
+    );
+
     // Register an entity.
     register(
+        &config_path,
         server_url,
         first_entity_0,
         "e2e@example.org",
         "Check your email to finish registering e2e-first",
     )?;
 
+    // The configuration file should register the server URL.
+    assert_eq!(fs::read_to_string(&config_path).unwrap(), "{}");
+
     // Register the same entity with the same email address.
     register(
+        &config_path,
         server_url,
         first_entity_0,
         "e2e@example.org",
@@ -272,6 +286,7 @@ fn client_server_integration(
     // Can start to register an entity twice with different email
     // addresses as long as you don't complete the process.
     register(
+        &config_path,
         server_url,
         first_entity_0,
         "e2e-another@example.org",
@@ -282,6 +297,7 @@ fn client_server_integration(
 
     // Start the registration process for a second user (e2e-second)
     register(
+        &config_path,
         server_url,
         second_entity_0,
         "e2e-another@example.org",
@@ -303,7 +319,7 @@ fn client_server_integration(
 
     // Using a bad token (appending a letter) doesn't work.
     let cmd = ayb_assert_cmd!("client", "confirm", &format!("{}a", first_token0); {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     cmd.stdout("Error: Invalid or expired token\n");
 
@@ -314,31 +330,31 @@ fn client_server_integration(
     // same account, won't work now that there's already a confirmed
     // email address on the account..
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token0; {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let first_api_key0 = utils::extract_api_key(cmd.get_output())?;
 
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token1; {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let first_api_key1 = utils::extract_api_key(cmd.get_output())?;
 
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token2; {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     cmd.stdout("Error: e2e-first has already been registered\n");
 
     // And for the second account, we can still confirm using the only
     // authentication token we've requested so far.
     let cmd = ayb_assert_cmd!("client", "confirm", &second_token0; {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let second_api_key0 = utils::extract_api_key(cmd.get_output())?;
 
     // Logging in as the user emails the first email address, which
     // can confirm using the token it received.
     let cmd = ayb_assert_cmd!("client", "log_in", "e2e-first"; {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
 
     cmd.stdout("Check your email to finish logging in e2e-first\n");
@@ -348,7 +364,7 @@ fn client_server_integration(
     let login_token = utils::extract_token(&entries[2])?;
 
     let cmd = ayb_assert_cmd!("client", "confirm", &login_token; {
-        "AYB_SERVER_URL" => server_url,
+        "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
     let first_api_key2 = utils::extract_api_key(cmd.get_output())?;
 
@@ -359,35 +375,35 @@ fn client_server_integration(
 
     // Can't create database on e2e-first with e2e-second's token.
     create_database(
-        server_url,
+        &config_path,
         &second_api_key0,
         "Error: Authenticated entity e2e-second can not create a database for entity e2e-first",
     )?;
 
     // Can't create database on e2e-first with invalid token.
     create_database(
-        server_url,
+        &config_path,
         &format!("{}bad", first_api_key0),
         "Error: Invalid API token",
     )?;
 
     // Create a database with the appropriate user/key pair.
     create_database(
-        server_url,
+        &config_path,
         &first_api_key0,
         "Successfully created e2e-first/test.sqlite",
     )?;
 
     // Can't create a database twice.
     create_database(
-        server_url,
+        &config_path,
         &first_api_key0,
         "Error: Database already exists",
     )?;
 
     // Can't query database with second account's API key
     query(
-        server_url,
+        &config_path,
         &second_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         "table",
@@ -396,7 +412,7 @@ fn client_server_integration(
 
     // Can't query database with bad API key.
     query(
-        server_url,
+        &config_path,
         &format!("{}bad", first_api_key0),
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         "table",
@@ -406,34 +422,34 @@ fn client_server_integration(
     // Populate and query database. Alternate through the three API
     // keys for the first account to ensure they all work.
     query(
-        server_url,
+        &config_path,
         &first_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         "table",
         "\nRows: 0",
     )?;
     query(
-        server_url,
+        &config_path,
         &first_api_key1,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
         "table",
         "\nRows: 0",
     )?;
     query(
-        server_url,
+        &config_path,
         &first_api_key2,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
         "table",
         "\nRows: 0",
     )?;
     query(
-        server_url,
+        &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
                  "table",                 
                  " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
     query(
-        server_url,
+        &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
         "csv",
@@ -442,7 +458,7 @@ fn client_server_integration(
 
     // List databases from first account using its API key
     list_databases(
-        server_url,
+        &config_path,
         &first_api_key0,
         first_entity_0,
         "csv",
@@ -451,7 +467,7 @@ fn client_server_integration(
 
     // List databases from first account using the API key of the second account
     list_databases(
-        server_url,
+        &config_path,
         &second_api_key0,
         first_entity_0,
         "csv",
@@ -459,7 +475,7 @@ fn client_server_integration(
     )?;
 
     update_profile(
-        server_url,
+        &config_path,
         &first_api_key0,
         first_entity_0,
         Some("Entity 0"),
@@ -471,7 +487,7 @@ fn client_server_integration(
     )?;
 
     profile(
-        server_url,
+        &config_path,
         &first_api_key0,
         first_entity_0,
         "csv",
@@ -479,7 +495,7 @@ fn client_server_integration(
     )?;
 
     profile(
-        server_url,
+        &config_path,
         &second_api_key0,
         first_entity_0,
         "csv",
@@ -487,7 +503,7 @@ fn client_server_integration(
     )?;
 
     update_profile(
-        server_url,
+        &config_path,
         &first_api_key0,
         first_entity_0,
         None,
@@ -499,7 +515,7 @@ fn client_server_integration(
     )?;
 
     profile(
-        server_url,
+        &config_path,
         &first_api_key0,
         first_entity_0,
         "csv",
@@ -507,7 +523,7 @@ fn client_server_integration(
     )?;
 
     profile(
-        server_url,
+        &config_path,
         &second_api_key0,
         first_entity_0,
         "csv",
