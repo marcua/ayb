@@ -23,7 +23,7 @@ reqwest = { version = "0.11.23", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 regex = { version = "1.10.2"}
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.108", features = ["raw_value"] }
+serde_json = { version = "1.0.111", features = ["raw_value"] }
 serde_repr = { version = "0.1.17" }
 sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
 toml = { version = "0.8.8" }
