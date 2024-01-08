@@ -521,7 +521,7 @@ fn client_server_integration(
     )?;
 
     // Querying with no API token also works, because the first
-    // account is saved in the configuration file.
+    // account token is saved in the configuration file.
     query_no_api_token(
         &config_path,
         "SELECT * FROM test_table;",
@@ -529,8 +529,9 @@ fn client_server_integration(
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
 
-    // Testing setting the default server URL: we set it to something
-    // nonsensical and it breaks connections.
+    // We now test setting the default server URL: we set it to
+    // something nonsensical and it breaks connections, and when we
+    // reset it, the connections work again.
     set_default_url(
         &config_path,
         &format!("{}badport", server_url),
