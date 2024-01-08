@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 
@@ -31,6 +31,11 @@ impl ClientConfig {
     }
 
     pub fn to_file(&self, file_path: &PathBuf) -> Result<(), std::io::Error> {
+        create_dir_all(
+            &file_path
+                .parent()
+                .expect("unable to determine parent of ayb configuration directory"),
+        )?;
         let file = File::create(file_path)?;
         let mut writer = BufWriter::new(file);
         serde_json::to_writer(&mut writer, &self)?;

@@ -112,7 +112,7 @@ $ ayb client profile marcua
  Adam Marcus  |             |              |          | http://marcua.net 
 ```
 
-Note that the command line also saved a configuration file (on linux,
+Note that the command line also saved a configuration file (on Linux,
 to a place like `$HOME/.config/ayb/ayb.json`) for your convenience so
 you don't have to keep entering a server URL or API token. If you ever
 want to set these explicitly, the `--url`/`--token` command-line flags

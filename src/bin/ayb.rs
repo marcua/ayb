@@ -188,7 +188,7 @@ async fn main() -> std::io::Result<()> {
             ProjectDirs::from("org", "ayb", "ayb")
                 .expect("can't determine ayb project directory directory")
                 .config_dir()
-                .join(".ayb.json")
+                .join("ayb.json")
         };
         let mut config = ClientConfig::from_file(&config_path)?;
 
@@ -210,7 +210,7 @@ async fn main() -> std::io::Result<()> {
         } else if let Some(ref server_url) = config.default_url {
             server_url.to_string()
         } else {
-            panic!("Server URL is required through --url parameter, AYB_SERVER_URL environment variable, or default_url in .ayb.json");
+            panic!("Server URL is required through --url parameter, AYB_SERVER_URL environment variable, or default_url in {}", config_path.display());
         };
 
         let token = matches
