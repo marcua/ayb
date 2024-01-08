@@ -165,7 +165,7 @@ async fn main() -> std::io::Result<()> {
                 )
                 .subcommand(
                     Command::new("set_default_url")
-                        .about("Set the default server URL for future requests in .ayb.json")
+                        .about("Set the default server URL for future requests in ayb.json")
                         .arg(arg!(<url> "The URL to use in the future")
                              .required(true))
                 )

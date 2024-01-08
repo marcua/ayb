@@ -32,7 +32,7 @@ impl ClientConfig {
 
     pub fn to_file(&self, file_path: &PathBuf) -> Result<(), std::io::Error> {
         create_dir_all(
-            &file_path
+            file_path
                 .parent()
                 .expect("unable to determine parent of ayb configuration directory"),
         )?;
