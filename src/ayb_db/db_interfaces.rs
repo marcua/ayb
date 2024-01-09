@@ -277,7 +277,7 @@ WHERE id = $1
                         continue;
                     };
 
-                    if i != 0 {
+                    if prev_to_links {
                         query.push(",");
                     }
 
