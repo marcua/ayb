@@ -272,7 +272,7 @@ WHERE id = $1
                     ("display_name", &entity.display_name),
                 ];
 
-                for (i, (key, current)) in pairs.iter().enumerate() {
+                for (key, current) in pairs.iter() {
                     let Some(current) = current else {
                         continue;
                     };
@@ -281,7 +281,7 @@ WHERE id = $1
                         query.push(",");
                     }
 
-                    // Keys are hardcoded an thus there is no risk of SQL injection
+                    // Keys are hard-coded, and are not open to SQL injection
                     query.push(format!(" {} = ", key));
                     query.push_bind(current);
                     prev_to_links = true;
