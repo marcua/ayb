@@ -112,12 +112,15 @@ $ ayb client profile marcua
  Adam Marcus  |             |              |          | http://marcua.net 
 ```
 
-Note that the command line also saved a configuration file (on Linux,
-to a place like `$HOME/.config/ayb/ayb.json`) for your convenience so
-you don't have to keep entering a server URL or API token. If you ever
-want to set these explicitly, the `--url`/`--token` command-line flags
-and `AYB_SERVER_URL`/`AYB_API_TOKEN` environment variables will
-override whatever is in the saved configuration.
+Note that the command line also saved a configuration file for your
+convenience so you don't have to keep entering a server URL or API
+token. If you ever want to set these explicitly, the `--url`/`--token`
+command-line flags and `AYB_SERVER_URL`/`AYB_API_TOKEN` environment
+variables will override whatever is in the saved configuration. By
+default, the configuration file can be found in:
+* Linux: `/home/alice/.config/ayb/ayb.json`
+* MacOS (untested): `/Users/Alice/Library/Application Support/org.ayb.ayb/ayb.json`
+* Windows (untested): `C:\Users\Alice\AppData\Roaming\ayb\ayb\config\ayb.json`
 
 The command line invocations above are a thin wrapper around `ayb`'s HTTP API. Here are the same commands as above, but with `curl`:
 ```bash
