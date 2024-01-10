@@ -1,11 +1,13 @@
 use ayb::ayb_db::models::{DBType, EntityType};
+use ayb::client::config::ClientConfig;
+use ayb::client::http::AybClient;
 use ayb::formatting::TabularFormatter;
-use ayb::http::client::AybClient;
 use ayb::http::config::{config_to_toml, default_server_config};
 use ayb::http::server::run_server;
 use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
+use directories::ProjectDirs;
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -57,9 +59,14 @@ async fn main() -> std::io::Result<()> {
             Command::new("client")
                 .about("Connect to an HTTP server")
                 .arg(
+                    arg!(--config <FILE> "Path to the client's configuration file")
+                        .value_parser(value_parser!(PathBuf))
+                        .env("AYB_CLIENT_CONFIG_FILE")
+                )
+                .arg(
                     arg!(--url <VALUE> "The server URL")
                         .env("AYB_SERVER_URL")
-                        .required(true)
+                        .required(false)
                 )
                 .arg(
                     arg!(--token <VALUE> "A client API token")
@@ -156,6 +163,12 @@ async fn main() -> std::io::Result<()> {
                                 .num_args(0..)
                         )
                 )
+                .subcommand(
+                    Command::new("set_default_url")
+                        .about("Set the default server URL for future requests in ayb.json")
+                        .arg(arg!(<url> "The URL to use in the future")
+                             .required(true))
+                )
         )
         .get_matches();
 
@@ -169,174 +182,204 @@ async fn main() -> std::io::Result<()> {
             Err(err) => println!("Error: {}", err),
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
-        if let Some(url) = matches.get_one::<String>("url") {
-            let client = AybClient {
-                base_url: url.to_string(),
-                api_token: matches.get_one::<String>("token").cloned(),
-            };
-            if let Some(matches) = matches.subcommand_matches("create_database") {
-                if let (Some(entity_database), Some(db_type)) = (
-                    matches.get_one::<EntityDatabasePath>("database"),
-                    matches.get_one::<DBType>("type"),
-                ) {
-                    match client
-                        .create_database(
-                            &entity_database.entity,
-                            &entity_database.database,
-                            db_type,
-                        )
-                        .await
-                    {
-                        Ok(_response) => {
-                            println!(
-                                "Successfully created {}/{}",
-                                entity_database.entity, entity_database.database
-                            );
-                        }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
-                    }
-                }
-            } else if let Some(matches) = matches.subcommand_matches("register") {
-                if let (Some(entity), Some(email_address), Some(entity_type)) = (
-                    matches.get_one::<String>("entity"),
-                    matches.get_one::<String>("email_address"),
-                    matches.get_one::<EntityType>("type"),
-                ) {
-                    match client.register(entity, email_address, entity_type).await {
-                        Ok(_response) => {
-                            println!("Check your email to finish registering {}", entity);
-                        }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
-                    }
-                }
-            } else if let Some(matches) = matches.subcommand_matches("confirm") {
-                if let Some(authentication_token) =
-                    matches.get_one::<String>("authentication_token")
+        let config_path = if let Some(path) = matches.get_one::<PathBuf>("config") {
+            path.clone()
+        } else {
+            ProjectDirs::from("org", "ayb", "ayb")
+                .expect("can't determine ayb project directory directory")
+                .config_dir()
+                .join("ayb.json")
+        };
+        let mut config = ClientConfig::from_file(&config_path)?;
+
+        if let Some(matches) = matches.subcommand_matches("set_default_url") {
+            if let Some(url) = matches.get_one::<String>("url") {
+                config.default_url = Some(url.to_string());
+                config.to_file(&config_path)?;
+                println!("Saved {} as new default_url", url);
+                return Ok(());
+            }
+        }
+
+        let url = if let Some(server_url) = matches.get_one::<String>("url") {
+            if config.default_url.is_none() {
+                config.default_url = Some(server_url.to_string());
+                config.to_file(&config_path)?;
+            }
+            server_url.to_string()
+        } else if let Some(ref server_url) = config.default_url {
+            server_url.to_string()
+        } else {
+            panic!("Server URL is required through --url parameter, AYB_SERVER_URL environment variable, or default_url in {}", config_path.display());
+        };
+
+        let token = matches
+            .get_one::<String>("token")
+            .or(config.authentication.get(&url))
+            .cloned();
+        let client = AybClient {
+            base_url: url.to_string(),
+            api_token: token,
+        };
+        if let Some(matches) = matches.subcommand_matches("create_database") {
+            if let (Some(entity_database), Some(db_type)) = (
+                matches.get_one::<EntityDatabasePath>("database"),
+                matches.get_one::<DBType>("type"),
+            ) {
+                match client
+                    .create_database(&entity_database.entity, &entity_database.database, db_type)
+                    .await
                 {
-                    match client.confirm(authentication_token).await {
-                        Ok(api_token) => {
-                            // TODO(marcua): Save the token and use it for future requests.
-                            println!(
-                                "Successfully authenticated and saved token {}",
-                                api_token.token
-                            );
-                        }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
-                    }
-                }
-            } else if let Some(matches) = matches.subcommand_matches("log_in") {
-                if let Some(entity) = matches.get_one::<String>("entity") {
-                    match client.log_in(entity).await {
-                        Ok(_response) => {
-                            println!("Check your email to finish logging in {}", entity);
-                        }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
-                    }
-                }
-            } else if let Some(matches) = matches.subcommand_matches("profile") {
-                if let (Some(entity), Some(format)) = (
-                    matches.get_one::<String>("entity"),
-                    matches.get_one::<OutputFormat>("format"),
-                ) {
-                    match client.entity_details(entity).await {
-                        Ok(response) => match format {
-                            OutputFormat::Table => response.profile.generate_table()?,
-                            OutputFormat::Csv => response.profile.generate_csv()?,
-                        },
-                        Err(err) => println!("Error: {}", err),
-                    }
-                }
-            } else if let Some(matches) = matches.subcommand_matches("update_profile") {
-                if let Some(entity) = matches.get_one::<String>("entity") {
-                    let mut profile_update = HashMap::new();
-                    if let Some(display_name) = matches.get_one::<String>("display_name").cloned() {
-                        profile_update.insert("display_name".to_owned(), Some(display_name));
-                    }
-
-                    if let Some(description) = matches.get_one::<String>("description").cloned() {
-                        profile_update.insert("description".to_owned(), Some(description));
-                    }
-
-                    if let Some(organization) = matches.get_one::<String>("organization").cloned() {
-                        profile_update.insert("organization".to_owned(), Some(organization));
-                    }
-
-                    if let Some(location) = matches.get_one::<String>("location").cloned() {
-                        profile_update.insert("location".to_owned(), Some(location));
-                    }
-
-                    if matches.get_many::<String>("links").is_some() {
-                        profile_update.insert(
-                            "links".to_owned(),
-                            Some(serde_json::to_string(
-                                &matches
-                                    .get_many::<String>("links")
-                                    .map(|v| v.into_iter().collect::<Vec<&String>>())
-                                    .map(|v| {
-                                        v.into_iter()
-                                            .map(|v| ProfileLinkUpdate { url: v.clone() })
-                                            .collect::<Vec<ProfileLinkUpdate>>()
-                                    }),
-                            )?),
+                    Ok(_response) => {
+                        println!(
+                            "Successfully created {}/{}",
+                            entity_database.entity, entity_database.database
                         );
                     }
+                    Err(err) => {
+                        println!("Error: {}", err);
+                    }
+                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("register") {
+            if let (Some(entity), Some(email_address), Some(entity_type)) = (
+                matches.get_one::<String>("entity"),
+                matches.get_one::<String>("email_address"),
+                matches.get_one::<EntityType>("type"),
+            ) {
+                match client.register(entity, email_address, entity_type).await {
+                    Ok(_response) => {
+                        println!("Check your email to finish registering {}", entity);
+                    }
+                    Err(err) => {
+                        println!("Error: {}", err);
+                    }
+                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("confirm") {
+            if let Some(authentication_token) = matches.get_one::<String>("authentication_token") {
+                match client.confirm(authentication_token).await {
+                    Ok(api_token) => {
+                        config
+                            .authentication
+                            .insert(url.clone(), api_token.token.clone());
+                        config.to_file(&config_path)?;
+                        println!(
+                            "Successfully authenticated and saved token {}",
+                            api_token.token
+                        );
+                    }
+                    Err(err) => {
+                        println!("Error: {}", err);
+                    }
+                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("log_in") {
+            if let Some(entity) = matches.get_one::<String>("entity") {
+                match client.log_in(entity).await {
+                    Ok(_response) => {
+                        println!("Check your email to finish logging in {}", entity);
+                    }
+                    Err(err) => {
+                        println!("Error: {}", err);
+                    }
+                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("profile") {
+            if let (Some(entity), Some(format)) = (
+                matches.get_one::<String>("entity"),
+                matches.get_one::<OutputFormat>("format"),
+            ) {
+                match client.entity_details(entity).await {
+                    Ok(response) => match format {
+                        OutputFormat::Table => response.profile.generate_table()?,
+                        OutputFormat::Csv => response.profile.generate_csv()?,
+                    },
+                    Err(err) => println!("Error: {}", err),
+                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("update_profile") {
+            if let Some(entity) = matches.get_one::<String>("entity") {
+                let mut profile_update = HashMap::new();
+                if let Some(display_name) = matches.get_one::<String>("display_name").cloned() {
+                    profile_update.insert("display_name".to_owned(), Some(display_name));
+                }
 
-                    match client.update_profile(entity, &profile_update).await {
-                        Ok(_) => println!("Successfully updated profile"),
-                        Err(err) => println!("Error: {}", err),
-                    }
+                if let Some(description) = matches.get_one::<String>("description").cloned() {
+                    profile_update.insert("description".to_owned(), Some(description));
                 }
-            } else if let Some(matches) = matches.subcommand_matches("list") {
-                if let (Some(entity), Some(format)) = (
-                    matches.get_one::<String>("entity"),
-                    matches.get_one::<OutputFormat>("format"),
-                ) {
-                    match client.entity_details(entity).await {
-                        Ok(response) => {
-                            if response.databases.is_empty() {
-                                println!("No queryable databases owned by {}", entity);
-                            } else {
-                                match format {
-                                    OutputFormat::Table => response.databases.generate_table()?,
-                                    OutputFormat::Csv => response.databases.generate_csv()?,
-                                }
+
+                if let Some(organization) = matches.get_one::<String>("organization").cloned() {
+                    profile_update.insert("organization".to_owned(), Some(organization));
+                }
+
+                if let Some(location) = matches.get_one::<String>("location").cloned() {
+                    profile_update.insert("location".to_owned(), Some(location));
+                }
+
+                if matches.get_many::<String>("links").is_some() {
+                    profile_update.insert(
+                        "links".to_owned(),
+                        Some(serde_json::to_string(
+                            &matches
+                                .get_many::<String>("links")
+                                .map(|v| v.into_iter().collect::<Vec<&String>>())
+                                .map(|v| {
+                                    v.into_iter()
+                                        .map(|v| ProfileLinkUpdate { url: v.clone() })
+                                        .collect::<Vec<ProfileLinkUpdate>>()
+                                }),
+                        )?),
+                    );
+                }
+
+                match client.update_profile(entity, &profile_update).await {
+                    Ok(_) => println!("Successfully updated profile"),
+                    Err(err) => println!("Error: {}", err),
+                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("list") {
+            if let (Some(entity), Some(format)) = (
+                matches.get_one::<String>("entity"),
+                matches.get_one::<OutputFormat>("format"),
+            ) {
+                match client.entity_details(entity).await {
+                    Ok(response) => {
+                        if response.databases.is_empty() {
+                            println!("No queryable databases owned by {}", entity);
+                        } else {
+                            match format {
+                                OutputFormat::Table => response.databases.generate_table()?,
+                                OutputFormat::Csv => response.databases.generate_csv()?,
                             }
                         }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
+                    }
+                    Err(err) => {
+                        println!("Error: {}", err);
                     }
                 }
-            } else if let Some(matches) = matches.subcommand_matches("query") {
-                if let (Some(entity_database), Some(query), Some(format)) = (
-                    matches.get_one::<EntityDatabasePath>("database"),
-                    matches.get_one::<String>("query"),
-                    matches.get_one::<OutputFormat>("format"),
-                ) {
-                    match client
-                        .query(&entity_database.entity, &entity_database.database, query)
-                        .await
-                    {
-                        Ok(query_result) => {
-                            if !query_result.rows.is_empty() {
-                                match format {
-                                    OutputFormat::Table => query_result.generate_table()?,
-                                    OutputFormat::Csv => query_result.generate_csv()?,
-                                }
+            }
+        } else if let Some(matches) = matches.subcommand_matches("query") {
+            if let (Some(entity_database), Some(query), Some(format)) = (
+                matches.get_one::<EntityDatabasePath>("database"),
+                matches.get_one::<String>("query"),
+                matches.get_one::<OutputFormat>("format"),
+            ) {
+                match client
+                    .query(&entity_database.entity, &entity_database.database, query)
+                    .await
+                {
+                    Ok(query_result) => {
+                        if !query_result.rows.is_empty() {
+                            match format {
+                                OutputFormat::Table => query_result.generate_table()?,
+                                OutputFormat::Csv => query_result.generate_csv()?,
                             }
-                            println!("\nRows: {}", query_result.rows.len());
                         }
-                        Err(err) => {
-                            println!("Error: {}", err);
-                        }
+                        println!("\nRows: {}", query_result.rows.len());
+                    }
+                    Err(err) => {
+                        println!("Error: {}", err);
                     }
                 }
             }
