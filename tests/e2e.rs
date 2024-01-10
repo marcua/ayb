@@ -591,6 +591,26 @@ fn client_server_integration(
         &first_api_key0,
         first_entity_0,
         Some("Entity 0"),
+        None,
+        None,
+        None,
+        None,
+        "Successfully updated profile",
+    )?;
+
+    profile(
+        &config_path,
+        &first_api_key0,
+        first_entity_0,
+        "csv",
+        "Display name,Description,Organization,Location,Links\nEntity 0,null,null,null,"
+    )?;
+
+    update_profile(
+        &config_path,
+        &first_api_key0,
+        first_entity_0,
+        Some("Entity 0"),
         Some("Entity 0 description"),
         None,
         None,
