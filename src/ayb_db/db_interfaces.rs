@@ -264,7 +264,7 @@ WHERE id = $1
 
             async fn update_entity_by_id(&self, entity: &PartialEntity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
                 let mut query = QueryBuilder::new("UPDATE entity SET");
-                let mut prev_to_links = false;
+                let mut updated_field = false;
                 let pairs = vec![
                     ("description", &entity.description),
                     ("organization", &entity.organization),
@@ -272,23 +272,23 @@ WHERE id = $1
                     ("display_name", &entity.display_name),
                 ];
 
-                for (i, (key, current)) in pairs.iter().enumerate() {
+                for (key, current) in pairs.iter() {
                     let Some(current) = current else {
                         continue;
                     };
 
-                    if i != 0 {
+                    if updated_field {
                         query.push(",");
                     }
 
-                    // Keys are hardcoded an thus there is no risk of SQL injection
+                    // Keys are hard-coded, and are not open to SQL injection
                     query.push(format!(" {} = ", key));
                     query.push_bind(current);
-                    prev_to_links = true;
+                    updated_field = true;
                 }
 
                 if let Some(links) = &entity.links {
-                    if prev_to_links {
+                    if updated_field {
                         query.push(",");
                     }
 

@@ -102,7 +102,7 @@ $ ayb client query marcua/test.sqlite "SELECT * FROM favorite_databases;"
 
 Rows: 3
 
-$ ayb client update_profile marcua --display_name 'Adam Marcus' --link 'http://marcua.net'
+$ ayb client update_profile marcua --display_name 'Adam Marcus' --links 'http://marcua.net'
 
 Successfully updated profile
 
