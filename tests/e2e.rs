@@ -603,7 +603,7 @@ fn client_server_integration(
         &first_api_key0,
         first_entity_0,
         "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,null,null,null,"
+        "Display name,Description,Organization,Location,Links\nEntity 0,null,null,null,",
     )?;
 
     update_profile(
