@@ -15,7 +15,7 @@ pub async fn entity_details(
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<web::Json<EntityQueryResponse>, AybError> {
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
-    let entity_slug = &path.entity;
+    let entity_slug = &path.entity.to_lowercase();
     let desired_entity = ayb_db.get_entity_by_slug(entity_slug).await?;
 
     let databases = ayb_db

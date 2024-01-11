@@ -98,10 +98,11 @@ fn query(
     config: &str,
     api_key: &str,
     query: &str,
+    database: &str,
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "query", "e2e-first/test.sqlite", "--format", format, query; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -112,10 +113,11 @@ fn query(
 fn query_no_api_token(
     config: &str,
     query: &str,
+    database: &str,
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "query", "e2e-first/test.sqlite", "--format", format, query; {});
+    let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {});
 
     cmd.stdout(format!("{}\n", result));
     Ok(())
@@ -280,6 +282,7 @@ fn client_server_integration(
     thread::sleep(time::Duration::from_secs(10));
 
     let first_entity_0 = "e2e-first";
+    let first_entity_db = "e2e-first/test.sqlite";
 
     // Before running commands, we have no configuration file
     assert_eq!(
@@ -470,6 +473,7 @@ fn client_server_integration(
         &config_path,
         &second_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
+        first_entity_db,
         "table",
         "Error: Authenticated entity e2e-second can not query database e2e-first/test.sqlite",
     )?;
@@ -479,6 +483,7 @@ fn client_server_integration(
         &config_path,
         &format!("{}bad", first_api_key0),
         "CREATE TABLE test_table(fname varchar, lname varchar);",
+        first_entity_db,
         "table",
         "Error: Invalid API token",
     )?;
@@ -489,6 +494,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
+        first_entity_db,
         "table",
         "\nRows: 0",
     )?;
@@ -496,6 +502,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key1,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
+        first_entity_db,
         "table",
         "\nRows: 0",
     )?;
@@ -503,6 +510,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key2,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
+        first_entity_db,
         "table",
         "\nRows: 0",
     )?;
@@ -510,12 +518,14 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
-                 "table",                 
-                 " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
+        first_entity_db,
+        "table",                 
+        " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
     query(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
+        first_entity_db,
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
@@ -525,6 +535,7 @@ fn client_server_integration(
     query_no_api_token(
         &config_path,
         "SELECT * FROM test_table;",
+        first_entity_db,
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
@@ -546,6 +557,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
+        first_entity_db,
         "csv",
         "Error: reqwest::Error { kind: Builder, source: InvalidPort }",
     )?;
@@ -563,6 +575,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
+        "E2E-FiRST/test.sqlite", // Entity slugs should be case-insensitive
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
@@ -571,7 +584,7 @@ fn client_server_integration(
     list_databases(
         &config_path,
         &first_api_key0,
-        first_entity_0,
+        "E2E-FiRsT", // Entity slugs should be case-insensitive
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
@@ -601,7 +614,7 @@ fn client_server_integration(
     profile(
         &config_path,
         &first_api_key0,
-        first_entity_0,
+        "E2E-FiRsT", // Entity slugs should be case-insensitive
         "csv",
         "Display name,Description,Organization,Location,Links\nEntity 0,null,null,null,",
     )?;
@@ -609,7 +622,7 @@ fn client_server_integration(
     update_profile(
         &config_path,
         &first_api_key0,
-        first_entity_0,
+        "E2E-FiRST", // Entity slugs should be case-insensitive
         Some("Entity 0"),
         Some("Entity 0 description"),
         None,

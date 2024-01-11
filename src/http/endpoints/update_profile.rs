@@ -19,7 +19,7 @@ pub async fn update_profile(
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
-    let entity_slug = &path.entity;
+    let entity_slug = &path.entity.to_lowercase();
     let profile = profile.into_inner();
 
     if entity_slug != &authenticated_entity.slug {
