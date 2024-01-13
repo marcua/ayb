@@ -191,7 +191,14 @@ WHERE
                 .bind(entity_slug)
                 .bind(database_slug)
                 .fetch_one(&self.pool)
-                .await?;
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                        id: format!("{}/{}", entity_slug, database_slug),
+                        record_type: "database".into(),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
 
                 Ok(db)
             }
