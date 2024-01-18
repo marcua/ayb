@@ -265,8 +265,8 @@ async fn main() -> std::io::Result<()> {
                             .insert(url.clone(), api_token.token.clone());
                         config.to_file(&config_path)?;
                         println!(
-                            "Successfully authenticated and saved token {}",
-                            api_token.token
+                            "Successfully authenticated {} and saved token {}",
+                            api_token.entity, api_token.token
                         );
                     }
                     Err(err) => {
