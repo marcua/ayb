@@ -214,6 +214,7 @@ pub struct AuthenticationDetails {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct APIToken {
+    pub entity: String,
     pub token: String,
 }
 

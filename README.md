@@ -130,7 +130,7 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/register -H "entity-type: user" 
 
 $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/confirm -H "authentication-token: TOKEN_FROM_EMAIL"
 
-{"token":"<API_TOKEN>"}
+{"entity":"marcua","token":"<API_TOKEN>"}
 
 $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/create -H "db-type: sqlite" -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>"
 

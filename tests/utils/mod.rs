@@ -19,10 +19,10 @@ pub struct EmailEntry {
 
 pub fn extract_api_key(output: &Output) -> Result<String, AybError> {
     let output_str = std::str::from_utf8(&output.stdout)?;
-    let re = Regex::new(r"^Successfully authenticated and saved token (\S+)\n").unwrap();
+    let re = Regex::new(r"^Successfully authenticated (\S+) and saved token (\S+)\n").unwrap();
     if re.is_match(output_str) {
         let captures = re.captures(output_str).unwrap();
-        Ok(captures.get(1).map_or("", |m| m.as_str()).to_string())
+        Ok(captures.get(2).map_or("", |m| m.as_str()).to_string())
     } else {
         Err(AybError::Other {
             message: "No API key".to_string(),
