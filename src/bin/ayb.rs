@@ -385,13 +385,35 @@ async fn main() -> std::io::Result<()> {
                         }
                     }   
                 } else {
+                    println!("Launching an interactive session for {}/{}", entity_database.entity, entity_database.database);
+                    
                     match DefaultEditor::new() {
                         Ok(mut rl) => loop {
                             let line = rl.readline(">>> ");
                             match line {
-                                Ok(query) => { println!("{}", query.as_str()); }
-                                Err(ReadlineError::Interrupted) => { break; }
-                                Err(ReadlineError::Eof) => { break; }
+                                Ok(line) if line.is_empty() => {}
+                                Ok(query) => {
+                                    rl.add_history_entry(query.as_str()).unwrap();
+                                    match client
+                                    .query(&entity_database.entity, &entity_database.database, query.as_str())
+                                    .await
+                                    {
+                                        Ok(query_result) => {
+                                            if !query_result.rows.is_empty() {
+                                                match format {
+                                                    OutputFormat::Table => query_result.generate_table()?,
+                                                    OutputFormat::Csv => query_result.generate_csv()?,
+                                                }
+                                            }
+                                            println!("\nRows: {}", query_result.rows.len());
+                                        }
+                                        Err(err) => {
+                                            println!("Error: {}", err);
+                                        }
+                                    }   
+                                }
+                                Err(ReadlineError::Interrupted) => break,
+                                Err(ReadlineError::Eof) => break,
                                 Err(err) => {
                                     println!("Error: {}", err);
                                     break
