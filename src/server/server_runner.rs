@@ -1,14 +1,14 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
-use crate::http::config::read_config;
-use crate::http::endpoints::{
+use crate::server::config::read_config;
+use crate::server::config::AybConfigCors;
+use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, log_in_endpoint, query_endpoint,
     register_endpoint, update_profile_endpoint,
 };
-use crate::http::structs::AybConfigCors;
-use crate::http::tokens::retrieve_and_validate_api_token;
-use crate::http::web_frontend::WebFrontendDetails;
+use crate::server::tokens::retrieve_and_validate_api_token;
+use crate::server::web_frontend::WebFrontendDetails;
 use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};

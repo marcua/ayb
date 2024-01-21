@@ -1,6 +1,6 @@
 use crate::error::AybError;
 use crate::hosted_db::{sandbox::run_in_sandbox, QueryResult};
-use crate::http::structs::AybConfigIsolation;
+use crate::server::config::AybConfigIsolation;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;

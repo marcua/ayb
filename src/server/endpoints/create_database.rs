@@ -5,9 +5,10 @@ use std::str::FromStr;
 use crate::error::AybError;
 
 use crate::hosted_db::paths::database_path;
-use crate::http::permissions::can_create_database;
-use crate::http::structs::{AybConfig, Database as APIDatabase, EntityDatabasePath};
-use crate::http::utils::{get_header, unwrap_authenticated_entity};
+use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
+use crate::server::config::AybConfig;
+use crate::server::permissions::can_create_database;
+use crate::server::utils::{get_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/{entity}/{database}/create")]

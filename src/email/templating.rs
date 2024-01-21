@@ -1,4 +1,4 @@
-use crate::http::web_frontend::WebFrontendDetails;
+use crate::server::web_frontend::WebFrontendDetails;
 use crate::templating::TemplateString;
 
 pub fn render_confirmation_template(

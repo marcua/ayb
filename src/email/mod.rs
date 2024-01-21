@@ -1,7 +1,7 @@
 use crate::email::templating::render_confirmation_template;
 use crate::error::AybError;
-use crate::http::structs::AybConfigEmail;
-use crate::http::web_frontend::WebFrontendDetails;
+use crate::server::config::AybConfigEmail;
+use crate::server::web_frontend::WebFrontendDetails;
 use lettre::{
     message::header::ContentType,
     transport::smtp::authentication::Credentials,
