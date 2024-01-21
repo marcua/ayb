@@ -4,7 +4,7 @@ use ayb::client::http::AybClient;
 use ayb::formatting::TabularFormatter;
 use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use ayb::server::config::{config_to_toml, default_server_config};
-use ayb::server::server::run_server;
+use ayb::server::server_runner::run_server;
 use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use directories::ProjectDirs;
