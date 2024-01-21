@@ -412,8 +412,7 @@ async fn main() -> std::io::Result<()> {
                                         }
                                     }   
                                 }
-                                Err(ReadlineError::Interrupted) => break,
-                                Err(ReadlineError::Eof) => break,
+                                Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
                                 Err(err) => {
                                     println!("Error: {}", err);
                                     break
