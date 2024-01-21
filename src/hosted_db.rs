@@ -6,7 +6,7 @@ use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
-use crate::http::structs::AybConfigIsolation;
+use crate::server::config::AybConfigIsolation;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

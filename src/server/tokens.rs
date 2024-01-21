@@ -1,7 +1,8 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{APIToken, APITokenStatus, InstantiatedEntity};
 use crate::error::AybError;
-use crate::http::structs::{AuthenticationDetails, AybConfigAuthentication};
+use crate::http::structs::AuthenticationDetails;
+use crate::server::config::AybConfigAuthentication;
 use actix_web::web;
 use fernet::Fernet;
 use prefixed_api_key::rand::rngs::OsRng;

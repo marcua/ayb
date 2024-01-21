@@ -4,9 +4,10 @@ use crate::ayb_db::models::{
     InstantiatedAuthenticationMethod,
 };
 use crate::error::AybError;
-use crate::http::structs::{APIToken as APIAPIToken, AybConfig};
-use crate::http::tokens::{decrypt_auth_token, generate_api_token};
-use crate::http::utils::get_header;
+use crate::http::structs::APIToken as APIAPIToken;
+use crate::server::config::AybConfig;
+use crate::server::tokens::{decrypt_auth_token, generate_api_token};
+use crate::server::utils::get_header;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/confirm")]

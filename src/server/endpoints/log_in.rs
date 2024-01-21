@@ -3,10 +3,11 @@ use crate::ayb_db::models::{AuthenticationMethodStatus, AuthenticationMethodType
 use crate::email::send_registration_email;
 use crate::error::AybError;
 
-use crate::http::structs::{AuthenticationDetails, AybConfig, EmptyResponse};
-use crate::http::tokens::encrypt_auth_token;
-use crate::http::utils::get_lowercased_header;
-use crate::http::web_frontend::WebFrontendDetails;
+use crate::http::structs::{AuthenticationDetails, EmptyResponse};
+use crate::server::config::AybConfig;
+use crate::server::tokens::encrypt_auth_token;
+use crate::server::utils::get_lowercased_header;
+use crate::server::web_frontend::WebFrontendDetails;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/log_in")]

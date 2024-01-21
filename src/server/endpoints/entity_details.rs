@@ -1,11 +1,11 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
-use crate::http::permissions::can_query;
 use crate::http::structs::{
     EntityDatabase, EntityPath, EntityProfile, EntityProfileLink, EntityQueryResponse,
 };
-use crate::http::utils::unwrap_authenticated_entity;
+use crate::server::permissions::can_query;
+use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
 #[get("/v1/entity/{entity}")]

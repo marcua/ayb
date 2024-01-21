@@ -4,10 +4,10 @@ use crate::ayb_db::models::{DBType, InstantiatedEntity};
 use crate::error::AybError;
 use crate::hosted_db::paths::database_path;
 use crate::hosted_db::{run_query, QueryResult};
-use crate::http::permissions::can_query;
-use crate::http::structs::{AybConfig, EntityDatabasePath};
-
-use crate::http::utils::unwrap_authenticated_entity;
+use crate::http::structs::EntityDatabasePath;
+use crate::server::config::AybConfig;
+use crate::server::permissions::can_query;
+use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{post, web};
 
 #[post("/v1/{entity}/{database}/query")]
