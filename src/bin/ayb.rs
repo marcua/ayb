@@ -9,6 +9,8 @@ use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use directories::ProjectDirs;
 use regex::Regex;
+use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -94,8 +96,8 @@ async fn main() -> std::io::Result<()> {
                              .value_parser(ValueParser::new(entity_database_parser))
                              .required(true)
                         )
-                        .arg(arg!(<query> "The query to execute")
-                             .required(true))
+                        .arg(arg!(<query> "The query to execute. If not provided, an interactive session to write queries will be launched")
+                             .required(false))
                         .arg(
                             arg!(--format <type> "The format in which to output the result")
                                 .value_parser(value_parser!(OutputFormat))
@@ -360,26 +362,45 @@ async fn main() -> std::io::Result<()> {
                 }
             }
         } else if let Some(matches) = matches.subcommand_matches("query") {
-            if let (Some(entity_database), Some(query), Some(format)) = (
+            if let (Some(entity_database), Some(format)) = (
                 matches.get_one::<EntityDatabasePath>("database"),
-                matches.get_one::<String>("query"),
                 matches.get_one::<OutputFormat>("format"),
             ) {
-                match client
+                if let Some(query) = matches.get_one::<String>("query") {
+                    match client
                     .query(&entity_database.entity, &entity_database.database, query)
                     .await
-                {
-                    Ok(query_result) => {
-                        if !query_result.rows.is_empty() {
-                            match format {
-                                OutputFormat::Table => query_result.generate_table()?,
-                                OutputFormat::Csv => query_result.generate_csv()?,
+                    {
+                        Ok(query_result) => {
+                            if !query_result.rows.is_empty() {
+                                match format {
+                                    OutputFormat::Table => query_result.generate_table()?,
+                                    OutputFormat::Csv => query_result.generate_csv()?,
+                                }
+                            }
+                            println!("\nRows: {}", query_result.rows.len());
+                        }
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
+                    }   
+                } else {
+                    match DefaultEditor::new() {
+                        Ok(mut rl) => loop {
+                            let line = rl.readline(">>> ");
+                            match line {
+                                Ok(query) => { println!("{}", query.as_str()); }
+                                Err(ReadlineError::Interrupted) => { break; }
+                                Err(ReadlineError::Eof) => { break; }
+                                Err(err) => {
+                                    println!("Error: {}", err);
+                                    break
+                                }
                             }
                         }
-                        println!("\nRows: {}", query_result.rows.len());
-                    }
-                    Err(err) => {
-                        println!("Error: {}", err);
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
                     }
                 }
             }
