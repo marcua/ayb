@@ -2,6 +2,7 @@ use ayb::ayb_db::models::{DBType, EntityType};
 use ayb::client::config::ClientConfig;
 use ayb::client::http::AybClient;
 use ayb::formatting::TabularFormatter;
+use ayb::hosted_db::QueryResult;
 use ayb::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use ayb::server::config::{config_to_toml, default_server_config};
 use ayb::server::server_runner::run_server;
@@ -25,6 +26,17 @@ fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
     } else {
         Err("Argument must be formatted as 'entity/database'".to_string())
     }
+}
+
+fn display_query_result(query_result: &QueryResult, format: &OutputFormat) -> Result<(), std::io::Error> {
+    if !query_result.rows.is_empty() {
+        match format {
+            OutputFormat::Table => query_result.generate_table()?,
+            OutputFormat::Csv => query_result.generate_csv()?,
+        }
+    }
+    println!("\nRows: {}", query_result.rows.len());
+    Ok(())
 }
 
 #[derive(Clone, ValueEnum)]
@@ -372,13 +384,7 @@ async fn main() -> std::io::Result<()> {
                     .await
                     {
                         Ok(query_result) => {
-                            if !query_result.rows.is_empty() {
-                                match format {
-                                    OutputFormat::Table => query_result.generate_table()?,
-                                    OutputFormat::Csv => query_result.generate_csv()?,
-                                }
-                            }
-                            println!("\nRows: {}", query_result.rows.len());
+                            display_query_result(&query_result, format)?;
                         }
                         Err(err) => {
                             println!("Error: {}", err);
@@ -403,13 +409,7 @@ async fn main() -> std::io::Result<()> {
                                     .await
                                     {
                                         Ok(query_result) => {
-                                            if !query_result.rows.is_empty() {
-                                                match format {
-                                                    OutputFormat::Table => query_result.generate_table()?,
-                                                    OutputFormat::Csv => query_result.generate_csv()?,
-                                                }
-                                            }
-                                            println!("\nRows: {}", query_result.rows.len());
+                                            display_query_result(&query_result, format)?;
                                         }
                                         Err(err) => {
                                             println!("Error: {}", err);
