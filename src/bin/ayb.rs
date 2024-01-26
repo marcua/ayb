@@ -393,7 +393,11 @@ async fn main() -> std::io::Result<()> {
                             match line {
                                 Ok(line) if line.is_empty() => {}
                                 Ok(query) => {
-                                    rl.add_history_entry(query.as_str()).unwrap();
+                                    let result = rl.add_history_entry(query.as_str());
+                                    if let Err(err) = result {
+                                        println!("Error: {}", err);
+                                    };
+
                                     match client
                                     .query(&entity_database.entity, &entity_database.database, query.as_str())
                                     .await
