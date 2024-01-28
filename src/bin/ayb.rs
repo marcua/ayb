@@ -395,7 +395,8 @@ async fn main() -> std::io::Result<()> {
                     
                     match DefaultEditor::new() {
                         Ok(mut rl) => loop {
-                            let line = rl.readline(">>> ");
+                            let prompt = format!("{}/{}> ", entity_database.entity, entity_database.database);
+                            let line = rl.readline(&prompt);
                             match line {
                                 Ok(line) if line.is_empty() => {}
                                 Ok(query) => {
