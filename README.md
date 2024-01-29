@@ -81,19 +81,19 @@ $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varc
 
 Rows: 0
 
-$ ayb client query marcua/test.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+# If you don't pass a query to the query command, ayb launches an interactive query session
+$ ayb client query marcua/test.sqlite
+Launching an interactive session for marcua/test.sqlite
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("PostgreSQL", 10);
 
 Rows: 0
-
-$ ayb client query marcua/test.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
-
-Rows: 0
-
-$ ayb client query marcua/test.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"DuckDB\", 9);"
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("SQLite", 9);
 
 Rows: 0
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("DuckDB", 9);
 
-$ ayb client query marcua/test.sqlite "SELECT * FROM favorite_databases;"
+Rows: 0
+marcua/test.sqlite> SELECT * FROM favorite_databases;
  name       | score 
 ------------+-------
  PostgreSQL | 10 
@@ -101,6 +101,7 @@ $ ayb client query marcua/test.sqlite "SELECT * FROM favorite_databases;"
  DuckDB     | 9 
 
 Rows: 3
+marcua/test.sqlite>
 
 $ ayb client update_profile marcua --display_name 'Adam Marcus' --links 'http://marcua.net'
 
