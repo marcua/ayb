@@ -27,11 +27,14 @@ fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
     }
 }
 
-async fn query_and_display(client: &AybClient, entity: &str, database: &str, query: &str, format: &OutputFormat) -> Result<(), std::io::Error> {
-    match client
-    .query(&entity, &database, query)
-    .await
-    {
+async fn query_and_display(
+    client: &AybClient,
+    entity: &str,
+    database: &str,
+    query: &str,
+    format: &OutputFormat,
+) -> Result<(), std::io::Error> {
+    match client.query(&entity, &database, query).await {
         Ok(query_result) => {
             if !query_result.rows.is_empty() {
                 match format {
@@ -39,7 +42,8 @@ async fn query_and_display(client: &AybClient, entity: &str, database: &str, que
                     OutputFormat::Csv => query_result.generate_csv()?,
                 }
             }
-            println!("\nRows: {}", query_result.rows.len());        }
+            println!("\nRows: {}", query_result.rows.len());
+        }
         Err(err) => {
             println!("Error: {}", err);
         }
@@ -98,7 +102,7 @@ async fn main() -> std::io::Result<()> {
                 .subcommand(
                     Command::new("create_database")
                         .about("Create a database")
-                        .arg(arg!(<database> "The database to create (e.g., entity/database.sqlite")
+                        .arg(arg!(<database> "The database to create (e.g., entity/database.sqlite)")
                              .value_parser(ValueParser::new(entity_database_parser))
                              .required(true)
                         )
@@ -112,11 +116,11 @@ async fn main() -> std::io::Result<()> {
                 .subcommand(
                     Command::new("query")
                         .about("Query a database")
-                        .arg(arg!(<database> "The database to which to connect (e.g., entity/database.sqlite")
+                        .arg(arg!(<database> "The database to which to connect (e.g., entity/database.sqlite)")
                              .value_parser(ValueParser::new(entity_database_parser))
                              .required(true)
                         )
-                        .arg(arg!(<query> "The query to execute. If not provided, an interactive session to write queries will be launched")
+                        .arg(arg!(<query> "The query to execute. If not provided, an interactive session to write queries will be launched.")
                              .required(false))
                         .arg(
                             arg!(--format <type> "The format in which to output the result")
@@ -387,13 +391,26 @@ async fn main() -> std::io::Result<()> {
                 matches.get_one::<OutputFormat>("format"),
             ) {
                 if let Some(query) = matches.get_one::<String>("query") {
-                    query_and_display(&client, &entity_database.entity, &entity_database.database, query, format).await?;
+                    query_and_display(
+                        &client,
+                        &entity_database.entity,
+                        &entity_database.database,
+                        query,
+                        format,
+                    )
+                    .await?;
                 } else {
-                    println!("Launching an interactive session for {}/{}", entity_database.entity, entity_database.database);
-                    
+                    println!(
+                        "Launching an interactive session for {}/{}",
+                        entity_database.entity, entity_database.database
+                    );
+
                     match DefaultEditor::new() {
                         Ok(mut rl) => loop {
-                            let prompt = format!("{}/{}> ", entity_database.entity, entity_database.database);
+                            let prompt = format!(
+                                "{}/{}> ",
+                                entity_database.entity, entity_database.database
+                            );
                             let line = rl.readline(&prompt);
                             match line {
                                 Ok(line) if line.is_empty() => {}
@@ -402,15 +419,22 @@ async fn main() -> std::io::Result<()> {
                                     if let Err(err) = result {
                                         println!("Error: {}", err);
                                     };
-                                    query_and_display(&client, &entity_database.entity, &entity_database.database, &query, format).await?;
+                                    query_and_display(
+                                        &client,
+                                        &entity_database.entity,
+                                        &entity_database.database,
+                                        &query,
+                                        format,
+                                    )
+                                    .await?;
                                 }
                                 Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
                                 Err(err) => {
                                     println!("Error: {}", err);
-                                    break
+                                    break;
                                 }
                             }
-                        }
+                        },
                         Err(err) => {
                             println!("Error: {}", err);
                         }
