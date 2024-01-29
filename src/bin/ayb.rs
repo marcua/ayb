@@ -9,6 +9,8 @@ use clap::builder::ValueParser;
 use clap::{arg, command, value_parser, Command, ValueEnum};
 use directories::ProjectDirs;
 use regex::Regex;
+use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -23,6 +25,26 @@ fn entity_database_parser(value: &str) -> Result<EntityDatabasePath, String> {
     } else {
         Err("Argument must be formatted as 'entity/database'".to_string())
     }
+}
+
+async fn query_and_display(client: &AybClient, entity: &str, database: &str, query: &str, format: &OutputFormat) -> Result<(), std::io::Error> {
+    match client
+    .query(&entity, &database, query)
+    .await
+    {
+        Ok(query_result) => {
+            if !query_result.rows.is_empty() {
+                match format {
+                    OutputFormat::Table => query_result.generate_table()?,
+                    OutputFormat::Csv => query_result.generate_csv()?,
+                }
+            }
+            println!("\nRows: {}", query_result.rows.len());        }
+        Err(err) => {
+            println!("Error: {}", err);
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, ValueEnum)]
@@ -94,8 +116,8 @@ async fn main() -> std::io::Result<()> {
                              .value_parser(ValueParser::new(entity_database_parser))
                              .required(true)
                         )
-                        .arg(arg!(<query> "The query to execute")
-                             .required(true))
+                        .arg(arg!(<query> "The query to execute. If not provided, an interactive session to write queries will be launched")
+                             .required(false))
                         .arg(
                             arg!(--format <type> "The format in which to output the result")
                                 .value_parser(value_parser!(OutputFormat))
@@ -360,26 +382,38 @@ async fn main() -> std::io::Result<()> {
                 }
             }
         } else if let Some(matches) = matches.subcommand_matches("query") {
-            if let (Some(entity_database), Some(query), Some(format)) = (
+            if let (Some(entity_database), Some(format)) = (
                 matches.get_one::<EntityDatabasePath>("database"),
-                matches.get_one::<String>("query"),
                 matches.get_one::<OutputFormat>("format"),
             ) {
-                match client
-                    .query(&entity_database.entity, &entity_database.database, query)
-                    .await
-                {
-                    Ok(query_result) => {
-                        if !query_result.rows.is_empty() {
-                            match format {
-                                OutputFormat::Table => query_result.generate_table()?,
-                                OutputFormat::Csv => query_result.generate_csv()?,
+                if let Some(query) = matches.get_one::<String>("query") {
+                    query_and_display(&client, &entity_database.entity, &entity_database.database, query, format).await?;
+                } else {
+                    println!("Launching an interactive session for {}/{}", entity_database.entity, entity_database.database);
+                    
+                    match DefaultEditor::new() {
+                        Ok(mut rl) => loop {
+                            let prompt = format!("{}/{}> ", entity_database.entity, entity_database.database);
+                            let line = rl.readline(&prompt);
+                            match line {
+                                Ok(line) if line.is_empty() => {}
+                                Ok(query) => {
+                                    let result = rl.add_history_entry(query.as_str());
+                                    if let Err(err) = result {
+                                        println!("Error: {}", err);
+                                    };
+                                    query_and_display(&client, &entity_database.entity, &entity_database.database, &query, format).await?;
+                                }
+                                Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
+                                Err(err) => {
+                                    println!("Error: {}", err);
+                                    break
+                                }
                             }
                         }
-                        println!("\nRows: {}", query_result.rows.len());
-                    }
-                    Err(err) => {
-                        println!("Error: {}", err);
+                        Err(err) => {
+                            println!("Error: {}", err);
+                        }
                     }
                 }
             }
