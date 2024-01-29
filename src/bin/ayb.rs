@@ -417,7 +417,7 @@ async fn main() -> std::io::Result<()> {
                                 Ok(query) => {
                                     let result = rl.add_history_entry(query.as_str());
                                     if let Err(err) = result {
-                                        println!("Error: {}", err);
+                                        println!("Error adding line to history: {}", err);
                                     };
                                     query_and_display(
                                         &client,
@@ -430,13 +430,13 @@ async fn main() -> std::io::Result<()> {
                                 }
                                 Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
                                 Err(err) => {
-                                    println!("Error: {}", err);
+                                    println!("Error reading next line: {}", err);
                                     break;
                                 }
                             }
                         },
                         Err(err) => {
-                            println!("Error: {}", err);
+                            println!("Error starting readline editor: {}", err);
                         }
                     }
                 }
