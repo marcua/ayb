@@ -34,7 +34,7 @@ async fn query_and_display(
     query: &str,
     format: &OutputFormat,
 ) -> Result<(), std::io::Error> {
-    match client.query(&entity, &database, query).await {
+    match client.query(entity, database, query).await {
         Ok(query_result) => {
             if !query_result.rows.is_empty() {
                 match format {

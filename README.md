@@ -81,7 +81,7 @@ $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varc
 
 Rows: 0
 
-# If you don't pass a query, an interactive query session begins
+# If you don't pass a query to the query command, ayb launches an interactive query session
 $ ayb client query marcua/test.sqlite
 Launching an interactive session for marcua/test.sqlite
 marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("PostgreSQL", 10);
