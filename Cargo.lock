@@ -412,6 +412,7 @@ dependencies = [
  "dyn-clone",
  "env_logger",
  "fernet",
+ "go-parse-duration",
  "lettre",
  "prefixed-api-key",
  "prettytable-rs",
@@ -1207,6 +1208,12 @@ name = "gimli"
 version = "0.27.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6c80984affa11d98d1b88b66ac8853f143217b399d3c74116778ff8fdb4ed2e"
+
+[[package]]
+name = "go-parse-duration"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "558b88954871f5e5b2af0e62e2e176c8bde7a6c2c4ed41b13d138d96da2e2cbd"
 
 [[package]]
 name = "h2"

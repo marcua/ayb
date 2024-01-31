@@ -1,6 +1,6 @@
 CREATE TABLE snapshot (
        id INTEGER PRIMARY KEY,
-       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, NOT NULL,
+       created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
        hash VARCHAR(64) NOT NULL,
        database_id INT NOT NULL,
        next_snapshot_id INT,
