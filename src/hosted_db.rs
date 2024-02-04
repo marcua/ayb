@@ -2,14 +2,14 @@ pub mod paths;
 mod sandbox;
 pub mod sqlite;
 
-use crate::ayb_db::models::DBType;
+use crate::ayb_db::models::{DBType, InstantiatedDatabase};
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;
+use crate::hosted_db::paths::database_path;
 use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
 use crate::server::config::AybConfigIsolation;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::vec::Vec;
 
 #[derive(Serialize, Debug, Deserialize)]
@@ -44,13 +44,15 @@ impl TabularFormatter for QueryResult {
 }
 
 pub async fn run_query(
-    path: &PathBuf,
+    entity_slug: &str,
+    database: &InstantiatedDatabase,
     query: &str,
-    db_type: &DBType,
+    data_path: &str,
     isolation: &Option<AybConfigIsolation>,
 ) -> Result<QueryResult, AybError> {
-    match db_type {
-        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(path, query, isolation).await?),
+    let path = database_path(entity_slug, &database.slug, data_path, false)?;
+    match DBType::try_from(database.db_type)? {
+        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(&path, query, isolation).await?),
         _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),
