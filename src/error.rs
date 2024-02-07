@@ -1,6 +1,7 @@
 use actix_web;
 use derive_more::Error;
 use fernet;
+use go_parse_duration;
 use lettre;
 use prefixed_api_key;
 use quoted_printable;
@@ -11,12 +12,15 @@ use serde_json;
 use sqlx;
 use std::fmt::{Display, Formatter};
 use std::string;
+use tokio_cron_scheduler;
 use toml;
 use url;
 
 #[derive(Debug, Deserialize, Error, Serialize)]
 #[serde(tag = "type")]
 pub enum AybError {
+    DurationParseError { message: String },
+    PeriodicSnapshotError { message: String },
     RecordNotFound { id: String, record_type: String },
     Other { message: String },
 }
@@ -40,6 +44,14 @@ impl From<fernet::DecryptionError> for AybError {
     fn from(_cause: fernet::DecryptionError) -> Self {
         AybError::Other {
             message: "Invalid or expired token".to_owned(),
+        }
+    }
+}
+
+impl From<go_parse_duration::Error> for AybError {
+    fn from(cause: go_parse_duration::Error) -> Self {
+        AybError::DurationParseError {
+            message: format!("Unable to parse duration: {:?}", cause),
         }
     }
 }
@@ -152,6 +164,14 @@ impl From<toml::ser::Error> for AybError {
     fn from(cause: toml::ser::Error) -> Self {
         AybError::Other {
             message: format!("Unable to serialize toml string: {:?}", cause),
+        }
+    }
+}
+
+impl From<tokio_cron_scheduler::JobSchedulerError> for AybError {
+    fn from(cause: tokio_cron_scheduler::JobSchedulerError) -> Self {
+        AybError::PeriodicSnapshotError {
+            message: format!("Unable to schedule snapshots: {:?}", cause),
         }
     }
 }

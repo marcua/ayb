@@ -23,7 +23,16 @@ async fn query(
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
     if can_query(&authenticated_entity, &database) {
-        Ok(web::Json(run_query(entity_slug, &database, &query, &ayb_config.data_path, &ayb_config.isolation).await?))
+        Ok(web::Json(
+            run_query(
+                entity_slug,
+                &database,
+                &query,
+                &ayb_config.data_path,
+                &ayb_config.isolation,
+            )
+            .await?,
+        ))
     } else {
         Err(AybError::Other {
             message: format!(
