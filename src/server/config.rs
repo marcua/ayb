@@ -45,9 +45,13 @@ pub enum SqliteSnapshotMethod {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigPeriodicSnapshots {
+pub struct AybConfigSnapshotsAutomation {
     pub interval: String, // A time interval in Go's time.ParseDuration format (e.g., "5m" means "every 5 minutes",
     pub num_snapshots: u16,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigSnapshots {
     pub sqlite_method: SqliteSnapshotMethod,
     pub access_key_id: String,
     pub secret_access_key: String,
@@ -56,6 +60,7 @@ pub struct AybConfigPeriodicSnapshots {
     pub endpoint: Option<String>,
     pub region: Option<String>,
     pub force_path_style: Option<bool>,
+    pub automation: Option<AybConfigSnapshotsAutomation>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -70,7 +75,7 @@ pub struct AybConfig {
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
     pub isolation: Option<AybConfigIsolation>,
-    pub periodic_snapshots: Option<AybConfigPeriodicSnapshots>,
+    pub snapshots: Option<AybConfigSnapshots>,
 }
 
 impl AybConfig {
@@ -107,7 +112,7 @@ pub fn default_server_config() -> AybConfig {
         },
         web: None,
         isolation: None,
-        periodic_snapshots: None,
+        snapshots: None,
     }
 }
 

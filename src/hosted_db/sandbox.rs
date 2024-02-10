@@ -27,6 +27,7 @@ SOFTWARE.
 */
 
 use crate::error::AybError;
+use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
 use serde::{Deserialize, Serialize};
 use std::env::current_exe;
 use std::fs::canonicalize;
@@ -74,21 +75,7 @@ pub async fn run_in_sandbox(
 
     // Generate a /local/path/to/file:/tmp/file mapping.
     let absolute_db_path = canonicalize(db_path)?;
-    let db_file_name = absolute_db_path
-        .file_name()
-        .ok_or(AybError::Other {
-            message: format!(
-                "Could not parse file name from path: {}",
-                absolute_db_path.display()
-            ),
-        })?
-        .to_str()
-        .ok_or(AybError::Other {
-            message: format!(
-                "Could not convert path to string: {}",
-                absolute_db_path.display()
-            ),
-        })?;
+    let db_file_name = pathbuf_to_file_name(&absolute_db_path)?;
     let tmp_db_path = Path::new("/tmp").join(db_file_name);
     let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
     cmd.args(["--bindmount", &db_file_mapping]);
@@ -97,15 +84,7 @@ pub async fn run_in_sandbox(
     // We assume `ayb` and `ayb_isolated_runner` will always be in the same directory,
     // so we see what the path to the current `ayb` executable is to build the path.
     let ayb_path = current_exe()?;
-    let isolated_runner_path = ayb_path
-        .parent()
-        .ok_or(AybError::Other {
-            message: format!(
-                "Unable to find parent directory of ayb from {}",
-                ayb_path.display()
-            ),
-        })?
-        .join("ayb_isolated_runner");
+    let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
     cmd.args([
         "--bindmount_ro",
         &format!(

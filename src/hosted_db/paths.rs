@@ -1,6 +1,12 @@
 use crate::error::AybError;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+const DATABASES: &str = "databases";
+
+pub fn database_parent_path(data_path: &str) -> PathBuf {
+    [data_path, DATABASES].iter().collect()
+}
 
 pub fn database_path(
     entity_slug: &str,
@@ -8,7 +14,7 @@ pub fn database_path(
     data_path: &str,
     create_database: bool,
 ) -> Result<PathBuf, AybError> {
-    let mut path: PathBuf = [data_path, entity_slug].iter().collect();
+    let mut path: PathBuf = [data_path, DATABASES, entity_slug].iter().collect();
     if create_database {
         if let Err(e) = fs::create_dir_all(&path) {
             return Err(AybError::Other {
@@ -24,4 +30,26 @@ pub fn database_path(
     }
 
     Ok(path)
+}
+
+pub fn pathbuf_to_file_name(path: &Path) -> Result<String, AybError> {
+    Ok(path
+        .file_name()
+        .ok_or(AybError::Other {
+            message: format!("Could not parse file name from path: {}", path.display()),
+        })?
+        .to_str()
+        .ok_or(AybError::Other {
+            message: format!("Could not convert path to string: {}", path.display()),
+        })?
+        .to_string())
+}
+
+pub fn pathbuf_to_parent(path: &PathBuf) -> Result<PathBuf, AybError> {
+    Ok(path
+        .parent()
+        .ok_or(AybError::Other {
+            message: format!("Unable to find parent directory of {}", path.display()),
+        })?
+        .to_owned())
 }
