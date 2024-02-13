@@ -20,7 +20,9 @@ use url;
 #[serde(tag = "type")]
 pub enum AybError {
     DurationParseError { message: String },
+    InvalidIsolationConfiguration { message: String },
     PeriodicSnapshotError { message: String },
+    SnapshotError { message: String },
     RecordNotFound { id: String, record_type: String },
     Other { message: String },
 }

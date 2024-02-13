@@ -43,16 +43,27 @@ impl TabularFormatter for QueryResult {
     }
 }
 
+/// `allow_unsafe` disables features that prevent abuse but also
+/// prevent backups/snapshots. The only known use case in the codebase
+/// is for snapshots.
 pub async fn run_query(
     entity_slug: &str,
     database: &InstantiatedDatabase,
     query: &str,
     data_path: &str,
     isolation: &Option<AybConfigIsolation>,
+    allow_unsafe: bool,
 ) -> Result<QueryResult, AybError> {
+    if isolation.is_some() && allow_unsafe {
+        return Err(AybError::InvalidIsolationConfiguration {
+            message: "Can't run isolated query in unsafe mode".to_string(),
+        });
+    }
     let path = database_path(entity_slug, &database.slug, data_path, false)?;
     match DBType::try_from(database.db_type)? {
-        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(&path, query, isolation).await?),
+        DBType::Sqlite => {
+            Ok(potentially_isolated_sqlite_query(&path, query, isolation, allow_unsafe).await?)
+        }
         _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),

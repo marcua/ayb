@@ -3,9 +3,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 const DATABASES: &str = "databases";
+const SNAPSHOTS: &str = "snapshots";
 
-pub fn database_parent_path(data_path: &str) -> PathBuf {
-    [data_path, DATABASES].iter().collect()
+pub fn database_parent_path(data_path: &str) -> Result<PathBuf, AybError> {
+    let path: PathBuf = [data_path, DATABASES].iter().collect();
+    Ok(fs::canonicalize(path)?)
 }
 
 pub fn database_path(
@@ -29,7 +31,34 @@ pub fn database_path(
         fs::File::create(path.clone())?;
     }
 
-    Ok(path)
+    Ok(fs::canonicalize(path)?)
+}
+
+pub fn database_snapshot_path(
+    entity_slug: &str,
+    database_slug: &str,
+    snapshot_slug: &str,
+    data_path: &str,
+) -> Result<PathBuf, AybError> {
+    let path: PathBuf = [
+        data_path,
+        SNAPSHOTS,
+        entity_slug,
+        database_slug,
+        snapshot_slug,
+    ]
+    .iter()
+    .collect();
+    if let Err(e) = fs::create_dir_all(&path) {
+        return Err(AybError::Other {
+            message: format!(
+                "Unable to create snapshot path for {}/{}: {}",
+                entity_slug, database_slug, e
+            ),
+        });
+    }
+
+    Ok(fs::canonicalize(path)?)
 }
 
 pub fn pathbuf_to_file_name(path: &Path) -> Result<String, AybError> {
@@ -45,7 +74,7 @@ pub fn pathbuf_to_file_name(path: &Path) -> Result<String, AybError> {
         .to_string())
 }
 
-pub fn pathbuf_to_parent(path: &PathBuf) -> Result<PathBuf, AybError> {
+pub fn pathbuf_to_parent(path: &Path) -> Result<PathBuf, AybError> {
     Ok(path
         .parent()
         .ok_or(AybError::Other {

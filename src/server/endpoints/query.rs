@@ -30,6 +30,7 @@ async fn query(
                 &query,
                 &ayb_config.data_path,
                 &ayb_config.isolation,
+                false,
             )
             .await?,
         ))
