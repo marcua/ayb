@@ -1,9 +1,10 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::hosted_db::paths::{
-    database_parent_path, database_snapshot_path, pathbuf_to_file_name, pathbuf_to_parent,
+    database_parent_path, database_path, database_snapshot_path, pathbuf_to_file_name,
+    pathbuf_to_parent,
 };
-use crate::hosted_db::run_query;
+use crate::hosted_db::sqlite::query_sqlite;
 use crate::server::config::{AybConfig, AybConfigIsolation, SqliteSnapshotMethod};
 use go_parse_duration::parse_duration;
 use std::fs;
@@ -80,6 +81,7 @@ pub async fn snapshot_database(
             // TODO(marcua): Implement hashing. `.sha3sum --schema` is
             // only available at the SQLite command line since it's a
             // dot command.
+            let db_path = database_path(&entity_slug, &database_slug, &config.data_path, false)?;
             // TODO(marcua): Do better than "temporary"
             // by creating a tmpdir.
             let mut snapshot_path = database_snapshot_path(
@@ -104,20 +106,19 @@ pub async fn snapshot_database(
                 }
             };
             println!("Running {}", backup_query);
-            let result = run_query(
-                &entity_slug,
-                &db,
+            let result = query_sqlite(
+                &db_path,
                 &backup_query,
-                &config.data_path,
-                // Run without isolation, as we trust the backup
-                // commands and we need to create other files on the
-                // filesystem.
-                &None::<AybConfigIsolation>,
-                // Disable saftey measures that prevent attaching to
-                // databases.
+                // Run in unsafe mode to allow backup process to
+                // attach to destination database.
                 true,
-            )
-            .await?;
+            )?;
+            // TODO(marcua)
+            // - Verify result should have no lines (read VACUUM docs)
+            // - Run "PRAGMA integrity_check;" on the backup, ensure it returns "ok"
+            // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
+            // - Get hash
+            // - Upload to S3-like storage
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {

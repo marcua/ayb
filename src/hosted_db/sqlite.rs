@@ -7,6 +7,9 @@ use rusqlite::types::ValueRef;
 use serde_json;
 use std::path::{Path, PathBuf};
 
+/// `allow_unsafe` disables features that prevent abuse but also
+/// prevent backups/snapshots. The only known use case in the codebase
+/// is for snapshots.
 pub fn query_sqlite(
     path: &PathBuf,
     query: &str,
@@ -60,7 +63,6 @@ pub async fn potentially_isolated_sqlite_query(
     path: &PathBuf,
     query: &str,
     isolation: &Option<AybConfigIsolation>,
-    allow_unsafe: bool,
 ) -> Result<QueryResult, AybError> {
     if let Some(isolation) = isolation {
         let result = run_in_sandbox(Path::new(&isolation.nsjail_path), path, query).await?;
@@ -86,5 +88,5 @@ pub async fn potentially_isolated_sqlite_query(
     }
 
     // No isolation configuration, so run the query without a sandbox.
-    query_sqlite(path, query, allow_unsafe)
+    query_sqlite(path, query, false)
 }
