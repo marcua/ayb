@@ -96,7 +96,7 @@ pub async fn snapshot_database(
             let backup_query = match snapshot_config.sqlite_method {
                 // TODO(marcua): Figure out dot commands to make .backup work
                 SqliteSnapshotMethod::Backup => {
-                    return Err(AybError::Other {
+                    return Err(AybError::SnapshotError {
                         message: "Backup requires dot commands, which are not yet supported"
                             .to_string(),
                     })
@@ -113,9 +113,21 @@ pub async fn snapshot_database(
                 // attach to destination database.
                 true,
             )?;
+            if result.rows.len() != 0 {
+                return Err(AybError::SnapshotError {
+                    message: format!("Unexpected snapshot result: {:?}", result),
+                });
+            }
+            let result = query_sqlite(&snapshot_path, "PRAGMA integrity_check;", false)?;
+            if result.fields.len() != 1
+                || result.rows.len() != 1
+                || result.rows[0][0] != Some("ok".to_string())
+            {
+                return Err(AybError::SnapshotError {
+                    message: format!("Snapshot failed integrity check: {:?}", result),
+                });
+            }
             // TODO(marcua)
-            // - Verify result should have no lines (read VACUUM docs)
-            // - Run "PRAGMA integrity_check;" on the backup, ensure it returns "ok"
             // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
             // - Get hash
             // - Upload to S3-like storage
