@@ -16,7 +16,10 @@ pub fn database_path(
     data_path: &str,
     create_database: bool,
 ) -> Result<PathBuf, AybError> {
-    let mut path: PathBuf = [data_path, DATABASES, entity_slug].iter().collect();
+    // We place each database in its own directory because databases
+    // might span multiple files (e.g, the SQLite database file as
+    // well as a journal/write-ahead log.
+    let mut path: PathBuf = [data_path, DATABASES, entity_slug, database_slug].iter().collect();
     if create_database {
         if let Err(e) = fs::create_dir_all(&path) {
             return Err(AybError::Other {

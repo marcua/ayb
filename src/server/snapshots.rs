@@ -66,7 +66,7 @@ pub async fn snapshot_database(
     path: &Path,
 ) -> Result<(), AybError> {
     println!("Trying to back up {}", path.display());
-    let entity_slug = pathbuf_to_file_name(&pathbuf_to_parent(path)?)?;
+    let entity_slug = pathbuf_to_file_name(&pathbuf_to_parent(&pathbuf_to_parent(path)?)?)?;
     let database_slug = pathbuf_to_file_name(&path)?;
     if let None = config.snapshots {
         return Err(AybError::SnapshotError {
@@ -128,13 +128,14 @@ pub async fn snapshot_database(
                 });
             }
             // TODO(marcua)
-            // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
             // - Get hash
             // - Upload to S3-like storage
+            // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
+            println!("Completed snapshot");
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {
-                println!("Not a known database {} {}", entity_slug, database_slug);
+                println!("Not a known database {}/{}", entity_slug, database_slug);
             }
             _ => {
                 return Err(AybError::from(err));
