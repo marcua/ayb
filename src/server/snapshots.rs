@@ -128,7 +128,7 @@ pub async fn snapshot_database(
                 });
             }
             // TODO(marcua)
-            // - Get hash
+            // - Get hash (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, shasum those together).
             // - Upload to S3-like storage
             // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
             println!("Completed snapshot");
