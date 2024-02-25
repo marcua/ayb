@@ -1,6 +1,6 @@
 [package]
 name = "ayb"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 description = "ayb makes it easy to create, host, and share embedded databases like SQLite and DuckDB"
 homepage = "https://github.com/marcua/ayb"
@@ -10,7 +10,7 @@ default-run = "ayb"
 
 [dependencies]
 actix-cors = { version = "0.7.0" }
-actix-web = { version = "4.4.1" }
+actix-web = { version = "4.5.1" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.77" }
 chrono = { version = "0.4.33", features = [ "serde" ] }
@@ -21,18 +21,19 @@ dyn-clone = { version = "1.0.16" }
 env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.1" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.3", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.4", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.0" }
-reqwest = { version = "0.11.23", features = ["json"] }
+regex = { version = "1.10.3"}
+reqwest = { version = "0.11.24", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
-regex = { version = "1.10.2"}
-scraper = {  version = "0.18.1" }
+rustyline = { version = "13.0.0" }
+scraper = { version = "0.18.1" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.111", features = ["raw_value"] }
+serde_json = { version = "1.0.113", features = ["raw_value"] }
 serde_repr = { version = "0.1.18" }
-sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
-toml = { version = "0.8.8" }
-tokio = { version = "1.35.1", features = ["macros", "process", "rt"] }
+sqlx = { version = "0.6.3", features = ["runtime-actix-native-tls", "postgres", "sqlite"] }
+toml = { version = "0.8.10" }
+tokio = { version = "1.36.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.10.0", features = ["signal"]}
 prefixed-api-key = { version = "0.1.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
