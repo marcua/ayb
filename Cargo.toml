@@ -17,7 +17,7 @@ chrono = { version = "0.4.33", features = [ "serde" ] }
 clap = { version = "4.5.2", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 directories = { version = "5.0" }
-dyn-clone = { version = "1.0.16" }
+dyn-clone = { version = "1.0.17" }
 env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.1" }
 go-parse-duration = { version = "0.1.1" }
