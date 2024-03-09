@@ -18,7 +18,7 @@ pub fn database_path(
 ) -> Result<PathBuf, AybError> {
     // We place each database in its own directory because databases
     // might span multiple files (e.g, the SQLite database file as
-    // well as a journal/write-ahead log.
+    // well as a journal/write-ahead log).
     let mut path: PathBuf = [data_path, DATABASES, entity_slug, database_slug]
         .iter()
         .collect();

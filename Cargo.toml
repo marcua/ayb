@@ -14,10 +14,10 @@ actix-web = { version = "4.5.1" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.77" }
 chrono = { version = "0.4.33", features = [ "serde" ] }
-clap = { version = "4.4.18", features = ["cargo", "derive", "env"] }
+clap = { version = "4.5.2", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 directories = { version = "5.0" }
-dyn-clone = { version = "1.0.16" }
+dyn-clone = { version = "1.0.17" }
 env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.1" }
 go-parse-duration = { version = "0.1.1" }
@@ -26,11 +26,11 @@ quoted_printable = { version = "0.5.0" }
 regex = { version = "1.10.3"}
 reqwest = { version = "0.11.24", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
-rustyline = { version = "13.0.0" }
+rustyline = { version = "14.0.0" }
 rust-s3 = { version = "0.33.0" }
-scraper = { version = "0.18.1" }
+scraper = { version = "0.19.0" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.113", features = ["raw_value"] }
+serde_json = { version = "1.0.114", features = ["raw_value"] }
 serde_repr = { version = "0.1.18" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 toml = { version = "0.8.10" }
@@ -40,7 +40,7 @@ prefixed-api-key = { version = "0.1.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.0", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
-walkdir = { version = "2.4.0" }
+walkdir = { version = "2.5.0" }
 
 [dev-dependencies]
 assert_cmd = "2.0"
