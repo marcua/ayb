@@ -1,15 +1,16 @@
+mod models;
+mod storage;
+
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::InstantiatedDatabase;
 use crate::error::AybError;
 use crate::hosted_db::paths::{
     database_parent_path, database_path, database_snapshot_path, pathbuf_to_file_name,
     pathbuf_to_parent,
 };
 use crate::hosted_db::sqlite::query_sqlite;
-use crate::server::config::{AybConfig, AybConfigSnapshots, SqliteSnapshotMethod};
+use crate::server::config::{AybConfig, SqliteSnapshotMethod};
+use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
-use s3::bucket::Bucket;
-use s3::creds::Credentials;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
@@ -134,6 +135,7 @@ pub async fn snapshot_database(
             // - Get hash (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, shasum those together).
             // - Upload to S3-like storage
             // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
+            let snapshot_storage = SnapshotStorage::new(&snapshot_config)?;
             println!("Completed snapshot");
         }
         Err(err) => match err {
@@ -146,35 +148,4 @@ pub async fn snapshot_database(
         },
     }
     Ok(())
-}
-
-pub struct SnapshotStorage {
-    access_key_id: String,
-    secret_access_key: String,
-    bucket: String,
-    path_prefix: String,
-    endpoint: Option<String>,
-    region: Option<String>,
-    force_path_style: Option<bool>,
-}
-
-impl SnapshotStorage {
-    fn create(config: &AybConfigSnapshots) -> SnapshotStorage {
-        let credentials = Credentials::default(...)?;
-        SnapshotStorage {
-            bucket: Bucket::new(config.bucket, config.region.or("us-east-1".to_string), credentials)?,
-            path_prefix: config.path_prefix,
-        }
-        let bucket_name = "rust-s3-test";
-        let region = "us-east-1".parse()?;
-
-        let bucket = 
-    }
-    fn db_path(self, entity_slug: &str, database_slug: &str, final_path: &str) -> String {
-        format!("{}/{}/{}/{}", self.path_prefix, entity_slug, database_slug, final_path)
-    }
-    
-    pub fn list_snapshots(self, entity_slug: &str, database_slug: &str) {
-        self.path_to_db(entity_slug, database_slug, "")
-    }
 }
