@@ -7,15 +7,24 @@ use rusqlite::types::ValueRef;
 use serde_json;
 use std::path::{Path, PathBuf};
 
-pub fn query_sqlite(path: &PathBuf, query: &str) -> Result<QueryResult, AybError> {
+/// `allow_unsafe` disables features that prevent abuse but also
+/// prevent backups/snapshots. The only known use case in the codebase
+/// is for snapshots.
+pub fn query_sqlite(
+    path: &PathBuf,
+    query: &str,
+    allow_unsafe: bool,
+) -> Result<QueryResult, AybError> {
     let conn = rusqlite::Connection::open(path)?;
 
-    // Disable the usage of ATTACH
-    // https://www.sqlite.org/lang_attach.html
-    conn.set_limit(Limit::SQLITE_LIMIT_ATTACHED, 0);
-    // Prevent queries from deliberately corrupting the database
-    // https://www.sqlite.org/c3ref/c_dbconfig_defensive.html
-    conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE)?;
+    if !allow_unsafe {
+        // Disable the usage of ATTACH
+        // https://www.sqlite.org/lang_attach.html
+        conn.set_limit(Limit::SQLITE_LIMIT_ATTACHED, 0);
+        // Prevent queries from deliberately corrupting the database
+        // https://www.sqlite.org/c3ref/c_dbconfig_defensive.html
+        conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE)?;
+    }
 
     let mut prepared = conn.prepare(query)?;
     let num_columns = prepared.column_count();
@@ -79,5 +88,5 @@ pub async fn potentially_isolated_sqlite_query(
     }
 
     // No isolation configuration, so run the query without a sandbox.
-    query_sqlite(path, query)
+    query_sqlite(path, query, false)
 }
