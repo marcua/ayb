@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
     APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
-    InstantiatedDatabase, InstantiatedEntity, PartialEntity,
+    InstantiatedDatabase, InstantiatedEntity, InstantiatedSnapshot, PartialEntity, Snapshot,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -30,6 +30,7 @@ pub trait AybDb: DynClone + Send + Sync {
         method: &AuthenticationMethod,
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
+    async fn create_snapshot(&self, snapshot: &Snapshot) -> Result<InstantiatedSnapshot, AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
     async fn get_api_token(&self, short_token: &str) -> Result<APIToken, AybError>;
     async fn get_database(
@@ -39,6 +40,7 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    // async fn get_snapshot_by_hash_prefix(&self, hash_prefix: &str) -> Result<InstantiatedSnapshot, AybError>;
     async fn update_entity_by_id(
         &self,
         entity: &PartialEntity,
@@ -52,6 +54,10 @@ pub trait AybDb: DynClone + Send + Sync {
         &self,
         entity: &InstantiatedEntity,
     ) -> Result<Vec<InstantiatedDatabase>, AybError>;
+    // async fn list_snapshots_for_database(
+    //    &self,
+    //    database: &InstantiatedDatabase,
+    // ) -> Result<Vec<InstantiatedSnapshot>, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -132,6 +138,36 @@ RETURNING entity_id, short_token, hash, status
                     {
                         Err(AybError::Other {
                             message: format!("Database already exists"),
+                        })
+                    }
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(db)
+            }
+
+            async fn create_snapshot(
+                &self,
+                snapshot: &Snapshot,
+            ) -> Result<InstantiatedSnapshot, AybError> {
+                let db: InstantiatedSnapshot = sqlx::query_as(
+                    r#"
+                INSERT INTO snapshot ( hash, database_id, snapshot_type )
+                VALUES ( $1, $2, $3 )
+                RETURNING id, created_at, hash, database_id, next_snapshot_id, snapshot_type
+                "#,
+                )
+                .bind(&snapshot.hash)
+                .bind(snapshot.database_id)
+                .bind(snapshot.snapshot_type)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::Database(db_error)
+                        if self.is_duplicate_constraint_error(&*db_error) =>
+                    {
+                        Err(AybError::Other {
+                            message: format!("Snapshot already exists"),
                         })
                     }
                     _ => Err(AybError::from(err)),
