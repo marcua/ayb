@@ -1,5 +1,5 @@
-// mod models;
-// mod storage;
+mod models;
+mod storage;
 
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
@@ -9,7 +9,7 @@ use crate::hosted_db::paths::{
 };
 use crate::hosted_db::sqlite::query_sqlite;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
-// use crate::server::snapshots::storage::SnapshotStorage;
+use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
 use std::fs;
 use std::path::Path;
@@ -142,7 +142,7 @@ pub async fn snapshot_database(
             // - Get hash (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, shasum those together).
             // - Upload to S3-like storage
             // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
-            // let snapshot_storage = SnapshotStorage::new(&snapshot_config)?;
+            let snapshot_storage = SnapshotStorage::new(&snapshot_config)?;
             println!("Completed snapshot");
 
             // Clean up after uploading snapshot.
