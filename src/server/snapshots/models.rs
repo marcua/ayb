@@ -37,7 +37,6 @@ impl SnapshotType {
 pub struct Snapshot {
     pub hash: String,
     pub database_id: i32,
-    pub next_snapshot_id: Option<i32>,
     pub snapshot_type: i16,
 }
 
@@ -46,7 +45,6 @@ pub struct InstantiatedSnapshot {
     pub created_at: DateTime<Utc>,
     pub hash: String,
     pub database_id: i32,
-    pub next_snapshot_id: Option<i32>,
     pub snapshot_type: i16,
 }
 

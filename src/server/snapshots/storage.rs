@@ -1,6 +1,6 @@
 use crate::error::AybError;
 use crate::server::config::AybConfigSnapshots;
-use crate::server::snapshots::models::InstantiatedSnapshot;
+use crate::server::snapshots::models::{InstantiatedSnapshot, ListSnapshotResult};
 use s3::bucket::Bucket;
 use s3::creds::Credentials;
 use s3::region::Region;
@@ -41,6 +41,11 @@ impl SnapshotStorage {
     }
 
     // switch to rusty: https://docs.rs/rusty-s3/latest/rusty_s3/
+    // or https://docs.rs/object_store/latest/object_store/aws/struct.AmazonS3Builder.html
+    // Start with object_store
+    // Run minio
+    // Get put path working first
+    // Then get list working
     pub async fn list_snapshots(
         self,
         entity_slug: &str,
