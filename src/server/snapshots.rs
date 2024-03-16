@@ -1,5 +1,5 @@
-mod models;
-mod storage;
+// mod models;
+// mod storage;
 
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
@@ -9,7 +9,7 @@ use crate::hosted_db::paths::{
 };
 use crate::hosted_db::sqlite::query_sqlite;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
-use crate::server::snapshots::storage::SnapshotStorage;
+// use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
 use std::fs;
 use std::path::Path;
@@ -49,6 +49,11 @@ pub async fn schedule_periodic_snapshots(
     Ok(())
 }
 
+// TODO(marcua): Figure how how to avoid this Clippy ignore and the
+// one on snapshot_database. If I remove the Box, I get an
+// unimplemented trait compiler error, but if I keep it, I get a
+// Clippy warning.
+#[allow(clippy::borrowed_box)]
 async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) {
     // Walk the data path for entity slugs, database slugs
     for entry in WalkDir::new(database_parent_path(&config.data_path).unwrap())
@@ -57,22 +62,24 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) {
         .filter(|e| !e.file_type().is_dir())
     {
         let path = entry.path();
-        // For any database, get its hash and look that Snapshot up in the DB (or S3...decide)
-        if let Some(err) = snapshot_database(&config, &ayb_db, &path).await.err() {
+        if let Some(err) = snapshot_database(config, ayb_db, path).await.err() {
             eprintln!("Unable to snapshot database {}: {}", path.display(), err);
         }
     }
 }
 
+#[allow(clippy::borrowed_box)]
 pub async fn snapshot_database(
     config: &AybConfig,
     ayb_db: &Box<dyn AybDb>,
     path: &Path,
 ) -> Result<(), AybError> {
+    // TODO(marcua): Replace printlns with some structured logging or
+    // tracing library.
     println!("Trying to back up {}", path.display());
     let entity_slug = pathbuf_to_file_name(&pathbuf_to_parent(&pathbuf_to_parent(path)?)?)?;
-    let database_slug = pathbuf_to_file_name(&path)?;
-    if let None = config.snapshots {
+    let database_slug = pathbuf_to_file_name(path)?;
+    if config.snapshots.is_none() {
         return Err(AybError::SnapshotError {
             message: "No snapshot config found".to_string(),
         });
@@ -80,7 +87,7 @@ pub async fn snapshot_database(
     let snapshot_config = config.snapshots.as_ref().unwrap();
 
     match ayb_db.get_database(&entity_slug, &database_slug).await {
-        Ok(db) => {
+        Ok(_db) => {
             println!("Hashing {} {}", entity_slug, database_slug);
             // TODO(marcua): Implement hashing. `.sha3sum --schema` is
             // only available at the SQLite command line since it's a
@@ -117,7 +124,7 @@ pub async fn snapshot_database(
                 // attach to destination database.
                 true,
             )?;
-            if result.rows.len() != 0 {
+            if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
                     message: format!("Unexpected snapshot result: {:?}", result),
                 });
@@ -135,15 +142,18 @@ pub async fn snapshot_database(
             // - Get hash (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, shasum those together).
             // - Upload to S3-like storage
             // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
-            let snapshot_storage = SnapshotStorage::new(&snapshot_config)?;
+            // let snapshot_storage = SnapshotStorage::new(&snapshot_config)?;
             println!("Completed snapshot");
+
+            // Clean up after uploading snapshot.
+            fs::remove_file(&snapshot_path).ok();
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {
                 println!("Not a known database {}/{}", entity_slug, database_slug);
             }
             _ => {
-                return Err(AybError::from(err));
+                return Err(err);
             }
         },
     }

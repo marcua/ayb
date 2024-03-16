@@ -20,8 +20,6 @@ use url;
 #[serde(tag = "type")]
 pub enum AybError {
     DurationParseError { message: String },
-    InvalidIsolationConfiguration { message: String },
-    PeriodicSnapshotError { message: String },
     SnapshotError { message: String },
     RecordNotFound { id: String, record_type: String },
     Other { message: String },
@@ -172,7 +170,7 @@ impl From<toml::ser::Error> for AybError {
 
 impl From<tokio_cron_scheduler::JobSchedulerError> for AybError {
     fn from(cause: tokio_cron_scheduler::JobSchedulerError) -> Self {
-        AybError::PeriodicSnapshotError {
+        AybError::SnapshotError {
             message: format!("Unable to schedule snapshots: {:?}", cause),
         }
     }
