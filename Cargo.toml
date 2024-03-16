@@ -13,7 +13,7 @@ actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.5.1" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.77" }
-chrono = { version = "0.4.33", features = [ "serde" ] }
+chrono = { version = "0.4.35", features = [ "serde" ] }
 clap = { version = "4.5.2", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 directories = { version = "5.0" }
@@ -24,7 +24,7 @@ go-parse-duration = { version = "0.1.1" }
 lettre = { version = "0.11.4", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.0" }
 regex = { version = "1.10.3"}
-reqwest = { version = "0.11.24", features = ["json"] }
+reqwest = { version = "0.11.26", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 rustyline = { version = "14.0.0" }
 rust-s3 = { version = "0.33.0" }
@@ -33,7 +33,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.114", features = ["raw_value"] }
 serde_repr = { version = "0.1.18" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
-toml = { version = "0.8.10" }
+toml = { version = "0.8.11" }
 tokio = { version = "1.36.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.10.0", features = ["signal"]}
 prefixed-api-key = { version = "0.1.0", features = ["sha2"]}
