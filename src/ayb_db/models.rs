@@ -1,43 +1,10 @@
+use crate::{try_from_i16, from_str};
 use crate::error::AybError;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::FromRow;
 use std::str::FromStr;
-
-macro_rules! try_from_i16 {
-    ($struct:ident, { $($left:literal => $right:expr),+ }) => {
-        impl TryFrom<i16> for $struct {
-            type Error = AybError;
-
-            fn try_from(value: i16) -> Result<Self, Self::Error> {
-                match value {
-                    $($left => Ok($right),)*
-                    _ => Err(Self::Error::Other {
-                        message: format!("Unknown value: {}", value),
-                    }),
-                }
-            }
-        }
-    };
-}
-
-macro_rules! from_str {
-    ($struct:ident, { $($left:literal => $right:expr),+ }) => {
-        impl FromStr for $struct {
-            type Err = AybError;
-
-            fn from_str(value: &str) -> Result<Self, Self::Err> {
-                match value {
-                    $($left => Ok($right),)*
-                    _ => Err(Self::Err::Other {
-                        message: format!("Unknown value: {}", value),
-                    }),
-                }
-            }
-        }
-    };
-}
 
 #[derive(
     Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
