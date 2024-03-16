@@ -7,6 +7,7 @@ use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, log_in_endpoint, query_endpoint,
     register_endpoint, update_profile_endpoint,
 };
+use crate::server::snapshots::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
 use actix_cors::Cors;
@@ -91,6 +92,9 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     } else {
         None
     };
+    schedule_periodic_snapshots(ayb_conf_for_server.clone(), ayb_db.clone())
+        .await
+        .expect("unable to start periodic snapshot scheduler");
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     if ayb_conf.isolation.is_none() {

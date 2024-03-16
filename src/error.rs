@@ -17,6 +17,8 @@ use url;
 #[derive(Debug, Deserialize, Error, Serialize)]
 #[serde(tag = "type")]
 pub enum AybError {
+    DurationParseError { message: String },
+    SnapshotError { message: String },
     RecordNotFound { id: String, record_type: String },
     Other { message: String },
 }
@@ -40,6 +42,14 @@ impl From<fernet::DecryptionError> for AybError {
     fn from(_cause: fernet::DecryptionError) -> Self {
         AybError::Other {
             message: "Invalid or expired token".to_owned(),
+        }
+    }
+}
+
+impl From<go_parse_duration::Error> for AybError {
+    fn from(cause: go_parse_duration::Error) -> Self {
+        AybError::DurationParseError {
+            message: format!("Unable to parse duration: {:?}", cause),
         }
     }
 }
@@ -152,6 +162,14 @@ impl From<toml::ser::Error> for AybError {
     fn from(cause: toml::ser::Error) -> Self {
         AybError::Other {
             message: format!("Unable to serialize toml string: {:?}", cause),
+        }
+    }
+}
+
+impl From<tokio_cron_scheduler::JobSchedulerError> for AybError {
+    fn from(cause: tokio_cron_scheduler::JobSchedulerError) -> Self {
+        AybError::SnapshotError {
+            message: format!("Unable to schedule snapshots: {:?}", cause),
         }
     }
 }
