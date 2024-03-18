@@ -14,7 +14,7 @@ actix-web = { version = "4.5.1" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.77" }
 chrono = { version = "0.4.35", features = [ "serde" ] }
-clap = { version = "4.5.2", features = ["cargo", "derive", "env"] }
+clap = { version = "4.5.3", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 directories = { version = "5.0" }
 dyn-clone = { version = "1.0.17" }
