@@ -34,7 +34,7 @@ serde_json = { version = "1.0.114", features = ["raw_value"] }
 serde_repr = { version = "0.1.18" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 toml = { version = "0.8.12" }
-tokio = { version = "1.36.0", features = ["macros", "process", "rt"] }
+tokio = { version = "1.37.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.10.0", features = ["signal"]}
 prefixed-api-key = { version = "0.1.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
