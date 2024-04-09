@@ -1,5 +1,5 @@
-use crate::{try_from_i16, from_str};
 use crate::error::AybError;
+use crate::{from_str, try_from_i16};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
