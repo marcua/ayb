@@ -48,7 +48,7 @@ fn api_key_controller() -> Result<PrefixedApiKeyController<OsRng, Sha256>, AybEr
 }
 
 pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, String), AybError> {
-    let mut controller = api_key_controller()?;
+    let controller = api_key_controller()?;
     let (pak, hash) = controller.generate_key_and_hash();
     Ok((
         APIToken {
