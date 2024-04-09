@@ -31,7 +31,7 @@ rust-s3 = { version = "0.33.0" }
 scraper = { version = "0.19.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.115", features = ["raw_value"] }
-serde_repr = { version = "0.1.18" }
+serde_repr = { version = "0.1.19" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 toml = { version = "0.8.12" }
 tokio = { version = "1.37.0", features = ["macros", "process", "rt"] }
