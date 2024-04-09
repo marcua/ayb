@@ -147,6 +147,34 @@ impl AuthenticationMethodStatus {
     }
 }
 
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum APITokenStatus {
+    Active = 0,
+    Revoked = 1,
+}
+
+from_str!(APITokenStatus, {
+    "active" => APITokenStatus::Active,
+    "revoked" => APITokenStatus::Revoked
+});
+
+try_from_i16!(APITokenStatus, {
+    0 => APITokenStatus::Active,
+    1 => APITokenStatus::Revoked
+});
+
+impl APITokenStatus {
+    pub fn to_str(&self) -> &str {
+        match self {
+            APITokenStatus::Active => "active",
+            APITokenStatus::Revoked => "revoked",
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Database {
     pub entity_id: i32,
@@ -237,34 +265,6 @@ pub struct InstantiatedAuthenticationMethod {
     pub method_type: i16,
     pub status: i16,
     pub email_address: String,
-}
-
-#[derive(
-    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
-)]
-#[repr(i16)]
-pub enum APITokenStatus {
-    Active = 0,
-    Revoked = 1,
-}
-
-from_str!(APITokenStatus, {
-    "active" => APITokenStatus::Active,
-    "revoked" => APITokenStatus::Revoked
-});
-
-try_from_i16!(APITokenStatus, {
-    0 => APITokenStatus::Active,
-    1 => APITokenStatus::Revoked
-});
-
-impl APITokenStatus {
-    pub fn to_str(&self) -> &str {
-        match self {
-            APITokenStatus::Active => "active",
-            APITokenStatus::Revoked => "revoked",
-        }
-    }
 }
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
