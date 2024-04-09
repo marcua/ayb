@@ -2397,9 +2397,9 @@ dependencies = [
 
 [[package]]
 name = "prefixed-api-key"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f117b34dde5c1df3a3da7735f7a7eed170bbc87dc8ac5fbe9a763410e96546e"
+checksum = "83a1392c6490debe7283eeb8fd424c41a5f9a2751ccd05f7e1a63d0b07522a9c"
 dependencies = [
  "bs58",
  "constant_time_eq",
