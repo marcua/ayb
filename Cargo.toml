@@ -12,14 +12,14 @@ default-run = "ayb"
 actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.5.1" }
 actix-web-httpauth = { version = "0.8.1" }
-async-trait = { version = "0.1.77" }
+async-trait = { version = "0.1.79" }
 aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
 aws-credential-types = { version = "1.1.8", features = ["hardcoded-credentials"] }
 aws-sdk-s3 = { version = "1.21.0" }
 aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
 aws-types = { version = "1.1.8" }
-chrono = { version = "0.4.35", features = [ "serde" ] }
-clap = { version = "4.5.2", features = ["cargo", "derive", "env"] }
+chrono = { version = "0.4.37", features = [ "serde" ] }
+clap = { version = "4.5.4", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
 directories = { version = "5.0" }
 dyn-clone = { version = "1.0.17" }
@@ -27,22 +27,22 @@ env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.1" }
 flate2 = { version = "1.0.28" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.4", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.6", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.0" }
-regex = { version = "1.10.3"}
-reqwest = { version = "0.11.26", features = ["json"] }
+regex = { version = "1.10.4"}
+reqwest = { version = "0.12.3", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 rustyline = { version = "14.0.0" }
 rust-s3 = { version = "0.33.0" }
 scraper = { version = "0.19.0" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.114", features = ["raw_value"] }
-serde_repr = { version = "0.1.18" }
+serde_json = { version = "1.0.115", features = ["raw_value"] }
+serde_repr = { version = "0.1.19" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
-toml = { version = "0.8.11" }
-tokio = { version = "1.36.0", features = ["macros", "process", "rt"] }
+toml = { version = "0.8.12" }
+tokio = { version = "1.37.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.10.0", features = ["signal"]}
-prefixed-api-key = { version = "0.1.0", features = ["sha2"]}
+prefixed-api-key = { version = "0.2.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.0", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
