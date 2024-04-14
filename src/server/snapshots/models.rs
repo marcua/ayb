@@ -3,6 +3,7 @@ use crate::{from_str, try_from_i16};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -49,6 +50,24 @@ pub struct Snapshot {
     pub snapshot_hash: String,
     pub database_id: i32,
     pub snapshot_type: i16,
+}
+
+impl Snapshot {
+    pub fn to_header_map(&self) -> Result<HashMap<String, String>, AybError> {
+        let mut headers = HashMap::new();
+        headers.insert(
+            "pre_snapshot_hash".to_string(),
+            self.pre_snapshot_hash.clone(),
+        );
+        headers.insert("snapshot_hash".to_string(), self.snapshot_hash.clone());
+        headers.insert(
+            "snapshot_type".to_string(),
+            SnapshotType::try_from(self.snapshot_type)?
+                .to_str()
+                .to_string(),
+        );
+        return Ok(headers);
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

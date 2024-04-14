@@ -23,12 +23,12 @@ impl SnapshotStorage {
         let mut connection_config = aws_config::from_env().credentials_provider(
             Credentials::from_keys(&config.access_key_id, &config.secret_access_key, None),
         );
-        if !config.endpoint_url.is_none() {
+        if config.endpoint_url.is_some() {
             connection_config =
                 connection_config.endpoint_url(config.endpoint_url.as_ref().unwrap())
         }
 
-        if !config.region.is_none() {
+        if config.region.is_some() {
             let region = Region::new(config.region.clone().unwrap());
             let region_provider = RegionProviderChain::first_try(region).or_default_provider();
             connection_config = connection_config.region(region_provider);
@@ -120,12 +120,11 @@ impl SnapshotStorage {
             .bucket(&self.bucket)
             .key(path.clone())
             .body(body)
+            .set_metadata(Some(snapshot.to_header_map()?))
             .send()
             .await
-            .or_else(|err| {
-                Err(AybError::S3ExecutionError {
-                    message: format!("Unable to put snapshot in S3 at {}: {:?}", path, err),
-                })
+            .map_err(|err| AybError::S3ExecutionError {
+                message: format!("Unable to put snapshot in S3 at {}: {:?}", path, err),
             })?;
         Ok(())
     }
