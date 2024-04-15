@@ -66,7 +66,7 @@ impl Snapshot {
                 .to_str()
                 .to_string(),
         );
-        return Ok(headers);
+        Ok(headers)
     }
 }
 

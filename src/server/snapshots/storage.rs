@@ -28,11 +28,9 @@ impl SnapshotStorage {
                 connection_config.endpoint_url(config.endpoint_url.as_ref().unwrap())
         }
 
-        if config.region.is_some() {
-            let region = Region::new(config.region.clone().unwrap());
-            let region_provider = RegionProviderChain::first_try(region).or_default_provider();
-            connection_config = connection_config.region(region_provider);
-        }
+        let region = Region::new(config.region.clone().unwrap_or("us-east-1".to_string()));
+        let region_provider = RegionProviderChain::first_try(region).or_default_provider();
+        connection_config = connection_config.region(region_provider);
 
         Ok(SnapshotStorage {
             bucket: config.bucket.clone(),

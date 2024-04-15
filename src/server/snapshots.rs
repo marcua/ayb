@@ -139,7 +139,7 @@ pub async fn snapshot_database(
                     message: format!("Snapshot failed integrity check: {:?}", result),
                 });
             }
-            let snapshot_storage = SnapshotStorage::new(&snapshot_config).await?;
+            let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
             snapshot_storage
                 .put(
                     &entity_slug,
@@ -157,13 +157,11 @@ pub async fn snapshot_database(
                 .list_snapshots(&entity_slug, &database_slug)
                 .await?
                 .pop();
-
+            println!("Storage: {:?}", recent_snapshot);
             // TODO(marcua)
             // - Run minio
             // - Copy header data (e.g., hashes) to S3 headers
-            // - Add to tests
-            //    wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20240315010719.0.0_amd64.deb -O minio.deb
-            //    sudo dpkg -i minio.deb
+            // - Add to tests. Installation command in scripts/install_minio.sh.
             // - Add hashes, don't snapshot if hashes match (and update tests)
             // - Include timestamp data to avoid even snapshotting/hashing (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, take max or shasum them together).
             // - Remove old snapshots in list beyond the retention quantity/period.
