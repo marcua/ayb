@@ -24,6 +24,7 @@ try_from_i16!(SnapshotType, {
 });
 
 impl SnapshotType {
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_str(&self) -> &str {
         match self {
             SnapshotType::Automatic => "automatic",
