@@ -24,6 +24,9 @@ try_from_i16!(SnapshotType, {
 });
 
 impl SnapshotType {
+    // Suppress clippy here, as this exact behavior (&self) -> &str is
+    // allowed in `ayb_db/models.rs` and the documentation suggests
+    // I'm following proper convention.
     #[allow(clippy::wrong_self_convention)]
     pub fn to_str(&self) -> &str {
         match self {
