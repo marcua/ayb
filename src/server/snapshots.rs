@@ -1,5 +1,5 @@
-// mod models;
-// mod storage;
+mod models;
+mod storage;
 
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
@@ -9,7 +9,8 @@ use crate::hosted_db::paths::{
 };
 use crate::hosted_db::sqlite::query_sqlite;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
-// use crate::server::snapshots::storage::SnapshotStorage;
+use crate::server::snapshots::models::{Snapshot, SnapshotType};
+use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
 use std::fs;
 use std::path::Path;
@@ -87,7 +88,7 @@ pub async fn snapshot_database(
     let snapshot_config = config.snapshots.as_ref().unwrap();
 
     match ayb_db.get_database(&entity_slug, &database_slug).await {
-        Ok(_db) => {
+        Ok(db) => {
             println!("Hashing {} {}", entity_slug, database_slug);
             // TODO(marcua): Implement hashing. `.sha3sum --schema` is
             // only available at the SQLite command line since it's a
@@ -101,7 +102,7 @@ pub async fn snapshot_database(
                 "temporary",
                 &config.data_path,
             )?;
-            snapshot_path.push(database_slug);
+            snapshot_path.push(&database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
             fs::remove_file(&snapshot_path).ok();
             let backup_query = match snapshot_config.sqlite_method {
@@ -138,11 +139,34 @@ pub async fn snapshot_database(
                     message: format!("Snapshot failed integrity check: {:?}", result),
                 });
             }
+            let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
+            snapshot_storage
+                .put(
+                    &entity_slug,
+                    &database_slug,
+                    &Snapshot {
+                        pre_snapshot_hash: "notimplemented".to_string(),
+                        snapshot_hash: "notimplemented".to_string(),
+                        database_id: db.id,
+                        snapshot_type: SnapshotType::Automatic as i16,
+                    },
+                    &snapshot_path,
+                )
+                .await?;
+            let recent_snapshot = snapshot_storage
+                .list_snapshots(&entity_slug, &database_slug)
+                .await?
+                .pop();
+            println!("Storage: {:?}", recent_snapshot);
             // TODO(marcua)
-            // - Get hash (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, shasum those together).
-            // - Upload to S3-like storage
+            // - Run minio
+            // - Copy header data (e.g., hashes) to S3 headers
+            // - Add to tests. Installation command in scripts/install_minio.sh.
+            // - Add hashes, don't snapshot if hashes match (and update tests)
+            // - Include timestamp data to avoid even snapshotting/hashing (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, take max or shasum them together).
+            // - Remove old snapshots in list beyond the retention quantity/period.
             // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
-            // let snapshot_storage = SnapshotStorage::new(&snapshot_config)?;
+            // - If we don't need chrono for datetimes in hindsight, we can remove it from our snapshot models and sqlx features. (grep for chrono).
             println!("Completed snapshot");
 
             // Clean up after uploading snapshot.

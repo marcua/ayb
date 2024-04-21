@@ -57,7 +57,7 @@ pub struct AybConfigSnapshots {
     pub secret_access_key: String,
     pub bucket: String,
     pub path_prefix: String,
-    pub endpoint: Option<String>,
+    pub endpoint_url: Option<String>,
     pub region: Option<String>,
     pub force_path_style: Option<bool>,
     pub automation: Option<AybConfigSnapshotsAutomation>,

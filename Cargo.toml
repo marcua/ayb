@@ -13,6 +13,11 @@ actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.5.1" }
 actix-web-httpauth = { version = "0.8.1" }
 async-trait = { version = "0.1.80" }
+aws-config = { version = "1.1.9", features = ["behavior-version-latest"] }
+aws-credential-types = { version = "1.1.8", features = ["hardcoded-credentials"] }
+aws-sdk-s3 = { version = "1.21.0" }
+aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
+aws-types = { version = "1.1.8" }
 chrono = { version = "0.4.37", features = [ "serde" ] }
 clap = { version = "4.5.4", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
@@ -20,6 +25,7 @@ directories = { version = "5.0" }
 dyn-clone = { version = "1.0.17" }
 env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.1" }
+flate2 = { version = "1.0.28" }
 go-parse-duration = { version = "0.1.1" }
 lettre = { version = "0.11.6", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.0" }
@@ -53,3 +59,8 @@ path = "src/bin/ayb.rs"
 [[bin]]
 name = "ayb_isolated_runner"
 path = "src/bin/ayb_isolated_runner.rs"
+
+[profile.dev]
+# debug = 2 uses too much memory and gets an OOM on marcua's tiny dev
+# server. See https://github.com/marcua/ayb/issues/342.
+debug = 1
