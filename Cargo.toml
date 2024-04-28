@@ -59,8 +59,3 @@ path = "src/bin/ayb.rs"
 [[bin]]
 name = "ayb_isolated_runner"
 path = "src/bin/ayb_isolated_runner.rs"
-
-[profile.dev]
-# debug = 2 uses too much memory and gets an OOM on marcua's tiny dev
-# server. See https://github.com/marcua/ayb/issues/342.
-debug = 1
