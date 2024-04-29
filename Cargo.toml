@@ -27,7 +27,7 @@ env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.1" }
 flate2 = { version = "1.0.28" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.6", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.7", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.0" }
 regex = { version = "1.10.4"}
 reqwest = { version = "0.12.3", features = ["json"] }
