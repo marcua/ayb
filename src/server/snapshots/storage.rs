@@ -40,7 +40,7 @@ impl SnapshotStorage {
         Ok(SnapshotStorage {
             bucket: config.bucket.clone(),
             client: aws_sdk_s3::Client::from_conf(s3_config),
-            force_path_style: force_path_style,
+            force_path_style,
             path_prefix: config.path_prefix.to_string(),
         })
     }

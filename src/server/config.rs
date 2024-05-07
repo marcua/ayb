@@ -62,7 +62,8 @@ pub struct AybConfigSnapshots {
     // By default, AWS (and some S3-compatible providers) include
     // bucket details in the domain/endpoint. Other tools like minio
     // include the bucket in the path. When `force_path_style` is
-    // `true`, we include the bucket in the path.
+    // `true` (it defaults to `false`), we include the bucket
+    // in the path.
     pub force_path_style: Option<bool>,
     pub automation: Option<AybConfigSnapshotsAutomation>,
 }
