@@ -15,6 +15,7 @@ use std::path::PathBuf;
 pub struct SnapshotStorage {
     bucket: String,
     client: aws_sdk_s3::Client,
+    force_path_style: bool,
     path_prefix: String,
 }
 
@@ -25,24 +26,35 @@ impl SnapshotStorage {
         );
         if config.endpoint_url.is_some() {
             connection_config =
-                connection_config.endpoint_url(config.endpoint_url.as_ref().unwrap())
+                connection_config.endpoint_url(config.endpoint_url.as_ref().unwrap());
         }
 
         let region = Region::new(config.region.clone().unwrap_or("us-east-1".to_string()));
         let region_provider = RegionProviderChain::first_try(region).or_default_provider();
         connection_config = connection_config.region(region_provider);
 
+        let force_path_style = config.force_path_style.unwrap_or(false);
+        let s3_config = aws_sdk_s3::config::Builder::from(&connection_config.load().await)
+            .force_path_style(force_path_style)
+            .build();
         Ok(SnapshotStorage {
             bucket: config.bucket.clone(),
-            client: aws_sdk_s3::Client::new(&connection_config.load().await),
+            client: aws_sdk_s3::Client::from_conf(s3_config),
+            force_path_style: force_path_style,
             path_prefix: config.path_prefix.to_string(),
         })
     }
 
     fn db_path(&self, entity_slug: &str, database_slug: &str, final_part: &str) -> String {
+        // Include bucket details in path only if `force_path_style` is `true`.
+        let bucket = if self.force_path_style {
+            format!("{}/", self.bucket)
+        } else {
+            "".to_string()
+        };
         format!(
-            "{}/{}/{}/{}",
-            self.path_prefix, entity_slug, database_slug, final_part
+            "{}{}/{}/{}/{}",
+            bucket, self.path_prefix, entity_slug, database_slug, final_part
         )
     }
 

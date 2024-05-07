@@ -22,3 +22,4 @@ tests/ayb_data_sqlite
 tests/smtp_data_10025
 tests/smtp_data_10026
 tests/nsjail
+tests/localstack_init.sh
