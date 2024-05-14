@@ -1,5 +1,5 @@
-mod models;
-mod storage;
+pub mod models;
+pub mod storage;
 
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;

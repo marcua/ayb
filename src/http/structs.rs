@@ -3,6 +3,7 @@ use crate::ayb_db::models::{
     InstantiatedEntity as PersistedEntity,
 };
 use crate::formatting::TabularFormatter;
+use crate::server::snapshots::models::ListSnapshotResult;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 
@@ -168,3 +169,8 @@ pub struct APIToken {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmptyResponse {}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SnapshotList {
+    pub snapshots: Vec<ListSnapshotResult>,
+}
