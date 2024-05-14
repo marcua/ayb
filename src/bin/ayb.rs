@@ -19,7 +19,7 @@ async fn main() -> std::io::Result<()> {
             Command::new("default_server_config")
                 .about("Print a default configuration file for a server"),
         )
-        .subcommand(client_subcommands())
+        .subcommand(client_commands())
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("server") {
@@ -32,7 +32,7 @@ async fn main() -> std::io::Result<()> {
             Err(err) => println!("Error: {}", err),
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
-        execute_client_command(&matches).await?;
+        execute_client_command(matches).await?;
     }
 
     Ok(())

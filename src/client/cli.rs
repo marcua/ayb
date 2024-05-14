@@ -64,7 +64,7 @@ impl OutputFormat {
     }
 }
 
-pub fn client_subcommands() -> Command {
+pub fn client_commands() -> Command {
     Command::new("client")
         .about("Connect to an HTTP server")
         .arg(
