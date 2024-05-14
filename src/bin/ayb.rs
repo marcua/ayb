@@ -4,25 +4,22 @@ use ayb::server::server_runner::run_server;
 use clap::{arg, command, value_parser, Command};
 use std::path::PathBuf;
 
-
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let matches = command!()
         .subcommand(
-            Command::new("server")
-                .about("Run an HTTP server")
-                .arg(arg!(--config <FILE> "Path to the server's configuration file")
-                     .value_parser(value_parser!(PathBuf))
-                     .env("AYB_SERVER_CONFIG_FILE")
-                     .default_value("./ayb.toml"))
+            Command::new("server").about("Run an HTTP server").arg(
+                arg!(--config <FILE> "Path to the server's configuration file")
+                    .value_parser(value_parser!(PathBuf))
+                    .env("AYB_SERVER_CONFIG_FILE")
+                    .default_value("./ayb.toml"),
+            ),
         )
         .subcommand(
             Command::new("default_server_config")
-                .about("Print a default configuration file for a server")
+                .about("Print a default configuration file for a server"),
         )
-        .subcommand(
-            client_subcommands()
-        )
+        .subcommand(client_subcommands())
         .get_matches();
 
     if let Some(matches) = matches.subcommand_matches("server") {

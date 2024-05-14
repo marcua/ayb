@@ -3,12 +3,12 @@ use crate::client::config::ClientConfig;
 use crate::client::http::AybClient;
 use crate::formatting::TabularFormatter;
 use crate::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
-use clap::{arg, value_parser, ArgMatches, Command, ValueEnum};
 use clap::builder::ValueParser;
+use clap::{arg, value_parser, ArgMatches, Command, ValueEnum};
 use directories::ProjectDirs;
 use regex::Regex;
-use rustyline::DefaultEditor;
 use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -63,7 +63,6 @@ impl OutputFormat {
         }
     }
 }
-
 
 pub fn client_subcommands() -> Command {
     Command::new("client")
@@ -373,7 +372,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     query,
                     format,
                 )
-                    .await?;
+                .await?;
             } else {
                 println!(
                     "Launching an interactive session for {}/{}",
@@ -382,10 +381,8 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
 
                 match DefaultEditor::new() {
                     Ok(mut rl) => loop {
-                        let prompt = format!(
-                            "{}/{}> ",
-                            entity_database.entity, entity_database.database
-                        );
+                        let prompt =
+                            format!("{}/{}> ", entity_database.entity, entity_database.database);
                         let line = rl.readline(&prompt);
                         match line {
                             Ok(line) if line.is_empty() => {}
@@ -401,7 +398,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                                     &query,
                                     format,
                                 )
-                                    .await?;
+                                .await?;
                             }
                             Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
                             Err(err) => {
