@@ -1,4 +1,4 @@
-use ayb::client::cli::{client_subcommands, execute_client_command};
+use ayb::client::cli::{client_commands, execute_client_command};
 use ayb::server::config::{config_to_toml, default_server_config};
 use ayb::server::server_runner::run_server;
 use clap::{arg, command, value_parser, Command};
