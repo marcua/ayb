@@ -59,3 +59,9 @@ path = "src/bin/ayb.rs"
 [[bin]]
 name = "ayb_isolated_runner"
 path = "src/bin/ayb_isolated_runner.rs"
+
+[profile.dev]
+# debug = 2 takes ~50% longer to build for tests on marcua's tiny dev
+# server. Comment this out if you need more debugging symbols.
+# See https://github.com/marcua/ayb/issues/342.
+debug = 1
