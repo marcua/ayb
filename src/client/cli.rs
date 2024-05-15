@@ -178,6 +178,19 @@ pub fn client_commands() -> Command {
                 .arg(arg!(<url> "The URL to use in the future")
                      .required(true))
         )
+        .subcommand(
+            Command::new("list_snapshots")
+                .about("List snapshots/backups of a database")
+                .arg(arg!(<database> "The database for which to list snapshots (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+                .arg(
+                    arg!(--format <type> "The format in which to output the result")
+                        .value_parser(value_parser!(OutputFormat))
+                        .default_value(OutputFormat::Table.to_str())
+                        .required(false))
+        )
 }
 
 pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()> {
@@ -410,6 +423,33 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     Err(err) => {
                         println!("Error starting readline editor: {}", err);
                     }
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("list_snapshots") {
+        if let (Some(entity_database), Some(format)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<OutputFormat>("format"),
+        ) {
+            match client
+                .list_snapshots(&entity_database.entity, &entity_database.database)
+                .await
+            {
+                Ok(response) => {
+                    if response.snapshots.is_empty() {
+                        println!(
+                            "No snapshots for {}/{}",
+                            entity_database.entity, entity_database.database
+                        );
+                    } else {
+                        match format {
+                            OutputFormat::Table => response.snapshots.generate_table()?,
+                            OutputFormat::Csv => response.snapshots.generate_csv()?,
+                        }
+                    }
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
                 }
             }
         }
