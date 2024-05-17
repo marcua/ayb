@@ -1626,11 +1626,11 @@ dependencies = [
 
 [[package]]
 name = "fernet"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3364d69f691f3903b1a71605fa04f40a7c2d259f0f0512347e36d19a63debf1f"
+checksum = "c66b725fe9483b9ee72ccaec072b15eb8ad95a3ae63a8c798d5748883b72fd33"
 dependencies = [
- "base64 0.21.0",
+ "base64 0.22.0",
  "byteorder",
  "getrandom",
  "openssl",
