@@ -24,7 +24,7 @@ derive_more = { version = "0.99.0" }
 directories = { version = "5.0" }
 dyn-clone = { version = "1.0.17" }
 env_logger = { version = "0.10.2" }
-fernet = { version = "0.2.1" }
+fernet = { version = "0.2.2" }
 flate2 = { version = "1.0.30" }
 go-parse-duration = { version = "0.1.1" }
 lettre = { version = "0.11.7", features = ["tokio1-native-tls"] }
