@@ -1,223 +1,21 @@
 #![allow(clippy::too_many_arguments)]
 
+mod e2e_tests;
+mod utils;
+
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
 use std::fs;
-use std::process::{Child, Command};
+use std::process::Command;
 use std::thread;
 use std::time;
-
-mod utils;
-
-// ayb_cmd!("value1", value2; {
-//     "ENV_VAR" => env_value
-// })
-macro_rules! ayb_cmd {
-    ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
-        Command::cargo_bin("ayb")?
-                .args([$($value,)*])
-                $(.env($env_left, $env_right))*
-    }
-}
-
-// ayb_assert_cmd!("value1", value2; {
-//     "ENV_VAR" => env_value
-// })
-macro_rules! ayb_assert_cmd {
-    ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
-        Command::cargo_bin("ayb")?
-                .args([$($value,)*])
-                $(.env($env_left, $env_right))*
-                .assert()
-                .success()
-    }
-}
-
-struct Cleanup;
-
-impl Drop for Cleanup {
-    fn drop(&mut self) {
-        if let Err(err) = fs::remove_dir_all("/tmp/ayb/e2e") {
-            assert_eq!(format!("{}", err), "No such file or directory (os error 2)")
-        }
-    }
-}
-
-struct AybServer(Child);
-impl AybServer {
-    fn run(db_type: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self(
-            ayb_cmd!("server", "--config", &format!("tests/test-server-config-{}.toml", db_type); {
-                "RUST_LOG" => "actix_web=debug",
-                "RUST_BACKTRACE" => "1"
-            })
-            .spawn()?,
-        ))
-    }
-}
-
-impl Drop for AybServer {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-    }
-}
-
-struct SmtpServer(Child);
-
-impl SmtpServer {
-    fn run(smtp_port: u16) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(SmtpServer(
-            Command::new("tests/smtp_server.sh")
-                .args([&*format!("{}", smtp_port)])
-                .spawn()?,
-        ))
-    }
-}
-
-impl Drop for SmtpServer {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-    }
-}
-
-fn create_database(
-    config: &str,
-    api_key: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", "e2e-first/test.sqlite", "sqlite"; {
-        "AYB_API_TOKEN" => api_key,
-    });
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn query(
-    config: &str,
-    api_key: &str,
-    query: &str,
-    database: &str,
-    format: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {
-        "AYB_API_TOKEN" => api_key,
-    });
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn query_no_api_token(
-    config: &str,
-    query: &str,
-    database: &str,
-    format: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {});
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn set_default_url(
-    config: &str,
-    server_url: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "set_default_url", server_url; {});
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn register(
-    config: &str,
-    server_url: &str,
-    slug: &str,
-    email: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "register", slug, email; {
-        "AYB_CLIENT_CONFIG_FILE" => config,
-        "AYB_SERVER_URL" => server_url,
-    });
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn list_databases(
-    config: &str,
-    api_key: &str,
-    entity: &str,
-    format: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "list", entity, "--format", format; {
-        "AYB_API_TOKEN" => api_key,
-    });
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn profile(
-    config: &str,
-    api_key: &str,
-    entity: &str,
-    format: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "profile", entity, "--format", format; {
-        "AYB_API_TOKEN" => api_key,
-    });
-
-    cmd.stdout(format!("{}\n", result));
-    Ok(())
-}
-
-fn update_profile(
-    config: &str,
-    api_key: &str,
-    entity: &str,
-    display_name: Option<&str>,
-    description: Option<&str>,
-    organization: Option<&str>,
-    location: Option<&str>,
-    links: Option<Vec<&str>>,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("ayb")?;
-    cmd.args(["client", "--config", config, "update_profile", entity])
-        .env("AYB_API_TOKEN", api_key);
-
-    if let Some(display_name) = display_name {
-        cmd.arg("--display_name").arg(display_name);
-    }
-
-    if let Some(description) = description {
-        cmd.arg("--description").arg(description);
-    }
-
-    if let Some(organization) = organization {
-        cmd.arg("--organization").arg(organization);
-    }
-
-    if let Some(location) = location {
-        cmd.arg("--location").arg(location);
-    }
-
-    if let Some(links) = links {
-        cmd.arg("--links").arg(links.join(","));
-    }
-
-    cmd.assert().success().stdout(format!("{}\n", result));
-    Ok(())
-}
+use crate::e2e_tests::{test_entity_details_and_profile};
+use crate::utils::testing::{AybServer, Cleanup, SmtpServer};
+// Consider moving this into registration tests, since it's likely
+// only used there. These functions can stay private.
+use crate::utils::testing::{extract_api_key, extract_token, parse_smtp_log};
+use crate::utils::ayb::{ayb_assert_cmd, create_database, query, query_no_api_token, register, set_default_url};
 
 #[test]
 fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
@@ -281,8 +79,8 @@ fn client_server_integration(
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
 
-    let first_entity_0 = "e2e-first";
-    let first_entity_db = "e2e-first/test.sqlite";
+    let FIRST_ENTITY_SLUG = "e2e-first";
+    let FIRST_ENTITY_DB = "e2e-first/test.sqlite";
 
     // Before running commands, we have no configuration file
     assert_eq!(
@@ -294,7 +92,7 @@ fn client_server_integration(
     register(
         &config_path,
         server_url,
-        first_entity_0,
+        FIRST_ENTITY_SLUG,
         "e2e@example.org",
         "Check your email to finish registering e2e-first",
     )?;
@@ -310,7 +108,7 @@ fn client_server_integration(
     register(
         &config_path,
         server_url,
-        first_entity_0,
+        FIRST_ENTITY_SLUG,
         "e2e@example.org",
         "Check your email to finish registering e2e-first",
     )?;
@@ -320,7 +118,7 @@ fn client_server_integration(
     register(
         &config_path,
         server_url,
-        first_entity_0,
+        FIRST_ENTITY_SLUG,
         "e2e-another@example.org",
         "Check your email to finish registering e2e-first",
     )?;
@@ -337,17 +135,17 @@ fn client_server_integration(
     )?;
 
     // Check that two emails were received
-    let entries = utils::parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
+    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
     assert_eq!(entries.len(), 2);
-    let first_token0 = utils::extract_token(&entries[0])?;
-    let first_token1 = utils::extract_token(&entries[1])?;
-    let entries = utils::parse_smtp_log(&format!(
+    let first_token0 = extract_token(&entries[0])?;
+    let first_token1 = extract_token(&entries[1])?;
+    let entries = parse_smtp_log(&format!(
         "tests/smtp_data_{}/e2e-another@example.org",
         smtp_port
     ))?;
     assert_eq!(entries.len(), 2);
-    let first_token2 = utils::extract_token(&entries[0])?;
-    let second_token0 = utils::extract_token(&entries[1])?;
+    let first_token2 = extract_token(&entries[0])?;
+    let second_token0 = extract_token(&entries[1])?;
 
     // Using a bad token (appending a letter) doesn't work.
     let cmd = ayb_assert_cmd!("client", "confirm", &format!("{}a", first_token0); {
@@ -368,7 +166,7 @@ fn client_server_integration(
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token0; {
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
-    let first_api_key0 = utils::extract_api_key(cmd.get_output())?;
+    let first_api_key0 = extract_api_key(cmd.get_output())?;
     expected_config
         .authentication
         .insert(server_url.to_string(), first_api_key0.clone());
@@ -380,7 +178,7 @@ fn client_server_integration(
     let cmd = ayb_assert_cmd!("client", "confirm", &first_token1; {
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
-    let first_api_key1 = utils::extract_api_key(cmd.get_output())?;
+    let first_api_key1 = extract_api_key(cmd.get_output())?;
     expected_config
         .authentication
         .insert(server_url.to_string(), first_api_key1.clone());
@@ -403,7 +201,7 @@ fn client_server_integration(
     let cmd = ayb_assert_cmd!("client", "confirm", &second_token0; {
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
-    let second_api_key0 = utils::extract_api_key(cmd.get_output())?;
+    let second_api_key0 = extract_api_key(cmd.get_output())?;
     expected_config
         .authentication
         .insert(server_url.to_string(), second_api_key0.clone());
@@ -420,14 +218,14 @@ fn client_server_integration(
 
     cmd.stdout("Check your email to finish logging in e2e-first\n");
 
-    let entries = utils::parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
+    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
     assert_eq!(entries.len(), 3);
-    let login_token = utils::extract_token(&entries[2])?;
+    let login_token = extract_token(&entries[2])?;
 
     let cmd = ayb_assert_cmd!("client", "confirm", &login_token; {
         "AYB_CLIENT_CONFIG_FILE" => config_path.clone(),
     });
-    let first_api_key2 = utils::extract_api_key(cmd.get_output())?;
+    let first_api_key2 = extract_api_key(cmd.get_output())?;
     expected_config
         .authentication
         .insert(server_url.to_string(), first_api_key2.clone());
@@ -473,7 +271,7 @@ fn client_server_integration(
         &config_path,
         &second_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "table",
         "Error: Authenticated entity e2e-second can not query database e2e-first/test.sqlite",
     )?;
@@ -483,7 +281,7 @@ fn client_server_integration(
         &config_path,
         &format!("{}bad", first_api_key0),
         "CREATE TABLE test_table(fname varchar, lname varchar);",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "table",
         "Error: Invalid API token",
     )?;
@@ -494,7 +292,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "CREATE TABLE test_table(fname varchar, lname varchar);",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
@@ -502,7 +300,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key1,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
@@ -510,7 +308,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key2,
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
@@ -518,14 +316,14 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "table",                 
         " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
     query(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
@@ -535,7 +333,7 @@ fn client_server_integration(
     query_no_api_token(
         &config_path,
         "SELECT * FROM test_table;",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
@@ -557,7 +355,7 @@ fn client_server_integration(
         &config_path,
         &first_api_key0,
         "SELECT * FROM test_table;",
-        first_entity_db,
+        FIRST_ENTITY_DB,
         "csv",
         "Error: reqwest::Error { kind: Builder, source: InvalidPort }",
     )?;
@@ -580,100 +378,7 @@ fn client_server_integration(
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
 
-    // List databases from first account using its API key
-    list_databases(
-        &config_path,
-        &first_api_key0,
-        "E2E-FiRsT", // Entity slugs should be case-insensitive
-        "csv",
-        "Database slug,Type\ntest.sqlite,sqlite",
-    )?;
-
-    // List databases from first account using the API key of the second account
-    list_databases(
-        &config_path,
-        &second_api_key0,
-        first_entity_0,
-        "csv",
-        &format!("No queryable databases owned by {}", first_entity_0),
-    )?;
-
-    // Make some partial profile updates and verify profile details upon retrieval
-    update_profile(
-        &config_path,
-        &first_api_key0,
-        first_entity_0,
-        Some("Entity 0"),
-        None,
-        None,
-        None,
-        None,
-        "Successfully updated profile",
-    )?;
-
-    profile(
-        &config_path,
-        &first_api_key0,
-        "E2E-FiRsT", // Entity slugs should be case-insensitive
-        "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,null,null,null,",
-    )?;
-
-    update_profile(
-        &config_path,
-        &first_api_key0,
-        "E2E-FiRST", // Entity slugs should be case-insensitive
-        Some("Entity 0"),
-        Some("Entity 0 description"),
-        None,
-        None,
-        None,
-        "Successfully updated profile",
-    )?;
-
-    profile(
-        &config_path,
-        &first_api_key0,
-        first_entity_0,
-        "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,"
-    )?;
-
-    profile(
-        &config_path,
-        &second_api_key0,
-        first_entity_0,
-        "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 description,null,null,"
-    )?;
-
-    update_profile(
-        &config_path,
-        &first_api_key0,
-        first_entity_0,
-        None,
-        Some("Entity 0 NEW description"),
-        Some("Entity 0 organization"),
-        None,
-        Some(vec!["http://ayb.host/", "http://ayb2.host"]),
-        "Successfully updated profile",
-    )?;
-
-    profile(
-        &config_path,
-        &first_api_key0,
-        first_entity_0,
-        "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,\"http://ayb.host/,http://ayb2.host\""
-    )?;
-
-    profile(
-        &config_path,
-        &second_api_key0,
-        first_entity_0,
-        "csv",
-        "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,\"http://ayb.host/,http://ayb2.host\""
-    )?;
+    test_entity_details_and_profile(&config_path)?;
 
     Ok(())
 }
