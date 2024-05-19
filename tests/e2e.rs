@@ -16,7 +16,7 @@ use crate::utils::testing::{AybServer, Cleanup, SmtpServer};
 // Consider moving this into registration tests, since it's likely
 // only used there. These functions can stay private.
 use crate::utils::testing::{extract_api_key, extract_token, parse_smtp_log};
-use crate::utils::ayb::{ayb_assert_cmd, create_database, query, query_no_api_token, register, set_default_url};
+use crate::utils::ayb::{create_database, query, query_no_api_token, register, set_default_url};
 
 #[test]
 fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {

@@ -4,6 +4,7 @@ use std::process::Command;
 // ayb_assert_cmd!("value1", value2; {
 //     "ENV_VAR" => env_value
 // })
+#[macro_export]
 macro_rules! ayb_assert_cmd {
     ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
         Command::cargo_bin("ayb")?
