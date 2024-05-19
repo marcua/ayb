@@ -6,6 +6,7 @@ mod utils;
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
 use std::thread;
@@ -233,6 +234,11 @@ fn client_server_integration(
         fs::read_to_string(&config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
+
+    let mut api_keys: HashMap<String, Vec<String>> = HashMap::new();
+    api_keys.insert("first".to_string(), vec![first_api_key0, first_api_key1, first_api_key2]);
+    api_keys.insert("second".to_string(), vec![second_api_key0]);    
+
     // To summarize where we are at this point
     // * User e2e-first has three API tokens (first_api_key[0...2]). We'll use these
     //   interchangeably below.
@@ -241,35 +247,35 @@ fn client_server_integration(
     // Can't create database on e2e-first with e2e-second's token.
     create_database(
         &config_path,
-        &second_api_key0,
+        &api_keys.get("second").unwrap()[0],
         "Error: Authenticated entity e2e-second can not create a database for entity e2e-first",
     )?;
 
     // Can't create database on e2e-first with invalid token.
     create_database(
         &config_path,
-        &format!("{}bad", first_api_key0),
+        &format!("{}bad", api_keys.get("first").unwrap()[0]),
         "Error: Invalid API token",
     )?;
 
     // Create a database with the appropriate user/key pair.
     create_database(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "Successfully created e2e-first/test.sqlite",
     )?;
 
     // Can't create a database twice.
     create_database(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "Error: Database already exists",
     )?;
 
     // Can't query database with second account's API key
     query(
         &config_path,
-        &second_api_key0,
+        &api_keys.get("second").unwrap()[0],
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         FIRST_ENTITY_DB,
         "table",
@@ -279,7 +285,7 @@ fn client_server_integration(
     // Can't query database with bad API key.
     query(
         &config_path,
-        &format!("{}bad", first_api_key0),
+        &format!("{}bad", api_keys.get("first").unwrap()[0]),
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         FIRST_ENTITY_DB,
         "table",
@@ -290,7 +296,7 @@ fn client_server_integration(
     // keys for the first account to ensure they all work.
     query(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         FIRST_ENTITY_DB,
         "table",
@@ -298,7 +304,7 @@ fn client_server_integration(
     )?;
     query(
         &config_path,
-        &first_api_key1,
+        &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
         FIRST_ENTITY_DB,
         "table",
@@ -306,7 +312,7 @@ fn client_server_integration(
     )?;
     query(
         &config_path,
-        &first_api_key2,
+        &api_keys.get("first").unwrap()[2],
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
         FIRST_ENTITY_DB,
         "table",
@@ -314,14 +320,14 @@ fn client_server_integration(
     )?;
     query(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "SELECT * FROM test_table;",
         FIRST_ENTITY_DB,
         "table",                 
         " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
     query(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "SELECT * FROM test_table;",
         FIRST_ENTITY_DB,
         "csv",
@@ -353,7 +359,7 @@ fn client_server_integration(
     );
     query(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "SELECT * FROM test_table;",
         FIRST_ENTITY_DB,
         "csv",
@@ -371,14 +377,14 @@ fn client_server_integration(
     );
     query(
         &config_path,
-        &first_api_key0,
+        &api_keys.get("first").unwrap()[0],
         "SELECT * FROM test_table;",
         "E2E-FiRST/test.sqlite", // Entity slugs should be case-insensitive
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
 
-    test_entity_details_and_profile(&config_path)?;
+    test_entity_details_and_profile(&config_path, &api_keys)?;
 
     Ok(())
 }
