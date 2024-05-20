@@ -2,7 +2,10 @@ use crate::e2e_tests::FIRST_ENTITY_SLUG;
 use crate::utils::ayb::{list_databases, profile, update_profile};
 use std::collections::HashMap;
 
-pub fn test_entity_details_and_profile(config_path: &str, api_keys: &HashMap<String, Vec<String>>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn test_entity_details_and_profile(
+    config_path: &str,
+    api_keys: &HashMap<String, Vec<String>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     // List databases from first account using its API key
     list_databases(
         &config_path,
