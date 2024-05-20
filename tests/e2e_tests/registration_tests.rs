@@ -24,7 +24,7 @@ fn extract_api_key(output: &Output) -> Result<String, AybError> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct EmailEntry {
+struct EmailEntry {
     from: String,
     to: String,
     reply_to: String,
