@@ -17,7 +17,7 @@ aws-config = { version = "1.4.0", features = ["behavior-version-latest"] }
 aws-credential-types = { version = "1.1.8", features = ["hardcoded-credentials"] }
 aws-sdk-s3 = { version = "1.29.0" }
 aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
-aws-types = { version = "1.2.1" }
+aws-types = { version = "1.3.0" }
 chrono = { version = "0.4.38", features = [ "serde" ] }
 clap = { version = "4.5.4", features = ["cargo", "derive", "env"] }
 derive_more = { version = "0.99.0" }
