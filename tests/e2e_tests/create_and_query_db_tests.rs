@@ -1,4 +1,4 @@
-use crate::e2e_tests::FIRST_ENTITY_DB;
+use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED};
 use crate::utils::ayb::{create_database, query, query_no_api_token, set_default_url};
 use ayb::client::config::ClientConfig;
 use std::collections::HashMap;
@@ -145,7 +145,7 @@ pub fn test_create_and_query_db(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         "SELECT * FROM test_table;",
-        "E2E-FiRST/test.sqlite", // Entity slugs should be case-insensitive
+        FIRST_ENTITY_DB_CASED, // Entity slugs should be case-insensitive
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
