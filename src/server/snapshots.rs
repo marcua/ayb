@@ -57,7 +57,7 @@ pub async fn schedule_periodic_snapshots(
 #[allow(clippy::borrowed_box)]
 async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) {
     // Walk the data path for entity slugs, database slugs
-    for entry in WalkDir::new(database_parent_path(&config.data_path).unwrap())
+    for entry in WalkDir::new(database_parent_path(&config.data_path, true).unwrap())
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| !e.file_type().is_dir())
