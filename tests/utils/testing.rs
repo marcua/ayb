@@ -1,5 +1,9 @@
 use assert_cmd::prelude::*;
+use ayb::error::AybError;
+use ayb::server::config::read_config;
+use ayb::server::snapshots::storage::SnapshotStorage;
 use std::fs;
+use std::path::PathBuf;
 use std::process::{Child, Command};
 
 // ayb_cmd!("value1", value2; {
@@ -23,11 +27,15 @@ impl Drop for Cleanup {
     }
 }
 
+fn server_config_path(db_type: &str) -> String {
+    format!("tests/test-server-config-{}.toml", db_type)
+}
+
 pub struct AybServer(Child);
 impl AybServer {
     pub fn run(db_type: &str) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self(
-            ayb_cmd!("server", "--config", &format!("tests/test-server-config-{}.toml", db_type); {
+            ayb_cmd!("server", "--config", &server_config_path(db_type); {
                 "RUST_LOG" => "actix_web=debug",
                 "RUST_BACKTRACE" => "1"
             })
@@ -58,4 +66,9 @@ impl Drop for SmtpServer {
     fn drop(&mut self) {
         let _ = self.0.kill();
     }
+}
+
+pub async fn snapshot_storage(db_type: &str) -> Result<SnapshotStorage, AybError> {
+    let config = read_config(&PathBuf::from(server_config_path(db_type)))?;
+    Ok(SnapshotStorage::new(&config.snapshots.unwrap()).await?)
 }

@@ -21,3 +21,16 @@ origin = "*"
 
 [isolation]
 nsjail_path = "tests/nsjail"
+
+[snapshots]
+sqlite_method = "Vacuum"
+access_key_id = "test"
+secret_access_key = "test"
+bucket = "bucket"
+path_prefix = "postgres"
+endpoint_url = "http://localhost:4566"
+force_path_style = true
+
+[snapshots.automation]
+interval = "2s"
+num_snapshots = 10

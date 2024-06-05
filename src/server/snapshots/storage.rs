@@ -58,6 +58,62 @@ impl SnapshotStorage {
         )
     }
 
+    /// Deletes all files in this bucket for
+    /// `entity_slug/database_slug`. Currently only used in tests to
+    /// get to a predictable starting point.
+    pub async fn dangerously_delete_prefix(
+        &self,
+        entity_slug: &str,
+        database_slug: &str,
+    ) -> Result<(), AybError> {
+        let path = self.db_path(entity_slug, database_slug, "");
+        let objects = self
+            .client
+            .list_objects_v2()
+            .bucket(&self.bucket)
+            .prefix(path.clone())
+            .send()
+            .await
+            .map_err(|err| AybError::S3ExecutionError {
+                message: format!("Unable to list objects to delete at {}: {:?}", path, err),
+            })?;
+
+        let mut delete_objects: Vec<aws_sdk_s3::types::ObjectIdentifier> = vec![];
+        for obj in objects.contents() {
+            let obj_id = aws_sdk_s3::types::ObjectIdentifier::builder()
+                .set_key(Some(obj.key().unwrap().to_string()))
+                .build()
+                .map_err(|err| AybError::S3ExecutionError {
+                    message: format!("Identify object ID to delete for {}: {:?}", path, err),
+                })?;
+            delete_objects.push(obj_id);
+        }
+
+        if !delete_objects.is_empty() {
+            self.client
+                .delete_objects()
+                .bucket(&self.bucket)
+                .delete(
+                    aws_sdk_s3::types::Delete::builder()
+                        .set_objects(Some(delete_objects))
+                        .build()
+                        .map_err(|err| AybError::S3ExecutionError {
+                            message: format!(
+                                "Unable to create deletion builder for {}: {:?}",
+                                path, err
+                            ),
+                        })?,
+                )
+                .send()
+                .await
+                .map_err(|err| AybError::S3ExecutionError {
+                    message: format!("Unable to delete objects as listed in {}: {:?}", path, err),
+                })?;
+        }
+
+        Ok(())
+    }
+
     pub async fn list_snapshots(
         &self,
         entity_slug: &str,

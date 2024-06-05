@@ -4,7 +4,7 @@ mod e2e_tests;
 mod utils;
 
 use crate::e2e_tests::{
-    test_create_and_query_db, test_entity_details_and_profile, test_registration,
+    test_create_and_query_db, test_entity_details_and_profile, test_registration, test_snapshots,
 };
 use crate::utils::testing::{AybServer, Cleanup, SmtpServer};
 use assert_cmd::prelude::*;
@@ -13,15 +13,16 @@ use regex::Regex;
 use std::process::Command;
 use std::thread;
 use std::time;
+use tokio;
 
-#[test]
-fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
-    client_server_integration("postgres", "http://127.0.0.1:5433", 10025)
+#[tokio::test]
+async fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
+    client_server_integration("postgres", "http://127.0.0.1:5433", 10025).await
 }
 
-#[test]
-fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
-    client_server_integration("sqlite", "http://127.0.0.1:5434", 10026)
+#[tokio::test]
+async fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
+    client_server_integration("sqlite", "http://127.0.0.1:5434", 10026).await
 }
 
 #[test]
@@ -54,7 +55,7 @@ origin = "*"
     Ok(())
 }
 
-fn client_server_integration(
+async fn client_server_integration(
     db_type: &str,
     server_url: &str,
     smtp_port: u16,
@@ -79,6 +80,7 @@ fn client_server_integration(
     let api_keys = test_registration(&config_path, server_url, smtp_port, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
+    test_snapshots(db_type, &config_path, &api_keys).await?;
 
     Ok(())
 }
