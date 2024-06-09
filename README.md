@@ -204,19 +204,23 @@ nsjail_path = "path/to/nsjail"
 `ayb` is largely tested through [end-to-end
 tests](tests/e2e.rs) that mimic as realistic an environment as
 possible. Individual modules may also provide more specific unit
-tests. To run the tests, type:
+tests. To set up your environment for running end-to-end tests, type:
+
+```bash
+tests/set_up_e2e_env.sh
+```
+
+After your environment is set up, you can run the tests with:
 
 ```bash
 cargo test --verbose
 ```
 
-Because the tests cover [isolation](#isolation), an `nsjail` binary is
-required for running the end-to-end tests. To build and place `nsjail`
-in the appropriate directory, run:
-
-```bash
-scripts/build_nsjail.sh && mv nsjail tests/
-```
+In order to mimic as close to a realistic environment as possible, the end-to-end tests mock out very little functionality. The `tests/set_up_e2e_env.sh` script, which has been used extensively in Ubuntu, does the following:
+* Sets up a Python virtual environment and installs requirements for various helpers.
+* Installs requirements for a Python-based stub SMTP server to help test email-based registration.
+* Installs the requirements for a [LocalStack](https://docs.localstack.cloud/getting-started/quickstart/) server and then runs that server in the background (requires Docker) in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
+* Installs an `nsjail` binary to test `ayb`'s [isolation](#isolation) functionality.
 
 ## FAQ
 
