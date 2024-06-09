@@ -27,7 +27,7 @@ async fn list_snapshots(
         if let Some(ref snapshot_config) = ayb_config.snapshots {
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
             recent_snapshots = snapshot_storage
-                .list_snapshots(&entity_slug, &database_slug)
+                .list_snapshots(entity_slug, database_slug)
                 .await?;
         }
         Ok(web::Json(SnapshotList {
