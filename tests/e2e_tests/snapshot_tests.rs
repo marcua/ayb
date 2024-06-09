@@ -37,13 +37,17 @@ pub async fn test_snapshots(
 
     // We'll sleep between various checks in this test to allow the
     // snapshotting logic, which runs every 2 seconds, to execute.
+    let snapshot_result_line = format!(
+        r"bucket\/{}\/e2e-first\/test.sqlite\/notimplemented,\d{{4,5}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}} UTC",
+        db_type
+    );
     thread::sleep(time::Duration::from_secs(3));
     list_snapshots(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
+        &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
 
     // No change to database, so same number of snapshots after sleep.
@@ -53,7 +57,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
+        &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
 
     // Modify database, wait, and ensure a new snapshot was taken.
@@ -73,7 +77,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
+        &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
 
     Ok(())
