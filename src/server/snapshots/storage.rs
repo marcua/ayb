@@ -66,25 +66,17 @@ impl SnapshotStorage {
         entity_slug: &str,
         database_slug: &str,
     ) -> Result<(), AybError> {
-        let path = self.db_path(entity_slug, database_slug, "");
-        let objects = self
-            .client
-            .list_objects_v2()
-            .bucket(&self.bucket)
-            .prefix(path.clone())
-            .send()
-            .await
-            .map_err(|err| AybError::S3ExecutionError {
-                message: format!("Unable to list objects to delete at {}: {:?}", path, err),
-            })?;
-
+        let snapshots = self.list_snapshots(entity_slug, database_slug);
         let mut delete_objects: Vec<aws_sdk_s3::types::ObjectIdentifier> = vec![];
-        for obj in objects.contents() {
+        for snapshot in snapshots.await? {
             let obj_id = aws_sdk_s3::types::ObjectIdentifier::builder()
-                .set_key(Some(obj.key().unwrap().to_string()))
+                .set_key(Some(snapshot.name))
                 .build()
                 .map_err(|err| AybError::S3ExecutionError {
-                    message: format!("Identify object ID to delete for {}: {:?}", path, err),
+                    message: format!(
+                        "Identify object ID to delete for {}/{}: {:?}",
+                        entity_slug, database_slug, err
+                    ),
                 })?;
             delete_objects.push(obj_id);
         }
@@ -99,15 +91,18 @@ impl SnapshotStorage {
                         .build()
                         .map_err(|err| AybError::S3ExecutionError {
                             message: format!(
-                                "Unable to create deletion builder for {}: {:?}",
-                                path, err
+                                "Unable to create deletion builder for {}/{}: {:?}",
+                                entity_slug, database_slug, err
                             ),
                         })?,
                 )
                 .send()
                 .await
                 .map_err(|err| AybError::S3ExecutionError {
-                    message: format!("Unable to delete objects as listed in {}: {:?}", path, err),
+                    message: format!(
+                        "Unable to delete objects as listed in {}/{}: {:?}",
+                        entity_slug, database_slug, err
+                    ),
                 })?;
         }
 
