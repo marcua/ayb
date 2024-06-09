@@ -43,7 +43,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4-5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
+        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
     )?;
 
     // No change to database, so same number of snapshots after sleep.
@@ -53,7 +53,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4-5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
+        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
     )?;
 
     // Modify database, wait, and ensure a new snapshot was taken.
@@ -73,7 +73,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4-5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
+        r"Name,Last modified\nbucket/sqlite/e2e-first/test.sqlite/notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC",
     )?;
 
     Ok(())
