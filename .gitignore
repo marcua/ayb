@@ -24,3 +24,4 @@ tests/smtp_data_10026
 tests/nsjail
 tests/localstack_init.sh
 tests/localstack_data*
+tests/test-env

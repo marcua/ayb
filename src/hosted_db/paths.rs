@@ -10,7 +10,11 @@ pub fn database_parent_path(data_path: &str, create_path: bool) -> Result<PathBu
     if create_path {
         if let Err(e) = fs::create_dir_all(&path) {
             return Err(AybError::Other {
-                message: format!("Unable to create database parent path {}", path.display()),
+                message: format!(
+                    "Unable to create database parent path {}: {}",
+                    path.display(),
+                    e
+                ),
             });
         }
     }
