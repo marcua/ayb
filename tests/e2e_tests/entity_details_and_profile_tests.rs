@@ -1,4 +1,4 @@
-use crate::e2e_tests::FIRST_ENTITY_SLUG;
+use crate::e2e_tests::{FIRST_ENTITY_SLUG, FIRST_ENTITY_SLUG_CASED};
 use crate::utils::ayb::{list_databases, profile, update_profile};
 use std::collections::HashMap;
 
@@ -10,7 +10,7 @@ pub fn test_entity_details_and_profile(
     list_databases(
         &config_path,
         &api_keys.get("first").unwrap()[0],
-        "E2E-FiRsT", // Entity slugs should be case-insensitive
+        FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
@@ -40,7 +40,7 @@ pub fn test_entity_details_and_profile(
     profile(
         &config_path,
         &api_keys.get("first").unwrap()[0],
-        "E2E-FiRsT", // Entity slugs should be case-insensitive
+        FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         "csv",
         "Display name,Description,Organization,Location,Links\nEntity 0,null,null,null,",
     )?;
@@ -48,7 +48,7 @@ pub fn test_entity_details_and_profile(
     update_profile(
         &config_path,
         &api_keys.get("first").unwrap()[0],
-        "E2E-FiRST", // Entity slugs should be case-insensitive
+        FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         Some("Entity 0"),
         Some("Entity 0 description"),
         None,

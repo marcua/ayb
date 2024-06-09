@@ -5,8 +5,19 @@ use std::path::{Path, PathBuf};
 const DATABASES: &str = "databases";
 const SNAPSHOTS: &str = "snapshots";
 
-pub fn database_parent_path(data_path: &str) -> Result<PathBuf, AybError> {
+pub fn database_parent_path(data_path: &str, create_path: bool) -> Result<PathBuf, AybError> {
     let path: PathBuf = [data_path, DATABASES].iter().collect();
+    if create_path {
+        if let Err(e) = fs::create_dir_all(&path) {
+            return Err(AybError::Other {
+                message: format!(
+                    "Unable to create database parent path {}: {}",
+                    path.display(),
+                    e
+                ),
+            });
+        }
+    }
     Ok(fs::canonicalize(path)?)
 }
 

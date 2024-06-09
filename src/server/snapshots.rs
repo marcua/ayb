@@ -1,5 +1,5 @@
-mod models;
-mod storage;
+pub mod models;
+pub mod storage;
 
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
@@ -57,7 +57,7 @@ pub async fn schedule_periodic_snapshots(
 #[allow(clippy::borrowed_box)]
 async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) {
     // Walk the data path for entity slugs, database slugs
-    for entry in WalkDir::new(database_parent_path(&config.data_path).unwrap())
+    for entry in WalkDir::new(database_parent_path(&config.data_path, true).unwrap())
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| !e.file_type().is_dir())
@@ -158,15 +158,6 @@ pub async fn snapshot_database(
                 .await?
                 .pop();
             println!("Storage: {:?}", recent_snapshot);
-            // TODO(marcua)
-            // - Run minio
-            // - Copy header data (e.g., hashes) to S3 headers
-            // - Add to tests. Installation command in scripts/install_minio.sh.
-            // - Add hashes, don't snapshot if hashes match (and update tests)
-            // - Include timestamp data to avoid even snapshotting/hashing (get fs::metadata of each file in the dir, call `modified()` on result, sort the times so it's stable, take max or shasum them together).
-            // - Remove old snapshots in list beyond the retention quantity/period.
-            // - Clean up: Initialize a HostedDb that has a SQLite / DuckDB implementation. Push query/backup logic into that. Consider doing this on an InstantiatedDatabase directly.
-            // - If we don't need chrono for datetimes in hindsight, we can remove it from our snapshot models and sqlx features. (grep for chrono).
             println!("Completed snapshot");
 
             // Clean up after uploading snapshot.

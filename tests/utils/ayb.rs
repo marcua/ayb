@@ -1,4 +1,5 @@
 use assert_cmd::prelude::*;
+use predicates::prelude::*;
 use std::process::Command;
 
 // ayb_assert_cmd!("value1", value2; {
@@ -96,6 +97,21 @@ pub fn list_databases(
     });
 
     cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
+pub fn list_snapshots(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "list_snapshots", database, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(predicate::str::is_match(&format!("{}\n", result)).unwrap());
     Ok(())
 }
 

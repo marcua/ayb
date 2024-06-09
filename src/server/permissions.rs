@@ -15,3 +15,11 @@ pub fn can_query(
     // An entity/user can only query its own databases (for now)
     authenticated_entity.id == database.entity_id
 }
+
+pub fn can_manage_snapshots(
+    authenticated_entity: &InstantiatedEntity,
+    database: &InstantiatedDatabase,
+) -> bool {
+    // An entity/user can only manage snapshots on its own databases (for now)
+    authenticated_entity.id == database.entity_id
+}

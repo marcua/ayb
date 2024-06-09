@@ -39,7 +39,7 @@ jobs:
       run: cargo clippy -- -D warnings
     - name: Install nsjail requirements
       run: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
-    - name: Build nsjail
-      run: scripts/build_nsjail.sh && mv nsjail tests/
+    - name: Set up environment for end-to-end tests
+      run: tests/set_up_e2e_env.sh
     - name: Run tests
       run: cargo test --verbose

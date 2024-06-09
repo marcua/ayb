@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse};
+use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse, SnapshotList};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -114,6 +114,24 @@ impl AybClient {
             .await?;
 
         self.handle_response(response, reqwest::StatusCode::CREATED)
+            .await
+    }
+
+    pub async fn list_snapshots(
+        &self,
+        entity: &str,
+        database: &str,
+    ) -> Result<SnapshotList, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url(format!("{}/{}/list_snapshots", entity, database)))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
             .await
     }
 
