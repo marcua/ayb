@@ -178,6 +178,22 @@ impl SnapshotStorage {
             match result {
                 Ok(output) => {
                     for object in output.contents() {
+                        let key = object
+                            .key
+                            .as_ref()
+                            .ok_or_else(|| AybError::S3ExecutionError {
+                                message: format!("Unable to read key from object: {:?}", object),
+                            })?
+                            .clone();
+                        let snapshot_id = key
+                            .rsplit_once("/")
+                            .ok_or_else(|| AybError::S3ExecutionError {
+                                message: format!(
+                                    "Unexpected key path {} on object: {:?}",
+                                    key, object
+                                ),
+                            })?
+                            .1;
                         results.push(ListSnapshotResult {
                             last_modified_at: object
                                 .last_modified
@@ -188,16 +204,7 @@ impl SnapshotStorage {
                                         object
                                     ),
                                 })??,
-                            name: object
-                                .key
-                                .as_ref()
-                                .ok_or_else(|| AybError::S3ExecutionError {
-                                    message: format!(
-                                        "Unable to read key from object: {:?}",
-                                        object
-                                    ),
-                                })?
-                                .clone(),
+                            name: snapshot_id.to_string(),
                         });
                     }
                 }
