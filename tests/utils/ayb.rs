@@ -115,6 +115,21 @@ pub fn list_snapshots(
     Ok(())
 }
 
+pub fn restore_snapshot(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    snapshot_name: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "restore_snapshot", database, snapshot_name; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
 pub fn profile(
     config: &str,
     api_key: &str,

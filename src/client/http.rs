@@ -117,6 +117,26 @@ impl AybClient {
             .await
     }
 
+    pub async fn restore_snapshot(
+        &self,
+        entity: &str,
+        database: &str,
+        snapshot_name: &str,
+    ) -> Result<(), AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .post(self.make_url(format!("{}/{}/restore_snapshot", entity, database)))
+            .headers(headers)
+            .body(snapshot_name.to_owned())
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
     pub async fn list_snapshots(
         &self,
         entity: &str,

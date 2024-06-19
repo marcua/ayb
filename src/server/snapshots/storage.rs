@@ -1,4 +1,5 @@
 use crate::error::AybError;
+use crate::hosted_db::paths::database_snapshot_path;
 use crate::server::config::AybConfigSnapshots;
 use crate::server::snapshots::models::{ListSnapshotResult, Snapshot};
 use aws_config::meta::region::RegionProviderChain;
@@ -9,7 +10,7 @@ use aws_types::region::Region;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
-use std::io::{self};
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 pub struct SnapshotStorage {
@@ -107,6 +108,55 @@ impl SnapshotStorage {
         }
 
         Ok(())
+    }
+
+    pub async fn retrieve_snapshot(
+        &self,
+        entity_slug: &str,
+        database_slug: &str,
+        snapshot_name: &str,
+        data_path: &str,
+    ) -> Result<PathBuf, AybError> {
+        let s3_path = self.db_path(entity_slug, database_slug, snapshot_name);
+        let mut snapshot_path = database_snapshot_path(
+            entity_slug,
+            database_slug,
+            &format!("{}-restore", snapshot_name),
+            data_path,
+        )?;
+        snapshot_path.push(database_slug);
+        let mut file = File::create(snapshot_path.clone())?;
+
+        let mut object = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(&s3_path.clone())
+            .send()
+            .await
+            .map_err(|err| AybError::S3ExecutionError {
+                message: format!(
+                    "Unable to retrieve snapshot in S3 at {}: {:?}",
+                    s3_path, err
+                ),
+            })?;
+
+        while let Some(bytes) =
+            object
+                .body
+                .try_next()
+                .await
+                .map_err(|err| AybError::S3ExecutionError {
+                    message: format!(
+                        "Unable to retrieve snapshot chunk at {}: {:?}",
+                        s3_path, err
+                    ),
+                })?
+        {
+            file.write_all(&bytes)?;
+        }
+
+        Ok(snapshot_path)
     }
 
     pub async fn list_snapshots(

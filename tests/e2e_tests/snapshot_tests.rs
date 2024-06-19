@@ -1,7 +1,7 @@
 use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG,
 };
-use crate::utils::ayb::{list_snapshots, query};
+use crate::utils::ayb::{list_snapshots, query, restore_snapshot};
 use crate::utils::testing::snapshot_storage;
 use std::collections::HashMap;
 use std::thread;
@@ -80,5 +80,40 @@ pub async fn test_snapshots(
         &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
 
+    // Insert another row and ensure there are four. Then restore the
+    // previous snapshot, ensuring there are only three rows row.
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "INSERT INTO test_table (fname, lname) VALUES (\"yet another first\", \"yet another last\");",
+        FIRST_ENTITY_DB,
+        "table",
+        "\nRows: 0",
+    )?;
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "SELECT COUNT(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DB,
+        "table",
+        " the_count \n-----------\n 4 \n\nRows: 1",
+    )?;
+    restore_snapshot(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "notimplemented", // TODO(marcua): Replace with snapshot ID when we implement hashing.
+        "Restored snapshot replaceme",
+    )?;
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "SELECT COUNT(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DB,
+        "table",
+        " the_count \n-----------\n 3 \n\nRows: 1",
+    )?;
+
+    // TODO(marcua): Should it be called snapshot name or snapshot ID or snapshot slug or snapshot hash? snapshot_id, and also rename ListSnapshotResult to have an id instead of a name.
     Ok(())
 }
