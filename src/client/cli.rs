@@ -198,7 +198,7 @@ pub fn client_commands() -> Command {
                      .value_parser(ValueParser::new(entity_database_parser))
                      .required(true)
                 )
-                .arg(arg!(<snapshot_name> "The name of the snapshot to load").required(true))               )
+                .arg(arg!(<snapshot_id> "The name of the snapshot to load").required(true))               )
 }
 
 pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()> {
@@ -462,22 +462,22 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
             }
         }
     } else if let Some(matches) = matches.subcommand_matches("restore_snapshot") {
-        if let (Some(entity_database), Some(snapshot_name)) = (
+        if let (Some(entity_database), Some(snapshot_id)) = (
             matches.get_one::<EntityDatabasePath>("database"),
-            matches.get_one::<String>("snapshot_name"),
+            matches.get_one::<String>("snapshot_id"),
         ) {
             match client
                 .restore_snapshot(
                     &entity_database.entity,
                     &entity_database.database,
-                    snapshot_name,
+                    snapshot_id,
                 )
                 .await
             {
                 Ok(_response) => {
                     println!(
                         "Restored {}/{} to snapshot {}",
-                        entity_database.entity, entity_database.database, snapshot_name
+                        entity_database.entity, entity_database.database, snapshot_id
                     );
                 }
                 Err(err) => {

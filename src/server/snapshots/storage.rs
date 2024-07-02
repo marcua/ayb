@@ -46,7 +46,7 @@ impl SnapshotStorage {
         })
     }
 
-    fn db_path(&self, entity_slug: &str, database_slug: &str, final_part: &str) -> String {
+    fn db_path(&self, entity_slug: &str, database_slug: &str, snapshot_id: &str) -> String {
         // Include bucket details in path only if `force_path_style` is `true`.
         let bucket = if self.force_path_style {
             format!("{}/", self.bucket)
@@ -55,7 +55,7 @@ impl SnapshotStorage {
         };
         format!(
             "{}{}/{}/{}/{}",
-            bucket, self.path_prefix, entity_slug, database_slug, final_part
+            bucket, self.path_prefix, entity_slug, database_slug, snapshot_id
         )
     }
 
@@ -71,7 +71,11 @@ impl SnapshotStorage {
         let mut delete_objects: Vec<aws_sdk_s3::types::ObjectIdentifier> = vec![];
         for snapshot in snapshots.await? {
             let obj_id = aws_sdk_s3::types::ObjectIdentifier::builder()
-                .set_key(Some(snapshot.name))
+                .set_key(Some(self.db_path(
+                    entity_slug,
+                    database_slug,
+                    &snapshot.snapshot_id,
+                )))
                 .build()
                 .map_err(|err| AybError::S3ExecutionError {
                     message: format!(
@@ -142,7 +146,7 @@ impl SnapshotStorage {
             })?;
 
         while let Some(bytes) =
-            object
+            response
                 .body
                 .try_next()
                 .await
@@ -204,7 +208,7 @@ impl SnapshotStorage {
                                         object
                                     ),
                                 })??,
-                            name: snapshot_id.to_string(),
+                            snapshot_id: snapshot_id.to_string(),
                         });
                     }
                 }

@@ -37,10 +37,7 @@ pub async fn test_snapshots(
 
     // We'll sleep between various checks in this test to allow the
     // snapshotting logic, which runs every 2 seconds, to execute.
-    let snapshot_result_line = format!(
-        r"bucket\/{}\/e2e-first\/test.sqlite\/notimplemented,\d{{4,5}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}} UTC",
-        db_type
-    );
+    let snapshot_result_line = r"notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC";
     thread::sleep(time::Duration::from_secs(3));
     list_snapshots(
         &config_path,
@@ -103,7 +100,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "notimplemented", // TODO(marcua): Replace with snapshot ID when we implement hashing.
-        "Restored snapshot replaceme",
+        "Restored e2e-first/test.sqlite to snapshot notimplemented",
     )?;
     query(
         &config_path,
@@ -114,6 +111,5 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
-    // TODO(marcua): Should it be called snapshot name or snapshot ID or snapshot slug or snapshot hash? snapshot_id, and also rename ListSnapshotResult to have an id instead of a name.
     Ok(())
 }

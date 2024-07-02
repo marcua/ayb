@@ -119,10 +119,10 @@ pub fn restore_snapshot(
     config: &str,
     api_key: &str,
     database: &str,
-    snapshot_name: &str,
+    snapshot_id: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "restore_snapshot", database, snapshot_name; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "restore_snapshot", database, snapshot_id; {
         "AYB_API_TOKEN" => api_key,
     });
 
