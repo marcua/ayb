@@ -7,6 +7,7 @@ use aws_credential_types::Credentials;
 use aws_sdk_s3;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use aws_types::region::Region;
+use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
@@ -118,20 +119,19 @@ impl SnapshotStorage {
         &self,
         entity_slug: &str,
         database_slug: &str,
-        snapshot_name: &str,
+        snapshot_id: &str,
         data_path: &str,
     ) -> Result<PathBuf, AybError> {
-        let s3_path = self.db_path(entity_slug, database_slug, snapshot_name);
+        let s3_path = self.db_path(entity_slug, database_slug, snapshot_id);
         let mut snapshot_path = database_snapshot_path(
             entity_slug,
             database_slug,
-            &format!("{}-restore", snapshot_name),
+            &format!("{}-restore", snapshot_id),
             data_path,
         )?;
         snapshot_path.push(database_slug);
-        let mut file = File::create(snapshot_path.clone())?;
 
-        let mut object = self
+        let response = self
             .client
             .get_object()
             .bucket(&self.bucket)
@@ -144,21 +144,22 @@ impl SnapshotStorage {
                     s3_path, err
                 ),
             })?;
-
-        while let Some(bytes) =
-            response
-                .body
-                .try_next()
-                .await
-                .map_err(|err| AybError::S3ExecutionError {
-                    message: format!(
-                        "Unable to retrieve snapshot chunk at {}: {:?}",
-                        s3_path, err
-                    ),
-                })?
-        {
-            file.write_all(&bytes)?;
-        }
+        let stream = response
+            .body
+            .collect()
+            .await
+            .map_err(|err| AybError::S3ExecutionError {
+                message: format!(
+                    "Unable to stream snapshot retrieval from S3 at {}: {:?}",
+                    s3_path, err
+                ),
+            })?;
+        let data = stream.into_bytes();
+        let mut decoder = GzDecoder::new(&data[..]);
+        let mut decompressed_data = Vec::new();
+        io::copy(&mut decoder, &mut decompressed_data)?;
+        let mut file = File::create(snapshot_path.clone())?;
+        file.write_all(&decompressed_data)?;
 
         Ok(snapshot_path)
     }
