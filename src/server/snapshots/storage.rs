@@ -191,7 +191,7 @@ impl SnapshotStorage {
                             })?
                             .clone();
                         let snapshot_id = key
-                            .rsplit_once("/")
+                            .rsplit_once('/')
                             .ok_or_else(|| AybError::S3ExecutionError {
                                 message: format!(
                                     "Unexpected key path {} on object: {:?}",

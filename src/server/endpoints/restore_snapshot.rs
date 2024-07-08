@@ -47,9 +47,9 @@ async fn restore_snapshot(
                     )
                     .await?,
             )?;
-            let db_path = &new_database_path(&entity_slug, &database_slug, &ayb_config.data_path)?;
+            let db_path = &new_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
             rename(snapshot_path, db_path.clone())?;
-            set_current_database_and_clean_up(&db_path)?;
+            set_current_database_and_clean_up(db_path)?;
         }
         Ok(HttpResponse::Ok().json(EmptyResponse {}))
     } else {
