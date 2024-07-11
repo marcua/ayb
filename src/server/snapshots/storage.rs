@@ -1,5 +1,4 @@
 use crate::error::AybError;
-use crate::hosted_db::paths::database_snapshot_path;
 use crate::server::config::AybConfigSnapshots;
 use crate::server::snapshots::models::{ListSnapshotResult, Snapshot};
 use aws_config::meta::region::RegionProviderChain;
@@ -120,15 +119,10 @@ impl SnapshotStorage {
         entity_slug: &str,
         database_slug: &str,
         snapshot_id: &str,
-        data_path: &str,
-    ) -> Result<PathBuf, AybError> {
+        destination_path: &PathBuf,
+    ) -> Result<(), AybError> {
         let s3_path = self.db_path(entity_slug, database_slug, snapshot_id);
-        let mut snapshot_path = database_snapshot_path(
-            entity_slug,
-            database_slug,
-            &format!("{}-restore", snapshot_id),
-            data_path,
-        )?;
+        let mut snapshot_path = destination_path.clone();
         snapshot_path.push(database_slug);
 
         let response = self
@@ -158,10 +152,10 @@ impl SnapshotStorage {
         let mut decoder = GzDecoder::new(&data[..]);
         let mut decompressed_data = Vec::new();
         io::copy(&mut decoder, &mut decompressed_data)?;
-        let mut file = File::create(snapshot_path.clone())?;
+        let mut file = File::create(snapshot_path)?;
         file.write_all(&decompressed_data)?;
 
-        Ok(snapshot_path)
+        Ok(())
     }
 
     pub async fn list_snapshots(

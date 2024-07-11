@@ -49,6 +49,14 @@ pub fn new_database_path(
     ]
     .iter()
     .collect();
+    if let Err(e) = fs::create_dir_all(&path) {
+        return Err(AybError::Other {
+            message: format!(
+                "Unable to create database path for {}/{}: {}",
+                entity_slug, database_slug, e
+            ),
+        });
+    }
 
     Ok(path)
 }
@@ -62,13 +70,7 @@ pub fn instantiated_new_database_path(
     data_path: &str,
 ) -> Result<PathBuf, AybError> {
     let mut path = new_database_path(entity_slug, database_slug, data_path)?;
-    if let Err(e) = fs::create_dir_all(&path) {
-        return Err(AybError::Other {
-            message: format!("Unable to create entity path for {}: {}", entity_slug, e),
-        });
-    }
     path.push(database_slug);
-
     if !path.exists() {
         fs::File::create(path.clone())?;
     }
