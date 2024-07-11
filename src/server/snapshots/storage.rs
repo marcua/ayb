@@ -6,11 +6,12 @@ use aws_credential_types::Credentials;
 use aws_sdk_s3;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use aws_types::region::Region;
+use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
-use std::io::{self};
-use std::path::PathBuf;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 
 pub struct SnapshotStorage {
     bucket: String,
@@ -45,7 +46,7 @@ impl SnapshotStorage {
         })
     }
 
-    fn db_path(&self, entity_slug: &str, database_slug: &str, final_part: &str) -> String {
+    fn db_path(&self, entity_slug: &str, database_slug: &str, snapshot_id: &str) -> String {
         // Include bucket details in path only if `force_path_style` is `true`.
         let bucket = if self.force_path_style {
             format!("{}/", self.bucket)
@@ -54,7 +55,7 @@ impl SnapshotStorage {
         };
         format!(
             "{}{}/{}/{}/{}",
-            bucket, self.path_prefix, entity_slug, database_slug, final_part
+            bucket, self.path_prefix, entity_slug, database_slug, snapshot_id
         )
     }
 
@@ -70,7 +71,11 @@ impl SnapshotStorage {
         let mut delete_objects: Vec<aws_sdk_s3::types::ObjectIdentifier> = vec![];
         for snapshot in snapshots.await? {
             let obj_id = aws_sdk_s3::types::ObjectIdentifier::builder()
-                .set_key(Some(snapshot.name))
+                .set_key(Some(self.db_path(
+                    entity_slug,
+                    database_slug,
+                    &snapshot.snapshot_id,
+                )))
                 .build()
                 .map_err(|err| AybError::S3ExecutionError {
                     message: format!(
@@ -109,6 +114,50 @@ impl SnapshotStorage {
         Ok(())
     }
 
+    pub async fn retrieve_snapshot(
+        &self,
+        entity_slug: &str,
+        database_slug: &str,
+        snapshot_id: &str,
+        destination_path: &Path,
+    ) -> Result<(), AybError> {
+        let s3_path = self.db_path(entity_slug, database_slug, snapshot_id);
+        let mut snapshot_path = destination_path.to_path_buf();
+        snapshot_path.push(database_slug);
+
+        let response = self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(&s3_path.clone())
+            .send()
+            .await
+            .map_err(|err| AybError::S3ExecutionError {
+                message: format!(
+                    "Unable to retrieve snapshot in S3 at {}: {:?}",
+                    s3_path, err
+                ),
+            })?;
+        let stream = response
+            .body
+            .collect()
+            .await
+            .map_err(|err| AybError::S3ExecutionError {
+                message: format!(
+                    "Unable to stream snapshot retrieval from S3 at {}: {:?}",
+                    s3_path, err
+                ),
+            })?;
+        let data = stream.into_bytes();
+        let mut decoder = GzDecoder::new(&data[..]);
+        let mut decompressed_data = Vec::new();
+        io::copy(&mut decoder, &mut decompressed_data)?;
+        let mut file = File::create(snapshot_path)?;
+        file.write_all(&decompressed_data)?;
+
+        Ok(())
+    }
+
     pub async fn list_snapshots(
         &self,
         entity_slug: &str,
@@ -128,6 +177,22 @@ impl SnapshotStorage {
             match result {
                 Ok(output) => {
                     for object in output.contents() {
+                        let key = object
+                            .key
+                            .as_ref()
+                            .ok_or_else(|| AybError::S3ExecutionError {
+                                message: format!("Unable to read key from object: {:?}", object),
+                            })?
+                            .clone();
+                        let snapshot_id = key
+                            .rsplit_once('/')
+                            .ok_or_else(|| AybError::S3ExecutionError {
+                                message: format!(
+                                    "Unexpected key path {} on object: {:?}",
+                                    key, object
+                                ),
+                            })?
+                            .1;
                         results.push(ListSnapshotResult {
                             last_modified_at: object
                                 .last_modified
@@ -138,16 +203,7 @@ impl SnapshotStorage {
                                         object
                                     ),
                                 })??,
-                            name: object
-                                .key
-                                .as_ref()
-                                .ok_or_else(|| AybError::S3ExecutionError {
-                                    message: format!(
-                                        "Unable to read key from object: {:?}",
-                                        object
-                                    ),
-                                })?
-                                .clone(),
+                            snapshot_id: snapshot_id.to_string(),
                         });
                     }
                 }

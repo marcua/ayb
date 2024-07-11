@@ -5,7 +5,8 @@ use crate::server::config::read_config;
 use crate::server::config::AybConfigCors;
 use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
-    log_in_endpoint, query_endpoint, register_endpoint, update_profile_endpoint,
+    log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint,
+    update_profile_endpoint,
 };
 use crate::server::snapshots::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
@@ -30,7 +31,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(query_endpoint)
             .service(entity_details_endpoint)
             .service(update_profile_endpoint)
-            .service(list_snapshots_endpoint),
+            .service(list_snapshots_endpoint)
+            .service(restore_snapshot_endpoint),
     );
 }
 
@@ -105,6 +107,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
         let cors = build_cors(ayb_conf.cors.clone());
 
         App::new()
+            .wrap(middleware::Logger::default())
             .wrap(middleware::Compress::default())
             .wrap(cors)
             .configure(config)

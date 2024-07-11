@@ -52,7 +52,6 @@ pub struct Snapshot {
     // `snapshot_hash`.
     pub pre_snapshot_hash: String,
     pub snapshot_hash: String,
-    pub database_id: i32,
     pub snapshot_type: i16,
 }
 
@@ -76,16 +75,15 @@ impl Snapshot {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstantiatedSnapshot {
-    pub created_at: DateTime<Utc>,
+    pub last_modified_at: DateTime<Utc>,
     // See Snapshot for a defintion of the two hash fields.
     pub pre_snapshot_hash: String,
     pub snapshot_hash: String,
-    pub database_id: i32,
     pub snapshot_type: i16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListSnapshotResult {
     pub last_modified_at: DateTime<Utc>,
-    pub name: String,
+    pub snapshot_id: String,
 }

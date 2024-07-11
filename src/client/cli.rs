@@ -191,6 +191,14 @@ pub fn client_commands() -> Command {
                         .default_value(OutputFormat::Table.to_str())
                         .required(false))
         )
+        .subcommand(
+            Command::new("restore_snapshot")
+                .about("Restore a database to a particular snapshot/backup")
+                .arg(arg!(<database> "The database for which to load a snapshot (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+                .arg(arg!(<snapshot_id> "The name of the snapshot to load").required(true))               )
 }
 
 pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()> {
@@ -447,6 +455,30 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                             OutputFormat::Csv => response.snapshots.generate_csv()?,
                         }
                     }
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("restore_snapshot") {
+        if let (Some(entity_database), Some(snapshot_id)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<String>("snapshot_id"),
+        ) {
+            match client
+                .restore_snapshot(
+                    &entity_database.entity,
+                    &entity_database.database,
+                    snapshot_id,
+                )
+                .await
+            {
+                Ok(_response) => {
+                    println!(
+                        "Restored {}/{} to snapshot {}",
+                        entity_database.entity, entity_database.database, snapshot_id
+                    );
                 }
                 Err(err) => {
                     println!("Error: {}", err);

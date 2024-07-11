@@ -186,7 +186,7 @@ impl TabularFormatter for Vec<ListSnapshotResult> {
         self.iter()
             .map(|v| {
                 Row::new(vec![
-                    Cell::new(&v.name),
+                    Cell::new(&v.snapshot_id),
                     Cell::new(&v.last_modified_at.to_string()),
                 ])
             })

@@ -2,7 +2,7 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{DBType, InstantiatedEntity};
 
 use crate::error::AybError;
-use crate::hosted_db::paths::database_path;
+use crate::hosted_db::paths::current_database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
@@ -25,7 +25,7 @@ async fn query(
 
     if can_query(&authenticated_entity, &database) {
         let db_type = DBType::try_from(database.db_type)?;
-        let db_path = database_path(entity_slug, database_slug, &ayb_config.data_path, false)?;
+        let db_path = current_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
         let result = run_query(&db_path, &query, &db_type, &ayb_config.isolation).await?;
         Ok(web::Json(result))
     } else {
