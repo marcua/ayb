@@ -117,14 +117,8 @@ pub async fn snapshot_database(
             // only available at the SQLite command line since it's a
             // dot command.
             let db_path = current_database_path(&entity_slug, &database_slug, &config.data_path)?;
-            // TODO(marcua): Do better than "temporary"
-            // by creating a tmpdir.
-            let mut snapshot_path = database_snapshot_path(
-                &entity_slug,
-                &database_slug,
-                "temporary",
-                &config.data_path,
-            )?;
+            let mut snapshot_path =
+                database_snapshot_path(&entity_slug, &database_slug, &config.data_path)?;
             snapshot_path.push(&database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
             fs::remove_file(&snapshot_path).ok();
@@ -182,7 +176,7 @@ pub async fn snapshot_database(
             println!("Completed snapshot");
 
             // Clean up after uploading snapshot.
-            fs::remove_file(&snapshot_path).ok();
+            fs::remove_dir_all(&pathbuf_to_parent(&snapshot_path)?)?;
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {

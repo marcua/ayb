@@ -30,7 +30,7 @@ pub fn database_parent_path(data_path: &str, create_path: bool) -> Result<PathBu
 
 /// Returns a path for a new database directory for storing
 /// `{entity_slug}/{database_slug}`. The format for this path is
-/// `{data_path}/{entity_slug}/{database_slug}/{time_sortable_uuid}/`.
+/// `{data_path}/databases/{entity_slug}/{database_slug}/{time_sortable_uuid}/`.
 pub fn new_database_path(
     entity_slug: &str,
     database_slug: &str,
@@ -99,18 +99,22 @@ pub fn current_database_path(
     Ok(fs::canonicalize(path)?)
 }
 
+/// Returns a path for a new database snapshot directory for storing a
+/// snapshot of `{entity_slug}/{database_slug}`. The format for this
+/// path is
+/// `{data_path}/snapshots/{entity_slug}/{database_slug}/{time_sortable_uuid}/`.
 pub fn database_snapshot_path(
     entity_slug: &str,
     database_slug: &str,
-    snapshot_slug: &str,
     data_path: &str,
 ) -> Result<PathBuf, AybError> {
+    let uuid = Uuid::new_v7(Timestamp::now(ContextV7::new()));
     let path: PathBuf = [
         data_path,
         SNAPSHOTS,
         entity_slug,
         database_slug,
-        snapshot_slug,
+        &uuid.to_string(),
     ]
     .iter()
     .collect();
