@@ -1,6 +1,9 @@
 use crate::error::AybError;
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::symlink;
+#[cfg(windows)]
+use std::os::windows::fs::symlink_dir;
 use std::path::{Path, PathBuf};
 use uuid::{timestamp::context::ContextV7, Timestamp, Uuid};
 
@@ -143,6 +146,18 @@ pub fn pathbuf_to_parent(path: &Path) -> Result<PathBuf, AybError> {
         .to_owned())
 }
 
+#[cfg(unix)]
+fn symlink_directory(original: &Path, link: &Path) -> Result<(), AybError> {
+    symlink(original, link)?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn symlink_directory(original: &Path, link: &Path) -> Result<(), AybError> {
+    symlink_dir(original, link)?;
+    Ok(())
+}
+
 /// Declares `new_path` as the new current path (by symlinking the
 /// current path to it) and, if a previous database existed as the
 /// current database, delete it.
@@ -153,9 +168,7 @@ pub fn set_current_database_and_clean_up(new_path: &Path) -> Result<(), AybError
     current_tmp_db_path.push(CURRENT_TMP);
     let previous_database_path = fs::canonicalize(current_db_path.clone());
 
-    // TODO(marcua): This `symlink` call is the Unix API. Consider
-    // Windows support in the future.
-    symlink(fs::canonicalize(new_path)?, current_tmp_db_path.clone())?;
+    symlink_directory(&fs::canonicalize(new_path)?, &current_tmp_db_path.clone())?;
     // Why create a temporary current symlink and then rename it? This
     // is apparently how one overwrites a symlink. See
     // https://stackoverflow.com/questions/37345844/how-to-overwrite-a-symlink-in-go.
