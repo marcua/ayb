@@ -11,7 +11,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use std::fs::File;
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct SnapshotStorage {
     bucket: String,
@@ -119,10 +119,10 @@ impl SnapshotStorage {
         entity_slug: &str,
         database_slug: &str,
         snapshot_id: &str,
-        destination_path: &PathBuf,
+        destination_path: &Path,
     ) -> Result<(), AybError> {
         let s3_path = self.db_path(entity_slug, database_slug, snapshot_id);
-        let mut snapshot_path = destination_path.clone();
+        let mut snapshot_path = destination_path.to_path_buf();
         snapshot_path.push(database_slug);
 
         let response = self

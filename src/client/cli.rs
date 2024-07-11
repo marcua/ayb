@@ -193,7 +193,7 @@ pub fn client_commands() -> Command {
         )
         .subcommand(
             Command::new("restore_snapshot")
-                .about("Load a different snapshot/backup of a database")
+                .about("Restore a database to a particular snapshot/backup")
                 .arg(arg!(<database> "The database for which to load a snapshot (e.g., entity/database.sqlite)")
                      .value_parser(ValueParser::new(entity_database_parser))
                      .required(true)

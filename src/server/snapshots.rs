@@ -176,7 +176,7 @@ pub async fn snapshot_database(
             println!("Completed snapshot");
 
             // Clean up after uploading snapshot.
-            fs::remove_dir_all(&pathbuf_to_parent(&snapshot_path)?)?;
+            fs::remove_dir_all(pathbuf_to_parent(&snapshot_path)?)?;
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {
