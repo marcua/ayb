@@ -1,3 +1,4 @@
+pub mod hashes;
 pub mod models;
 pub mod storage;
 
@@ -9,6 +10,7 @@ use crate::hosted_db::paths::{
 };
 use crate::hosted_db::sqlite::query_sqlite;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
+use crate::server::snapshots::hashes::hash_db_directory;
 use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
