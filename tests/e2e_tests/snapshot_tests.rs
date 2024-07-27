@@ -1,7 +1,7 @@
 use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG,
 };
-use crate::utils::ayb::{list_snapshots, query, restore_snapshot};
+use crate::utils::ayb::{list_snapshots, list_snapshots_match_output, query, restore_snapshot};
 use crate::utils::testing::snapshot_storage;
 use std::collections::HashMap;
 use std::thread;
@@ -18,7 +18,7 @@ pub async fn test_snapshots(
         .await?;
 
     // Can't list snapshots from an account without access.
-    list_snapshots(
+    list_snapshots_match_output(
         &config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -27,7 +27,7 @@ pub async fn test_snapshots(
     )?;
 
     // Can list snapshots from the first set of API keys.
-    list_snapshots(
+    list_snapshots_match_output(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB_CASED,
@@ -37,25 +37,32 @@ pub async fn test_snapshots(
 
     // We'll sleep between various checks in this test to allow the
     // snapshotting logic, which runs every 2 seconds, to execute.
-    let snapshot_result_line = r"notimplemented,\d{4,5}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC";
-    thread::sleep(time::Duration::from_secs(3));
-    list_snapshots(
+    thread::sleep(time::Duration::from_secs(4));
+    let snapshots = list_snapshots(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
+    assert_eq!(
+        snapshots.len(),
+        1,
+        "there should be one snapshot after sleeping"
+    );
 
     // No change to database, so same number of snapshots after sleep.
-    thread::sleep(time::Duration::from_secs(3));
-    list_snapshots(
+    thread::sleep(time::Duration::from_secs(4));
+    let snapshots = list_snapshots(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
+    assert_eq!(
+        snapshots.len(),
+        1,
+        "there should still be one snapshot after sleeping more"
+    );
 
     // Modify database, wait, and ensure a new snapshot was taken.
     query(
@@ -66,19 +73,20 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
-    thread::sleep(time::Duration::from_secs(3));
-    // TODO(marcua): When we store multiple snapshots with hashing,
-    // there should be two snapshots instead of one here.
-    list_snapshots(
+    thread::sleep(time::Duration::from_secs(4));
+    let snapshots = list_snapshots(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        &format!("Name,Last modified\n{}", snapshot_result_line),
     )?;
+    assert_eq!(
+        snapshots.len(),
+        2,
+        "there two snapshots after updating database"
+    );
 
-    // Insert another row and ensure there are four. Then restore the
-    // previous snapshot, ensuring there are only three rows row.
+    // Insert another row and ensure there are four.
     query(
         &config_path,
         &api_keys.get("first").unwrap()[1],
@@ -95,12 +103,18 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
+
+    // Restore the previous snapshot, ensuring there are only three
+    // rows.
     restore_snapshot(
         &config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "notimplemented", // TODO(marcua): Replace with snapshot ID when we implement hashing.
-        "Restored e2e-first/test.sqlite to snapshot notimplemented",
+        &snapshots[0].snapshot_id,
+        &format!(
+            "Restored e2e-first/test.sqlite to snapshot {}",
+            snapshots[0].snapshot_id
+        ),
     )?;
     query(
         &config_path,
@@ -109,6 +123,27 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 3 \n\nRows: 1",
+    )?;
+
+    // Restore the snapshot before that, ensuring there are only two
+    // rows.
+    restore_snapshot(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        &snapshots[1].snapshot_id,
+        &format!(
+            "Restored e2e-first/test.sqlite to snapshot {}",
+            snapshots[1].snapshot_id
+        ),
+    )?;
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "SELECT COUNT(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DB,
+        "table",
+        " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
     Ok(())

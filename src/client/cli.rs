@@ -198,7 +198,7 @@ pub fn client_commands() -> Command {
                      .value_parser(ValueParser::new(entity_database_parser))
                      .required(true)
                 )
-                .arg(arg!(<snapshot_id> "The name of the snapshot to load").required(true))               )
+                .arg(arg!(<snapshot_id> "The id of the snapshot to load").required(true))               )
 }
 
 pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()> {
