@@ -20,7 +20,7 @@ pub fn hash_db_directory(path: &Path) -> Result<String, AybError> {
             }
         })
         .collect::<Result<Vec<PathBuf>, AybError>>()?;
-    // Sort alphabetically to ensure determinism.
+    // Sort alphabetically to ensure hash is deterministic.
     paths.sort();
 
     let mut hasher = Hasher::new();
