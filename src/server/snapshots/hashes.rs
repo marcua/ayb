@@ -21,7 +21,7 @@ pub fn hash_db_directory(path: &Path) -> Result<String, AybError> {
         })
         .collect::<Result<Vec<PathBuf>, AybError>>()?;
     // Sort alphabetically to ensure determinism.
-    paths.sort_by(|a, b| a.cmp(b));
+    paths.sort();
 
     let mut hasher = Hasher::new();
     for entry in paths {
