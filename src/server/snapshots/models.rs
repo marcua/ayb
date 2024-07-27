@@ -38,31 +38,14 @@ impl SnapshotType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Snapshot {
-    // We take two snapshots of the database. The first, a
-    // `pre_snapshot_hash`, is taken of the actual database's files
-    // before taking a snapshot. The second is a the `snapshot_hash`,
-    // which is the hash of the snapshot's files. Because a database
-    // is copied (and potentially vacuumed) in order to take a
-    // snapshot, its snapshot hash might be different from that of the
-    // original database from which it was copied. If a database
-    // snapshot is taken and then doesn't change by the next snapshot,
-    // it will have the same hash as the `pre_snapshot_hash`. If a
-    // database is restored from snapshot and then doesn't change the
-    // next time snapshot is taken, it will have the same hash as the
-    // `snapshot_hash`.
-    pub pre_snapshot_hash: String,
-    pub snapshot_hash: String,
+    // A blake3 hash of the snapshot directory before compressing.
+    pub snapshot_id: String,
     pub snapshot_type: i16,
 }
 
 impl Snapshot {
     pub fn to_header_map(&self) -> Result<HashMap<String, String>, AybError> {
         let mut headers = HashMap::new();
-        headers.insert(
-            "pre_snapshot_hash".to_string(),
-            self.pre_snapshot_hash.clone(),
-        );
-        headers.insert("snapshot_hash".to_string(), self.snapshot_hash.clone());
         headers.insert(
             "snapshot_type".to_string(),
             SnapshotType::try_from(self.snapshot_type)?
@@ -76,9 +59,7 @@ impl Snapshot {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InstantiatedSnapshot {
     pub last_modified_at: DateTime<Utc>,
-    // See Snapshot for a defintion of the two hash fields.
-    pub pre_snapshot_hash: String,
-    pub snapshot_hash: String,
+    pub snapshot_id: String,
     pub snapshot_type: i16,
 }
 

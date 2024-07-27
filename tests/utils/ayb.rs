@@ -1,5 +1,8 @@
 use assert_cmd::prelude::*;
+use ayb::server::snapshots::models::ListSnapshotResult;
+use chrono::DateTime;
 use predicates::prelude::*;
+use regex::Regex;
 use std::process::Command;
 
 // ayb_assert_cmd!("value1", value2; {
@@ -101,6 +104,49 @@ pub fn list_databases(
 }
 
 pub fn list_snapshots(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    format: &str,
+) -> Result<Vec<ListSnapshotResult>, Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "list_snapshots", database, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+    let mut output_lines = std::str::from_utf8(&cmd.get_output().stdout)?
+        .lines()
+        .collect::<Vec<&str>>();
+    assert_eq!(
+        output_lines[0], "Name,Last modified",
+        "first result line should be a header row"
+    );
+    let re = Regex::new(r"([a-f0-9]{64}),(\d{4,5}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00)").unwrap();
+    let mut snapshots = Vec::new();
+    for line in &mut output_lines[1..] {
+        println!("trying this line '{}'", line);
+        let capture = re
+            .captures(line)
+            .expect("resulting line should be a snapshot record");
+        snapshots.push(ListSnapshotResult {
+            snapshot_id: capture
+                .get(1)
+                .expect("snapshot line should have a hash/id")
+                .as_str()
+                .to_string(),
+            last_modified_at: DateTime::parse_from_rfc3339(
+                capture
+                    .get(2)
+                    .expect("snapshot line should have a datetime")
+                    .into(),
+            )
+            .expect("datetime should be in ISO format")
+            .into(),
+        })
+    }
+
+    Ok(snapshots)
+}
+
+pub fn list_snapshots_match_output(
     config: &str,
     api_key: &str,
     database: &str,

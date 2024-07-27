@@ -1,3 +1,4 @@
+pub mod hashes;
 pub mod models;
 pub mod storage;
 
@@ -9,6 +10,7 @@ use crate::hosted_db::paths::{
 };
 use crate::hosted_db::sqlite::query_sqlite;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
+use crate::server::snapshots::hashes::hash_db_directory;
 use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
@@ -113,12 +115,10 @@ pub async fn snapshot_database(
 
     match ayb_db.get_database(&entity_slug, &database_slug).await {
         Ok(_db) => {
-            // TODO(marcua): Implement hashing. `.sha3sum --schema` is
-            // only available at the SQLite command line since it's a
-            // dot command.
             let db_path = current_database_path(&entity_slug, &database_slug, &config.data_path)?;
             let mut snapshot_path =
                 database_snapshot_path(&entity_slug, &database_slug, &config.data_path)?;
+            let snapshot_directory = snapshot_path.clone();
             snapshot_path.push(&database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
             fs::remove_file(&snapshot_path).ok();
@@ -155,14 +155,14 @@ pub async fn snapshot_database(
                     message: format!("Snapshot failed integrity check: {:?}", result),
                 });
             }
+
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
             snapshot_storage
                 .put(
                     &entity_slug,
                     &database_slug,
                     &Snapshot {
-                        pre_snapshot_hash: "notimplemented".to_string(),
-                        snapshot_hash: "notimplemented".to_string(),
+                        snapshot_id: hash_db_directory(&snapshot_directory)?,
                         snapshot_type: SnapshotType::Automatic as i16,
                     },
                     &snapshot_path,

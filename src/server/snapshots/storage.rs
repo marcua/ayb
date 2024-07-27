@@ -227,7 +227,7 @@ impl SnapshotStorage {
         snapshot: &Snapshot,
         snapshot_path: &PathBuf,
     ) -> Result<(), AybError> {
-        let path = self.db_path(entity_slug, database_slug, &snapshot.snapshot_hash);
+        let path = self.db_path(entity_slug, database_slug, &snapshot.snapshot_id);
         let mut input_file = File::open(snapshot_path)?;
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         io::copy(&mut input_file, &mut encoder)?;
