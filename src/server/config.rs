@@ -47,7 +47,7 @@ pub enum SqliteSnapshotMethod {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshotsAutomation {
     pub interval: String, // A time interval in Go's time.ParseDuration format (e.g., "5m" means "every 5 minutes",
-    pub num_snapshots: u16,
+    pub max_snapshots: u16,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -13,9 +13,6 @@ pub async fn test_snapshots(
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let snapshots = snapshot_storage(db_type).await?;
-    snapshots
-        .dangerously_delete_prefix(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
-        .await?;
 
     // Can't list snapshots from an account without access.
     list_snapshots_match_output(
@@ -25,6 +22,10 @@ pub async fn test_snapshots(
         "csv",
         "Error: Authenticated entity e2e-second can not manage snapshots on database e2e-first/test.sqlite",
     )?;
+
+    snapshots
+        .delete_all_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
+        .await?;
 
     // Can list snapshots from the first set of API keys.
     list_snapshots_match_output(
@@ -44,6 +45,7 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "csv",
     )?;
+    let last_modified_at = snapshots[0].last_modified_at;
     assert_eq!(
         snapshots.len(),
         1,
@@ -62,6 +64,10 @@ pub async fn test_snapshots(
         snapshots.len(),
         1,
         "there should still be one snapshot after sleeping more"
+    );
+    assert_eq!(
+        last_modified_at, snapshots[0].last_modified_at,
+        "After sleeping, the snapshot shouldn't have been modified/updated"
     );
 
     // Modify database, wait, and ensure a new snapshot was taken.
