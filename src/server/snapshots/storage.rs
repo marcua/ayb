@@ -72,7 +72,7 @@ impl SnapshotStorage {
                 .build()
                 .map_err(|err| AybError::S3ExecutionError {
                     message: format!(
-                        "Unable to create object identifier for deletion for {}/{}/{}: {:?}",
+                        "Unable to create object identifier for deletion of {}/{}/{}: {:?}",
                         entity_slug, database_slug, snapshot_id, err
                     ),
                 })?;
@@ -104,24 +104,6 @@ impl SnapshotStorage {
                 })?;
         }
 
-        Ok(())
-    }
-
-    /// Deletes all files in this bucket for
-    /// `entity_slug/database_slug`. Currently only used in tests to
-    /// get to a predictable starting point.
-    pub async fn delete_all_snapshots(
-        &self,
-        entity_slug: &str,
-        database_slug: &str,
-    ) -> Result<(), AybError> {
-        let snapshots = self.list_snapshots(entity_slug, database_slug).await?;
-        let snapshot_ids = snapshots
-            .iter()
-            .map(|snapshot| snapshot.snapshot_id.clone())
-            .collect();
-        self.delete_snapshots(entity_slug, database_slug, &snapshot_ids)
-            .await?;
         Ok(())
     }
 

@@ -12,8 +12,6 @@ pub async fn test_snapshots(
     config_path: &str,
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let snapshots = snapshot_storage(db_type).await?;
-
     // Can't list snapshots from an account without access.
     list_snapshots_match_output(
         &config_path,
@@ -23,8 +21,20 @@ pub async fn test_snapshots(
         "Error: Authenticated entity e2e-second can not manage snapshots on database e2e-first/test.sqlite",
     )?;
 
-    snapshots
-        .delete_all_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
+    // Remove all snapshots so our tests aren't affected by
+    // timing/snapshots of previous tsts.
+    let storage = snapshot_storage(db_type).await?;
+    storage
+        .delete_snapshots(
+            FIRST_ENTITY_SLUG,
+            FIRST_ENTITY_DB_SLUG,
+            &storage
+                .list_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
+                .await?
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.clone())
+                .collect(),
+        )
         .await?;
 
     // Can list snapshots from the first set of API keys.
