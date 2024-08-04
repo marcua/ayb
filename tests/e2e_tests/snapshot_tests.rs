@@ -22,7 +22,7 @@ pub async fn test_snapshots(
     )?;
 
     // Remove all snapshots so our tests aren't affected by
-    // timing/snapshots of previous tsts.
+    // timing/snapshots from previous tsts.
     let storage = snapshot_storage(db_type).await?;
     storage
         .delete_snapshots(
