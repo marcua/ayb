@@ -122,7 +122,6 @@ pub fn list_snapshots(
     let re = Regex::new(r"([a-f0-9]{64}),(\d{4,5}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00)").unwrap();
     let mut snapshots = Vec::new();
     for line in &mut output_lines[1..] {
-        println!("trying this line '{}'", line);
         let capture = re
             .captures(line)
             .expect("resulting line should be a snapshot record");

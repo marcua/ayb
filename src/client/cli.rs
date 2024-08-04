@@ -1,6 +1,7 @@
 use crate::ayb_db::models::{DBType, EntityType};
 use crate::client::config::ClientConfig;
 use crate::client::http::AybClient;
+use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::http::structs::{EntityDatabasePath, ProfileLinkUpdate};
 use clap::builder::ValueParser;
@@ -479,6 +480,12 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                         "Restored {}/{} to snapshot {}",
                         entity_database.entity, entity_database.database, snapshot_id
                     );
+                }
+                Err(AybError::SnapshotDoesNotExistError) => {
+                    println!(
+                        "Error: Snapshot {} does not exist for {}/{}",
+                        snapshot_id, entity_database.entity, entity_database.database
+                    )
                 }
                 Err(err) => {
                     println!("Error: {}", err);

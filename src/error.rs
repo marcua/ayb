@@ -22,6 +22,7 @@ pub enum AybError {
     S3ExecutionError { message: String },
     S3ConnectionError { message: String },
     SnapshotError { message: String },
+    SnapshotDoesNotExistError,
     RecordNotFound { id: String, record_type: String },
     Other { message: String },
 }

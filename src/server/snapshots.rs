@@ -157,23 +157,60 @@ pub async fn snapshot_database(
             }
 
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
-            snapshot_storage
-                .put(
-                    &entity_slug,
-                    &database_slug,
-                    &Snapshot {
-                        snapshot_id: hash_db_directory(&snapshot_directory)?,
-                        snapshot_type: SnapshotType::Automatic as i16,
-                    },
-                    &snapshot_path,
-                )
-                .await?;
-            let recent_snapshot = snapshot_storage
+            let existing_snapshots = snapshot_storage
                 .list_snapshots(&entity_slug, &database_slug)
-                .await?
-                .pop();
-            println!("Storage: {:?}", recent_snapshot);
-            println!("Completed snapshot");
+                .await?;
+            let num_existing_snapshots = existing_snapshots.len();
+            let snapshot_hash = hash_db_directory(&snapshot_directory)?;
+            let mut should_upload_snapshot = true;
+            for snapshot in &existing_snapshots {
+                if snapshot.snapshot_id == snapshot_hash {
+                    println!(
+                        "Snapshot with hash {} already exists, not uploading again.",
+                        snapshot_hash
+                    );
+                    should_upload_snapshot = false;
+                    break;
+                }
+            }
+            if should_upload_snapshot {
+                println!("Uploading new snapshot with hash {}.", snapshot_hash);
+                snapshot_storage
+                    .put(
+                        &entity_slug,
+                        &database_slug,
+                        &Snapshot {
+                            snapshot_id: snapshot_hash,
+                            snapshot_type: SnapshotType::Automatic as i16,
+                        },
+                        &snapshot_path,
+                    )
+                    .await?;
+
+                // If adding this snapshot resulted in more than the
+                // maximum snapshots we are allowed, prune old ones.
+                let max_snapshots: usize = snapshot_config
+                    .automation
+                    .as_ref()
+                    .unwrap()
+                    .max_snapshots
+                    .into();
+                let prune_snapshots = (num_existing_snapshots + 1).checked_sub(max_snapshots);
+                if let Some(prune_snapshots) = prune_snapshots {
+                    println!("Pruning {} oldest snapshots", prune_snapshots);
+                    let mut ids_to_prune: Vec<String> = vec![];
+                    for snapshot_index in 0..prune_snapshots {
+                        ids_to_prune.push(
+                            existing_snapshots[existing_snapshots.len() - snapshot_index - 1]
+                                .snapshot_id
+                                .clone(),
+                        )
+                    }
+                    snapshot_storage
+                        .delete_snapshots(&entity_slug, &database_slug, &ids_to_prune)
+                        .await?;
+                }
+            }
 
             // Clean up after uploading snapshot.
             fs::remove_dir_all(pathbuf_to_parent(&snapshot_path)?)?;
