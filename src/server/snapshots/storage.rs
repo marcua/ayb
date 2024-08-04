@@ -143,11 +143,17 @@ impl SnapshotStorage {
             .key(&s3_path.clone())
             .send()
             .await
-            .map_err(|err| AybError::S3ExecutionError {
-                message: format!(
-                    "Unable to retrieve snapshot in S3 at {}: {:?}",
-                    s3_path, err
-                ),
+            .map_err(|err| {
+                let s3_error = aws_sdk_s3::Error::from(err);
+                if let aws_sdk_s3::Error::NoSuchKey(_err) = s3_error {
+                    return AybError::SnapshotDoesNotExistError;
+                }
+                AybError::S3ExecutionError {
+                    message: format!(
+                        "Unable to retrieve snapshot in S3 at {}: {:?}",
+                        s3_path, s3_error
+                    ),
+                }
             })?;
         let stream = response
             .body
