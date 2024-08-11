@@ -87,8 +87,6 @@ pub async fn snapshot_database(
     path: &Path,
     visited: &mut HashSet<String>,
 ) -> Result<(), AybError> {
-    // TODO(marcua): Replace printlns with some structured logging or
-    // tracing library.
     println!("Trying to back up {}", path.display());
     let entity_slug = pathbuf_to_file_name(&pathbuf_to_parent(&pathbuf_to_parent(
         &pathbuf_to_parent(path)?,
