@@ -8,7 +8,7 @@ use crate::server::endpoints::{
     log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint,
     update_profile_endpoint,
 };
-use crate::server::snapshots::schedule_periodic_snapshots;
+use crate::server::snapshots::execution::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
 use actix_cors::Cors;
