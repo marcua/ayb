@@ -59,28 +59,21 @@ impl SnapshotStorage {
         )
     }
 
-    /// Deletes all files in this bucket for
-    /// `entity_slug/database_slug`. Currently only used in tests to
-    /// get to a predictable starting point.
-    pub async fn dangerously_delete_prefix(
+    pub async fn delete_snapshots(
         &self,
         entity_slug: &str,
         database_slug: &str,
+        snapshot_ids: &Vec<String>,
     ) -> Result<(), AybError> {
-        let snapshots = self.list_snapshots(entity_slug, database_slug);
         let mut delete_objects: Vec<aws_sdk_s3::types::ObjectIdentifier> = vec![];
-        for snapshot in snapshots.await? {
+        for snapshot_id in snapshot_ids {
             let obj_id = aws_sdk_s3::types::ObjectIdentifier::builder()
-                .set_key(Some(self.db_path(
-                    entity_slug,
-                    database_slug,
-                    &snapshot.snapshot_id,
-                )))
+                .set_key(Some(self.db_path(entity_slug, database_slug, snapshot_id)))
                 .build()
                 .map_err(|err| AybError::S3ExecutionError {
                     message: format!(
-                        "Identify object ID to delete for {}/{}: {:?}",
-                        entity_slug, database_slug, err
+                        "Unable to create object identifier for deletion of {}/{}/{}: {:?}",
+                        entity_slug, database_slug, snapshot_id, err
                     ),
                 })?;
             delete_objects.push(obj_id);
@@ -105,7 +98,7 @@ impl SnapshotStorage {
                 .await
                 .map_err(|err| AybError::S3ExecutionError {
                     message: format!(
-                        "Unable to delete objects as listed in {}/{}: {:?}",
+                        "Unable to delete snapshots as listed in {}/{}: {:?}",
                         entity_slug, database_slug, err
                     ),
                 })?;
@@ -129,14 +122,20 @@ impl SnapshotStorage {
             .client
             .get_object()
             .bucket(&self.bucket)
-            .key(&s3_path.clone())
+            .key(s3_path.clone())
             .send()
             .await
-            .map_err(|err| AybError::S3ExecutionError {
-                message: format!(
-                    "Unable to retrieve snapshot in S3 at {}: {:?}",
-                    s3_path, err
-                ),
+            .map_err(|err| {
+                let s3_error = aws_sdk_s3::Error::from(err);
+                if let aws_sdk_s3::Error::NoSuchKey(_err) = s3_error {
+                    return AybError::SnapshotDoesNotExistError;
+                }
+                AybError::S3ExecutionError {
+                    message: format!(
+                        "Unable to retrieve snapshot in S3 at {}: {:?}",
+                        s3_path, s3_error
+                    ),
+                }
             })?;
         let stream = response
             .body

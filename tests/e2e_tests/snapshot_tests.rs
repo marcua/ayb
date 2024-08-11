@@ -12,11 +12,6 @@ pub async fn test_snapshots(
     config_path: &str,
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let snapshots = snapshot_storage(db_type).await?;
-    snapshots
-        .dangerously_delete_prefix(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
-        .await?;
-
     // Can't list snapshots from an account without access.
     list_snapshots_match_output(
         &config_path,
@@ -25,6 +20,22 @@ pub async fn test_snapshots(
         "csv",
         "Error: Authenticated entity e2e-second can not manage snapshots on database e2e-first/test.sqlite",
     )?;
+
+    // Remove all snapshots so our tests aren't affected by
+    // timing/snapshots from previous tsts.
+    let storage = snapshot_storage(db_type).await?;
+    storage
+        .delete_snapshots(
+            FIRST_ENTITY_SLUG,
+            FIRST_ENTITY_DB_SLUG,
+            &storage
+                .list_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
+                .await?
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.clone())
+                .collect(),
+        )
+        .await?;
 
     // Can list snapshots from the first set of API keys.
     list_snapshots_match_output(
@@ -44,6 +55,7 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "csv",
     )?;
+    let last_modified_at = snapshots[0].last_modified_at;
     assert_eq!(
         snapshots.len(),
         1,
@@ -62,6 +74,10 @@ pub async fn test_snapshots(
         snapshots.len(),
         1,
         "there should still be one snapshot after sleeping more"
+    );
+    assert_eq!(
+        last_modified_at, snapshots[0].last_modified_at,
+        "After sleeping, the snapshot shouldn't have been modified/updated"
     );
 
     // Modify database, wait, and ensure a new snapshot was taken.
@@ -144,6 +160,84 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 2 \n\nRows: 1",
+    )?;
+
+    // There are 3 max_snapshots, so let's
+    // force 2 more snapshots to be created (more than 3 snapshots
+    // would exist) and then: 1) Ensure there are still only 3
+    // snapshots remaining due to pruning, 2) Get an error restoring
+    // to the oldest snapshot, which should have been pruned.
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "INSERT INTO test_table (fname, lname) VALUES (\"a new first name\", \"a new last name\");",
+        FIRST_ENTITY_DB,
+        "table",
+        "\nRows: 0",
+    )?;
+    thread::sleep(time::Duration::from_secs(4));
+
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
+        FIRST_ENTITY_DB,
+        "table",
+        "\nRows: 0",
+    )?;
+    thread::sleep(time::Duration::from_secs(4));
+
+    let old_snapshots = snapshots;
+    let snapshots = list_snapshots(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+    )?;
+    assert_eq!(
+        snapshots.len(),
+        3,
+        "there three snapshots after further updating database and pruning old snapshots"
+    );
+
+    // Restoring the previous oldest snapshot fails
+    restore_snapshot(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        &old_snapshots[1].snapshot_id,
+        &format!(
+            "Error: Snapshot {} does not exist for e2e-first/test.sqlite",
+            &old_snapshots[1].snapshot_id
+        ),
+    )?;
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        FIRST_ENTITY_DB,
+        "table",
+        " the_count \n-----------\n 1 \n\nRows: 1",
+    )?;
+
+    // Restoring the newer of the two oldest snapshot succeeds
+    restore_snapshot(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        &old_snapshots[0].snapshot_id,
+        &format!(
+            "Restored e2e-first/test.sqlite to snapshot {}",
+            old_snapshots[0].snapshot_id
+        ),
+    )?;
+    query(
+        &config_path,
+        &api_keys.get("first").unwrap()[1],
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        FIRST_ENTITY_DB,
+        "table",
+        " the_count \n-----------\n 0 \n\nRows: 1",
     )?;
 
     Ok(())
