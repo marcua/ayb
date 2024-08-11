@@ -6,12 +6,10 @@ use aws_credential_types::Credentials;
 use aws_sdk_s3;
 use aws_smithy_types_convert::date_time::DateTimeExt;
 use aws_types::region::Region;
-use flate2::read::GzDecoder;
-use flate2::write::GzEncoder;
-use flate2::Compression;
 use std::fs::File;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use zstd::stream::{Decoder, Encoder};
 
 pub struct SnapshotStorage {
     bucket: String,
@@ -148,7 +146,7 @@ impl SnapshotStorage {
                 ),
             })?;
         let data = stream.into_bytes();
-        let mut decoder = GzDecoder::new(&data[..]);
+        let mut decoder = Decoder::new(&data[..])?;
         let mut decompressed_data = Vec::new();
         io::copy(&mut decoder, &mut decompressed_data)?;
         let mut file = File::create(snapshot_path)?;
@@ -228,7 +226,7 @@ impl SnapshotStorage {
     ) -> Result<(), AybError> {
         let path = self.db_path(entity_slug, database_slug, &snapshot.snapshot_id);
         let mut input_file = File::open(snapshot_path)?;
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        let mut encoder = Encoder::new(Vec::new(), 0)?; // 0 = default compression for zstd
         io::copy(&mut input_file, &mut encoder)?;
         let body = aws_sdk_s3::primitives::ByteStream::from(encoder.finish()?);
         self.client
