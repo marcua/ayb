@@ -122,7 +122,7 @@ impl SnapshotStorage {
             .client
             .get_object()
             .bucket(&self.bucket)
-            .key(&s3_path.clone())
+            .key(s3_path.clone())
             .send()
             .await
             .map_err(|err| {
