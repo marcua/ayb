@@ -25,13 +25,12 @@ pub async fn schedule_periodic_snapshots(
     if let Some(ref snapshot_config) = config.snapshots {
         if let Some(ref automation_config) = snapshot_config.automation {
             let scheduler = JobScheduler::new().await?;
-            // TODO(marcua): Consider something better than
-            // try_into/unwrap. The problem is that `parse_duration`
-            // produces an i64 and `from_nanos` expects u64.
             let duration = Duration::from_nanos(
                 parse_duration(&automation_config.interval)?
                     .try_into()
-                    .unwrap(),
+                    .map_err(|err| AybError::SnapshotError {
+                        message: format!("Unable to turn snapshot interval into a duration: {:?}", err)
+                    })?
             );
             scheduler
                 .add(Job::new_repeated_async(duration, move |_, _| {
