@@ -126,7 +126,7 @@ pub async fn snapshot_database(
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();
-            snapshot_path.push(&database_slug);
+            snapshot_path.push(database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
             fs::remove_file(&snapshot_path).ok();
             let backup_query = match snapshot_config.sqlite_method {
