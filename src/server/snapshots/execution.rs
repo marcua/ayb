@@ -120,11 +120,11 @@ pub async fn snapshot_database(
     }
     let snapshot_config = config.snapshots.as_ref().unwrap();
 
-    match ayb_db.get_database(&entity_slug, &database_slug).await {
+    match ayb_db.get_database(entity_slug, database_slug).await {
         Ok(_db) => {
-            let db_path = current_database_path(&entity_slug, &database_slug, &config.data_path)?;
+            let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
             let mut snapshot_path =
-                database_snapshot_path(&entity_slug, &database_slug, &config.data_path)?;
+                database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();
             snapshot_path.push(&database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
@@ -165,7 +165,7 @@ pub async fn snapshot_database(
 
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
             let existing_snapshots = snapshot_storage
-                .list_snapshots(&entity_slug, &database_slug)
+                .list_snapshots(entity_slug, database_slug)
                 .await?;
             let num_existing_snapshots = existing_snapshots.len();
             let snapshot_hash = hash_db_directory(&snapshot_directory)?;
@@ -184,8 +184,8 @@ pub async fn snapshot_database(
                 println!("Uploading new snapshot with hash {}.", snapshot_hash);
                 snapshot_storage
                     .put(
-                        &entity_slug,
-                        &database_slug,
+                        entity_slug,
+                        database_slug,
                         &Snapshot {
                             snapshot_id: snapshot_hash,
                             snapshot_type: SnapshotType::Automatic as i16,
@@ -214,7 +214,7 @@ pub async fn snapshot_database(
                         )
                     }
                     snapshot_storage
-                        .delete_snapshots(&entity_slug, &database_slug, &ids_to_prune)
+                        .delete_snapshots(entity_slug, database_slug, &ids_to_prune)
                         .await?;
                 }
             }
