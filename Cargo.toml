@@ -54,7 +54,7 @@ zstd = { version = "0.13.2" }
 [dev-dependencies]
 assert_cmd = "2.0"
 assert-json-diff = "2.0.2"
-predicates = "3.1.0"
+predicates = "3.1.2"
 
 [[bin]]
 name = "ayb"
