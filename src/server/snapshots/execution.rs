@@ -1,4 +1,3 @@
-
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::hosted_db::paths::{
@@ -11,12 +10,9 @@ use crate::server::snapshots::hashes::hash_db_directory;
 use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
-use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
 use std::time::Duration;
 use tokio_cron_scheduler::{Job, JobScheduler};
-use walkdir::WalkDir;
 
 pub async fn schedule_periodic_snapshots(
     config: AybConfig,
@@ -29,8 +25,11 @@ pub async fn schedule_periodic_snapshots(
                 parse_duration(&automation_config.interval)?
                     .try_into()
                     .map_err(|err| AybError::SnapshotError {
-                        message: format!("Unable to turn snapshot interval into a duration: {:?}", err)
-                    })?
+                        message: format!(
+                            "Unable to turn snapshot interval into a duration: {:?}",
+                            err
+                        ),
+                    })?,
             );
             scheduler
                 .add(Job::new_repeated_async(duration, move |_, _| {
@@ -62,18 +61,44 @@ pub async fn schedule_periodic_snapshots(
 async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result<(), AybError> {
     // Walk the data path for entity slugs, database slugs
     println!("Creating snapshots...");
-    let mut visited: HashSet<String> = HashSet::new();
-    for entry in WalkDir::new(database_parent_path(&config.data_path, true).unwrap())
-        .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| !e.file_type().is_dir() && !e.path_is_symlink())
-    {
-        let path = entry.path();
-        if let Some(err) = snapshot_database(config, ayb_db, path, &mut visited)
-            .await
-            .err()
-        {
-            eprintln!("Unable to snapshot database {}: {}", path.display(), err);
+    let entity_paths =
+        fs::read_dir(database_parent_path(&config.data_path, true).unwrap())?.map(|entry| {
+            let entry_path = entry?.path();
+            let entity = pathbuf_to_file_name(&entry_path)?;
+            if entry_path.is_dir() {
+                Ok((entity, entry_path))
+            } else {
+                Err(AybError::SnapshotError {
+                    message: format!(
+                        "Unexpected file where entity directory expected: {}",
+                        entry_path.display()
+                    ),
+                })
+            }
+        });
+    for entity_details in entity_paths {
+        let (entity, entity_path) = entity_details?;
+        for entry in fs::read_dir(entity_path)? {
+            let entry_path = entry?.path();
+            let database = pathbuf_to_file_name(&entry_path)?;
+            if entry_path.is_dir() {
+                if let Some(err) = snapshot_database(config, ayb_db, &entity, &database)
+                    .await
+                    .err()
+                {
+                    eprintln!(
+                        "Unable to snapshot database {}/{}: {}",
+                        entity, database, err
+                    );
+                }
+            } else {
+                return Err(AybError::SnapshotError {
+                    message: format!(
+                        "Unexpected file where database directory expected: {}",
+                        entry_path.display()
+                    ),
+                });
+            }
         }
     }
 
@@ -84,22 +109,10 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
 pub async fn snapshot_database(
     config: &AybConfig,
     ayb_db: &Box<dyn AybDb>,
-    path: &Path,
-    visited: &mut HashSet<String>,
+    entity_slug: &str,
+    database_slug: &str,
 ) -> Result<(), AybError> {
-    println!("Trying to back up {}", path.display());
-    let entity_slug = pathbuf_to_file_name(&pathbuf_to_parent(&pathbuf_to_parent(
-        &pathbuf_to_parent(path)?,
-    )?)?)?;
-    let database_slug = pathbuf_to_file_name(path)?;
-    let visited_path = format!("{}/{}", entity_slug, database_slug);
-    if visited.contains(&visited_path) {
-        // We only need to snapshot each database once per run, but we
-        // might encounter multiple versions of the database. Return
-        // early if we've already taken a backup.
-        return Ok(());
-    }
-    visited.insert(visited_path);
+    println!("Trying to back up {}/{}", entity_slug, database_slug);
     if config.snapshots.is_none() {
         return Err(AybError::SnapshotError {
             message: "No snapshot config found".to_string(),
