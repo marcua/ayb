@@ -38,6 +38,11 @@ impl SnapshotType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Snapshot {
+    // TODO(marcua): Eventually we'll want an InstantiatedSnapshot,
+    // but haven't needed one yet. When we do, it will need this field
+    // for completeness:
+    // pub last_modified_at: DateTime<Utc>,
+
     // A blake3 hash of the snapshot directory before compressing.
     pub snapshot_id: String,
     pub snapshot_type: i16,
@@ -54,13 +59,6 @@ impl Snapshot {
         );
         Ok(headers)
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct InstantiatedSnapshot {
-    pub last_modified_at: DateTime<Utc>,
-    pub snapshot_id: String,
-    pub snapshot_type: i16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
