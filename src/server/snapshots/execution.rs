@@ -11,7 +11,9 @@ use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
 use std::fs;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 use tokio_cron_scheduler::{Job, JobScheduler};
 
 pub async fn schedule_periodic_snapshots(
@@ -31,17 +33,32 @@ pub async fn schedule_periodic_snapshots(
                         ),
                     })?,
             );
+            // Since jobs are scheduled to run on an interval, it's
+            // possible that if it takes a while to snapshot
+            // databases, two snapshot jobs will run at the same
+            // time. To avoid asynchrony-related issues, we skip a
+            // snapshot run if a previous one is running.
+            let is_running = Arc::new(Mutex::new(false));
             scheduler
                 .add(Job::new_repeated_async(duration, move |_, _| {
+                    let is_running = Arc::clone(&is_running);
                     let config = config.clone();
                     let ayb_db = ayb_db.clone();
                     Box::pin(async move {
+                        let mut guard = is_running.lock().await;
+                        if *guard {
+                            println!("Previous snapshot logic running, will skip this round...");
+                            return;
+                        }
+                        // Mark the job as running
+                        *guard = true;
                         if let Some(err) = create_snapshots(&config.clone(), &ayb_db.clone())
                             .await
                             .err()
                         {
                             eprintln!("Unable to walk database directory for snapshots: {}", err);
                         }
+                        *guard = false;
                     })
                 })?)
                 .await?;
