@@ -166,6 +166,86 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 {"fields":["name","score"],"rows":[["PostgreSQL","10"],["SQLite","9"],["DuckDB","9"]]}
 ```
 
+### Snapshots / backups
+
+You can configure `ayb` to periodically upload snapshots of each
+database to [S3](https://aws.amazon.com/s3/)-compatible storage to
+recover from the failure of the machine running `ayb` or revert to a
+previous copy of the data. Each snapshot is compressed (using
+[zstd](https://zstd.net)) and only uploaded if the database changed
+since the last snapshot. To enable snapshot-based backups, include a
+configuration block like the following in your `ayb.toml`:
+
+```toml
+[snapshots]
+sqlite_method = "Vacuum"
+access_key_id = "YOUR_S3_ACCESS_KEY_ID"
+secret_access_key = "YOUR_S3_ACCESS_KEY_SECRET"
+bucket = "bucket-to-upload-snapshots"
+path_prefix = "some/optional/prefix"
+endpoint_url = "https://url-endpoint-of-s3-compatible-provider.com"  # Optional
+region = "us-east-1"  # Optional
+force_path_style = false  # Optional
+
+[snapshots.automation]
+interval = "10m"
+max_snapshots = 3
+```
+
+Here is an explanation of the parameters:
+* `sqlite_method`: The two SQLite backup methods are [Vacuum](https://www.sqlite.org/lang_vacuum.html#vacuuminto) and [Backup](https://www.sqlite.org/backup.html). `ayb` only supports `Vacuum` for now.
+* `access_key_id` / `secret_access_key`: The access key ID and secret to upload/list snapshots to your S3-compatible storage provider.
+* `bucket`: The name of the bucket to which to upload snapshots.
+* `bucket_prefix`: (Can be blank) if you want to upload snapshots to a prefixed path inside `bucket` (e.g., `my-bucket/snapshots`), provide a prefix.
+* `endpoint_url`: (Optional if using AWS S3) Each S3-compatible storage provider will tell you their own endpoint to manage your buckets.
+* `region`: (Optional if using AWS S3) Some S3-compatible storage providers will request a region in their network where your bucket will live.
+* `force_path_style`: (Optional, legacy) If included and `true`, will use the legacy [path-style](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access) method of referencing buckets. Used in `ayb`'s end-to-end tests and might be helpful beyond, but start without it.
+* `interval`: How frequently to take a snapshot of your data in human-readable format (e.g., `30m`, `1h`, `1h30m`, with [more examples here](https://docs.rs/go-parse-duration/latest/go_parse_duration/)).
+* `max_snapshots`: How many old snapshots to keep before pruning the oldest ones.
+
+Once snapshots are enabled, you will see logs on the server with each periodic snapshot run. The following example shows how snapshots work, including how to list and restore them (using `interval = "3s"` and `max_snapshots = 2`):
+
+```bash
+$ ayb client create_database marcua/snapshots.sqlite
+Successfully created marcua/snapshots.sqlite
+
+$ ayb client query marcua/snapshots.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
+Rows: 0
+
+$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+Rows: 0
+
+# Wait longer than 3 seconds before inserting the next row, so that a snapshot with just PostgreSQL exists.
+$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
+Rows: 0
+
+$ ayb client query marcua/snapshots.sqlite "SELECT * FROM favorite_databases;"
+ name       | score
+------------+-------
+ PostgreSQL | 10
+ SQLite     | 9
+
+Rows: 2
+
+# Wait longer than 3 seconds before listing snapshots to ensure that a snapshot with SQLite exists as well.
+$ ayb client list_snapshots marcua/snapshots.sqlite
+ Name                                                             | Last modified
+------------------------------------------------------------------+---------------------------
+ f9e01a396fb7f91be988c26d43f9ffa667bd0fd05009b231aa61ea1073d34423 | 2024-08-18T15:05:04+00:00
+ 856e21f7cae8383426cd2e0599caf6e83962b051af4734ab5c53aff87ea0ff45 | 2024-08-18T15:04:40+00:00
+
+# Restire the older snapshot, which didn't contain SQLite
+$ ayb client restore_snapshot marcua/snapshots.sqlite 856e21f7cae8383426cd2e0599caf6e83962b051af4734ab5c53aff87ea0ff45
+Restored marcua/snapshots.sqlite to snapshot 856e21f7cae8383426cd2e0599caf6e83962b051af4734ab5c53aff87ea0ff45
+
+$ ayb client query marcua/snapshots.sqlite "SELECT * FROM favorite_databases;"
+ name       | score
+------------+-------
+ PostgreSQL | 10
+
+Rows: 1
+```
+
 ### Isolation
 `ayb` allows multiple users to run queries against databases that are
 stored on the same machine. Isolation enables you to prevent one user
@@ -237,10 +317,11 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [x] Reduce reliance on PostgreSQL (SQLite metadata storage). Given that the goal of `ayb` is to make it easier to create, share, and query databases, it's frustrating that running `ayb` requires you to pay the nontrivial cost of operationalizing PostgreSQL. While Postgres will be helpful for eventually coordinating between multiple `ayb` nodes, a single-node version should be able to store its metadata in SQLite with little setup costs.
   * [x] Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
   * [x] Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data.
+  * [x] Persistence beyond the node. Back databases up to persistent S3-compatible storage and allow (for now) manual recovery on failure.
   * [ ] Clustering. Support for multiple `ayb` nodes to serve databases and requests. Whereas a single database will not span multiple machines, parallelism/distribution will happen across users and databases.
-  * [ ] Persistence beyond the node. Using projects like [LiteFS](https://github.com/superfly/litefs), stream updates to databases to persistent storage, and allow failover if an `ayb` node disappears.
   * [ ] Sessions/transactions. `ayb`'s query API is a stateless request/response API, making it impossible to start a database transaction or issue multiple queries in a session. Exposing sessions in the API will allow multiple statements per session, and by extension, transactions.
   * [ ] Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
+  * [ ] High availablity/automatic failover. While `ayb` provides snapshot-based backups to protect against cataclysmic failures, the recovery process is manual. Streaming databases to replicas and switching to replicas on failure will make `ayb` more highly available.
 * Extend `ayb` to more people and software
   * [ ] Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
   * [ ] Forking. Allowing a user to fork their own copy of a database will enable collaborators to remix and build on each others' work.
