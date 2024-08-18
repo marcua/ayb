@@ -246,6 +246,11 @@ $ ayb client query marcua/snapshots.sqlite "SELECT * FROM favorite_databases;"
 Rows: 1
 ```
 
+Credits: the design of snapshot-based backups was influenced by that
+of
+[rqlite](https://rqlite.io/docs/guides/backup/#automatic-backups). Thank
+you to the authors for their great design and documentation.
+
 ### Isolation
 `ayb` allows multiple users to run queries against databases that are
 stored on the same machine. Isolation enables you to prevent one user
