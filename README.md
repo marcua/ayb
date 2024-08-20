@@ -172,7 +172,7 @@ You can configure `ayb` to periodically upload snapshots of each
 database to [S3](https://aws.amazon.com/s3/)-compatible storage to
 recover from the failure of the machine running `ayb` or revert to a
 previous copy of the data. Each snapshot is compressed (using
-[zstd](https://zstd.net)) and only uploaded if the database changed
+[zstd](https://facebook.github.io/zstd/)) and only uploaded if the database changed
 since the last snapshot. To enable snapshot-based backups, include a
 configuration block like the following in your `ayb.toml`:
 
