@@ -196,7 +196,7 @@ Here is an explanation of the parameters:
 * `sqlite_method`: The two SQLite backup methods are [Vacuum](https://www.sqlite.org/lang_vacuum.html#vacuuminto) and [Backup](https://www.sqlite.org/backup.html). `ayb` only supports `Vacuum` for now.
 * `access_key_id` / `secret_access_key`: The access key ID and secret to upload/list snapshots to your S3-compatible storage provider.
 * `bucket`: The name of the bucket to which to upload snapshots.
-* `bucket_prefix`: (Can be blank) if you want to upload snapshots to a prefixed path inside `bucket` (e.g., `my-bucket/snapshots`), provide a prefix.
+* `bucket_prefix`: (Can be blank) if you want to upload snapshots to a prefixed path inside `bucket` (e.g., `my-bucket/the-snapshots`), provide a prefix (e.g., `the-snapshots`).
 * `endpoint_url`: (Optional if using AWS S3) Each S3-compatible storage provider will tell you their own endpoint to manage your buckets.
 * `region`: (Optional if using AWS S3) Some S3-compatible storage providers will request a region in their network where your bucket will live.
 * `force_path_style`: (Optional, legacy) If included and `true`, will use the legacy [path-style](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access) method of referencing buckets. Used in `ayb`'s end-to-end tests and might be helpful beyond, but start without it.
