@@ -234,7 +234,7 @@ $ ayb client list_snapshots marcua/snapshots.sqlite
  f9e01a396fb7f91be988c26d43f9ffa667bd0fd05009b231aa61ea1073d34423 | 2024-08-18T15:05:04+00:00
  856e21f7cae8383426cd2e0599caf6e83962b051af4734ab5c53aff87ea0ff45 | 2024-08-18T15:04:40+00:00
 
-# Restire the older snapshot, which didn't contain SQLite
+# Restore the older snapshot, which didn't contain SQLite
 $ ayb client restore_snapshot marcua/snapshots.sqlite 856e21f7cae8383426cd2e0599caf6e83962b051af4734ab5c53aff87ea0ff45
 Restored marcua/snapshots.sqlite to snapshot 856e21f7cae8383426cd2e0599caf6e83962b051af4734ab5c53aff87ea0ff45
 
