@@ -200,7 +200,7 @@ Here is an explanation of the parameters:
 * `endpoint_url`: (Optional if using AWS S3) Each S3-compatible storage provider will tell you their own endpoint to manage your buckets.
 * `region`: (Optional if using AWS S3) Some S3-compatible storage providers will request a region in their network where your bucket will live.
 * `force_path_style`: (Optional, legacy) If included and `true`, will use the legacy [path-style](https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access) method of referencing buckets. Used in `ayb`'s end-to-end tests and might be helpful beyond, but start without it.
-* `interval`: How frequently to take a snapshot of your data in human-readable format (e.g., `30m`, `1h`, `1h30m`, with [more examples here](https://docs.rs/go-parse-duration/latest/go_parse_duration/)).
+* `interval`: How frequently to take a snapshot of your data in human-readable format (e.g., every 30 minutes = `30m`, every hour = `1h`, every hour and 30 minutes = `1h30m`, with [more examples here](https://docs.rs/go-parse-duration/latest/go_parse_duration/)).
 * `max_snapshots`: How many old snapshots to keep before pruning the oldest ones.
 
 Once snapshots are enabled, you will see logs on the server with each periodic snapshot run. The following example shows how snapshots work, including how to list and restore them (using `interval = "3s"` and `max_snapshots = 2`):
