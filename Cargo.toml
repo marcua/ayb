@@ -43,7 +43,7 @@ time = { version = "0.3.36" }  # Consider removing once another dependency updat
 toml = { version = "0.8.19" }
 tokio = { version = "1.38.1", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.11.0", features = ["signal"]}
-prefixed-api-key = { version = "0.2.0", features = ["sha2"]}
+prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.2", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
