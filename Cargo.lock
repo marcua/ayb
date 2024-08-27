@@ -838,7 +838,7 @@ dependencies = [
 
 [[package]]
 name = "ayb"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "actix-cors",
  "actix-web",
