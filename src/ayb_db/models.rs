@@ -114,11 +114,44 @@ impl AuthenticationMethodStatus {
     }
 }
 
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum PublicSharingLevel {
+    Metadata = 0,
+    Fork = 1,
+    ReadOnly = 2,
+}
+
+from_str!(PublicSharingLevel, {
+    "metadata" => PublicSharingLevel::Metadata,
+    "fork" => PublicSharingLevel::Fork,
+    "read_only" => PublicSharingLevel::ReadOnly
+});
+
+try_from_i16!(PublicSharingLevel, {
+    0 => PublicSharingLevel::Metadata,
+    1 => PublicSharingLevel::Fork,
+    3 => PublicSharingLevel::ReadOnly,
+});
+
+impl PublicSharingLevel {
+    pub fn to_str(&self) -> &str {
+        match self {
+            PublicSharingLevel::Metadata => "metadata",
+            PublicSharingLevel::Fork => "fork",
+            PublicSharingLevel::ReadOnly => "read_only",
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Database {
     pub entity_id: i32,
     pub slug: String,
     pub db_type: i16,
+    pub public_sharing_level: i16,
 }
 
 #[derive(Debug, FromRow, Serialize, Deserialize)]
@@ -127,6 +160,7 @@ pub struct InstantiatedDatabase {
     pub entity_id: i32,
     pub slug: String,
     pub db_type: i16,
+    pub public_sharing_level: i16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -240,4 +274,43 @@ pub struct APIToken {
     pub short_token: String,
     pub hash: String,
     pub status: i16,
+}
+
+#[derive(
+    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
+)]
+#[repr(i16)]
+pub enum EntityDatabaseSharingLevel {
+    ReadOnly = 0,
+    ReadWrite = 1,
+    Manager = 2,
+}
+
+from_str!(EntityDatabaseSharingLevel, {
+    "read_only" => EntityDatabaseSharingLevel::ReadOnly
+    "read_write" => EntityDatabaseSharingLevel::ReadWrite,
+    "manager" => EntityDatabaseSharingLevel::Manager,
+});
+
+try_from_i16!(EntityDatabaseSharingLevel, {
+    0 => EntityDatabaseSharingLevel::ReadOnly,
+    1 => EntityDatabaseSharingLevel::ReadWrite,
+    2 => EntityDatabaseSharingLevel::Manager,
+});
+
+impl EntityDatabaseSharingLevel {
+    pub fn to_str(&self) -> &str {
+        match self {
+            EntityDatabaseSharingLevel::ReadOnly => "read_only",
+            EntityDatabaseSharingLevel::ReadWrite => "read_write",
+            EntityDatabaseSharingLevel::Manager => "manager",
+        }
+    }
+}
+
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct EntityDatabasePermission {
+    pub entity_id: i32,
+    pub database_id: i32,
+    pub sharing_level: i16,
 }
