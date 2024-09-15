@@ -4,7 +4,7 @@ CREATE TABLE entity_database_permission (
        sharing_level SMALLINT NOT NULL,
 
        FOREIGN KEY(entity_id) REFERENCES entity(id),
-       FOREIGN KEY(database_id) REFERENCES database(id)
+       FOREIGN KEY(database_id) REFERENCES database(id),
        UNIQUE(entity_id, database_id)
 );
 
