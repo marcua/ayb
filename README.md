@@ -295,7 +295,7 @@ tests. To set up your environment for running end-to-end tests, type:
 tests/set_up_e2e_env.sh
 ```
 
-The postgres tests also require a `postgres_user` user with password `test`. Create this user with `createuser -P postgres_user`. Then grant the user database creation privileges:
+The Postgres tests also require a `postgres_user` user with password `test`. Create this user with `createuser -P postgres_user` and enter `test` as the password when prompted. Then grant the user database creation privileges:
 * On Linux (tested Ubuntu): `sudo -u postgres psql -c "alter user postgres_user createdb;"`
 * On macOS: `createuser -s postgres` followed by `psql -U postgres -c "alter user postgres_user createdb;"`
 
