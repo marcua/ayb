@@ -1,4 +1,4 @@
-use crate::ayb_db::models::{DBType, EntityType};
+use crate::ayb_db::models::{DBType, EntityType, PublicSharingLevel};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse, SnapshotList};
@@ -99,11 +99,16 @@ impl AybClient {
         entity: &str,
         database: &str,
         db_type: &DBType,
+        public_sharing_level: &PublicSharingLevel,
     ) -> Result<Database, AybError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             HeaderName::from_static("db-type"),
             HeaderValue::from_str(db_type.to_str()).unwrap(),
+        );
+        headers.insert(
+            HeaderName::from_static("public-sharing-level"),
+            HeaderValue::from_str(public_sharing_level.to_str()).unwrap(),
         );
         self.add_bearer_token(&mut headers)?;
 
