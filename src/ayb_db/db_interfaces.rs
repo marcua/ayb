@@ -116,14 +116,15 @@ RETURNING entity_id, short_token, hash, status
             ) -> Result<InstantiatedDatabase, AybError> {
                 let db: InstantiatedDatabase = sqlx::query_as(
                     r#"
-                INSERT INTO database ( entity_id, slug, db_type )
-                VALUES ( $1, $2, $3 )
-                RETURNING id, entity_id, slug, db_type
+                INSERT INTO database ( entity_id, slug, db_type, public_sharing_level )
+                VALUES ( $1, $2, $3, $4 )
+                RETURNING id, entity_id, slug, db_type, public_sharing_level
                 "#,
                 )
                 .bind(database.entity_id)
                 .bind(&database.slug)
                 .bind(database.db_type)
+                .bind(database.public_sharing_level)
                 .fetch_one(&self.pool)
                 .await
                 .or_else(|err| match err {
@@ -180,7 +181,8 @@ SELECT
     database.id,
     database.slug,
     database.entity_id,
-    database.db_type
+    database.db_type,
+    database.public_sharing_level
 FROM database
 JOIN entity on database.entity_id = entity.id
 WHERE
@@ -388,7 +390,8 @@ SELECT
     id,
     entity_id,
     slug,
-    db_type
+    db_type,
+    public_sharing_level
 FROM database
 WHERE database.entity_id = $1
                     "#,

@@ -1,4 +1,4 @@
-use crate::ayb_db::models::{DBType, EntityType};
+use crate::ayb_db::models::{DBType, EntityType, PublicSharingLevel};
 use crate::client::config::ClientConfig;
 use crate::client::http::AybClient;
 use crate::error::AybError;
@@ -95,7 +95,14 @@ pub fn client_commands() -> Command {
                         .value_parser(value_parser!(DBType))
                         .default_value(DBType::Sqlite.to_str())
                         .required(false)
+                )
+                .arg(
+                    arg!(<public_sharing_level> "The sharing level that the public/an anonymous user will have")
+                        .value_parser(value_parser!(PublicSharingLevel))
+                        .default_value(PublicSharingLevel::NoAccess.to_str())
+                        .required(false)
                 ),
+
         )
         .subcommand(
             Command::new("query")
@@ -244,12 +251,18 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
     };
 
     if let Some(matches) = matches.subcommand_matches("create_database") {
-        if let (Some(entity_database), Some(db_type)) = (
+        if let (Some(entity_database), Some(db_type), Some(public_sharing_level)) = (
             matches.get_one::<EntityDatabasePath>("database"),
             matches.get_one::<DBType>("type"),
+            matches.get_one::<PublicSharingLevel>("public_sharing_level"),
         ) {
             match client
-                .create_database(&entity_database.entity, &entity_database.database, db_type)
+                .create_database(
+                    &entity_database.entity,
+                    &entity_database.database,
+                    db_type,
+                    public_sharing_level,
+                )
                 .await
             {
                 Ok(_response) => {

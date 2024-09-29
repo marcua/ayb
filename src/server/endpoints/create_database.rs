@@ -1,5 +1,5 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{DBType, Database, InstantiatedEntity};
+use crate::ayb_db::models::{DBType, Database, InstantiatedEntity, PublicSharingLevel};
 use std::str::FromStr;
 
 use crate::error::AybError;
@@ -24,10 +24,12 @@ async fn create_database(
     let entity_slug = &path.entity;
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let db_type = get_header(&req, "db-type")?;
+    let public_sharing_level = get_header(&req, "public-sharing-level")?;
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),
         db_type: DBType::from_str(&db_type)? as i16,
+        public_sharing_level: PublicSharingLevel::from_str(&public_sharing_level)? as i16,
     };
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     if can_create_database(&authenticated_entity, &entity) {
