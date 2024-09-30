@@ -1267,14 +1267,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "cron"
-version = "0.12.0"
+name = "croner"
+version = "2.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ff76b51e4c068c52bfd2866e1567bee7c567ae8f24ada09fd4307019e25eab7"
+checksum = "09b42c74d1c9fc4680c245ca7287bd631fe73eb364657268b0e65bafdec83d47"
 dependencies = [
  "chrono",
- "nom",
- "once_cell",
 ]
 
 [[package]]
@@ -4405,12 +4403,12 @@ dependencies = [
 
 [[package]]
 name = "tokio-cron-scheduler"
-version = "0.11.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7b9480125554f0ace1c3c3797a24b5cc56c6a7cd82c739db35fb54c4dc046f3"
+checksum = "6a5597b569b4712cf78aa0c9ae29742461b7bda1e49c2a5fdad1d79bf022f8f0"
 dependencies = [
  "chrono",
- "cron",
+ "croner",
  "num-derive",
  "num-traits",
  "tokio",
