@@ -20,7 +20,7 @@ aws-smithy-types-convert = { version = "0.60.8", features = ["convert-chrono"] }
 aws-types = { version = "1.3.0" }
 blake3 = { version = "1.5.4" }
 chrono = { version = "0.4.38", features = [ "serde" ] }
-clap = { version = "4.5.18", features = ["cargo", "derive", "env"] }
+clap = { version = "4.5.20", features = ["cargo", "derive", "env"] }
 derive_more = { version = "1.0.0", features = ["error"] }
 directories = { version = "5.0" }
 dyn-clone = { version = "1.0.17" }
