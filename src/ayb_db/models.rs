@@ -167,6 +167,12 @@ pub struct InstantiatedDatabase {
     pub public_sharing_level: i16,
 }
 
+/// Represents properties of a database that can be updated.
+#[derive(Debug)]
+pub struct PartialDatabase {
+    pub public_sharing_level: Option<i16>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Entity {
     pub slug: String,

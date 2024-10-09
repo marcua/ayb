@@ -8,6 +8,14 @@ pub fn can_create_database(
     authenticated_entity.id == desired_entity.id
 }
 
+pub fn can_manage_database(
+    authenticated_entity: &InstantiatedEntity,
+    database: &InstantiatedDatabase,
+) -> bool {
+    // An entity/user can only manage its own databases (for now)
+    authenticated_entity.id == database.entity_id
+}
+
 pub fn can_query(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
