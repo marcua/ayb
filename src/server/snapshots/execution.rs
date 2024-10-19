@@ -5,6 +5,7 @@ use crate::hosted_db::paths::{
     pathbuf_to_parent,
 };
 use crate::hosted_db::sqlite::query_sqlite;
+use crate::hosted_db::QueryMode;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
 use crate::server::snapshots::hashes::hash_db_directory;
 use crate::server::snapshots::models::{Snapshot, SnapshotType};
@@ -164,13 +165,19 @@ pub async fn snapshot_database(
                 // Run in unsafe mode to allow backup process to
                 // attach to destination database.
                 true,
+                QueryMode::ReadWrite,
             )?;
             if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
                     message: format!("Unexpected snapshot result: {:?}", result),
                 });
             }
-            let result = query_sqlite(&snapshot_path, "PRAGMA integrity_check;", false)?;
+            let result = query_sqlite(
+                &snapshot_path,
+                "PRAGMA integrity_check;",
+                false,
+                QueryMode::ReadWrite,
+            )?;
             if result.fields.len() != 1
                 || result.rows.len() != 1
                 || result.rows[0][0] != Some("ok".to_string())

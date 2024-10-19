@@ -1,5 +1,5 @@
 use crate::error::AybError;
-use crate::hosted_db::{sandbox::run_in_sandbox, QueryResult};
+use crate::hosted_db::{sandbox::run_in_sandbox, QueryMode, QueryResult};
 use crate::server::config::AybConfigIsolation;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
@@ -14,8 +14,19 @@ pub fn query_sqlite(
     path: &PathBuf,
     query: &str,
     allow_unsafe: bool,
+    query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    let conn = rusqlite::Connection::open(path)?;
+    // The flags below are the default `open` flags in `rusqlite`
+    // except for `..READ_ONLY` and `..READ_WRITE`.
+    let mut open_flags = rusqlite::OpenFlags::SQLITE_OPEN_CREATE
+        | rusqlite::OpenFlags::SQLITE_OPEN_URI
+        | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    open_flags = open_flags
+        | match query_mode {
+            QueryMode::ReadOnly => rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+            QueryMode::ReadWrite => rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
+        };
+    let conn = rusqlite::Connection::open_with_flags(path, open_flags)?;
 
     if !allow_unsafe {
         // Disable the usage of ATTACH
@@ -63,6 +74,7 @@ pub async fn potentially_isolated_sqlite_query(
     path: &PathBuf,
     query: &str,
     isolation: &Option<AybConfigIsolation>,
+    query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     if let Some(isolation) = isolation {
         let result = run_in_sandbox(Path::new(&isolation.nsjail_path), path, query).await?;
@@ -88,5 +100,5 @@ pub async fn potentially_isolated_sqlite_query(
     }
 
     // No isolation configuration, so run the query without a sandbox.
-    query_sqlite(path, query, false)
+    query_sqlite(path, query, false, query_mode)
 }

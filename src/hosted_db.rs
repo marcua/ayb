@@ -7,10 +7,22 @@ use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
 use crate::server::config::AybConfigIsolation;
+use crate::try_from_i16;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
+
+#[repr(i16)]
+pub enum QueryMode {
+    ReadOnly = 0,
+    ReadWrite = 1,
+}
+
+try_from_i16!(QueryMode, {
+    0 => QueryMode::ReadOnly,
+    1 => QueryMode::ReadWrite
+});
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {
@@ -48,9 +60,12 @@ pub async fn run_query(
     query: &str,
     db_type: &DBType,
     isolation: &Option<AybConfigIsolation>,
+    query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     match db_type {
-        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(path, query, isolation).await?),
+        DBType::Sqlite => {
+            Ok(potentially_isolated_sqlite_query(path, query, isolation, query_mode).await?)
+        }
         _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),
