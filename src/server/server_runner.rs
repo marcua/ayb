@@ -6,7 +6,7 @@ use crate::server::config::AybConfigCors;
 use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
     log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint,
-    update_profile_endpoint,
+    update_db_endpoint, update_profile_endpoint,
 };
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
@@ -28,6 +28,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("")
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_db_endpoint)
+            .service(update_db_endpoint)
             .service(query_endpoint)
             .service(entity_details_endpoint)
             .service(update_profile_endpoint)

@@ -181,6 +181,15 @@ pub fn client_commands() -> Command {
                 )
         )
         .subcommand(
+            Command::new("update_database")
+                .about("Update properties of a database")
+                .arg(arg!(<database> "The database to which to connect (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true) // As we add other updateable properties, this one won't be required anymore.
+                )
+                .arg(arg!(--public_sharing_level <value> "The level of public access to enable for this database").value_parser(value_parser!(PublicSharingLevel)).required(false))
+        )
+        .subcommand(
             Command::new("set_default_url")
                 .about("Set the default server URL for future requests in ayb.json")
                 .arg(arg!(<url> "The URL to use in the future")
@@ -499,6 +508,30 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                         "Error: Snapshot {} does not exist for {}/{}",
                         snapshot_id, entity_database.entity, entity_database.database
                     )
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("update_database") {
+        if let (Some(entity_database), Some(public_sharing_level)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<PublicSharingLevel>("public_sharing_level"),
+        ) {
+            match client
+                .update_database(
+                    &entity_database.entity,
+                    &entity_database.database,
+                    public_sharing_level,
+                )
+                .await
+            {
+                Ok(_response) => {
+                    println!(
+                        "Database {}/{} updated successfully",
+                        entity_database.entity, entity_database.database
+                    );
                 }
                 Err(err) => {
                     println!("Error: {}", err);

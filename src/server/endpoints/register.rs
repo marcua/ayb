@@ -5,7 +5,7 @@ use crate::error::AybError;
 use crate::http::structs::{AuthenticationDetails, EmptyResponse};
 use crate::server::config::AybConfig;
 use crate::server::tokens::encrypt_auth_token;
-use crate::server::utils::{get_header, get_lowercased_header};
+use crate::server::utils::{get_lowercased_header, get_required_header};
 use crate::server::web_frontend::WebFrontendDetails;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::str::FromStr;
@@ -19,7 +19,7 @@ async fn register(
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
     let email_address = get_lowercased_header(&req, "email-address")?;
-    let entity_type = get_header(&req, "entity-type")?;
+    let entity_type = get_required_header(&req, "entity-type")?;
     let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
     // Ensure that there are no authentication methods aside from
     // perhaps the currently requested one.

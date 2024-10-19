@@ -18,7 +18,7 @@ pub async fn test_snapshots(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        "Error: Authenticated entity e2e-second can not manage snapshots on database e2e-first/test.sqlite",
+        "Error: Authenticated entity e2e-second can't manage snapshots on database e2e-first/test.sqlite",
     )?;
 
     // Remove all snapshots so our tests aren't affected by

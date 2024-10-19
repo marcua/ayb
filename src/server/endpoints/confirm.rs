@@ -7,7 +7,7 @@ use crate::error::AybError;
 use crate::http::structs::APIToken as APIAPIToken;
 use crate::server::config::AybConfig;
 use crate::server::tokens::{decrypt_auth_token, generate_api_token};
-use crate::server::utils::get_header;
+use crate::server::utils::get_required_header;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/confirm")]
@@ -16,7 +16,7 @@ async fn confirm(
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse, AybError> {
-    let auth_token = get_header(&req, "authentication-token")?;
+    let auth_token = get_required_header(&req, "authentication-token")?;
     let auth_details = decrypt_auth_token(auth_token, &ayb_config.authentication)?;
 
     let created_entity = ayb_db

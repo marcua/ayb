@@ -82,7 +82,7 @@ pub async fn update_profile(
     partial.links = links;
 
     ayb_db
-        .update_entity_by_id(&partial, authenticated_entity.id)
+        .update_entity_by_id(authenticated_entity.id, &partial)
         .await?;
 
     Ok(HttpResponse::Ok().json(EmptyResponse {}))

@@ -10,7 +10,7 @@ use crate::hosted_db::paths::{
 use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
 use crate::server::config::AybConfig;
 use crate::server::permissions::can_create_database;
-use crate::server::utils::{get_header, unwrap_authenticated_entity};
+use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/{entity}/{database}/create")]
@@ -23,8 +23,8 @@ async fn create_database(
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
-    let db_type = get_header(&req, "db-type")?;
-    let public_sharing_level = get_header(&req, "public-sharing-level")?;
+    let db_type = get_required_header(&req, "db-type")?;
+    let public_sharing_level = get_required_header(&req, "public-sharing-level")?;
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),
@@ -42,7 +42,7 @@ async fn create_database(
     } else {
         Err(AybError::Other {
             message: format!(
-                "Authenticated entity {} can not create a database for entity {}",
+                "Authenticated entity {} can't create a database for entity {}",
                 authenticated_entity.slug, entity_slug
             ),
         })

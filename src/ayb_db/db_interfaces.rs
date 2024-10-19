@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
     APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
-    InstantiatedDatabase, InstantiatedEntity, PartialEntity,
+    InstantiatedDatabase, InstantiatedEntity, PartialDatabase, PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -39,10 +39,15 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    async fn update_database_by_id(
+        &self,
+        database_id: i32,
+        database: &PartialDatabase,
+    ) -> Result<InstantiatedDatabase, AybError>;
     async fn update_entity_by_id(
         &self,
-        entity: &PartialEntity,
         entity_id: i32,
+        entity: &PartialEntity,
     ) -> Result<InstantiatedEntity, AybError>;
     async fn list_authentication_methods(
         &self,
@@ -271,7 +276,47 @@ WHERE id = $1
                 Ok(entity)
             }
 
-            async fn update_entity_by_id(&self, entity: &PartialEntity, entity_id: i32) -> Result<InstantiatedEntity, AybError> {
+            async fn update_database_by_id(&self, database_id: i32, database: &PartialDatabase) -> Result<InstantiatedDatabase, AybError> {
+                let mut query = QueryBuilder::new("UPDATE database SET");
+                let mut updated_field = false;
+                let pairs = vec![
+                    ("public_sharing_level", &database.public_sharing_level),
+                ];
+
+                for (key, current) in pairs.iter() {
+                    let Some(current) = current else {
+                        continue;
+                    };
+
+                    if updated_field {
+                        query.push(",");
+                    }
+
+                    // Keys are hard-coded, and are not open to SQL injection
+                    query.push(format!(" {} = ", key));
+                    query.push_bind(current);
+                    updated_field = true;
+                }
+
+                query.push(" WHERE database.id = ");
+                query.push_bind(database_id);
+                query.push(" RETURNING id, entity_id, slug, db_type, public_sharing_level;");
+
+                let database: InstantiatedDatabase = query.build_query_as()
+                    .fetch_one(&self.pool)
+                    .await
+                    .or_else(|err| match err {
+                        sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                            id: database_id.to_string(),
+                            record_type: "database".into(),
+                        }),
+                        _ => Err(AybError::from(err)),
+                    })?;
+
+                Ok(database)
+            }
+
+            async fn update_entity_by_id(&self, entity_id: i32, entity: &PartialEntity) -> Result<InstantiatedEntity, AybError> {
                 let mut query = QueryBuilder::new("UPDATE entity SET");
                 let mut updated_field = false;
                 let pairs = vec![
