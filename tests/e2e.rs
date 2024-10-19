@@ -4,7 +4,8 @@ mod e2e_tests;
 mod utils;
 
 use crate::e2e_tests::{
-    test_create_and_query_db, test_entity_details_and_profile, test_registration, test_snapshots,
+    test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
+    test_snapshots,
 };
 use crate::utils::testing::{AybServer, Cleanup, SmtpServer};
 use assert_cmd::prelude::*;
@@ -81,6 +82,7 @@ async fn client_server_integration(
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(db_type, &config_path, &api_keys).await?;
+    test_permissions(&config_path, &api_keys).await?;
 
     Ok(())
 }

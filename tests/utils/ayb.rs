@@ -228,3 +228,18 @@ pub fn update_profile(
     cmd.assert().success().stdout(format!("{}\n", result));
     Ok(())
 }
+
+pub fn update_database(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    public_sharing_level: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "update_database", database, "--public_sharing_level", public_sharing_level; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}

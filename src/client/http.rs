@@ -266,4 +266,28 @@ impl AybClient {
         self.handle_empty_response(response, reqwest::StatusCode::OK)
             .await
     }
+
+    pub async fn update_database(
+        &self,
+        entity: &str,
+        database: &str,
+        public_sharing_level: &PublicSharingLevel,
+    ) -> Result<(), AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        headers.insert(
+            HeaderName::from_static("public-sharing-level"),
+            HeaderValue::from_str(public_sharing_level.to_str()).unwrap(),
+        );
+
+        let response = reqwest::Client::new()
+            .patch(self.make_url(format!("{}/{}/update", entity, database)))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_empty_response(response, reqwest::StatusCode::OK)
+            .await
+    }
 }
