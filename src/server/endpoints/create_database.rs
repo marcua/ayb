@@ -42,7 +42,7 @@ async fn create_database(
     } else {
         Err(AybError::Other {
             message: format!(
-                "Authenticated entity {} can not create a database for entity {}",
+                "Authenticated entity {} can't create a database for entity {}",
                 authenticated_entity.slug, entity_slug
             ),
         })

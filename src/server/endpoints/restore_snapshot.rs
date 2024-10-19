@@ -42,7 +42,7 @@ async fn restore_snapshot(
     } else {
         Err(AybError::Other {
             message: format!(
-                "Authenticated entity {} can not manage snapshots on database {}/{}",
+                "Authenticated entity {} can't manage snapshots on database {}/{}",
                 authenticated_entity.slug, entity_slug, database_slug
             ),
         })

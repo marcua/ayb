@@ -22,7 +22,7 @@ pub async fn test_permissions(
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
         "table",
-        "Error: Authenticated entity e2e-second can not query database e2e-first/test.sqlite",
+        "Error: Authenticated entity e2e-second can't query database e2e-first/test.sqlite",
     )?;
 
     //TODO(marcua): Implement "can't find database in list" part.
@@ -34,7 +34,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "metadata",
-        "Error: Authenticated entity e2e-second can not update database e2e-first/test.sqlite",
+        "Error: Authenticated entity e2e-second can't update database e2e-first/test.sqlite",
     )?;
 
     update_database(

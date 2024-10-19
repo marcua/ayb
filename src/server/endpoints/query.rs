@@ -31,7 +31,7 @@ async fn query(
     } else {
         Err(AybError::Other {
             message: format!(
-                "Authenticated entity {} can not query database {}/{}",
+                "Authenticated entity {} can't query database {}/{}",
                 authenticated_entity.slug, entity_slug, database_slug
             ),
         })

@@ -35,7 +35,7 @@ async fn update_database(
     } else {
         Err(AybError::Other {
             message: format!(
-                "Authenticated entity {} can not update database {}/{}",
+                "Authenticated entity {} can't update database {}/{}",
                 authenticated_entity.slug, entity_slug, database_slug
             ),
         })

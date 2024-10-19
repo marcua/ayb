@@ -14,7 +14,7 @@ pub fn test_create_and_query_db(
     create_database(
         &config_path,
         &api_keys.get("second").unwrap()[0],
-        "Error: Authenticated entity e2e-second can not create a database for entity e2e-first",
+        "Error: Authenticated entity e2e-second can't create a database for entity e2e-first",
     )?;
 
     // Can't create database on e2e-first with invalid token.
@@ -45,7 +45,7 @@ pub fn test_create_and_query_db(
         "CREATE TABLE test_table(fname varchar, lname varchar);",
         FIRST_ENTITY_DB,
         "table",
-        "Error: Authenticated entity e2e-second can not query database e2e-first/test.sqlite",
+        "Error: Authenticated entity e2e-second can't query database e2e-first/test.sqlite",
     )?;
 
     // Can't query database with bad API key.
