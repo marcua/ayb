@@ -1,6 +1,7 @@
 use crate::error::AybError;
 use crate::hosted_db::{sandbox::run_in_sandbox, QueryMode, QueryResult};
 use crate::server::config::AybConfigIsolation;
+use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
@@ -18,14 +19,14 @@ pub fn query_sqlite(
 ) -> Result<QueryResult, AybError> {
     // The flags below are the default `open` flags in `rusqlite`
     // except for `..READ_ONLY` and `..READ_WRITE`.
-    let mut open_flags = rusqlite::OpenFlags::SQLITE_OPEN_CREATE
-        | rusqlite::OpenFlags::SQLITE_OPEN_URI
-        | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX;
-    open_flags = open_flags
-        | match query_mode {
-            QueryMode::ReadOnly => rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-            QueryMode::ReadWrite => rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE,
-        };
+    let mut open_flags =
+        rusqlite::OpenFlags::SQLITE_OPEN_URI | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    open_flags |= match query_mode {
+        QueryMode::ReadOnly => rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        QueryMode::ReadWrite => {
+            rusqlite::OpenFlags::SQLITE_OPEN_CREATE | rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE
+        }
+    };
     let conn = rusqlite::Connection::open_with_flags(path, open_flags)?;
 
     if !allow_unsafe {
@@ -46,7 +47,16 @@ pub fn query_sqlite(
 
     let mut rows = prepared.query([])?;
     let mut results: Vec<Vec<Option<String>>> = Vec::new();
-    while let Some(row) = rows.next()? {
+    while let Some(row) = rows.next().map_err(|err| match err {
+        rusqlite::Error::SqliteFailure(ref code, _)
+            if code.code == rusqlite::ErrorCode::ReadOnly && code.extended_code == 8 =>
+        {
+            AybError::NoWriteAccessError {
+                message: "Attempted to write to a read-only database".to_string(),
+            }
+        }
+        _ => AybError::from(err),
+    })? {
         let mut result: Vec<Option<String>> = Vec::new();
         for column_index in 0..num_columns {
             let column_value = row.get_ref(column_index)?;

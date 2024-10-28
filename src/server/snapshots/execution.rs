@@ -165,7 +165,7 @@ pub async fn snapshot_database(
                 // Run in unsafe mode to allow backup process to
                 // attach to destination database.
                 true,
-                QueryMode::ReadWrite,
+                QueryMode::ReadOnly,
             )?;
             if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
@@ -176,7 +176,7 @@ pub async fn snapshot_database(
                 &snapshot_path,
                 "PRAGMA integrity_check;",
                 false,
-                QueryMode::ReadWrite,
+                QueryMode::ReadOnly,
             )?;
             if result.fields.len() != 1
                 || result.rows.len() != 1
