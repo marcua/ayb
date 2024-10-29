@@ -22,9 +22,15 @@ fn main() -> Result<(), serde_json::Error> {
     .expect("query mode should be 0 or 1");
     let query = (args[3..]).to_vec();
     let result = query_sqlite(&PathBuf::from(db_file), &query.join(" "), false, query_mode);
+    let query_mode2 = QueryMode::try_from(
+        args[2]
+            .parse::<i16>()
+            .expect("query mode should be an integer"),
+    )
+    .expect("query mode should be 0 or 1");
     match result {
         Ok(result) => println!("{}", serde_json::to_string(&result)?),
-        Err(error) => eprintln!("{}", serde_json::to_string(&error)?),
+        Err(error) => eprintln!("{}---{}---{:?}---{:?}", serde_json::to_string(&error)?, db_file, query_mode2, query),
     }
     Ok(())
 }
