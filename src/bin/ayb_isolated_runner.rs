@@ -20,7 +20,7 @@ fn main() -> Result<(), serde_json::Error> {
             .expect("query mode should be an integer"),
     )
     .expect("query mode should be 0 or 1");
-    let query = (args[2..]).to_vec();
+    let query = (args[3..]).to_vec();
     let result = query_sqlite(&PathBuf::from(db_file), &query.join(" "), false, query_mode);
     match result {
         Ok(result) => println!("{}", serde_json::to_string(&result)?),
