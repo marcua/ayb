@@ -28,6 +28,7 @@ SOFTWARE.
 
 use crate::error::AybError;
 use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
+use crate::hosted_db::QueryMode;
 use serde::{Deserialize, Serialize};
 use std::env::current_exe;
 use std::fs::canonicalize;
@@ -51,6 +52,7 @@ pub async fn run_in_sandbox(
     nsjail: &Path,
     db_path: &PathBuf,
     query: &str,
+    query_mode: QueryMode,
 ) -> Result<RunResult, AybError> {
     let mut cmd = tokio::process::Command::new(nsjail);
 
@@ -97,6 +99,7 @@ pub async fn run_in_sandbox(
         .arg("--")
         .arg("/tmp/ayb_isolated_runner")
         .arg(tmp_db_path)
+        .arg((query_mode as i16).to_string())
         .arg(query)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
