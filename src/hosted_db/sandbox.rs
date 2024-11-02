@@ -99,7 +99,6 @@ pub async fn run_in_sandbox(
         .arg(tmp_db_path)
         .arg((query_mode as i16).to_string())
         .arg(query);
-    println!("The commmand {:?}", cmd);
 
     let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 

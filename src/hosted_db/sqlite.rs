@@ -90,7 +90,6 @@ pub async fn potentially_isolated_sqlite_query(
         let result =
             run_in_sandbox(Path::new(&isolation.nsjail_path), path, query, query_mode).await?;
 
-        println!("Results {:?}", result);
         if !result.stderr.is_empty() {
             let error: AybError = serde_json::from_str(&result.stderr)?;
             return Err(error);
