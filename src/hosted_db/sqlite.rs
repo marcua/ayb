@@ -52,7 +52,7 @@ pub fn query_sqlite(
             if code.code == rusqlite::ErrorCode::ReadOnly && code.extended_code == 8 =>
         {
             AybError::NoWriteAccessError {
-                message: "Attempted to write to a read-only database".to_string(),
+                message: "Attempted to write to database while in read-only mode".to_string(),
             }
         }
         _ => AybError::from(err),

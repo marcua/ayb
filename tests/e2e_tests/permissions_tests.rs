@@ -98,7 +98,7 @@ pub async fn test_permissions(
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
         "table",
-        "Error: Attempted to write to a read-only database",
+        "Error: Attempted to write to database while in read-only mode",
     )?;
     list_databases(
         &config_path,
