@@ -1,10 +1,8 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
-use crate::http::structs::{
-    EntityDatabase, EntityPath, EntityProfile, EntityProfileLink, EntityQueryResponse,
-};
-use crate::server::permissions::can_query;
+use crate::http::structs::{EntityPath, EntityProfile, EntityProfileLink, EntityQueryResponse};
+use crate::server::permissions::can_discover_database;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
@@ -18,13 +16,12 @@ pub async fn entity_details(
     let entity_slug = &path.entity.to_lowercase();
     let desired_entity = ayb_db.get_entity_by_slug(entity_slug).await?;
 
-    let databases = ayb_db
-        .list_databases_by_entity(&desired_entity)
-        .await?
-        .into_iter()
-        .filter(|v| can_query(&authenticated_entity, v))
-        .map(From::from)
-        .collect::<Vec<EntityDatabase>>();
+    let mut databases = Vec::new();
+    for database in ayb_db.list_databases_by_entity(&desired_entity).await? {
+        if can_discover_database(&authenticated_entity, &database)? {
+            databases.push(database.into());
+        }
+    }
 
     let links: Vec<EntityProfileLink> = desired_entity.links.map_or_else(Vec::new, |l| {
         l.iter()

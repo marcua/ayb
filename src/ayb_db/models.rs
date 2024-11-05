@@ -120,30 +120,26 @@ impl AuthenticationMethodStatus {
 #[repr(i16)]
 pub enum PublicSharingLevel {
     NoAccess = 0,
-    Metadata = 1,
-    Fork = 2,
-    ReadOnly = 3,
+    Fork = 1,
+    ReadOnly = 2,
 }
 
 from_str!(PublicSharingLevel, {
     "no-access" => PublicSharingLevel::NoAccess,
-    "metadata" => PublicSharingLevel::Metadata,
     "fork" => PublicSharingLevel::Fork,
     "read-only" => PublicSharingLevel::ReadOnly
 });
 
 try_from_i16!(PublicSharingLevel, {
     0 => PublicSharingLevel::NoAccess,
-    1 => PublicSharingLevel::Metadata,
-    2 => PublicSharingLevel::Fork,
-    3 => PublicSharingLevel::ReadOnly
+    1 => PublicSharingLevel::Fork,
+    2 => PublicSharingLevel::ReadOnly
 });
 
 impl PublicSharingLevel {
     pub fn to_str(&self) -> &str {
         match self {
             PublicSharingLevel::NoAccess => "no-access",
-            PublicSharingLevel::Metadata => "metadata",
             PublicSharingLevel::Fork => "fork",
             PublicSharingLevel::ReadOnly => "read-only",
         }
