@@ -251,6 +251,52 @@ of
 [rqlite](https://rqlite.io/docs/guides/backup/#automatic-backups). Thank
 you to the authors for their great design and documentation.
 
+### Permissions
+
+By default, only the owner / creator of an `ayb` database can access
+it. It's possible to share `ayb` databases in two ways:
+* By setting the public sharing level of the database to give any entity access to the database.
+* By sharing the database with a particular entity.
+
+To set the public sharing level of a database, select one of the following options:
+```
+
+# The default setting: no entity will be able to access the database
+# (unless they specifically get permissions).
+ayb client update_database marcua/test.sqlite --public-sharing-level no-access
+
+# With a public sharing level of `fork`, entities will be able to see
+# the database in the owner's list of databases using `ayb client
+# list` and fork a copy of the database under their own account. They
+# won't be able to query the database unless they fork it. Note:
+# Listing access is implemented today, but forking one database into
+# another account is not yet implemented.
+ayb client update_database marcua/test.sqlite --public-sharing-level fork
+
+# In addition to the listing and forking access that `fork`
+# allows, `read-only` access allows any entity to
+# issue a read-only (e.g., SELECT) query against the database. They
+# can't modify the database.
+ayb client update_database marcua/test.sqlite --public-sharing-level read-only
+```
+
+To provide a specific user with access to a database, select one of the following:
+```
+# Revoke access to a database from an entity.
+ayb client permissions marcua/test.sqlite sofia no-access
+
+# Allow an entity to make read-only (e.g., SELECT) queries against a
+# database.
+ayb client permissions marcua/test.sqlite sofia read-only
+
+# Allow an entity to make any type of query against a database.
+ayb client permissions marcua/test.sqlite sofia read-write
+
+# Allow an entity to not only modify a database, but also to change
+# the permissions of any non-owner entity.
+ayb client permissions marcua/test.sqlite sofia manager
+```
+
 ### Isolation
 `ayb` allows multiple users to run queries against databases that are
 stored on the same machine. Isolation enables you to prevent one user
