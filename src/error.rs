@@ -18,6 +18,7 @@ use url;
 #[derive(Debug, Deserialize, Error, Serialize)]
 #[serde(tag = "type")]
 pub enum AybError {
+    CantSetOwnerPermissions { message: String },
     DurationParseError { message: String },
     NoWriteAccessError { message: String },
     S3ExecutionError { message: String },
