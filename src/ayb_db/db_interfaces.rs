@@ -45,6 +45,11 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_database_permission(
+        &self,
+        entity: &InstantiatedEntity,
+        database: &InstantiatedDatabase,
+    ) -> Result<Option<EntityDatabasePermission>, AybError>;
     async fn update_database_by_id(
         &self,
         database_id: i32,
@@ -303,6 +308,26 @@ WHERE id = $1
                 })?;
 
                 Ok(entity)
+            }
+
+            async fn get_entity_database_permission(&self, entity: &InstantiatedEntity, database: &InstantiatedDatabase) -> Result<Option<EntityDatabasePermission>, AybError> {
+                let permission: Option<EntityDatabasePermission> = sqlx::query_as(
+                    r#"
+SELECT
+    entity_id,
+    database_id,
+    sharing_level
+FROM entity_database_permission
+WHERE entity_id = $1
+  AND database_id = $2
+        "#,
+                )
+                .bind(entity.id)
+                .bind(database.id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+                Ok(permission)
             }
 
             async fn update_database_by_id(&self, database_id: i32, database: &PartialDatabase) -> Result<InstantiatedDatabase, AybError> {

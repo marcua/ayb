@@ -1,6 +1,10 @@
-use crate::ayb_db::models::{InstantiatedDatabase, InstantiatedEntity, PublicSharingLevel};
+use crate::ayb_db::db_interfaces::AybDb;
+use crate::ayb_db::models::{
+    EntityDatabaseSharingLevel, InstantiatedDatabase, InstantiatedEntity, PublicSharingLevel,
+};
 use crate::error::AybError;
 use crate::hosted_db::QueryMode;
+use actix_web::web;
 
 fn is_owner(authenticated_entity: &InstantiatedEntity, database: &InstantiatedDatabase) -> bool {
     authenticated_entity.id == database.entity_id
@@ -32,9 +36,10 @@ pub fn can_manage_database(
     is_owner(authenticated_entity, database)
 }
 
-pub fn highest_query_access_level(
+pub async fn highest_query_access_level(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
+    ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<Option<QueryMode>, AybError> {
     if is_owner(authenticated_entity, database) {
         Ok(Some(QueryMode::ReadWrite))
@@ -43,7 +48,21 @@ pub fn highest_query_access_level(
     {
         Ok(Some(QueryMode::ReadOnly))
     } else {
-        Ok(None)
+        let permission = ayb_db
+            .get_entity_database_permission(authenticated_entity, database)
+            .await?;
+        match permission {
+            Some(permission) => {
+                match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+                    EntityDatabaseSharingLevel::Manager | EntityDatabaseSharingLevel::ReadWrite => {
+                        Ok(Some(QueryMode::ReadWrite))
+                    }
+                    EntityDatabaseSharingLevel::ReadOnly => Ok(Some(QueryMode::ReadOnly)),
+                    _ => Ok(None),
+                }
+            }
+            None => Ok(None),
+        }
     }
 }
 
