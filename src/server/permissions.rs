@@ -14,7 +14,6 @@ pub fn can_create_database(
     authenticated_entity: &InstantiatedEntity,
     desired_entity: &InstantiatedEntity,
 ) -> bool {
-    // An entity/user can only create databases on itself (for now)
     authenticated_entity.id == desired_entity.id
 }
 
@@ -28,12 +27,25 @@ pub fn can_discover_database(
         || public_sharing_level == PublicSharingLevel::Fork)
 }
 
-pub fn can_manage_database(
+pub async fn can_manage_database(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
-) -> bool {
-    // An entity/user can only manage its own databases (for now)
-    is_owner(authenticated_entity, database)
+    ayb_db: &web::Data<Box<dyn AybDb>>,
+) -> Result<bool, AybError> {
+    if is_owner(authenticated_entity, database) {
+        return Ok(true);
+    }
+
+    let permission = ayb_db
+        .get_entity_database_permission(authenticated_entity, database)
+        .await?;
+    match permission {
+        Some(permission) => match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+            EntityDatabaseSharingLevel::Manager => Ok(true),
+            _ => Ok(false),
+        },
+        None => Ok(false),
+    }
 }
 
 pub async fn highest_query_access_level(

@@ -19,7 +19,7 @@ async fn update_database(
     let database_slug = &path.database;
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
-    if can_manage_database(&authenticated_entity, &database) {
+    if can_manage_database(&authenticated_entity, &database, &ayb_db).await? {
         let public_sharing_level = get_optional_header(&req, "public-sharing-level")?;
         let mut partial_database = PartialDatabase {
             public_sharing_level: None,

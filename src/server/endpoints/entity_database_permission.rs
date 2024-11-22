@@ -35,7 +35,7 @@ async fn entity_database_permission(
                 entity_for_permission.slug, entity_for_database_slug, database_slug
             ),
         })
-    } else if can_manage_database(&authenticated_entity, &database) {
+    } else if can_manage_database(&authenticated_entity, &database, &ayb_db).await? {
         if sharing_level == EntityDatabaseSharingLevel::NoAccess {
             ayb_db
                 .delete_entity_database_permission(database.entity_id, database.id)
