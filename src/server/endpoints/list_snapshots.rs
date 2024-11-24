@@ -4,7 +4,7 @@ use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
 use crate::http::structs::{EntityDatabasePath, SnapshotList};
 use crate::server::config::AybConfig;
-use crate::server::permissions::can_manage_snapshots;
+use crate::server::permissions::can_manage_database;
 use crate::server::snapshots::models::ListSnapshotResult;
 use crate::server::snapshots::storage::SnapshotStorage;
 use crate::server::utils::unwrap_authenticated_entity;
@@ -22,7 +22,7 @@ async fn list_snapshots(
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
-    if can_manage_snapshots(&authenticated_entity, &database) {
+    if can_manage_database(&authenticated_entity, &database, &ayb_db).await? {
         let mut recent_snapshots: Vec<ListSnapshotResult> = Vec::new();
         if let Some(ref snapshot_config) = ayb_config.snapshots {
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;

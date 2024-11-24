@@ -4,7 +4,7 @@ use crate::error::AybError;
 use crate::hosted_db::paths::{new_database_path, set_current_database_and_clean_up};
 use crate::http::structs::{EmptyResponse, EntityDatabasePath};
 use crate::server::config::AybConfig;
-use crate::server::permissions::can_manage_snapshots;
+use crate::server::permissions::can_manage_database;
 use crate::server::snapshots::storage::SnapshotStorage;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{post, web, HttpResponse};
@@ -22,7 +22,7 @@ async fn restore_snapshot(
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
-    if can_manage_snapshots(&authenticated_entity, &database) {
+    if can_manage_database(&authenticated_entity, &database, &ayb_db).await? {
         if let Some(ref snapshot_config) = ayb_config.snapshots {
             // TODO(marcua): In the future, consider quiescing
             // requests to this database during the process, and

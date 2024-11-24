@@ -94,11 +94,3 @@ pub async fn highest_query_access_level(
         }
     }
 }
-
-pub fn can_manage_snapshots(
-    authenticated_entity: &InstantiatedEntity,
-    database: &InstantiatedDatabase,
-) -> bool {
-    // An entity/user can only manage snapshots on its own databases (for now)
-    is_owner(authenticated_entity, database)
-}
