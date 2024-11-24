@@ -17,14 +17,31 @@ pub fn can_create_database(
     authenticated_entity.id == desired_entity.id
 }
 
-pub fn can_discover_database(
+pub async fn can_discover_database(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
+    ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<bool, AybError> {
     let public_sharing_level = PublicSharingLevel::try_from(database.public_sharing_level)?;
-    Ok(is_owner(authenticated_entity, database)
+    if is_owner(authenticated_entity, database)
         || public_sharing_level == PublicSharingLevel::ReadOnly
-        || public_sharing_level == PublicSharingLevel::Fork)
+        || public_sharing_level == PublicSharingLevel::Fork
+    {
+        return Ok(true);
+    }
+
+    let permission = ayb_db
+        .get_entity_database_permission(authenticated_entity, database)
+        .await?;
+    match permission {
+        Some(permission) => match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+            EntityDatabaseSharingLevel::Manager
+            | EntityDatabaseSharingLevel::ReadWrite
+            | EntityDatabaseSharingLevel::ReadOnly => Ok(true),
+            _ => Ok(false),
+        },
+        None => Ok(false),
+    }
 }
 
 pub async fn can_manage_database(
