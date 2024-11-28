@@ -312,7 +312,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .patch(self.make_url(format!("{}/{}/share", entity_for_database, database)))
+            .post(self.make_url(format!("{}/{}/share", entity_for_database, database)))
             .headers(headers)
             .send()
             .await?;

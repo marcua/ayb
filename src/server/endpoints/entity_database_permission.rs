@@ -31,14 +31,14 @@ async fn entity_database_permission(
     if entity_for_permission.id == database.entity_id {
         Err(AybError::CantSetOwnerPermissions {
             message: format!(
-                "{} owns {}/{}, so their permissions are set",
+                "{} owns {}/{}, so their permissions can't be changed",
                 entity_for_permission.slug, entity_for_database_slug, database_slug
             ),
         })
     } else if can_manage_database(&authenticated_entity, &database, &ayb_db).await? {
         if sharing_level == EntityDatabaseSharingLevel::NoAccess {
             ayb_db
-                .delete_entity_database_permission(database.entity_id, database.id)
+                .delete_entity_database_permission(entity_for_permission.id, database.id)
                 .await?;
         } else {
             let permission = EntityDatabasePermission {
