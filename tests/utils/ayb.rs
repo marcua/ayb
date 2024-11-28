@@ -243,3 +243,19 @@ pub fn update_database(
     cmd.stdout(format!("{}\n", result));
     Ok(())
 }
+
+pub fn share(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    entity: &str,
+    sharing_level: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "share", database, entity, sharing_level; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}

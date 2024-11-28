@@ -16,3 +16,4 @@ const FIRST_ENTITY_DB_SLUG: &str = "test.sqlite";
 const FIRST_ENTITY_SLUG: &str = "e2e-first";
 const FIRST_ENTITY_SLUG_CASED: &str = "E2E-FiRsT";
 const SECOND_ENTITY_SLUG: &str = "e2e-second";
+const THIRD_ENTITY_SLUG: &str = "e2e-third";
