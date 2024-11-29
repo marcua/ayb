@@ -12,7 +12,7 @@ pub fn test_entity_details_and_profile(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         "csv",
-        "Database slug,Type\ntest.sqlite,sqlite",
+        "Database slug,Type\nanother.sqlite,sqlite\ntest.sqlite,sqlite",
     )?;
 
     // List databases from first account using the API key of the second account

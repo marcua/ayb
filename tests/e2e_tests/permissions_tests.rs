@@ -1,4 +1,6 @@
-use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG};
+use crate::e2e_tests::{
+    FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG,
+};
 use crate::utils::ayb::{
     list_databases, list_snapshots, list_snapshots_match_output, query, share, update_database,
 };
@@ -27,7 +29,10 @@ pub async fn test_permissions(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        "Database slug,Type\ntest.sqlite,sqlite",
+        // Note that while the first entity can see another.sqlite,
+        // the second/third entities, when granted access to
+        // test.sqlite, will not be able to see another.sqlite.
+        "Database slug,Type\nanother.sqlite,sqlite\ntest.sqlite,sqlite",
     )?;
     query(
         &config_path,
@@ -82,7 +87,7 @@ pub async fn test_permissions(
 
     // With public read-only permissions, the second entity can issue
     // read-only (SELECT) queries, but not modify the database (e.g.,
-    // INSERT). It should also still be able to discover the datbaase.
+    // INSERT). It should also still be able to discover the database.
     update_database(
         &config_path,
         &api_keys.get("first").unwrap()[0],
@@ -112,6 +117,16 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
+    )?;
+    // Read-only access to e2e-first/test.sqlite doesn't grant access
+    // to e2e-first/another.sqlite.
+    query(
+        &config_path,
+        &api_keys.get("second").unwrap()[0],
+        "SELECT COUNT(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DB2,
+        "table",
+        "Error: Authenticated entity e2e-second can\'t query database e2e-first/another.sqlite",
     )?;
 
     // With no public permissions, the second entity can't query or discover the database.
@@ -353,7 +368,17 @@ pub async fn test_permissions(
         0,
         "e2e-second should be able to list snapshots"
     );
-    // Second entity can update datbaase metadata.
+    // Access to e2e-first/test.sqlite doesn't grant access to
+    // e2e-first/another.sqlite.
+    query(
+        &config_path,
+        &api_keys.get("second").unwrap()[0],
+        "SELECT COUNT(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DB2,
+        "table",
+        "Error: Authenticated entity e2e-second can\'t query database e2e-first/another.sqlite",
+    )?;
+    // Second entity can update database metadata.
     update_database(
         &config_path,
         &api_keys.get("second").unwrap()[0],
