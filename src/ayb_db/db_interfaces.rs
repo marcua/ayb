@@ -515,6 +515,7 @@ SELECT
     public_sharing_level
 FROM database
 WHERE database.entity_id = $1
+ORDER BY id DESC
                     "#,
                 )
                 .bind(entity.id)

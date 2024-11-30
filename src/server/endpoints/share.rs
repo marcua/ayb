@@ -11,7 +11,7 @@ use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/{entity}/{database}/share")]
-async fn entity_database_permission(
+async fn share(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
