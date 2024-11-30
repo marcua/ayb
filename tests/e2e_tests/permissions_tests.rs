@@ -262,7 +262,15 @@ pub async fn test_permissions(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
-    // Second entity can modify database.
+    // Even if the public sharing level of the database is read-only,
+    // the second entity will be able to modify the database.
+    update_database(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "read-only",
+        "Database e2e-first/test.sqlite updated successfully",
+    )?;
     query(
         &config_path,
         &api_keys.get("second").unwrap()[0],
@@ -270,6 +278,13 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
+    )?;
+    update_database(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "no-access",
+        "Database e2e-first/test.sqlite updated successfully",
     )?;
     // Second entity can discover database.
     list_databases(

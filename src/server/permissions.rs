@@ -71,26 +71,28 @@ pub async fn highest_query_access_level(
     ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<Option<QueryMode>, AybError> {
     if is_owner(authenticated_entity, database) {
-        Ok(Some(QueryMode::ReadWrite))
+        return Ok(Some(QueryMode::ReadWrite));
+    }
+    let permission = ayb_db
+        .get_entity_database_permission(authenticated_entity, database)
+        .await?;
+    let access_level = match permission {
+        Some(permission) => match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+            EntityDatabaseSharingLevel::Manager | EntityDatabaseSharingLevel::ReadWrite => {
+                Some(QueryMode::ReadWrite)
+            }
+            EntityDatabaseSharingLevel::ReadOnly => Some(QueryMode::ReadOnly),
+            _ => None,
+        },
+        None => None,
+    };
+    if access_level.is_some() {
+        return Ok(access_level);
     } else if PublicSharingLevel::try_from(database.public_sharing_level)?
         == PublicSharingLevel::ReadOnly
     {
-        Ok(Some(QueryMode::ReadOnly))
-    } else {
-        let permission = ayb_db
-            .get_entity_database_permission(authenticated_entity, database)
-            .await?;
-        match permission {
-            Some(permission) => {
-                match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
-                    EntityDatabaseSharingLevel::Manager | EntityDatabaseSharingLevel::ReadWrite => {
-                        Ok(Some(QueryMode::ReadWrite))
-                    }
-                    EntityDatabaseSharingLevel::ReadOnly => Ok(Some(QueryMode::ReadOnly)),
-                    _ => Ok(None),
-                }
-            }
-            None => Ok(None),
-        }
+        return Ok(Some(QueryMode::ReadOnly));
     }
+
+    return Ok(None);
 }
