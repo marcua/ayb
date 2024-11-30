@@ -43,3 +43,5 @@ jobs:
       run: tests/set_up_e2e_env.sh
     - name: Run tests
       run: cargo test --verbose
+      env:
+        RUST_BACKTRACE: 1
