@@ -94,5 +94,5 @@ pub async fn highest_query_access_level(
         return Ok(Some(QueryMode::ReadOnly));
     }
 
-    return Ok(None);
+    Ok(None)
 }
