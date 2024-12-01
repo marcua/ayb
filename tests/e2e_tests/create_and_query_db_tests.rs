@@ -1,4 +1,4 @@
-use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED};
+use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_DB_CASED};
 use crate::utils::ayb::{create_database, query, query_no_api_token, set_default_url};
 use ayb::client::config::ClientConfig;
 use std::collections::HashMap;
@@ -14,6 +14,7 @@ pub fn test_create_and_query_db(
     create_database(
         &config_path,
         &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
         "Error: Authenticated entity e2e-second can't create a database for entity e2e-first",
     )?;
 
@@ -21,6 +22,7 @@ pub fn test_create_and_query_db(
     create_database(
         &config_path,
         &format!("{}bad", api_keys.get("first").unwrap()[0]),
+        FIRST_ENTITY_DB,
         "Error: Invalid API token",
     )?;
 
@@ -28,6 +30,7 @@ pub fn test_create_and_query_db(
     create_database(
         &config_path,
         &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
         "Successfully created e2e-first/test.sqlite",
     )?;
 
@@ -35,7 +38,16 @@ pub fn test_create_and_query_db(
     create_database(
         &config_path,
         &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
         "Error: Database already exists",
+    )?;
+
+    // Can create another database with the appropriate user/key pair.
+    create_database(
+        &config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB2,
+        "Successfully created e2e-first/another.sqlite",
     )?;
 
     // Can't query database with second account's API key

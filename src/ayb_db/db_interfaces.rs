@@ -1,6 +1,7 @@
 use crate::ayb_db::models::{
-    APIToken, AuthenticationMethod, Database, Entity, InstantiatedAuthenticationMethod,
-    InstantiatedDatabase, InstantiatedEntity, PartialDatabase, PartialEntity,
+    APIToken, AuthenticationMethod, Database, Entity, EntityDatabasePermission,
+    InstantiatedAuthenticationMethod, InstantiatedDatabase, InstantiatedEntity, PartialDatabase,
+    PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -30,6 +31,11 @@ pub trait AybDb: DynClone + Send + Sync {
         method: &AuthenticationMethod,
     ) -> Result<InstantiatedAuthenticationMethod, AybError>;
     async fn create_database(&self, database: &Database) -> Result<InstantiatedDatabase, AybError>;
+    async fn delete_entity_database_permission(
+        &self,
+        entity_id: i32,
+        database_id: i32,
+    ) -> Result<(), AybError>;
     async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError>;
     async fn get_api_token(&self, short_token: &str) -> Result<APIToken, AybError>;
     async fn get_database(
@@ -39,6 +45,11 @@ pub trait AybDb: DynClone + Send + Sync {
     ) -> Result<InstantiatedDatabase, AybError>;
     async fn get_entity_by_slug(&self, entity_slug: &str) -> Result<InstantiatedEntity, AybError>;
     async fn get_entity_by_id(&self, entity_id: i32) -> Result<InstantiatedEntity, AybError>;
+    async fn get_entity_database_permission(
+        &self,
+        entity: &InstantiatedEntity,
+        database: &InstantiatedDatabase,
+    ) -> Result<Option<EntityDatabasePermission>, AybError>;
     async fn update_database_by_id(
         &self,
         database_id: i32,
@@ -49,6 +60,10 @@ pub trait AybDb: DynClone + Send + Sync {
         entity_id: i32,
         entity: &PartialEntity,
     ) -> Result<InstantiatedEntity, AybError>;
+    async fn update_or_create_entity_database_permission(
+        &self,
+        permission: &EntityDatabasePermission,
+    ) -> Result<(), AybError>;
     async fn list_authentication_methods(
         &self,
         entity: &InstantiatedEntity,
@@ -145,6 +160,25 @@ RETURNING entity_id, short_token, hash, status
 
                 Ok(db)
             }
+
+            async fn delete_entity_database_permission(
+                &self,
+                entity_id: i32,
+                database_id: i32,
+            ) -> Result<(), AybError> {
+                sqlx::query(
+                    r#"
+DELETE FROM entity_database_permission
+WHERE entity_id = $1 AND database_id = $2;
+            "#,
+                )
+                    .bind(entity_id)
+                    .bind(database_id)
+                    .execute(&self.pool)
+                    .await?;
+                Ok(())
+            }
+
 
             async fn get_api_token(
                 &self,
@@ -276,6 +310,26 @@ WHERE id = $1
                 Ok(entity)
             }
 
+            async fn get_entity_database_permission(&self, entity: &InstantiatedEntity, database: &InstantiatedDatabase) -> Result<Option<EntityDatabasePermission>, AybError> {
+                let permission: Option<EntityDatabasePermission> = sqlx::query_as(
+                    r#"
+SELECT
+    entity_id,
+    database_id,
+    sharing_level
+FROM entity_database_permission
+WHERE entity_id = $1
+  AND database_id = $2
+        "#,
+                )
+                .bind(entity.id)
+                .bind(database.id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+                Ok(permission)
+            }
+
             async fn update_database_by_id(&self, database_id: i32, database: &PartialDatabase) -> Result<InstantiatedDatabase, AybError> {
                 let mut query = QueryBuilder::new("UPDATE database SET");
                 let mut updated_field = false;
@@ -372,6 +426,28 @@ WHERE id = $1
                 Ok(entity)
             }
 
+            async fn update_or_create_entity_database_permission(
+                &self,
+                permission: &EntityDatabasePermission,
+            ) -> Result<(), AybError> {
+                sqlx::query(
+                    r#"
+INSERT INTO entity_database_permission (entity_id, database_id, sharing_level)
+VALUES ($1, $2, $3)
+ON CONFLICT (entity_id, database_id) DO UPDATE
+    SET sharing_level = $3
+            "#,
+                )
+                    .bind(permission.entity_id)
+                    .bind(permission.database_id)
+                    .bind(permission.sharing_level)
+                    .execute(&self.pool)
+                    .await?;
+                Ok(())
+            }
+
+
+
             async fn get_or_create_entity(&self, entity: &Entity) -> Result<InstantiatedEntity, AybError> {
                 // Get or create logic inspired by https://stackoverflow.com/a/66337293
                 let mut tx = self.pool.begin().await?;
@@ -439,6 +515,7 @@ SELECT
     public_sharing_level
 FROM database
 WHERE database.entity_id = $1
+ORDER BY id DESC
                     "#,
                 )
                 .bind(entity.id)

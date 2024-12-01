@@ -23,7 +23,8 @@ async fn query(
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
-    let access_level = highest_query_access_level(&authenticated_entity, &database)?;
+    let access_level =
+        highest_query_access_level(&authenticated_entity, &database, &ayb_db).await?;
     match access_level {
         Some(access_level) => {
             let db_type = DBType::try_from(database.db_type)?;

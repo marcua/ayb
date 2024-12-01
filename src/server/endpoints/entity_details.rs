@@ -18,7 +18,7 @@ pub async fn entity_details(
 
     let mut databases = Vec::new();
     for database in ayb_db.list_databases_by_entity(&desired_entity).await? {
-        if can_discover_database(&authenticated_entity, &database)? {
+        if can_discover_database(&authenticated_entity, &database, &ayb_db).await? {
             databases.push(database.into());
         }
     }
