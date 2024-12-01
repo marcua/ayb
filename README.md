@@ -263,7 +263,7 @@ To set the public sharing level of a database, select one of the following optio
 
 # The default setting: no entity will be able to access the database
 # (unless they specifically get permissions).
-ayb client update_database marcua/test.sqlite --public-sharing-level no-access
+$ ayb client update_database marcua/test.sqlite --public-sharing-level no-access
 
 # With a public sharing level of `fork`, entities will be able to see
 # the database in the owner's list of databases using `ayb client
@@ -271,30 +271,30 @@ ayb client update_database marcua/test.sqlite --public-sharing-level no-access
 # won't be able to query the database unless they fork it. Note:
 # Listing access is implemented today, but forking one database into
 # another account is not yet implemented.
-ayb client update_database marcua/test.sqlite --public-sharing-level fork
+$ ayb client update_database marcua/test.sqlite --public-sharing-level fork
 
 # In addition to the listing and forking access that `fork`
 # allows, `read-only` access allows any entity to
 # issue a read-only (e.g., SELECT) query against the database. They
 # can't modify the database.
-ayb client update_database marcua/test.sqlite --public-sharing-level read-only
+$ ayb client update_database marcua/test.sqlite --public-sharing-level read-only
 ```
 
 To provide a specific user with access to a database, select one of the following:
 ```
 # Revoke access to a database from an entity.
-ayb client permissions marcua/test.sqlite sofia no-access
+$ ayb client permissions marcua/test.sqlite sofia no-access
 
 # Allow an entity to make read-only (e.g., SELECT) queries against a
 # database.
-ayb client permissions marcua/test.sqlite sofia read-only
+$ ayb client permissions marcua/test.sqlite sofia read-only
 
 # Allow an entity to make any type of query against a database.
-ayb client permissions marcua/test.sqlite sofia read-write
+$ ayb client permissions marcua/test.sqlite sofia read-write
 
 # Allow an entity to not only modify a database, but also to change
 # the permissions of any non-owner entity.
-ayb client permissions marcua/test.sqlite sofia manager
+$ ayb client permissions marcua/test.sqlite sofia manager
 ```
 
 ### Isolation
