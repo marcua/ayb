@@ -1,4 +1,4 @@
-use crate::ayb_db::models::{DBType, EntityType, PublicSharingLevel};
+use crate::ayb_db::models::{DBType, EntityDatabaseSharingLevel, EntityType, PublicSharingLevel};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse, SnapshotList};
@@ -288,6 +288,36 @@ impl AybClient {
             .await?;
 
         self.handle_empty_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn share(
+        &self,
+        entity_for_database: &str,
+        database: &str,
+        entity_for_permission: &str,
+        sharing_level: &EntityDatabaseSharingLevel,
+    ) -> Result<(), AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        headers.insert(
+            HeaderName::from_static("entity-for-permission"),
+            HeaderValue::from_str(entity_for_permission).unwrap(),
+        );
+
+        headers.insert(
+            HeaderName::from_static("sharing-level"),
+            HeaderValue::from_str(sharing_level.to_str()).unwrap(),
+        );
+
+        let response = reqwest::Client::new()
+            .post(self.make_url(format!("{}/{}/share", entity_for_database, database)))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_empty_response(response, reqwest::StatusCode::NO_CONTENT)
             .await
     }
 }

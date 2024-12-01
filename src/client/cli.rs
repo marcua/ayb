@@ -1,4 +1,4 @@
-use crate::ayb_db::models::{DBType, EntityType, PublicSharingLevel};
+use crate::ayb_db::models::{DBType, EntityDatabaseSharingLevel, EntityType, PublicSharingLevel};
 use crate::client::config::ClientConfig;
 use crate::client::http::AybClient;
 use crate::error::AybError;
@@ -185,15 +185,27 @@ pub fn client_commands() -> Command {
                 .about("Update properties of a database")
                 .arg(arg!(<database> "The database to which to connect (e.g., entity/database.sqlite)")
                      .value_parser(ValueParser::new(entity_database_parser))
-                     .required(true) // As we add other updateable properties, this one won't be required anymore.
+                     .required(true)
                 )
-                .arg(arg!(--public_sharing_level <value> "The level of public access to enable for this database").value_parser(value_parser!(PublicSharingLevel)).required(false))
+                // As we add other updateable properties, this one won't be required anymore.
+                .arg(arg!(--public_sharing_level <value> "The level of public access to enable for this database").value_parser(value_parser!(PublicSharingLevel)).required(true))
         )
         .subcommand(
             Command::new("set_default_url")
                 .about("Set the default server URL for future requests in ayb.json")
                 .arg(arg!(<url> "The URL to use in the future")
                      .required(true))
+        )
+        .subcommand(
+            Command::new("share")
+                .about("Share a database with another entity")
+                .arg(arg!(<database> "The database to share (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+                .arg(arg!(<entity> "The entity with which to share")
+                     .required(true))
+                .arg(arg!(<sharing_level> "The level of access for this entity").value_parser(value_parser!(EntityDatabaseSharingLevel)).required(true))
         )
         .subcommand(
             Command::new("list_snapshots")
@@ -531,6 +543,32 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     println!(
                         "Database {}/{} updated successfully",
                         entity_database.entity, entity_database.database
+                    );
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("share") {
+        if let (Some(entity_database), Some(entity), Some(sharing_level)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<String>("entity"),
+            matches.get_one::<EntityDatabaseSharingLevel>("sharing_level"),
+        ) {
+            match client
+                .share(
+                    &entity_database.entity,
+                    &entity_database.database,
+                    entity,
+                    sharing_level,
+                )
+                .await
+            {
+                Ok(_response) => {
+                    println!(
+                        "Permissions for {} on {}/{} updated successfully",
+                        entity, entity_database.entity, entity_database.database
                     );
                 }
                 Err(err) => {

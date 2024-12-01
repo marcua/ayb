@@ -18,6 +18,7 @@ use url;
 #[derive(Debug, Deserialize, Error, Serialize)]
 #[serde(tag = "type")]
 pub enum AybError {
+    CantSetOwnerPermissions { message: String },
     DurationParseError { message: String },
     NoWriteAccessError { message: String },
     S3ExecutionError { message: String },
@@ -32,6 +33,7 @@ impl Display for AybError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             AybError::Other { message } => write!(f, "{}", message),
+            AybError::CantSetOwnerPermissions { message } => write!(f, "{}", message),
             AybError::NoWriteAccessError { message } => write!(f, "{}", message),
             _ => write!(f, "{:?}", self),
         }

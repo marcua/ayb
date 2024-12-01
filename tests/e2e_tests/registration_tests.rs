@@ -1,5 +1,5 @@
 use crate::ayb_assert_cmd;
-use crate::e2e_tests::{FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG};
+use crate::e2e_tests::{FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG};
 use crate::utils::ayb::register;
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
@@ -215,15 +215,37 @@ pub fn test_registration(
         serde_json::to_string(&expected_config)?
     );
 
+    // Start the registration process for a third user (e2e-third)
+    register(
+        &config_path,
+        server_url,
+        THIRD_ENTITY_SLUG,
+        "e2e-a-third@example.org",
+        "Check your email to finish registering e2e-third",
+    )?;
+    let entries = parse_smtp_log(&format!(
+        "tests/smtp_data_{}/e2e-a-third@example.org",
+        smtp_port
+    ))?;
+    assert_eq!(entries.len(), 1);
+    let third_token0 = extract_token(&entries[0])?;
+    let cmd = ayb_assert_cmd!("client", "confirm", &third_token0; {
+        "AYB_CLIENT_CONFIG_FILE" => format!("{}-throwaway", config_path), // Don't save this third account's credentials as our default token in the main configuration file.
+        "AYB_SERVER_URL" => server_url,
+    });
+    let third_api_key0 = extract_api_key(cmd.get_output())?;
+
     // To summarize where we are at this point
     // * User e2e-first has three API tokens (first_api_key[0...2]). We'll use these
     //   interchangeably in subsequent tests.
     // * User e2e-second has one API token (second_api_key0)
+    // * User e2e-third has one API token (third_api_key0)
     let mut api_keys: HashMap<String, Vec<String>> = HashMap::new();
     api_keys.insert(
         "first".to_string(),
         vec![first_api_key0, first_api_key1, first_api_key2],
     );
     api_keys.insert("second".to_string(), vec![second_api_key0]);
+    api_keys.insert("third".to_string(), vec![third_api_key0]);
     Ok(api_keys)
 }

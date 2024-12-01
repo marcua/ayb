@@ -287,26 +287,30 @@ pub struct APIToken {
 )]
 #[repr(i16)]
 pub enum EntityDatabaseSharingLevel {
-    ReadOnly = 0,
-    ReadWrite = 1,
-    Manager = 2,
+    NoAccess = 0,
+    ReadOnly = 1,
+    ReadWrite = 2,
+    Manager = 3,
 }
 
 from_str!(EntityDatabaseSharingLevel, {
+    "no-access" => EntityDatabaseSharingLevel::NoAccess,
     "read-only" => EntityDatabaseSharingLevel::ReadOnly,
     "read-write" => EntityDatabaseSharingLevel::ReadWrite,
     "manager" => EntityDatabaseSharingLevel::Manager
 });
 
 try_from_i16!(EntityDatabaseSharingLevel, {
-    0 => EntityDatabaseSharingLevel::ReadOnly,
-    1 => EntityDatabaseSharingLevel::ReadWrite,
-    2 => EntityDatabaseSharingLevel::Manager
+    0 => EntityDatabaseSharingLevel::NoAccess,
+    1 => EntityDatabaseSharingLevel::ReadOnly,
+    2 => EntityDatabaseSharingLevel::ReadWrite,
+    3 => EntityDatabaseSharingLevel::Manager
 });
 
 impl EntityDatabaseSharingLevel {
     pub fn to_str(&self) -> &str {
         match self {
+            EntityDatabaseSharingLevel::NoAccess => "no-access",
             EntityDatabaseSharingLevel::ReadOnly => "read-only",
             EntityDatabaseSharingLevel::ReadWrite => "read-write",
             EntityDatabaseSharingLevel::Manager => "manager",

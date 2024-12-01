@@ -1,6 +1,10 @@
-use crate::ayb_db::models::{InstantiatedDatabase, InstantiatedEntity, PublicSharingLevel};
+use crate::ayb_db::db_interfaces::AybDb;
+use crate::ayb_db::models::{
+    EntityDatabaseSharingLevel, InstantiatedDatabase, InstantiatedEntity, PublicSharingLevel,
+};
 use crate::error::AybError;
 use crate::hosted_db::QueryMode;
+use actix_web::web;
 
 fn is_owner(authenticated_entity: &InstantiatedEntity, database: &InstantiatedDatabase) -> bool {
     authenticated_entity.id == database.entity_id
@@ -10,47 +14,85 @@ pub fn can_create_database(
     authenticated_entity: &InstantiatedEntity,
     desired_entity: &InstantiatedEntity,
 ) -> bool {
-    // An entity/user can only create databases on itself (for now)
     authenticated_entity.id == desired_entity.id
 }
 
-pub fn can_discover_database(
+pub async fn can_discover_database(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
+    ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<bool, AybError> {
     let public_sharing_level = PublicSharingLevel::try_from(database.public_sharing_level)?;
-    Ok(is_owner(authenticated_entity, database)
+    if is_owner(authenticated_entity, database)
         || public_sharing_level == PublicSharingLevel::ReadOnly
-        || public_sharing_level == PublicSharingLevel::Fork)
-}
-
-pub fn can_manage_database(
-    authenticated_entity: &InstantiatedEntity,
-    database: &InstantiatedDatabase,
-) -> bool {
-    // An entity/user can only manage its own databases (for now)
-    is_owner(authenticated_entity, database)
-}
-
-pub fn highest_query_access_level(
-    authenticated_entity: &InstantiatedEntity,
-    database: &InstantiatedDatabase,
-) -> Result<Option<QueryMode>, AybError> {
-    if is_owner(authenticated_entity, database) {
-        Ok(Some(QueryMode::ReadWrite))
-    } else if PublicSharingLevel::try_from(database.public_sharing_level)?
-        == PublicSharingLevel::ReadOnly
+        || public_sharing_level == PublicSharingLevel::Fork
     {
-        Ok(Some(QueryMode::ReadOnly))
-    } else {
-        Ok(None)
+        return Ok(true);
+    }
+
+    let permission = ayb_db
+        .get_entity_database_permission(authenticated_entity, database)
+        .await?;
+    match permission {
+        Some(permission) => match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+            EntityDatabaseSharingLevel::Manager
+            | EntityDatabaseSharingLevel::ReadWrite
+            | EntityDatabaseSharingLevel::ReadOnly => Ok(true),
+            _ => Ok(false),
+        },
+        None => Ok(false),
     }
 }
 
-pub fn can_manage_snapshots(
+pub async fn can_manage_database(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
-) -> bool {
-    // An entity/user can only manage snapshots on its own databases (for now)
-    is_owner(authenticated_entity, database)
+    ayb_db: &web::Data<Box<dyn AybDb>>,
+) -> Result<bool, AybError> {
+    if is_owner(authenticated_entity, database) {
+        return Ok(true);
+    }
+
+    let permission = ayb_db
+        .get_entity_database_permission(authenticated_entity, database)
+        .await?;
+    match permission {
+        Some(permission) => match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+            EntityDatabaseSharingLevel::Manager => Ok(true),
+            _ => Ok(false),
+        },
+        None => Ok(false),
+    }
+}
+
+pub async fn highest_query_access_level(
+    authenticated_entity: &InstantiatedEntity,
+    database: &InstantiatedDatabase,
+    ayb_db: &web::Data<Box<dyn AybDb>>,
+) -> Result<Option<QueryMode>, AybError> {
+    if is_owner(authenticated_entity, database) {
+        return Ok(Some(QueryMode::ReadWrite));
+    }
+    let permission = ayb_db
+        .get_entity_database_permission(authenticated_entity, database)
+        .await?;
+    let access_level = match permission {
+        Some(permission) => match EntityDatabaseSharingLevel::try_from(permission.sharing_level)? {
+            EntityDatabaseSharingLevel::Manager | EntityDatabaseSharingLevel::ReadWrite => {
+                Some(QueryMode::ReadWrite)
+            }
+            EntityDatabaseSharingLevel::ReadOnly => Some(QueryMode::ReadOnly),
+            _ => None,
+        },
+        None => None,
+    };
+    if access_level.is_some() {
+        return Ok(access_level);
+    } else if PublicSharingLevel::try_from(database.public_sharing_level)?
+        == PublicSharingLevel::ReadOnly
+    {
+        return Ok(Some(QueryMode::ReadOnly));
+    }
+
+    Ok(None)
 }

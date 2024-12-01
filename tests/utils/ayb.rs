@@ -22,9 +22,10 @@ macro_rules! ayb_assert_cmd {
 pub fn create_database(
     config: &str,
     api_key: &str,
+    database: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", "e2e-first/test.sqlite", "sqlite"; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, "sqlite"; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -237,6 +238,22 @@ pub fn update_database(
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "update_database", database, "--public_sharing_level", public_sharing_level; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}
+
+pub fn share(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    entity: &str,
+    sharing_level: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "share", database, entity, sharing_level; {
         "AYB_API_TOKEN" => api_key,
     });
 

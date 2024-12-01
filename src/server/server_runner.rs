@@ -5,7 +5,7 @@ use crate::server::config::read_config;
 use crate::server::config::AybConfigCors;
 use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
-    log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint,
+    log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint, share_endpoint,
     update_db_endpoint, update_profile_endpoint,
 };
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
@@ -33,7 +33,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(entity_details_endpoint)
             .service(update_profile_endpoint)
             .service(list_snapshots_endpoint)
-            .service(restore_snapshot_endpoint),
+            .service(restore_snapshot_endpoint)
+            .service(share_endpoint),
     );
 }
 
