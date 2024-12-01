@@ -283,18 +283,18 @@ $ ayb client update_database marcua/test.sqlite --public-sharing-level read-only
 To provide a specific user with access to a database, select one of the following:
 ```
 # Revoke access to a database from an entity.
-$ ayb client permissions marcua/test.sqlite sofia no-access
+$ ayb client share marcua/test.sqlite sofia no-access
 
 # Allow an entity to make read-only (e.g., SELECT) queries against a
 # database.
-$ ayb client permissions marcua/test.sqlite sofia read-only
+$ ayb client share marcua/test.sqlite sofia read-only
 
 # Allow an entity to make any type of query against a database.
-$ ayb client permissions marcua/test.sqlite sofia read-write
+$ ayb client share marcua/test.sqlite sofia read-write
 
 # Allow an entity to not only modify a database, but also to change
 # the permissions of any non-owner entity.
-$ ayb client permissions marcua/test.sqlite sofia manager
+$ ayb client share marcua/test.sqlite sofia manager
 ```
 
 ### Isolation
