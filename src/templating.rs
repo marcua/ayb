@@ -28,7 +28,7 @@ impl Serialize for TemplateString {
 
 struct TmplStrVisitor;
 
-impl<'de> Visitor<'de> for TmplStrVisitor {
+impl Visitor<'_> for TmplStrVisitor {
     type Value = TemplateString;
 
     fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
