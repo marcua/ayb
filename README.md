@@ -251,6 +251,51 @@ of
 [rqlite](https://rqlite.io/docs/guides/backup/#automatic-backups). Thank
 you to the authors for their great design and documentation.
 
+### Permissions
+
+By default, only the owner / creator of an `ayb` database can access
+it. It's possible to share `ayb` databases in two ways:
+* By setting the public sharing level of the database to give all entities some level of access to the database.
+* By sharing the database with a particular entity.
+
+To set the public sharing level of a database, select one of the following options:
+```bash
+# The default setting: no entity will be able to access the database
+# unless they specifically get permissions.
+$ ayb client update_database marcua/test.sqlite --public-sharing-level no-access
+
+# With a public sharing level of `fork`, entities will be able to see
+# the database in the owner's list of databases using `ayb client
+# list` and fork a copy of the database under their own account. They
+# won't be able to query the database unless they fork it. Note:
+# Listing access is implemented today, but forking one database into
+# another account is not yet implemented.
+$ ayb client update_database marcua/test.sqlite --public-sharing-level fork
+
+# In addition to the listing and forking access that `fork`
+# allows, `read-only` access allows any entity to
+# issue a read-only (e.g., SELECT) query against the database. They
+# can't modify the database.
+$ ayb client update_database marcua/test.sqlite --public-sharing-level read-only
+```
+
+To provide a specific user with access to a database, select one of the following:
+```bash
+# Revoke access to a database from an entity.
+$ ayb client share marcua/test.sqlite sofia no-access
+
+# Allow an entity to make read-only (e.g., SELECT) queries against a
+# database.
+$ ayb client share marcua/test.sqlite sofia read-only
+
+# Allow an entity to make any type of query against a database.
+$ ayb client share marcua/test.sqlite sofia read-write
+
+# Allow an entity to not only modify a database, but also to manage
+# snapshots and change the permissions of any non-owner entity.
+$ ayb client share marcua/test.sqlite sofia manager
+```
+
 ### Isolation
 `ayb` allows multiple users to run queries against databases that are
 stored on the same machine. Isolation enables you to prevent one user
@@ -332,7 +377,7 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [ ] Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
   * [ ] High availablity/automatic failover. While `ayb` provides snapshot-based backups to protect against cataclysmic failures, the recovery process is manual. Streaming databases to replicas and switching to replicas on failure will make `ayb` more highly available.
 * Extend `ayb` to more people and software
-  * [ ] Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
+  * [x] Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
   * [ ] Forking. Allowing a user to fork their own copy of a database will enable collaborators to remix and build on each others' work.
   * [ ] Versioning. To both make it less scary to execute sensitive operations and to make it possible for scientists to reference and publish checkpoints of their work, a user should be able to snapshot and revert to a database at a point in time.
   * [ ] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command. This effort is dependent on the DuckDB project. First, the DuckDB file format is rapidly changing ahead of the project's 1.0 release. Additionally, I don't know of an equivalent streaming replication project to LiteFS for DuckDB that handles *persistence beyond the node*.
