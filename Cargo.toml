@@ -41,7 +41,7 @@ serde_repr = { version = "0.1.19" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 time = { version = "0.3.36" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
 toml = { version = "0.8.19" }
-tokio = { version = "1.41.1", features = ["macros", "process", "rt"] }
+tokio = { version = "1.42.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.13.0", features = ["signal"]}
 prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
