@@ -396,3 +396,9 @@ Here's a rough roadmap for the project, with items near the top of the list more
 
 This project has a roadmap and features are added and tested in a certain order. I'm adding a little friction in requiring a discussion/design document for features before submitting a pull request to ensure that I can focus my attention on well-motivated, well-sequenced, and well-understood functionality.
 
+## Notes on releasing
+As we are in the early days of `ayb`, we largely do patch releases (e.g., v0.1.7 -> v0.1.8). We use [cargo-release](https://crates.io/crates/cargo-release) for this.
+
+To install `cargo-release`, run `cargo install cargo-release`.
+
+To perform a patch release, ensure you are on `main` and run `cargo release patch`.
