@@ -39,7 +39,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.133", features = ["raw_value"] }
 serde_repr = { version = "0.1.19" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
-time = { version = "0.3.36" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
+time = { version = "0.3.37" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
 toml = { version = "0.8.19" }
 tokio = { version = "1.43.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.13.0", features = ["signal"]}
