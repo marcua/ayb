@@ -1,5 +1,4 @@
 use actix_web;
-use aws_smithy_types_convert;
 use derive_more::Error;
 use fernet;
 use lettre;
@@ -43,14 +42,6 @@ impl Display for AybError {
 impl actix_web::error::ResponseError for AybError {
     fn error_response(&self) -> actix_web::HttpResponse {
         actix_web::HttpResponse::InternalServerError().json(self)
-    }
-}
-
-impl From<aws_smithy_types_convert::date_time::Error> for AybError {
-    fn from(cause: aws_smithy_types_convert::date_time::Error) -> Self {
-        AybError::S3ExecutionError {
-            message: format!("Unable to convert from AWS datetime: {:?}", cause),
-        }
     }
 }
 
