@@ -70,7 +70,7 @@ impl SnapshotStorage {
         &self,
         entity_slug: &str,
         database_slug: &str,
-        snapshot_ids: &Vec<String>,
+        snapshot_ids: &[String],
     ) -> Result<(), AybError> {
         let delete_futures: Vec<_> = snapshot_ids
             .iter()
