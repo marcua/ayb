@@ -33,8 +33,11 @@ async fn query(
     println!("6");
     match access_level {
         Some(access_level) => {
+            println!("7");
             let db_type = DBType::try_from(database.db_type)?;
+            println!("8");
             let db_path = current_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
+            println!("9");
             let result = run_query(
                 &db_path,
                 &query,
@@ -43,6 +46,7 @@ async fn query(
                 access_level,
             )
             .await?;
+            println!("10");
             Ok(web::Json(result))
         }
         None => Err(AybError::Other {
