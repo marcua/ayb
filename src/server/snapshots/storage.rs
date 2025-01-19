@@ -1,6 +1,7 @@
 use crate::error::AybError;
 use crate::server::config::AybConfigSnapshots;
 use crate::server::snapshots::models::{ListSnapshotResult, Snapshot};
+use futures_util::future::join_all;
 use s3::creds::Credentials;
 use s3::error::S3Error;
 use s3::{Bucket, Region};
@@ -27,7 +28,7 @@ impl SnapshotStorage {
             message: format!("Failed to create S3 credentials: {:?}", err),
         })?;
 
-        let region_str = config.region.clone().unwrap_or("".to_string());
+        let region_str = config.region.clone().unwrap_or("us-east-1".to_string());
         let region = if let Some(endpoint_url) = &config.endpoint_url {
             Region::Custom {
                 region: region_str,
@@ -37,21 +38,24 @@ impl SnapshotStorage {
             region_str
                 .parse()
                 .map_err(|err| AybError::S3ExecutionError {
-                    message: format!("Unable to parse region: {}, {:?}", region_str, err),
+                    message: format!("Failed to parse region: {}, {:?}", region_str, err),
                 })?
         };
         let mut bucket = Bucket::new(&config.bucket, region, credentials).map_err(|err| {
             AybError::S3ExecutionError {
-                message: format!("Unable to load bucket: {:?}", err),
+                message: format!("Failed to load bucket: {:?}", err),
             }
         })?;
-        if config.force_path_style.unwrap_or(false) {
+        let force_path_style = config.force_path_style.unwrap_or(false);
+        let mut path_prefix = config.path_prefix.clone();
+        if force_path_style {
             bucket = bucket.with_path_style();
+            path_prefix = format!("{}/{}", &config.bucket, path_prefix);
         }
 
         Ok(SnapshotStorage {
             bucket: *bucket,
-            path_prefix: config.path_prefix.clone(),
+            path_prefix,
         })
     }
 
@@ -68,15 +72,31 @@ impl SnapshotStorage {
         database_slug: &str,
         snapshot_ids: &Vec<String>,
     ) -> Result<(), AybError> {
-        for snapshot_id in snapshot_ids {
-            let key = self.db_path(entity_slug, database_slug, snapshot_id);
-            self.bucket
-                .delete_object(&key)
-                .await
-                .map_err(|err| AybError::S3ExecutionError {
-                    message: format!("Failed to delete snapshot {}: {:?}", key, err),
-                })?;
+        let delete_futures: Vec<_> = snapshot_ids
+            .iter()
+            .map(|snapshot_id| {
+                let key = self
+                    .db_path(entity_slug, database_slug, snapshot_id)
+                    .clone();
+
+                async move {
+                    self.bucket.delete_object(&key).await.map_err(|err| {
+                        AybError::S3ExecutionError {
+                            message: format!("Failed to delete snapshot {}: {:?}", key, err),
+                        }
+                    })
+                }
+            })
+            .collect();
+
+        // Await all delete operations
+        let results = join_all(delete_futures).await;
+
+        // Handle errors
+        for result in results {
+            result?; // Return the first error, if any
         }
+
         Ok(())
     }
 
@@ -142,7 +162,10 @@ impl SnapshotStorage {
                     snapshots.push(ListSnapshotResult {
                         last_modified_at: object.last_modified.parse().map_err(|err| {
                             AybError::S3ExecutionError {
-                                message: format!("Failed to parse date: {:?}", err),
+                                message: format!(
+                                    "Failed to read last modified datetime from object {}: {:?}",
+                                    key, err
+                                ),
                             }
                         })?,
                         snapshot_id: snapshot_id.to_string(),
@@ -151,6 +174,7 @@ impl SnapshotStorage {
             }
         }
 
+        // Return results in descending order.
         snapshots.sort_by(|a, b| b.last_modified_at.cmp(&a.last_modified_at));
         Ok(snapshots)
     }
@@ -164,7 +188,7 @@ impl SnapshotStorage {
     ) -> Result<(), AybError> {
         let path = self.db_path(entity_slug, database_slug, &snapshot.snapshot_id);
         let mut input_file = File::open(snapshot_path)?;
-        let mut encoder = Encoder::new(Vec::new(), 0)?;
+        let mut encoder = Encoder::new(Vec::new(), 0)?; // 0 = default compression for zstd
         io::copy(&mut input_file, &mut encoder)?;
         let compressed_data = encoder.finish()?;
 

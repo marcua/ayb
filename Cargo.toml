@@ -21,6 +21,7 @@ directories = { version = "6.0" }
 dyn-clone = { version = "1.0.17" }
 env_logger = { version = "0.10.2" }
 fernet = { version = "0.2.2" }
+futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
 lettre = { version = "0.11.11", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.1" }
