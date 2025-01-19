@@ -18,13 +18,19 @@ async fn query(
     ayb_config: web::Data<AybConfig>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<web::Json<QueryResult>, AybError> {
+    println!("1");
     let entity_slug = &path.entity.to_lowercase();
+    println!("2");
     let database_slug = &path.database;
+    println!("3");
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
+    println!("4");
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
-
+    println!("5");
+    
     let access_level =
         highest_query_access_level(&authenticated_entity, &database, &ayb_db).await?;
+    println!("6");
     match access_level {
         Some(access_level) => {
             let db_type = DBType::try_from(database.db_type)?;
