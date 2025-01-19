@@ -27,7 +27,7 @@ async fn query(
     println!("4");
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     println!("5");
-    
+
     let access_level =
         highest_query_access_level(&authenticated_entity, &database, &ayb_db).await?;
     println!("6");
