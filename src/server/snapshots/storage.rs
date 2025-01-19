@@ -66,11 +66,12 @@ impl SnapshotStorage {
         )
     }
 
+    #[allow(clippy::ptr_arg)]
     pub async fn delete_snapshots(
         &self,
         entity_slug: &str,
         database_slug: &str,
-        snapshot_ids: &[String],
+        snapshot_ids: &Vec<String>,
     ) -> Result<(), AybError> {
         let delete_futures: Vec<_> = snapshot_ids
             .iter()
