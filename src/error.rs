@@ -21,11 +21,12 @@ pub enum AybError {
     CantSetOwnerPermissions { message: String },
     DurationParseError { message: String },
     NoWriteAccessError { message: String },
+    QueryError { message: String },
+    RecordNotFound { id: String, record_type: String },
     S3ExecutionError { message: String },
     S3ConnectionError { message: String },
     SnapshotError { message: String },
     SnapshotDoesNotExistError,
-    RecordNotFound { id: String, record_type: String },
     Other { message: String },
 }
 
