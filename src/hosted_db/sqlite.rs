@@ -87,10 +87,8 @@ pub async fn potentially_isolated_sqlite_query(
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     if let Some(isolation) = isolation {
-        println!("potentially1");
         let result =
             run_in_sandbox(Path::new(&isolation.nsjail_path), path, query, query_mode).await?;
-        println!("potentially2");
         if !result.stderr.is_empty() {
             let error: Result<AybError, _> = serde_json::from_str(&result.stderr);
             // If the error could be deserialized into an AybError,
@@ -106,7 +104,6 @@ pub async fn potentially_isolated_sqlite_query(
                 }),
             };
         } else if result.status != 0 {
-            println!("potentially5");
             return Err(AybError::QueryError {
                 message: format!(
                     "Error status from sandboxed query runner: {}",
@@ -114,12 +111,9 @@ pub async fn potentially_isolated_sqlite_query(
                 ),
             });
         } else if !result.stdout.is_empty() {
-            println!("potentially6");
             let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
-            println!("potentially7");
             return Ok(query_result);
         } else {
-            println!("potentially8");
             return Err(AybError::QueryError {
                 message: "No results from sandboxed query runner".to_string(),
             });
