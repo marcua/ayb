@@ -19,7 +19,7 @@ clap = { version = "4.5.26", features = ["cargo", "derive", "env"] }
 derive_more = { version = "1.0.0", features = ["error"] }
 directories = { version = "6.0" }
 dyn-clone = { version = "1.0.17" }
-env_logger = { version = "0.10.2" }
+env_logger = { version = "0.11.6" }
 fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
