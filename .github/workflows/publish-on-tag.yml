@@ -11,10 +11,11 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Image
+  linux-amd64:
+    name: Build and push linux/amd64 Docker image
     runs-on: ubuntu-latest
-
+    env:
+      platform: "linux/amd64"
     steps:
     - name: Check out code
       uses: actions/checkout@v4
@@ -45,8 +46,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
       with:
-        platforms: linux/amd64
+        platforms: ${{ env.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        outputs: type=image,name=${{ env.REPO_NAME }},push-by-digest=true,name-canonical=true,push=true
+        outputs: type=image,name=${{ env.REGISTRY }}/${{ env.REPO_NAME }},push-by-digest=true,name-canonical=true,push=true
         push: true
 
