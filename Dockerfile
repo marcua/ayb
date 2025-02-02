@@ -8,7 +8,6 @@ RUN apt update
 RUN apt-get install -y \
     # ayb requirements
     libssl-dev \
-    libzstd-dev \
     # nsjail requirements
     autoconf \
     bison \
@@ -35,7 +34,7 @@ RUN cd ayb && cargo build --release
 FROM debian:bookworm-slim
 
 RUN apt update
-RUN apt-get install -y libssl-dev libzstd-dev
+RUN apt-get install -y libssl-dev
 
 COPY --from=builder /ayb/target/release/ayb /bin
 COPY --from=builder /ayb/target/release/ayb_isolated_runner /bin
