@@ -23,6 +23,7 @@ RUN apt-get install -y \
     protobuf-compiler
 
 # RUN git clone https://github.com/google/nsjail.git nsjail-checkout && cd nsjail-checkout && make && mv nsjail .. && cd .. && rm -rf nsjail-checkout
+RUN touch /nsjail
 
 COPY . /ayb
 
