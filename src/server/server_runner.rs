@@ -3,7 +3,6 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::server::config::read_config;
 use crate::server::config::AybConfigCors;
-use std::env::consts::OS;
 use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
     log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint, share_endpoint,
@@ -18,6 +17,7 @@ use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
+use std::env::consts::OS;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -108,7 +108,10 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     if ayb_conf.isolation.is_none() {
         println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
     } else if OS != "linux" {
-        println!("Warning: nsjail isolation is only supported on Linux. Running without isolation on {}", OS);
+        println!(
+            "Warning: nsjail isolation is only supported on Linux. Running without isolation on {}",
+            OS
+        );
         ayb_conf_for_server.isolation = None;
     } else {
         let isolation = ayb_conf.isolation.unwrap();
