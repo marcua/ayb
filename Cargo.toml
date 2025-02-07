@@ -12,7 +12,7 @@ default-run = "ayb"
 actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.9.0" }
 actix-web-httpauth = { version = "0.8.2" }
-async-trait = { version = "0.1.83" }
+async-trait = { version = "0.1.86" }
 blake3 = { version = "1.5.5" }
 chrono = { version = "0.4.39", features = [ "serde" ] }
 clap = { version = "4.5.27", features = ["cargo", "derive", "env"] }
