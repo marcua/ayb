@@ -332,6 +332,13 @@ Once you have a path to the
 nsjail_path = "path/to/nsjail"
 ```
 
+## Docker
+On every release, a docker image is built and pushed to `ghcr.io/marcua/ayb`.
+# AI!
+# - Show how to docker pull
+# - Show how to run the server (mapping in ayb.toml and a data directory appropriately as volumes)
+# - Show how to run the client, after creating an alias for `ayb`
+
 ## Testing
 `ayb` is largely tested through [end-to-end
 tests](tests/e2e.rs) that mimic as realistic an environment as
