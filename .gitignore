@@ -25,3 +25,4 @@ tests/nsjail
 tests/localstack_init.sh
 tests/localstack_data*
 tests/test-env
+.aider*
