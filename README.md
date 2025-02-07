@@ -334,10 +334,35 @@ nsjail_path = "path/to/nsjail"
 
 ## Docker
 On every release, a docker image is built and pushed to `ghcr.io/marcua/ayb`.
-# AI!
-# - Show how to docker pull
-# - Show how to run the server (mapping in ayb.toml and a data directory appropriately as volumes)
-# - Show how to run the client, after creating an alias for `ayb`
+
+To pull the latest version of the image:
+```bash
+docker pull ghcr.io/marcua/ayb:latest
+```
+
+To run the server, you'll need to:
+1. Create an `ayb.toml` configuration file (see [Running a server](#running-a-server))
+2. Create a data directory for the databases
+3. Map these as volumes when running the container
+
+For example:
+```bash
+docker run -v $(pwd)/ayb.toml:/ayb.toml \
+          -v $(pwd)/ayb_data:/ayb_data \
+          -p 5433:5433 \
+          ghcr.io/marcua/ayb:latest \
+          server --config /ayb.toml
+```
+
+To run client commands, you can create an alias for convenience:
+```bash
+alias ayb="docker run --network host -v $(pwd):/workspace -w /workspace ghcr.io/marcua/ayb:latest"
+```
+
+Then use the client as normal:
+```bash
+ayb client --url http://127.0.0.1:5433 register marcua you@example.com
+```
 
 ## Testing
 `ayb` is largely tested through [end-to-end
