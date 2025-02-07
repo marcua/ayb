@@ -309,16 +309,18 @@ flag and sets
 to `0` in order to prevent users from corrupting the database or
 attaching to other databases on the filesystem.
 
-For further isolation, `ayb` uses [nsjail](https://nsjail.dev/) to
-isolate each query's filesystem access and resources. When this form
-of isolation is enabled, `ayb` starts a new `nsjail`-managed process
-to execute the query against the database. We have not yet benchmarked
-the performance overhead of this approach.
+For further isolation, `ayb` can use [nsjail](https://nsjail.dev/)
+(only when running on Linux) to isolate each query's filesystem access
+and resources. When this form of isolation is enabled, `ayb` starts a
+new `nsjail`-managed process to execute the query against the
+database. We have not yet benchmarked the performance overhead of this
+approach.
 
-To enable isolation, you must first build `nsjail`, which you can do
-through [scripts/build_nsjail.sh](scripts/build_nsjail.sh). Note that
-`nsjail` depends on a few other packages. If you run into issues
-building it, it might be helpful to see its
+To enable this deeper form of isolation on Linux, you must first build
+`nsjail`, which you can do through
+[scripts/build_nsjail.sh](scripts/build_nsjail.sh). Note that `nsjail`
+depends on a few other packages. If you run into issues building it,
+it might be helpful to see its
 [Dockerfile](https://github.com/google/nsjail/blob/master/Dockerfile)
 to get a sense of those requirements.
 
