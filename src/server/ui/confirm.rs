@@ -11,7 +11,7 @@ pub async fn confirm_page(
     let client = create_client(&ayb_config, None);
     
     match client.confirm(&token).await {
-        Ok(_) => {
+        Ok(api_token) => {
             let content = r#"
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
@@ -26,6 +26,7 @@ pub async fn confirm_page(
             
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
+                .header("Set-Cookie", format!("auth={}; Path=/; HttpOnly", api_token.token))
                 .body(base_template("Email Confirmed", content)))
         },
         Err(_) => {
