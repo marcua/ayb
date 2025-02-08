@@ -11,11 +11,7 @@ pub async fn display_user(
 ) -> Result<HttpResponse> {
     let username = path.into_inner();
 
-    // Create HTTP client pointing to local API
-    let mut client = AybClient {
-        base_url: format!("http://{}:{}", ayb_config.host, ayb_config.port),
-        api_token: None,
-    };
+    let mut client = super::templates::create_client(&ayb_config, None);
 
     // Get auth token from cookie if present
     if let Ok(Some(token)) = get_optional_header(&req, "Cookie") {
