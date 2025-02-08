@@ -75,6 +75,6 @@ async fn confirm(
     };
 
     Ok(HttpResponse::Ok()
-        .header("Set-Cookie", format!("auth={}; Path=/; HttpOnly", token_string))
+        .append_header(("Set-Cookie", format!("auth={}; Path=/; HttpOnly", token_string)))
         .json(returned_token))
 }

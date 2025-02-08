@@ -26,7 +26,7 @@ pub async fn confirm_page(
             
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .header("Set-Cookie", format!("auth={}; Path=/; HttpOnly", api_token.token))
+                .append_header(("Set-Cookie", format!("auth={}; Path=/; HttpOnly", api_token.token)))
                 .body(base_template("Email Confirmed", content)))
         },
         Err(_) => {
