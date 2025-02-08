@@ -23,6 +23,8 @@ To learn more about why `ayb` matters, how it works, or who it's for, [read this
 cargo install ayb
 ```
 
+# AI! note that you can also run ayb through docker with a link to that section.
+
 ### Running a server
 An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. An `ayb.toml` file tells the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases. You can generate a starter file with `ayb default_server_config`.
 
@@ -333,11 +335,15 @@ nsjail_path = "path/to/nsjail"
 ```
 
 ## Docker
-On every release, a docker image is built and pushed to `ghcr.io/marcua/ayb`.
+
+On every release, a docker image is built and pushed to
+`ghcr.io/marcua/ayb`. For now, docker images are available for
+`linux-amd64`. If you would like a `linux-arm64` image, follow [this
+issue](https://github.com/marcua/ayb/issues/523).
 
 To pull the latest version of the image:
 ```bash
-docker pull ghcr.io/marcua/ayb:latest
+docker pull ghcr.io/marcua/ayb
 ```
 
 To run the server, you'll need to:
@@ -350,13 +356,13 @@ For example:
 docker run -v $(pwd)/ayb.toml:/ayb.toml \
           -v $(pwd)/ayb_data:/ayb_data \
           -p 5433:5433 \
-          ghcr.io/marcua/ayb:latest \
-          server --config /ayb.toml
+          ghcr.io/marcua/ayb \
+          ayb server --config /ayb.toml
 ```
 
 To run client commands, you can create an alias for convenience:
 ```bash
-alias ayb="docker run --network host -v $(pwd):/workspace -w /workspace ghcr.io/marcua/ayb:latest"
+alias ayb="docker run --network host ghcr.io/marcua/ayb ayb"
 ```
 
 Then use the client as normal:
