@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - 'v*.*.*' # Trigger only for tags starting with 'v' (e.g., v0.1.9)
-    branches:
-      - 'docker*' # Trigger for pushes to 'docker*' branches for testing
 env:
   REPO_NAME: marcua/ayb
   REGISTRY: ghcr.io
@@ -26,7 +24,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}
         tags: |
-          type=match,pattern=(v\d+\.\d+\.\d+|docker.*),group=1
+          type=match,pattern=(v\d+\.\d+\.\d+|docker.*),group=1  # AI! Only leave the pattern for v*, not docker*
           type=raw,value=latest
           type=sha,prefix=,format=short
 
