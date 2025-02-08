@@ -23,7 +23,7 @@ To learn more about why `ayb` matters, how it works, or who it's for, [read this
 cargo install ayb
 ```
 
-# AI! note that you can also run ayb through docker with a link to that section.
+Alternatively, you can run `ayb` using Docker - see the [Docker section](#docker) for details.
 
 ### Running a server
 An `ayb` server stores its metadata in [SQLite](https://www.sqlite.org/index.html) or [PostgreSQL](https://www.postgresql.org/), and stores the databases it's hosting on a local disk. An `ayb.toml` file tells the server what host/port to listen for connections on, how to connect to the database, and the data path for the hosted databases. You can generate a starter file with `ayb default_server_config`.
