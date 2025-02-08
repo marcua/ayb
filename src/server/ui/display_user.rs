@@ -1,4 +1,3 @@
-use crate::client::http::AybClient;
 use crate::server::config::AybConfig;
 use crate::server::utils::get_optional_header;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
@@ -44,20 +43,35 @@ pub async fn display_user(
                 {}
             </div>
         </div>"#,
-        entity_response.profile.display_name.as_deref().unwrap_or(&entity_response.slug),
-        entity_response.profile.description.map_or_else(
-            String::new,
-            |desc| format!("<p class=\"text-gray-600 mb-4\">{}</p>", desc)
-        ),
-        entity_response.profile.organization.map_or_else(
-            String::new,
-            |org| format!("<p class=\"text-sm text-gray-500 mb-2\">🏢 {}</p>", org)
-        ),
-        entity_response.profile.location.map_or_else(
-            String::new,
-            |loc| format!("<p class=\"text-sm text-gray-500\">📍 {}</p>", loc)
-        ),
-        entity_response.databases.into_iter()
+        entity_response
+            .profile
+            .display_name
+            .as_deref()
+            .unwrap_or(&entity_response.slug),
+        entity_response
+            .profile
+            .description
+            .map_or_else(String::new, |desc| format!(
+                "<p class=\"text-gray-600 mb-4\">{}</p>",
+                desc
+            )),
+        entity_response
+            .profile
+            .organization
+            .map_or_else(String::new, |org| format!(
+                "<p class=\"text-sm text-gray-500 mb-2\">🏢 {}</p>",
+                org
+            )),
+        entity_response
+            .profile
+            .location
+            .map_or_else(String::new, |loc| format!(
+                "<p class=\"text-sm text-gray-500\">📍 {}</p>",
+                loc
+            )),
+        entity_response
+            .databases
+            .into_iter()
             .map(|db| format!(
                 r#"<a href="/d/{}/{}" class="block p-4 border rounded-lg hover:bg-gray-50">
                     <h3 class="font-medium">{}</h3>
