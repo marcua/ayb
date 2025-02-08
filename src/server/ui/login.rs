@@ -34,9 +34,19 @@ pub async fn login_submit(
     let client = create_client(&ayb_config, None);
     
     match client.log_in(&form.username).await {
-        Ok(_) => Ok(HttpResponse::Found()
-            .append_header(("Location", format!("/d/{}", form.username)))
-            .finish()),
+        Ok(_) => {
+            let content = r#"
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                        Please check your email for a confirmation link to complete your login.
+                    </div>
+                </div>
+            "#;
+            
+            Ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(base_template("Check Your Email", content)))
+        },
         Err(_) => {
             let content = r#"
                 <div class="bg-white rounded-lg shadow-sm p-6">

@@ -40,9 +40,19 @@ pub async fn register_submit(
     let client = create_client(&ayb_config, None);
     
     match client.register(&form.username, &form.email, &EntityType::User).await {
-        Ok(_) => Ok(HttpResponse::Found()
-            .append_header(("Location", "/login"))
-            .finish()),
+        Ok(_) => {
+            let content = r#"
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+                        Please check your email for a confirmation link to complete your registration.
+                    </div>
+                </div>
+            "#;
+            
+            Ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(base_template("Check Your Email", content)))
+        },
         Err(_) => {
             let content = r#"
                 <div class="bg-white rounded-lg shadow-sm p-6">
