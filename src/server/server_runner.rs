@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(confirm_endpoint);
+    cfg.service(display_user_endpoint);
     cfg.service(log_in_endpoint);
     cfg.service(register_endpoint);
     cfg.service(
