@@ -1,7 +1,7 @@
-use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 use crate::client::http::AybClient;
 use crate::server::config::AybConfig;
 use crate::server::utils::get_optional_header;
+use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/d/{username}")]
 pub async fn display_user(
@@ -10,7 +10,7 @@ pub async fn display_user(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
     let username = path.into_inner();
-    
+
     // Create HTTP client pointing to local API
     let mut client = AybClient {
         base_url: format!("http://{}:{}", ayb_config.host, ayb_config.port),
@@ -22,7 +22,7 @@ pub async fn display_user(
         if let Some(auth_token) = token
             .split(';')
             .find(|c| c.trim().starts_with("auth="))
-            .map(|c| c.trim()[5..].to_string()) 
+            .map(|c| c.trim()[5..].to_string())
         {
             client.api_token = Some(auth_token);
         }
@@ -34,7 +34,8 @@ pub async fn display_user(
         Err(_) => return Ok(HttpResponse::NotFound().body("User not found")),
     };
 
-    let html = format!(r#"
+    let html = format!(
+        r#"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,30 +65,53 @@ pub async fn display_user(
 </html>
 "#,
         // Title
-        entity_response.profile.display_name.as_deref().unwrap_or(&entity_response.slug),
+        entity_response
+            .profile
+            .display_name
+            .as_deref()
+            .unwrap_or(&entity_response.slug),
         // Username
-        entity_response.profile.display_name.as_deref().unwrap_or(&entity_response.slug),
+        entity_response
+            .profile
+            .display_name
+            .as_deref()
+            .unwrap_or(&entity_response.slug),
         // Description
-        entity_response.profile.description.map_or_else(String::new, |desc| 
-            format!("<p class=\"text-gray-600 mb-4\">{}</p>", desc)),
+        entity_response
+            .profile
+            .description
+            .map_or_else(String::new, |desc| format!(
+                "<p class=\"text-gray-600 mb-4\">{}</p>",
+                desc
+            )),
         // Organization
-        entity_response.profile.organization.map_or_else(String::new, |org| 
-            format!("<p class=\"text-sm text-gray-500 mb-2\">🏢 {}</p>", org)),
+        entity_response
+            .profile
+            .organization
+            .map_or_else(String::new, |org| format!(
+                "<p class=\"text-sm text-gray-500 mb-2\">🏢 {}</p>",
+                org
+            )),
         // Location
-        entity_response.profile.location.map_or_else(String::new, |loc| 
-            format!("<p class=\"text-sm text-gray-500\">📍 {}</p>", loc)),
+        entity_response
+            .profile
+            .location
+            .map_or_else(String::new, |loc| format!(
+                "<p class=\"text-sm text-gray-500\">📍 {}</p>",
+                loc
+            )),
         // Databases
-        entity_response.databases.into_iter()
-            .map(|db| format!(r#"
+        entity_response
+            .databases
+            .into_iter()
+            .map(|db| format!(
+                r#"
                 <a href="/d/{}/{}" class="block p-4 border rounded-lg hover:bg-gray-50">
                     <h3 class="font-medium">{}</h3>
                     <p class="text-sm text-gray-500">Type: {}</p>
                 </a>
-            "#, 
-                username,
-                db.slug,
-                db.slug,
-                db.database_type
+            "#,
+                username, db.slug, db.slug, db.database_type
             ))
             .collect::<Vec<_>>()
             .join("\n")
