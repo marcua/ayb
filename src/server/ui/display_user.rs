@@ -34,36 +34,11 @@ pub async fn display_user(
         Err(_) => return Ok(HttpResponse::NotFound().body("User not found")),
     };
 
-    let html = format!(
-        r#"
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{} - AYB</title>
-    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.41/dist/css/core.min.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.41/dist/css/utilities.min.css"/>
-</head>
-<body class="bg-gray-50">
-    <div class="max-w-4xl mx-auto p-6">
-        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h1 class="text-2xl font-bold mb-2">{}</h1>
-            {}
-            {}
-            {}
-        </div>
-
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-semibold mb-4">Databases</h2>
-            <div class="grid gap-4">
-                {}
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-"#,
+    let profile_content = format!(
+        r#"<h1 class="text-2xl font-bold mb-2">{}</h1>
+{}
+{}
+{}"#,
         // Title
         entity_response
             .profile
