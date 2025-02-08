@@ -24,11 +24,11 @@ use std::path::{Path, PathBuf};
 pub fn config(cfg: &mut web::ServiceConfig) {
     // UI routes
     cfg.service(crate::server::ui::display_user_route)
-       .service(crate::server::ui::login_page_route)
-       .service(crate::server::ui::login_submit_route)
-       .service(crate::server::ui::register_page_route)
-       .service(crate::server::ui::register_submit_route)
-       .service(crate::server::ui::confirm_page_route);
+        .service(crate::server::ui::login_page_route)
+        .service(crate::server::ui::login_submit_route)
+        .service(crate::server::ui::register_page_route)
+        .service(crate::server::ui::register_submit_route)
+        .service(crate::server::ui::confirm_page_route);
 
     // API endpoints
     cfg.service(confirm_endpoint);
