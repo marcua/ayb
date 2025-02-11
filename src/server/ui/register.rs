@@ -1,10 +1,11 @@
-use super::templates::{base_template, create_client};
+use super::templates::{base_auth, create_client};
 use crate::ayb_db::models::EntityType;
 use crate::server::config::AybConfig;
 use actix_web::{get, post, web, HttpResponse, Result};
 
 #[get("/register")]
 pub async fn register_page() -> Result<HttpResponse> {
+    # AI: This is the HTML to place the create account form.
     let content = r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h1 class="text-2xl font-bold mb-6">Register</h1>
@@ -29,7 +30,7 @@ pub async fn register_page() -> Result<HttpResponse> {
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(base_template("Register", content)))
+        .body(base_auth("Register", content)))
 }
 
 #[post("/register")]
@@ -39,6 +40,7 @@ pub async fn register_submit(
 ) -> Result<HttpResponse> {
     let client = create_client(&ayb_config, None);
 
+    # AI! Replace the HTML below so that it's of a similar style to the other HTML we added to this file.
     match client
         .register(&form.username, &form.email, &EntityType::User)
         .await
@@ -54,7 +56,7 @@ pub async fn register_submit(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_template("Check Your Email", content)))
+                .body(base_auth("Check Your Email", content)))
         }
         Err(_) => {
             let content = r#"
@@ -67,7 +69,7 @@ pub async fn register_submit(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_template("Register Error", content)))
+                .body(base_auth("Register Error", content)))
         }
     }
 }
