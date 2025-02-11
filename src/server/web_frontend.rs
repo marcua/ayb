@@ -1,3 +1,4 @@
+//AI: import HostingMethod
 use crate::error::AybError;
 use crate::templating::TemplateString;
 use serde::Deserialize;
@@ -30,7 +31,7 @@ impl WebFrontendDetails {
         WebFrontendDetails {
             base_url,
             endpoints: WebFrontendEndpoints {
-                profile: TemplateString { string: "profile/{entity}".to_string() },
+                profile: TemplateString { string: "d/{entity}".to_string() },
                 confirmation: TemplateString { string: "confirm/{token}".to_string() },
             },
         }

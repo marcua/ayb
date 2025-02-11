@@ -7,9 +7,12 @@ use url::Url;
 
 use crate::error::AybError;
 
+// AI: Move HostingMethod from web_frontend.rs to here.
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigWeb {
     pub info_url: Url,
+    // AI: Add hosting_method here.
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -115,6 +118,7 @@ pub fn default_server_config() -> AybConfig {
         cors: AybConfigCors {
             origin: "*".to_string(),
         },
+        // AI: Make this include a local HostingMethod by default
         web: None,
         isolation: None,
         snapshots: None,
