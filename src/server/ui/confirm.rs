@@ -12,19 +12,20 @@ pub async fn confirm_page(
 
     match client.confirm(&token).await {
         Ok(api_token) => {
-            let content = r#"
+            let content = format!(
+                r#"
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
                         Your email has been confirmed! You are now logged in.
                     </div>
-// AI! The path on the next line isn't being filled in with the entity's username.
                     <a href="/d/{}" 
                        class="block w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-center text-white bg-blue-600 hover:bg-blue-700">
                         Go to Your Profile
                     </a>
                 </div>
-            "#;
-            api_token.entity;
+                "#,
+                api_token.entity
+            );
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
