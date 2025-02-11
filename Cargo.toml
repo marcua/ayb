@@ -12,18 +12,18 @@ default-run = "ayb"
 actix-cors = { version = "0.7.0" }
 actix-web = { version = "4.9.0" }
 actix-web-httpauth = { version = "0.8.2" }
-async-trait = { version = "0.1.83" }
+async-trait = { version = "0.1.86" }
 blake3 = { version = "1.5.5" }
 chrono = { version = "0.4.39", features = [ "serde" ] }
 clap = { version = "4.5.27", features = ["cargo", "derive", "env"] }
-derive_more = { version = "1.0.0", features = ["error"] }
+derive_more = { version = "2.0.1", features = ["error"] }
 directories = { version = "6.0" }
-dyn-clone = { version = "1.0.17" }
+dyn-clone = { version = "1.0.18" }
 env_logger = { version = "0.11.6" }
 fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.11", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.12", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.1" }
 regex = { version = "1.11.1"}
 reqwest = { version = "0.12.4", features = ["json"] }
