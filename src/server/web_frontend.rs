@@ -20,6 +20,8 @@ impl WebFrontendDetails {
         Ok(reqwest::get(url.to_string()).await?.json().await?)
     }
 
+    // AI: We can add the from_local function here.
+    
     pub fn profile(&self, entity: &str) -> String {
         let relative = self.endpoints.profile.execute(vec![("entity", entity)]);
         let absolute = self
