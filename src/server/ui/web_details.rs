@@ -13,7 +13,7 @@ pub async fn web_details_route(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
     let base_url = match &ayb_config.web {
-        Some(web_config) => web_config.base_url.clone(),
+        Some(web_config) => web_config.info_url.clone(),
         None => "".to_string(),
     };
     

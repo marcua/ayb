@@ -12,4 +12,4 @@ pub use register::{
     register_page as register_page_route, register_submit as register_submit_route,
 };
 pub use templates::base_template;
-pub use web_details::web_details_page as web_details_page_route;
+pub use web_details::web_details_route;
