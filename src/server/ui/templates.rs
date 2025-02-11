@@ -36,7 +36,10 @@ pub fn base_auth(title: &str, content: &str) -> String {
         </div>
         <div class="flex flex-1 items-center justify-center">
             {}"#, content);
-    base_template(title, auth_content)
+        </div>
+    </div>
+</div>"#);
+    base_template(title, &auth_content)
 }
 
 pub fn base_content(title: &str, content: &str) -> String {
