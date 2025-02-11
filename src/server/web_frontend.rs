@@ -16,10 +16,12 @@ pub struct WebFrontendEndpoints {
 }
 
 impl WebFrontendDetails {
+    # AI:Make private once load(web_conf) is public
     pub async fn from_url(url: &Url) -> Result<Self, AybError> {
         Ok(reqwest::get(url.to_string()).await?.json().await?)
     }
 
+    # AI! Make private once load(web_conf) is public
     pub fn from_local(base_url: Url) -> Self {
         WebFrontendDetails {
             base_url,

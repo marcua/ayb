@@ -101,6 +101,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
         .await
         .expect("unable to connect to ayb database");
+    # AI: Move the logic for returning WebFrontendDetails into WebfrontendDetails::load(web_conf)
     let web_details = if let Some(web_conf) = ayb_conf.web {
         Some(match web_conf.hosting_method {
             HostingMethod::Remote => {
