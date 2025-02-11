@@ -40,7 +40,7 @@ pub async fn register_submit(
 ) -> Result<HttpResponse> {
     let client = create_client(&ayb_config, None);
 
-    # AI! Replace the HTML below so that it's of a similar style to the other HTML we added to this file.
+    # AI: Replace the HTML below so that it's of a similar style to the other HTML we added to this file.
     match client
         .register(&form.username, &form.email, &EntityType::User)
         .await

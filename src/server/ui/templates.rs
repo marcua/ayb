@@ -17,8 +17,58 @@ fn base_template(title: &str, content: &str) -> String {
     )
 }
 
+# AI! Clean this function up
+# - Remove the everything from "Create account" to the "Sign in with Email" button and replace that with a {} template of the content argument
+# - Move the create account form into the other location I've marked
 pub fn base_auth(title: &str, content: &str) -> String {
-    base_template(title, content)
+    let auth_content = format!(r#"
+<div style="display: contents">
+	<!--[-->
+	<!--[-->
+	<!---->
+	<!---->
+	<div class="hidden h-screen grid-cols-2 xl:grid">
+		<div class="col-span-1 hidden flex-col justify-between bg-zinc-900 p-8 text-white lg:flex">
+			<div class="flex items-center text-lg font-medium">
+            ayb
+			</div>
+			<blockquote class="space-y-2">
+				<p class="text-lg">"This library has saved me countless hours of work and helped me deliver stunning designs to
+				my clients faster than ever before."</p>
+				<footer class="text-sm">Sofia Davis</footer>
+			</blockquote>
+		</div>
+		<div class="col-span-2 flex flex-col p-8 lg:col-span-1">
+			<div class="flex flex-none justify-end">
+				<button class="uk-btn uk-btn-ghost">Login</button>
+			</div>
+			<div class="flex flex-1 items-center justify-center">
+				<div class="w-80 space-y-6">
+					<div class="flex flex-col space-y-2 text-center">
+						<h1 class="uk-h3">Create an account</h1>
+						<p class="text-sm text-muted-foreground">Enter your email below to create your account</p>
+					</div>
+					<div class="space-y-2">
+						<input class="uk-input" placeholder="name@example.com" type="text">
+							<button class="uk-btn uk-btn-primary w-full">
+								<!--[!-->
+								<!--]--> Sign in with Email
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!---->
+		<!---->
+		<!---->
+		<!--]-->
+		<!--[!-->
+		<!--]-->
+		<!--]-->
+    </div>
+</div>"#, content);
+    base_template(title, auth_content)
 }
 
 pub fn base_content(title: &str, content: &str) -> String {
