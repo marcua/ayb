@@ -1,5 +1,4 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
-use crate::server::config::HostingMethod;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::server::config::read_config;
@@ -102,9 +101,11 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
         .await
         .expect("unable to connect to ayb database");
     let web_details = if let Some(web_conf) = ayb_conf.web {
-        Some(WebFrontendDetails::load(web_conf)
-            .await
-            .expect("failed to load web frontend details"))
+        Some(
+            WebFrontendDetails::load(web_conf)
+                .await
+                .expect("failed to load web frontend details"),
+        )
     } else {
         None
     };

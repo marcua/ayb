@@ -33,7 +33,7 @@ pub async fn confirm_page(
                     "Set-Cookie",
                     format!("auth={}; Path=/; HttpOnly", api_token.token),
                 ))
-                .body(base_template("Email Confirmed", content)))
+                .body(base_template("Email Confirmed", &content)))
         }
         Err(_) => {
             let content = r#"

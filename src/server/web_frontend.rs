@@ -1,4 +1,5 @@
 use crate::error::AybError;
+use crate::server::config::{AybConfigWeb, WebHostingMethod};
 use crate::templating::TemplateString;
 use serde::Deserialize;
 use url::Url;
@@ -24,8 +25,12 @@ impl WebFrontendDetails {
         WebFrontendDetails {
             base_url,
             endpoints: WebFrontendEndpoints {
-                profile: TemplateString { string: "d/{entity}".to_string() },
-                confirmation: TemplateString { string: "confirm/{token}".to_string() },
+                profile: TemplateString {
+                    string: "d/{entity}".into(),
+                },
+                confirmation: TemplateString {
+                    string: "confirm/{token}".into(),
+                },
             },
         }
     }
@@ -52,8 +57,8 @@ impl WebFrontendDetails {
 
     pub async fn load(web_conf: AybConfigWeb) -> Result<Self, AybError> {
         match web_conf.hosting_method {
-            HostingMethod::Remote => Self::from_url(&web_conf.info_url).await,
-            HostingMethod::Local => Ok(Self::from_local(web_conf.info_url)),
+            WebHostingMethod::Remote => Self::from_url(&web_conf.base_url).await,
+            WebHostingMethod::Local => Ok(Self::from_local(web_conf.base_url)),
         }
     }
 }

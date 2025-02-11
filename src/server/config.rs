@@ -8,15 +8,15 @@ use url::Url;
 use crate::error::AybError;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub enum HostingMethod {
+pub enum WebHostingMethod {
     Local,
     Remote,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigWeb {
-    pub info_url: Url,
-    pub hosting_method: HostingMethod,
+    pub base_url: Url,
+    pub hosting_method: WebHostingMethod,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -123,8 +123,8 @@ pub fn default_server_config() -> AybConfig {
             origin: "*".to_string(),
         },
         web: Some(AybConfigWeb {
-            info_url: Url::parse(&format!("http://{}:{}", "0.0.0.0", 5433)).unwrap(),
-            hosting_method: HostingMethod::Local,
+            base_url: Url::parse(&format!("http://{}:{}", "0.0.0.0", 5433)).unwrap(),
+            hosting_method: WebHostingMethod::Local,
         }),
         isolation: None,
         snapshots: None,

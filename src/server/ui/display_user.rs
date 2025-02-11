@@ -3,7 +3,7 @@ use crate::server::utils::get_optional_header;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/d/{username}")]
-pub async fn profile(
+pub async fn display_user(
     req: HttpRequest,
     path: web::Path<String>,
     ayb_config: web::Data<AybConfig>,

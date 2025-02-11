@@ -1,6 +1,6 @@
-use actix_web::{get, post, web, HttpResponse, Result};
-use crate::server::config::AybConfig;
 use super::templates::{base_template, create_client};
+use crate::server::config::AybConfig;
+use actix_web::{get, post, web, HttpResponse, Result};
 
 #[get("/login")]
 pub async fn login_page() -> Result<HttpResponse> {
@@ -32,7 +32,7 @@ pub async fn login_submit(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
     let client = create_client(&ayb_config, None);
-    
+
     match client.log_in(&form.username).await {
         Ok(_) => {
             let content = r#"
@@ -42,11 +42,11 @@ pub async fn login_submit(
                     </div>
                 </div>
             "#;
-            
+
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .body(base_template("Check Your Email", content)))
-        },
+        }
         Err(_) => {
             let content = r#"
                 <div class="bg-white rounded-lg shadow-sm p-6">
@@ -55,7 +55,7 @@ pub async fn login_submit(
                     </div>
                 </div>
             "#;
-            
+
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .body(base_template("Login Error", content)))

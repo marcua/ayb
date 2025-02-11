@@ -30,7 +30,10 @@ pub fn base_template(title: &str, content: &str) -> String {
     )
 }
 
-pub fn create_client(config: &crate::server::config::AybConfig, auth_token: Option<String>) -> crate::client::http::AybClient {
+pub fn create_client(
+    config: &crate::server::config::AybConfig,
+    auth_token: Option<String>,
+) -> crate::client::http::AybClient {
     crate::client::http::AybClient {
         base_url: format!("http://{}:{}", config.host, config.port),
         api_token: auth_token,
