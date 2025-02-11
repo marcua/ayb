@@ -17,7 +17,6 @@ pub enum HostingMethod {
 pub struct AybConfigWeb {
     pub info_url: Url,
     pub hosting_method: HostingMethod,
-    pub endpoint_url: Url,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -124,11 +123,8 @@ pub fn default_server_config() -> AybConfig {
             origin: "*".to_string(),
         },
         web: Some(AybConfigWeb {
-            # AI: These should come from the host and port, not be hard-coded
-            info_url: Url::parse("http://localhost:5433").unwrap(),
+            info_url: Url::parse(&format!("http://{}:{}", "0.0.0.0", 5433)).unwrap(),
             hosting_method: HostingMethod::Local,
-            # AI: Remove endpoint_url, it's not necessary.
-            endpoint_url: Url::parse("http://localhost:5433").unwrap(),
         }),
         isolation: None,
         snapshots: None,

@@ -101,18 +101,10 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
         .await
         .expect("unable to connect to ayb database");
-    # AI: Move the logic for returning WebFrontendDetails into WebfrontendDetails::load(web_conf)
     let web_details = if let Some(web_conf) = ayb_conf.web {
-        Some(match web_conf.hosting_method {
-            HostingMethod::Remote => {
-                WebFrontendDetails::from_url(&web_conf.info_url)
-                    .await
-                    .expect("failed to retrieve information from the web frontend")
-            }
-            HostingMethod::Local => {
-                WebFrontendDetails::from_local(web_conf.endpoint_url)
-            }
-        })
+        Some(WebFrontendDetails::load(web_conf)
+            .await
+            .expect("failed to load web frontend details"))
     } else {
         None
     };

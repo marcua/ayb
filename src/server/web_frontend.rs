@@ -16,13 +16,11 @@ pub struct WebFrontendEndpoints {
 }
 
 impl WebFrontendDetails {
-    # AI:Make private once load(web_conf) is public
-    pub async fn from_url(url: &Url) -> Result<Self, AybError> {
+    async fn from_url(url: &Url) -> Result<Self, AybError> {
         Ok(reqwest::get(url.to_string()).await?.json().await?)
     }
 
-    # AI! Make private once load(web_conf) is public
-    pub fn from_local(base_url: Url) -> Self {
+    fn from_local(base_url: Url) -> Self {
         WebFrontendDetails {
             base_url,
             endpoints: WebFrontendEndpoints {
@@ -50,5 +48,12 @@ impl WebFrontendDetails {
             .join(&relative)
             .expect("invalid confirmation template string provided by the web frontend");
         absolute.to_string()
+    }
+
+    pub async fn load(web_conf: AybConfigWeb) -> Result<Self, AybError> {
+        match web_conf.hosting_method {
+            HostingMethod::Remote => Self::from_url(&web_conf.info_url).await,
+            HostingMethod::Local => Ok(Self::from_local(web_conf.info_url)),
+        }
     }
 }
