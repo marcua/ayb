@@ -3,7 +3,6 @@ mod display_user;
 mod login;
 mod register;
 mod templates;
-mod web_details;
 
 pub use confirm::confirm_page as confirm_page_route;
 pub use display_user::display_user as display_user_route;
@@ -12,4 +11,3 @@ pub use register::{
     register_page as register_page_route, register_submit as register_submit_route,
 };
 pub use templates::base_template;
-pub use web_details::web_details_route;
