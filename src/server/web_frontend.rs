@@ -1,14 +1,7 @@
-//AI: import HostingMethod
 use crate::error::AybError;
 use crate::templating::TemplateString;
 use serde::Deserialize;
 use url::Url;
-
-#[derive(Clone, Deserialize)]
-pub enum HostingMethod {
-    Local,
-    Remote,
-}
 
 #[derive(Clone, Deserialize)]
 pub struct WebFrontendDetails {

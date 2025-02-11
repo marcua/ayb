@@ -3,8 +3,7 @@ use crate::server::utils::get_optional_header;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/d/{username}")]
-// AI! Rename to profile.
-pub async fn display_user(
+pub async fn profile(
     req: HttpRequest,
     path: web::Path<String>,
     ayb_config: web::Data<AybConfig>,

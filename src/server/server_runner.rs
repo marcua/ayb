@@ -1,5 +1,5 @@
-// AI: Import HostingMethod
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
+use crate::server::config::HostingMethod;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::server::config::read_config;
