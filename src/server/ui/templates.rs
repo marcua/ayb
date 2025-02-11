@@ -1,3 +1,7 @@
+# AI! Split into three template functions:
+# 1) base_template (private) contains an empty body (into which callers pass the content).
+# 2) base_auth (public) calls base_template and provides a base template for authentication pages like registration and login. Its content will be a noop for now (we'll fill it in next with an example)
+# 3) base_content (public) calls base_template and provides a base template for post-login content like profiles and databases, and for now can include the contents of today's base_template body.
 pub fn base_template(title: &str, content: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
