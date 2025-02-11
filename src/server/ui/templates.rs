@@ -1,8 +1,4 @@
-# AI! Split into three template functions:
-# 1) base_template (private) contains an empty body (into which callers pass the content).
-# 2) base_auth (public) calls base_template and provides a base template for authentication pages like registration and login. Its content will be a noop for now (we'll fill it in next with an example)
-# 3) base_content (public) calls base_template and provides a base template for post-login content like profiles and databases, and for now can include the contents of today's base_template body.
-pub fn base_template(title: &str, content: &str) -> String {
+fn base_template(title: &str, content: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -14,6 +10,19 @@ pub fn base_template(title: &str, content: &str) -> String {
     <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.41/dist/css/utilities.min.css"/>
 </head>
 <body class="bg-gray-50">
+    {}
+</body>
+</html>"#,
+        title, content
+    )
+}
+
+pub fn base_auth(title: &str, content: &str) -> String {
+    base_template(title, content)
+}
+
+pub fn base_content(title: &str, content: &str) -> String {
+    let nav = r#"
     <nav class="bg-white shadow-sm mb-6">
         <div class="max-w-4xl mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
@@ -26,12 +35,10 @@ pub fn base_template(title: &str, content: &str) -> String {
         </div>
     </nav>
     <div class="max-w-4xl mx-auto px-6">
-        {}
-    </div>
-</body>
-</html>"#,
-        title, content
-    )
+        "#;
+
+    let wrapped_content = format!("{}{}</div>", nav, content);
+    base_template(title, &wrapped_content)
 }
 
 pub fn create_client(
