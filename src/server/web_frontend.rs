@@ -4,6 +4,12 @@ use serde::Deserialize;
 use url::Url;
 
 #[derive(Clone, Deserialize)]
+pub enum HostingMethod {
+    Local,
+    Remote,
+}
+
+#[derive(Clone, Deserialize)]
 pub struct WebFrontendDetails {
     base_url: Url,
     endpoints: WebFrontendEndpoints,
@@ -20,8 +26,15 @@ impl WebFrontendDetails {
         Ok(reqwest::get(url.to_string()).await?.json().await?)
     }
 
-    // AI: We can add the from_local function here.
-    
+    pub fn from_local(base_url: Url) -> Self {
+        WebFrontendDetails {
+            base_url,
+            endpoints: WebFrontendEndpoints {
+                profile: TemplateString { string: "profile/{entity}".to_string() },
+                confirmation: TemplateString { string: "confirm/{token}".to_string() },
+            },
+        }
+    }
     pub fn profile(&self, entity: &str) -> String {
         let relative = self.endpoints.profile.execute(vec![("entity", entity)]);
         let absolute = self

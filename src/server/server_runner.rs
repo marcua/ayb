@@ -100,13 +100,17 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
         .await
         .expect("unable to connect to ayb database");
-    // AI! Add a required hosting_method parameter to ayb_conf under web. It's an enum with two values: 1) local, 2) remote. If remote, we use the logic below (with from_url) to request the WebFrontendDetails. If it's local, we construct a WebFrontendDetails::from_local, which uses the ayb_conf endpoint_url as the base_url, and provides the endpoint paths for the profile and confirmation pages.
     let web_details = if let Some(web_conf) = ayb_conf.web {
-        Some(
-            WebFrontendDetails::from_url(&web_conf.info_url)
-                .await
-                .expect("failed to retrieve information from the web frontend"),
-        )
+        Some(match web_conf.hosting_method {
+            HostingMethod::Remote => {
+                WebFrontendDetails::from_url(&web_conf.info_url)
+                    .await
+                    .expect("failed to retrieve information from the web frontend")
+            }
+            HostingMethod::Local => {
+                WebFrontendDetails::from_local(web_conf.endpoint_url)
+            }
+        })
     } else {
         None
     };
