@@ -5,7 +5,6 @@ use actix_web::{get, post, web, HttpResponse, Result};
 
 #[get("/register")]
 pub async fn register_page() -> Result<HttpResponse> {
-    # AI: This is the HTML to place the create account form.
     let content = r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h1 class="text-2xl font-bold mb-6">Register</h1>
@@ -40,7 +39,6 @@ pub async fn register_submit(
 ) -> Result<HttpResponse> {
     let client = create_client(&ayb_config, None);
 
-    # AI: Replace the HTML below so that it's of a similar style to the other HTML we added to this file.
     match client
         .register(&form.username, &form.email, &EntityType::User)
         .await
