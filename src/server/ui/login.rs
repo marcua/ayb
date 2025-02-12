@@ -1,21 +1,23 @@
-use super::templates::{base_template, create_client};
+use super::templates::{base_auth, create_client};
 use crate::server::config::AybConfig;
 use actix_web::{get, post, web, HttpResponse, Result};
+
+static CREATE_ACCOUNT: &str = r#"<a href="/register" class="text-sm">Create account</a>"#;
 
 #[get("/login")]
 pub async fn login_page() -> Result<HttpResponse> {
     let content = r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <h1 class="text-2xl font-bold mb-6">Login</h1>
+            <h1 class="text-2xl font-bold mb-6">Log in</h1>
             <form method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                    <label class="uk-form-label">Username</label>
                     <input type="text" name="username" required 
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                           class="uk-input">
                 </div>
                 <button type="submit" 
-                        class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                    Login
+                        class="uk-btn uk-btn-primary w-full">
+                    Log in
                 </button>
             </form>
         </div>
@@ -23,7 +25,7 @@ pub async fn login_page() -> Result<HttpResponse> {
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(base_template("Login", content)))
+        .body(base_auth("Log in", CREATE_ACCOUNT, content)))
 }
 
 #[post("/login")]
@@ -36,29 +38,31 @@ pub async fn login_submit(
     match client.log_in(&form.username).await {
         Ok(_) => {
             let content = r#"
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-                        Please check your email for a confirmation link to complete your login.
-                    </div>
-                </div>
+<div class="uk-alert" data-uk-alert>
+  <div class="uk-alert-title">Check email</div>
+  <p>
+    Please check your email for a confirmation link.
+  </p>
+</div>
             "#;
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_template("Check Your Email", content)))
+                .body(base_auth("Check email", CREATE_ACCOUNT, content)))
         }
         Err(_) => {
             let content = r#"
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                        Login failed. Please try again.
-                    </div>
-                </div>
+<div class="uk-alert uk-alert-destructive" data-uk-alert>
+  <div class="uk-alert-title">Unable to log in</div>
+  <p>
+    You were unable to log in. Please try again.
+  </p>
+</div>
             "#;
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_template("Login Error", content)))
+                .body(base_auth("Login error", CREATE_ACCOUNT, content)))
         }
     }
 }

@@ -1,4 +1,4 @@
-use super::templates::{base_template, create_client};
+use super::templates::{base_auth, create_client};
 use crate::server::config::AybConfig;
 use actix_web::{get, web, HttpResponse, Result};
 
@@ -14,15 +14,14 @@ pub async fn confirm_page(
         Ok(api_token) => {
             let content = format!(
                 r#"
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-                        Your email has been confirmed! You are now logged in.
-                    </div>
-                    <a href="/d/{}" 
-                       class="block w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-center text-white bg-blue-600 hover:bg-blue-700">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h1 class="text-2xl font-bold mb-6">Success</h1>
+            <p class="text-sm text-muted-foreground mb-6">Confirmation complete. You are now logged in.</p>
+            <a href="/d/{}"
+               class="uk-btn uk-btn-primary w-full">
                         Go to Your Profile
-                    </a>
-                </div>
+            </a>
+        </div>
                 "#,
                 api_token.entity
             );
@@ -33,20 +32,21 @@ pub async fn confirm_page(
                     "Set-Cookie",
                     format!("auth={}; Path=/; HttpOnly", api_token.token),
                 ))
-                .body(base_template("Email Confirmed", &content)))
+                .body(base_auth("Success", "", &content)))
         }
         Err(_) => {
             let content = r#"
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                        Invalid or expired confirmation link. Please try logging in again to receive a new link.
-                    </div>
-                </div>
+<div class="uk-alert uk-alert-destructive" data-uk-alert>
+  <div class="uk-alert-title">Unable to log in</div>
+  <p>
+    Invalid or expired confirmation link. Please try again.
+  </p>
+</div>
             "#;
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_template("Confirmation Failed", content)))
+                .body(base_auth("Confirmation failed", "", content)))
         }
     }
 }

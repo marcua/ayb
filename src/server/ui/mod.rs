@@ -10,4 +10,4 @@ pub use login::{login_page as login_page_route, login_submit as login_submit_rou
 pub use register::{
     register_page as register_page_route, register_submit as register_submit_route,
 };
-pub use templates::base_template;
+pub use templates::{base_auth, base_content};

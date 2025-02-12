@@ -1,15 +1,28 @@
 fn base_template(title: &str, content: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
-<html lang="en">
+<html
+  lang="en"
+  class="uk-theme-blue uk-radii-sm uk-shadows-md uk-font-sm">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{} - AYB</title>
-    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.41/dist/css/core.min.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.41/dist/css/utilities.min.css"/>
+    <title>{} - ayb</title>
+    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/css/core.min.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/css/utilities.min.css"/>
+    <script
+      src="https://unpkg.com/@tailwindcss/browser@4"
+    ></script>
+    <script
+      src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/core.iife.js"
+      type="module"
+    ></script>
+    <script
+      src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/icon.iife.js"
+      type="module"
+    ></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-background text-foreground">
     {}
 </body>
 </html>"#,
@@ -17,27 +30,30 @@ fn base_template(title: &str, content: &str) -> String {
     )
 }
 
-pub fn base_auth(title: &str, content: &str) -> String {
-    let auth_content = format!(r#"
+pub fn base_auth(title: &str, other_action: &str, content: &str) -> String {
+    let auth_content = format!(
+        r#"
 <div class="min-h-screen grid xl:grid-cols-2">
     <div class="hidden xl:flex flex-col justify-between bg-zinc-900 p-8 text-white">
         <div class="flex items-center text-lg font-medium">
             ayb
         </div>
         <blockquote class="space-y-2">
-            <p class="text-lg">"This library has saved me countless hours of work and helped me deliver stunning designs to
-            my clients faster than ever before."</p>
-            <footer class="text-sm">Sofia Davis</footer>
+            <p class="text-lg">You're a minute away from creating, sharing, and querying a database.</p>
         </blockquote>
     </div>
     <div class="flex flex-col p-8">
         <div class="flex justify-end">
-            <a href="/login" class="text-sm text-gray-600 hover:text-gray-900">Login</a>
+            {}
         </div>
         <div class="flex flex-1 items-center justify-center">
-            {}"#, content);
+            {}
+        </div>
+    </div>
+</div>"#,
+        other_action, content
+    );
 
-    base_template(title, &auth_content)
     base_template(title, &auth_content)
 }
 

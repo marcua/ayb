@@ -85,5 +85,5 @@ pub async fn display_user(
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(super::templates::base_template("User Profile", &content)))
+        .body(super::templates::base_content("User Profile", &content)))
 }

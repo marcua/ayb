@@ -3,25 +3,27 @@ use crate::ayb_db::models::EntityType;
 use crate::server::config::AybConfig;
 use actix_web::{get, post, web, HttpResponse, Result};
 
+static LOG_IN: &str = r#"<a href="/login" class="text-sm">Log in</a>"#;
+
 #[get("/register")]
 pub async fn register_page() -> Result<HttpResponse> {
     let content = r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
-            <h1 class="text-2xl font-bold mb-6">Register</h1>
+            <h1 class="text-2xl font-bold mb-6">Create account</h1>
             <form method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                    <label class="uk-form-label">Username</label>
                     <input type="text" name="username" required 
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                           class="uk-input">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <label class="uk-form-label">Email</label>
                     <input type="email" name="email" required 
-                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                           class="uk-input">
                 </div>
                 <button type="submit" 
-                        class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                    Register
+                        class="uk-btn uk-btn-primary w-full">
+                    Create account
                 </button>
             </form>
         </div>
@@ -29,7 +31,7 @@ pub async fn register_page() -> Result<HttpResponse> {
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(base_auth("Register", content)))
+        .body(base_auth("Register", LOG_IN, content)))
 }
 
 #[post("/register")]
@@ -45,29 +47,31 @@ pub async fn register_submit(
     {
         Ok(_) => {
             let content = r#"
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
-                        Please check your email for a confirmation link to complete your registration.
-                    </div>
-                </div>
+<div class="uk-alert" data-uk-alert>
+  <div class="uk-alert-title">Check email</div>
+  <p>
+    Please check your email for a confirmation link.
+  </p>
+</div>
             "#;
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Check Your Email", content)))
+                .body(base_auth("Check email", LOG_IN, content)))
         }
         Err(_) => {
             let content = r#"
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                        Registration failed. Please try again.
-                    </div>
-                </div>
+<div class="uk-alert uk-alert-destructive" data-uk-alert>
+  <div class="uk-alert-title">Unable to log in</div>
+  <p>
+    Registration failed. Please try again.
+  </p>
+</div>
             "#;
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Register Error", content)))
+                .body(base_auth("Account creation error", LOG_IN, content)))
         }
     }
 }
