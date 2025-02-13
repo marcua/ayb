@@ -23,9 +23,9 @@ use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     // Only add UI routes if web frontend is configured for local serving
-    if let Some(web_details) = cfg.app_data::<web::Data<Option<WebFrontendDetails>>>() {
-        if let Some(details) = web_details.as_ref() {
-            if details.method == "local" {
+    if let Some(ayb_config) = cfg.app_data::<web::Data<AybConfig>>() {
+        if let Some(web_config) = &ayb_config.web {
+            if web_config.method == "local" {
                 cfg.service(crate::server::ui::login_page_route)
                     .service(crate::server::ui::login_submit_route)
                     .service(crate::server::ui::register_page_route)
