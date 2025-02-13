@@ -22,6 +22,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
+    // UI routes
+    cfg.service(crate::server::ui::display_user_route)
+        .service(crate::server::ui::login_page_route)
+        .service(crate::server::ui::login_submit_route)
+        .service(crate::server::ui::register_page_route)
+        .service(crate::server::ui::register_submit_route)
+        .service(crate::server::ui::confirm_page_route);
+
+    // API endpoints
     cfg.service(confirm_endpoint);
     cfg.service(log_in_endpoint);
     cfg.service(register_endpoint);
@@ -93,9 +102,9 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
         .expect("unable to connect to ayb database");
     let web_details = if let Some(web_conf) = ayb_conf.web {
         Some(
-            WebFrontendDetails::from_url(&web_conf.info_url)
+            WebFrontendDetails::load(web_conf)
                 .await
-                .expect("failed to retrieve information from the web frontend"),
+                .expect("failed to load web frontend details"),
         )
     } else {
         None
