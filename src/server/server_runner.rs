@@ -22,14 +22,19 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    // UI routes
-    #AI! Make the addition of UI endpoints dependent on if there's an aybconfig web configuration with method local.
-    cfg.service(crate::server::ui::login_page_route)
-        .service(crate::server::ui::login_submit_route)
-        .service(crate::server::ui::register_page_route)
-        .service(crate::server::ui::register_submit_route)
-        .service(crate::server::ui::confirm_page_route)
-        .service(crate::server::ui::display_user_route);
+    // Only add UI routes if web frontend is configured for local serving
+    if let Some(web_details) = cfg.app_data::<web::Data<Option<WebFrontendDetails>>>() {
+        if let Some(details) = web_details.as_ref() {
+            if details.method == "local" {
+                cfg.service(crate::server::ui::login_page_route)
+                    .service(crate::server::ui::login_submit_route)
+                    .service(crate::server::ui::register_page_route)
+                    .service(crate::server::ui::register_submit_route)
+                    .service(crate::server::ui::confirm_page_route)
+                    .service(crate::server::ui::display_user_route);
+            }
+        }
+    }
 
 
     // API endpoints
