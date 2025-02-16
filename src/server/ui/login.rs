@@ -4,6 +4,7 @@ use actix_web::{get, post, web, HttpResponse, Result};
 
 static CREATE_ACCOUNT: &str = r#"<a href="/register" class="text-sm">Create account</a>"#;
 
+// TODO(marcua): login -> log_in
 #[get("/login")]
 pub async fn login_page() -> Result<HttpResponse> {
     let content = r#"

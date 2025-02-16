@@ -1,15 +1,17 @@
+use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
 use crate::server::utils::get_optional_header;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
-#[get("/d/{username}")]
+#[get("/{entity}")]
 pub async fn display_user(
     req: HttpRequest,
-    path: web::Path<String>,
+    path: web::Path<EntityPath>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
-    let username = path.into_inner();
+    let entity_slug = &path.entity.to_lowercase();
 
+    // TODO(marcua): Move "get cookie and create client" into a utils module.
     let mut client = super::templates::create_client(&ayb_config, None);
 
     // Get auth token from cookie if present
@@ -24,9 +26,9 @@ pub async fn display_user(
     }
 
     // Get entity details using the API client
-    let entity_response = match client.entity_details(&username).await {
+    let entity_response = match client.entity_details(&entity_slug).await {
         Ok(response) => response,
-        Err(_) => return Ok(HttpResponse::NotFound().body("User not found")),
+        Err(_) => return Ok(HttpResponse::NotFound().body("Entity not found")),
     };
 
     let content = format!(
@@ -77,7 +79,7 @@ pub async fn display_user(
                     <h3 class="font-medium">{}</h3>
                     <p class="text-sm text-gray-500">Type: {}</p>
                 </a>"#,
-                username, db.slug, db.slug, db.database_type
+                entity_slug, db.slug, db.slug, db.database_type
             ))
             .collect::<Vec<_>>()
             .join("\n")

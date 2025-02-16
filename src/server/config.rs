@@ -7,13 +7,13 @@ use url::Url;
 
 use crate::error::AybError;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Debug, Deserialize, PartialEq)]
 pub enum WebHostingMethod {
     Local,
     Remote,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AybConfigWeb {
     pub base_url: Url,
     pub hosting_method: WebHostingMethod,

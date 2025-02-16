@@ -2,7 +2,7 @@ use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::server::config::read_config;
-use crate::server::config::AybConfigCors;
+use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
 use crate::server::endpoints::{
     confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
     log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint, share_endpoint,
@@ -21,28 +21,15 @@ use std::env::consts::OS;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn config(cfg: &mut web::ServiceConfig) {
-    // Only add UI routes if web frontend is configured for local serving
-    if let Some(ayb_config) = cfg.app_data::<web::Data<AybConfig>>() {
-        if let Some(web_config) = &ayb_config.web {
-            if web_config.method == "local" {
-                cfg.service(crate::server::ui::login_page_route)
-                    .service(crate::server::ui::login_submit_route)
-                    .service(crate::server::ui::register_page_route)
-                    .service(crate::server::ui::register_submit_route)
-                    .service(crate::server::ui::confirm_page_route)
-                    .service(crate::server::ui::display_user_route);
-            }
-        }
-    }
+pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
+    // Unauthenticated API endpoints
+    cfg.service(confirm_endpoint)
+        .service(log_in_endpoint)
+        .service(register_endpoint);
 
-
-    // API endpoints
-    cfg.service(confirm_endpoint);
-    cfg.service(log_in_endpoint);
-    cfg.service(register_endpoint);
+    // Authenticated API endpoints
     cfg.service(
-        web::scope("")
+        web::scope("/v1")
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(create_db_endpoint)
             .service(update_db_endpoint)
@@ -53,6 +40,19 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(restore_snapshot_endpoint)
             .service(share_endpoint),
     );
+
+    // Only add UI routes if web frontend is configured for local serving
+    if let Some(web_config) = &ayb_config.web {
+        if web_config.hosting_method == WebHostingMethod::Local {
+            // TODO(marcua): standardize naming, import endpoint names directly
+            cfg.service(crate::server::ui::login_page_route)
+                .service(crate::server::ui::login_submit_route)
+                .service(crate::server::ui::register_page_route)
+                .service(crate::server::ui::register_submit_route)
+                .service(crate::server::ui::confirm_page_route)
+                .service(crate::server::ui::display_user_route);
+        }
+    }
 }
 
 async fn entity_validator(
@@ -143,10 +143,10 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(middleware::Compress::default())
             .wrap(cors)
-            .configure(config)
             .app_data(web::Data::new(web_details.clone()))
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
+            .configure(|cfg| config(cfg, &ayb_conf_for_server.clone()))
     })
     .bind((ayb_conf.host, ayb_conf.port))?
     .run()

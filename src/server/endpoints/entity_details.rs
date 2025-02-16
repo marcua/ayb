@@ -6,7 +6,7 @@ use crate::server::permissions::can_discover_database;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
-#[get("/v1/entity/{entity}")]
+#[get("/entity/{entity}")]
 pub async fn entity_details(
     path: web::Path<EntityPath>,
     ayb_db: web::Data<Box<dyn AybDb>>,

@@ -12,12 +12,13 @@ pub async fn confirm_page(
 
     match client.confirm(&token).await {
         Ok(api_token) => {
+            // TODO(marcua): Add redirect to profile page.
             let content = format!(
                 r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h1 class="text-2xl font-bold mb-6">Success</h1>
             <p class="text-sm text-muted-foreground mb-6">Confirmation complete. You are now logged in.</p>
-            <a href="/d/{}"
+            <a href="/{}"
                class="uk-btn uk-btn-primary w-full">
                         Go to Your Profile
             </a>
@@ -26,6 +27,7 @@ pub async fn confirm_page(
                 api_token.entity
             );
 
+            // TODO(marcua): Anything about making the cookie secure?
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .append_header((
