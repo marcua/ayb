@@ -10,7 +10,7 @@ use crate::server::permissions::highest_query_access_level;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{post, web};
 
-#[post("/v1/{entity}/{database}/query")]
+#[post("/{entity}/{database}/query")]
 async fn query(
     path: web::Path<EntityDatabasePath>,
     query: String,

@@ -4,7 +4,7 @@ use std::fmt::Formatter;
 
 #[derive(Clone)]
 pub struct TemplateString {
-    string: String,
+    pub string: String,
 }
 
 impl TemplateString {
