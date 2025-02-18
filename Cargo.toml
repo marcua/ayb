@@ -43,7 +43,7 @@ prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.2", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
-uuid = { version = "1.12.1", features = ["v7"] }
+uuid = { version = "1.13.2", features = ["v7"] }
 zstd = { version = "0.13.2" }
 
 [dev-dependencies]
