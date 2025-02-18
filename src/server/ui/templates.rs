@@ -1,4 +1,5 @@
 fn base_template(title: &str, content: &str) -> String {
+    // TODO(marcua): Don't link to third-parties for static assets.
     format!(
         r#"<!DOCTYPE html>
 <html
@@ -8,6 +9,16 @@ fn base_template(title: &str, content: &str) -> String {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{} - ayb</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+      :root {{
+          font-family: "Geist";
+          font-optical-sizing: auto;
+          font-style: normal;
+      }}
+    </style>
     <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/css/core.min.css"/>
     <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/css/utilities.min.css"/>
     <script
@@ -58,11 +69,13 @@ pub fn base_auth(title: &str, other_action: &str, content: &str) -> String {
 }
 
 pub fn base_content(title: &str, content: &str) -> String {
+    // TODO(marcua): Use https://franken-ui.dev/docs/2.0/nav#component-options
+    // TODO(marcua): Log out (username) vs Log in, Register
     let nav = r#"
     <nav class="bg-white shadow-sm mb-6">
-        <div class="max-w-4xl mx-auto px-6 py-4">
+        <div class="max-w-screen-xl mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
-                <a href="/" class="text-xl font-bold">AYB</a>
+                <a href="/" class="text-xl font-bold">ayb</a>
                 <div class="flex gap-4">
                     <a href="/register" class="text-gray-600 hover:text-gray-900">Register</a>
                     <a href="/login" class="text-gray-600 hover:text-gray-900">Login</a>
@@ -70,7 +83,7 @@ pub fn base_content(title: &str, content: &str) -> String {
             </div>
         </div>
     </nav>
-    <div class="max-w-4xl mx-auto px-6">
+    <div class="max-w-screen-xl mx-auto px-6">
         "#;
 
     let wrapped_content = format!("{}{}</div>", nav, content);

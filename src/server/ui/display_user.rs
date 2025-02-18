@@ -31,53 +31,66 @@ pub async fn display_user(
         Err(_) => return Ok(HttpResponse::NotFound().body("Entity not found")),
     };
 
+    let name = entity_response
+        .profile
+        .display_name
+        .as_deref()
+        .unwrap_or(&entity_response.slug);
     let content = format!(
         r#"
-        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h1 class="text-2xl font-bold mb-2">{}</h1>
-            {}
-            {}
-            {}
-        </div>
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-semibold mb-4">Databases</h2>
-            <div class="grid gap-4">
-                {}
+<div class="flex flex-col md:flex-row gap-4">
+    <div class="w-full md:w-1/3 lg:w-1/4">
+        <div class="uk-card">
+            <div class="uk-card-header space-y-2">
+                <h1 class="uk-h2">{}</h1>
+                <p class="text-muted-foreground">{}</p>
             </div>
-        </div>"#,
-        entity_response
-            .profile
-            .display_name
-            .as_deref()
-            .unwrap_or(&entity_response.slug),
-        entity_response
-            .profile
-            .description
-            .map_or_else(String::new, |desc| format!(
-                "<p class=\"text-gray-600 mb-4\">{}</p>",
-                desc
-            )),
+            <div class="uk-card-body space-y-2">
+                <p class="text-muted-foreground">{}</p>
+                <p class="text-muted-foreground">{}</p>
+                <div class="mt-3">
+                    {}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="w-full md:w-2/3 lg:w-3/4">
+        <div class="uk-card-header space-y-2">
+            <h2 class="uk-h2">Databases</h2>
+        </div>
+        <div class="uk-card-body space-y-2">
+            {}
+       </div>
+    </div>
+</div>
+"#,
+        name,
+        entity_response.profile.description.unwrap_or_default(),
+        // TODO(marcua): Actual icons
         entity_response
             .profile
             .organization
-            .map_or_else(String::new, |org| format!(
-                "<p class=\"text-sm text-gray-500 mb-2\">🏢 {}</p>",
-                org
-            )),
+            .map_or_else(String::new, |org| format!("🏢 {}", org)),
         entity_response
             .profile
             .location
-            .map_or_else(String::new, |loc| format!(
-                "<p class=\"text-sm text-gray-500\">📍 {}</p>",
-                loc
-            )),
+            .map_or_else(String::new, |loc| format!("📍 {}", loc)),
+        // TODO(marcua): Links open in new window, nofollow, add verification bit.
+        entity_response
+            .profile
+            .links
+            .into_iter()
+            .map(|link| format!(r#"<a class="block" href="{}">{}</a>"#, link.url, link.url))
+            .collect::<Vec<_>>()
+            .join("\n"),
         entity_response
             .databases
             .into_iter()
             .map(|db| format!(
-                r#"<a href="/d/{}/{}" class="block p-4 border rounded-lg hover:bg-gray-50">
-                    <h3 class="font-medium">{}</h3>
-                    <p class="text-sm text-gray-500">Type: {}</p>
+                r#"<hr class="uk-hr" />
+                <a href="/d/{}/{}" class="block hover:bg-gray-50">
+                    <h3 class="uk-h3 flex" style="align-items: baseline;">{} <uk-icon icon="chevron-right"></uk-icon></h3>
+                    <p class="text-muted-foreground">Type: {}</p>
                 </a>"#,
                 entity_slug, db.slug, db.slug, db.database_type
             ))
@@ -87,5 +100,5 @@ pub async fn display_user(
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(super::templates::base_content("User Profile", &content)))
+        .body(super::templates::base_content(&name, &content)))
 }
