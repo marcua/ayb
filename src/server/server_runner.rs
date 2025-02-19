@@ -18,36 +18,34 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
-    # AI! Replace each of the endpoint names in this function with endpoint_name_endpoint. For example, entity_details_endpoint.
     // Unauthenticated API endpoints
-    cfg.service(api_endpoints::confirm)
-        .service(api_endpoints::log_in)
-        .service(api_endpoints::register);
+    cfg.service(api_endpoints::confirm_endpoint)
+        .service(api_endpoints::log_in_endpoint)
+        .service(api_endpoints::register_endpoint);
 
     // Authenticated API endpoints
     cfg.service(
         web::scope("/v1")
             .wrap(HttpAuthentication::bearer(entity_validator))
-            .service(api_endpoints::create_database)
-            .service(api_endpoints::update_database)
-            .service(api_endpoints::query)
-            .service(api_endpoints::entity_details)
-            .service(api_endpoints::update_profile)
-            .service(api_endpoints::list_snapshots)
-            .service(api_endpoints::restore_snapshot)
-            .service(api_endpoints::share),
+            .service(api_endpoints::create_database_endpoint)
+            .service(api_endpoints::update_database_endpoint)
+            .service(api_endpoints::query_endpoint)
+            .service(api_endpoints::entity_details_endpoint)
+            .service(api_endpoints::update_profile_endpoint)
+            .service(api_endpoints::list_snapshots_endpoint)
+            .service(api_endpoints::restore_snapshot_endpoint)
+            .service(api_endpoints::share_endpoint),
     );
 
     // Only add UI routes if web frontend is configured for local serving
     if let Some(web_config) = &ayb_config.web {
         if web_config.hosting_method == WebHostingMethod::Local {
-            // TODO(marcua): standardize naming, import endpoint names directly
-            cfg.service(ui_endpoints::log_in)
-                .service(ui_endpoints::log_in_submit)
-                .service(ui_endpoints::register)
-                .service(ui_endpoints::register_submit)
-                .service(ui_endpoints::confirm)
-                .service(ui_endpoints::entity_details);
+            cfg.service(ui_endpoints::log_in_endpoint)
+                .service(ui_endpoints::log_in_submit_endpoint)
+                .service(ui_endpoints::register_endpoint)
+                .service(ui_endpoints::register_submit_endpoint)
+                .service(ui_endpoints::confirm_endpoint)
+                .service(ui_endpoints::entity_details_endpoint);
         }
     }
 }
