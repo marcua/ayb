@@ -1,0 +1,24 @@
+mod confirm;
+mod create_database;
+mod entity_details;
+mod list_snapshots;
+mod log_in;
+mod query;
+mod register;
+mod restore_snapshot;
+mod share;
+mod update_database;
+mod update_profile;
+
+#AI! Make each of the modules below be imported as endpoint_name_endpoint. For example pub use confirm::confirm as confirm_endpoint;
+pub use confirm::confirm;
+pub use create_database::create_database;
+pub use entity_details::entity_details;
+pub use list_snapshots::list_snapshots;
+pub use log_in::log_in;
+pub use query::query;
+pub use register::register;
+pub use restore_snapshot::restore_snapshot;
+pub use share::share;
+pub use update_database::update_database;
+pub use update_profile::update_profile;
