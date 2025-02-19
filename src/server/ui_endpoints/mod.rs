@@ -4,9 +4,8 @@ mod log_in;
 mod register;
 mod templates;
 
-# AI! Make each of the endpoints below be imported as endpoint_name_endpoint. For example pub use confirm::confirm as confirm_endpoint;
-pub use confirm::confirm;
-pub use entity_details::entity_details;
-pub use log_in::{log_in, log_in_submit};
-pub use register::{register, register_submit};
+pub use confirm::confirm as confirm_endpoint;
+pub use entity_details::entity_details as entity_details_endpoint;
+pub use log_in::{log_in as log_in_endpoint, log_in_submit as log_in_submit_endpoint};
+pub use register::{register as register_endpoint, register_submit as register_submit_endpoint};
 pub use templates::{base_auth, base_content};
