@@ -1,4 +1,4 @@
-fn base_template(title: &str, content: &str, redirect: &Option<str>) -> String {
+fn base_template(title: &str, content: &str, redirect: Option<String>) -> String {
     // TODO(marcua): Don't link to third-parties for static assets.
     format!(
         r#"<!DOCTYPE html>
@@ -38,12 +38,21 @@ fn base_template(title: &str, content: &str, redirect: &Option<str>) -> String {
     {}
 </body>
 </html>"#,
-        redirect.as_ref().map_or(String::new(), |url| format!(r#"<meta http-equiv="refresh" content="0; url={}" />"#, url)),
-        title, content
+        redirect.as_ref().map_or(String::new(), |url| format!(
+            r#"<meta http-equiv="refresh" content="0; url={}" />"#,
+            url
+        )),
+        title,
+        content
     )
 }
 
-pub fn base_auth(title: &str, other_action: &str, content: &str, redirect: &Option<str>) -> String {
+pub fn base_auth(
+    title: &str,
+    other_action: &str,
+    content: &str,
+    redirect: Option<String>,
+) -> String {
     let auth_content = format!(
         r#"
 <div class="min-h-screen grid xl:grid-cols-2">

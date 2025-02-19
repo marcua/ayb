@@ -31,7 +31,7 @@ pub async fn register() -> Result<HttpResponse> {
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(base_auth("Register", LOG_IN, content)))
+        .body(base_auth("Register", LOG_IN, content, None)))
 }
 
 #[derive(serde::Deserialize)]
@@ -63,7 +63,7 @@ pub async fn register_submit(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Check email", LOG_IN, content)))
+                .body(base_auth("Check email", LOG_IN, content, None)))
         }
         Err(_) => {
             let content = r#"
@@ -77,7 +77,7 @@ pub async fn register_submit(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Account creation error", LOG_IN, content)))
+                .body(base_auth("Account creation error", LOG_IN, content, None)))
         }
     }
 }

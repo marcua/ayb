@@ -25,7 +25,7 @@ pub async fn log_in() -> Result<HttpResponse> {
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(base_auth("Log in", CREATE_ACCOUNT, content)))
+        .body(base_auth("Log in", CREATE_ACCOUNT, content, None)))
 }
 
 #[derive(serde::Deserialize)]
@@ -53,7 +53,7 @@ pub async fn log_in_submit(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Check email", CREATE_ACCOUNT, content)))
+                .body(base_auth("Check email", CREATE_ACCOUNT, content, None)))
         }
         Err(_) => {
             let content = r#"
@@ -67,7 +67,7 @@ pub async fn log_in_submit(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Login error", CREATE_ACCOUNT, content)))
+                .body(base_auth("Login error", CREATE_ACCOUNT, content, None)))
         }
     }
 }

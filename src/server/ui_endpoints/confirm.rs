@@ -34,7 +34,12 @@ pub async fn confirm(
                     "Set-Cookie",
                     format!("auth={}; Path=/; HttpOnly", api_token.token),
                 ))
-                .body(base_auth("Success", "", &content)))
+                .body(base_auth(
+                    "Success",
+                    "",
+                    &content,
+                    Some(format!("/{}", api_token.entity)),
+                )))
         }
         Err(_) => {
             let content = r#"
@@ -48,7 +53,7 @@ pub async fn confirm(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Confirmation failed", "", content)))
+                .body(base_auth("Confirmation failed", "", content, None)))
         }
     }
 }
