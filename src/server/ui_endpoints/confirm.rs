@@ -12,7 +12,6 @@ pub async fn confirm(
 
     match client.confirm(&token).await {
         Ok(api_token) => {
-            // TODO(marcua): Add redirect to profile page.
             let content = format!(
                 r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
