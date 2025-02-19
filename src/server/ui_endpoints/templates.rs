@@ -38,7 +38,7 @@ fn base_template(title: &str, content: &str, redirect: &Option<str>) -> String {
     {}
 </body>
 </html>"#,
-        # AI!: before the title argument, insert a redirect argument that is `<meta http-equiv="refresh" content="0; url={}" />` if the redirect is Some and an empty string if it is None.
+        redirect.as_ref().map_or(String::new(), |url| format!(r#"<meta http-equiv="refresh" content="0; url={}" />"#, url)),
         title, content
     )
 }
