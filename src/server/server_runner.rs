@@ -3,14 +3,10 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::server::config::read_config;
 use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
-use crate::server::endpoints::{
-    confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
-    log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint, share_endpoint,
-    update_db_endpoint, update_profile_endpoint,
-};
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
+use crate::server::{api_endpoints, ui_endpoints};
 use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
@@ -22,35 +18,36 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
+    # AI! Replace each of the endpoint names in this function with endpoint_name_endpoint. For example, entity_details_endpoint.
     // Unauthenticated API endpoints
-    cfg.service(confirm_endpoint)
-        .service(log_in_endpoint)
-        .service(register_endpoint);
+    cfg.service(api_endpoints::confirm)
+        .service(api_endpoints::log_in)
+        .service(api_endpoints::register);
 
     // Authenticated API endpoints
     cfg.service(
         web::scope("/v1")
             .wrap(HttpAuthentication::bearer(entity_validator))
-            .service(create_db_endpoint)
-            .service(update_db_endpoint)
-            .service(query_endpoint)
-            .service(entity_details_endpoint)
-            .service(update_profile_endpoint)
-            .service(list_snapshots_endpoint)
-            .service(restore_snapshot_endpoint)
-            .service(share_endpoint),
+            .service(api_endpoints::create_database)
+            .service(api_endpoints::update_database)
+            .service(api_endpoints::query)
+            .service(api_endpoints::entity_details)
+            .service(api_endpoints::update_profile)
+            .service(api_endpoints::list_snapshots)
+            .service(api_endpoints::restore_snapshot)
+            .service(api_endpoints::share),
     );
 
     // Only add UI routes if web frontend is configured for local serving
     if let Some(web_config) = &ayb_config.web {
         if web_config.hosting_method == WebHostingMethod::Local {
             // TODO(marcua): standardize naming, import endpoint names directly
-            cfg.service(crate::server::ui::login_page_route)
-                .service(crate::server::ui::login_submit_route)
-                .service(crate::server::ui::register_page_route)
-                .service(crate::server::ui::register_submit_route)
-                .service(crate::server::ui::confirm_page_route)
-                .service(crate::server::ui::display_user_route);
+            cfg.service(ui_endpoints::log_in)
+                .service(ui_endpoints::log_in_submit)
+                .service(ui_endpoints::register)
+                .service(ui_endpoints::register_submit)
+                .service(ui_endpoints::confirm)
+                .service(ui_endpoints::entity_details);
         }
     }
 }
