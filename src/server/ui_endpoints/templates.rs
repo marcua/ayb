@@ -1,4 +1,4 @@
-fn base_template(title: &str, content: &str) -> String {
+fn base_template(title: &str, content: &str, redirect: &Option<str>) -> String {
     // TODO(marcua): Don't link to third-parties for static assets.
     format!(
         r#"<!DOCTYPE html>
@@ -8,6 +8,7 @@ fn base_template(title: &str, content: &str) -> String {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {}
     <title>{} - ayb</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,11 +38,12 @@ fn base_template(title: &str, content: &str) -> String {
     {}
 </body>
 </html>"#,
+        # AI!: before the title argument, insert a redirect argument that is `<meta http-equiv="refresh" content="0; url={}" />` if the redirect is Some and an empty string if it is None.
         title, content
     )
 }
 
-pub fn base_auth(title: &str, other_action: &str, content: &str) -> String {
+pub fn base_auth(title: &str, other_action: &str, content: &str, redirect: &Option<str>) -> String {
     let auth_content = format!(
         r#"
 <div class="min-h-screen grid xl:grid-cols-2">
@@ -65,7 +67,7 @@ pub fn base_auth(title: &str, other_action: &str, content: &str) -> String {
         other_action, content
     );
 
-    base_template(title, &auth_content)
+    base_template(title, &auth_content, redirect)
 }
 
 pub fn base_content(title: &str, content: &str) -> String {
@@ -87,7 +89,7 @@ pub fn base_content(title: &str, content: &str) -> String {
         "#;
 
     let wrapped_content = format!("{}{}</div>", nav, content);
-    base_template(title, &wrapped_content)
+    base_template(title, &wrapped_content, None)
 }
 
 pub fn create_client(
