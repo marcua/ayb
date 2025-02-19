@@ -4,9 +4,8 @@ use actix_web::{get, post, web, HttpResponse, Result};
 
 static CREATE_ACCOUNT: &str = r#"<a href="/register" class="text-sm">Create account</a>"#;
 
-// TODO(marcua): login -> log_in
-#[get("/login")]
-pub async fn login_page() -> Result<HttpResponse> {
+#[get("/log_in")]
+pub async fn log_in() -> Result<HttpResponse> {
     let content = r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h1 class="text-2xl font-bold mb-6">Log in</h1>
@@ -29,8 +28,13 @@ pub async fn login_page() -> Result<HttpResponse> {
         .body(base_auth("Log in", CREATE_ACCOUNT, content)))
 }
 
-#[post("/login")]
-pub async fn login_submit(
+#[derive(serde::Deserialize)]
+pub struct LoginForm {
+    username: String,
+}
+
+#[post("/log_in")]
+pub async fn log_in_submit(
     form: web::Form<LoginForm>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
@@ -66,9 +70,4 @@ pub async fn login_submit(
                 .body(base_auth("Login error", CREATE_ACCOUNT, content)))
         }
     }
-}
-
-#[derive(serde::Deserialize)]
-pub struct LoginForm {
-    username: String,
 }

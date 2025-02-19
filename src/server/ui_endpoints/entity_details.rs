@@ -4,7 +4,7 @@ use crate::server::utils::get_optional_header;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}")]
-pub async fn display_user(
+pub async fn entity_details(
     req: HttpRequest,
     path: web::Path<EntityPath>,
     ayb_config: web::Data<AybConfig>,

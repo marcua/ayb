@@ -78,7 +78,7 @@ pub fn base_content(title: &str, content: &str) -> String {
                 <a href="/" class="text-xl font-bold">ayb</a>
                 <div class="flex gap-4">
                     <a href="/register" class="text-gray-600 hover:text-gray-900">Register</a>
-                    <a href="/login" class="text-gray-600 hover:text-gray-900">Login</a>
+                    <a href="/log_in" class="text-gray-600 hover:text-gray-900">Log in</a>
                 </div>
             </div>
         </div>

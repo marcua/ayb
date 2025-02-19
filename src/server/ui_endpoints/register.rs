@@ -3,10 +3,10 @@ use crate::ayb_db::models::EntityType;
 use crate::server::config::AybConfig;
 use actix_web::{get, post, web, HttpResponse, Result};
 
-static LOG_IN: &str = r#"<a href="/login" class="text-sm">Log in</a>"#;
+static LOG_IN: &str = r#"<a href="/log_in" class="text-sm">Log in</a>"#;
 
 #[get("/register")]
-pub async fn register_page() -> Result<HttpResponse> {
+pub async fn register() -> Result<HttpResponse> {
     let content = r#"
         <div class="bg-white rounded-lg shadow-sm p-6">
             <h1 class="text-2xl font-bold mb-6">Create account</h1>
@@ -32,6 +32,12 @@ pub async fn register_page() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(base_auth("Register", LOG_IN, content)))
+}
+
+#[derive(serde::Deserialize)]
+pub struct RegisterForm {
+    username: String,
+    email: String,
 }
 
 #[post("/register")]
@@ -74,10 +80,4 @@ pub async fn register_submit(
                 .body(base_auth("Account creation error", LOG_IN, content)))
         }
     }
-}
-
-#[derive(serde::Deserialize)]
-pub struct RegisterForm {
-    username: String,
-    email: String,
 }

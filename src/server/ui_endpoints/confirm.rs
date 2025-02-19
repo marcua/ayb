@@ -3,7 +3,7 @@ use crate::server::config::AybConfig;
 use actix_web::{get, web, HttpResponse, Result};
 
 #[get("/confirm/{token}")]
-pub async fn confirm_page(
+pub async fn confirm(
     path: web::Path<String>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
