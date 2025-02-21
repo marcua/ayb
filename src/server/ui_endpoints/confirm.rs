@@ -26,12 +26,14 @@ pub async fn confirm(
                 api_token.entity
             );
 
-            // TODO(marcua): Anything about making the cookie secure?
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .append_header((
                     "Set-Cookie",
-                    format!("auth={}; Path=/; HttpOnly", api_token.token),
+                    format!(
+                        "auth={}; Path=/; HttpOnly; Secure; SameSite=Strict",
+                        api_token.token
+                    ),
                 ))
                 .body(base_auth(
                     "Success",

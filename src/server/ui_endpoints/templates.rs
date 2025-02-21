@@ -4,7 +4,7 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
         r#"<!DOCTYPE html>
 <html
   lang="en"
-  class="uk-theme-blue uk-radii-sm uk-shadows-md uk-font-sm">
+  class="uk-theme-blue uk-radii-md uk-shadows-md uk-font-sm">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
