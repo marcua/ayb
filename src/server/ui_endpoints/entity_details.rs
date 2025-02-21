@@ -1,6 +1,6 @@
 use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
-use crate::server::utils::get_optional_header;
+use crate::server::ui_endpoints::client::init_ayb_client;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}")]
@@ -11,19 +11,7 @@ pub async fn entity_details(
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
 
-    // TODO(marcua): Move "get cookie and create client" into a utils module.
-    let mut client = super::templates::create_client(&ayb_config, None);
-
-    // Get auth token from cookie if present
-    if let Ok(Some(token)) = get_optional_header(&req, "Cookie") {
-        if let Some(auth_token) = token
-            .split(';')
-            .find(|c| c.trim().starts_with("auth="))
-            .map(|c| c.trim()[5..].to_string())
-        {
-            client.api_token = Some(auth_token);
-        }
-    }
+    let client = init_ayb_client(&ayb_config, &req);
 
     // Get entity details using the API client
     let entity_response = match client.entity_details(&entity_slug).await {

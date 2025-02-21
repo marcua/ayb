@@ -1,7 +1,8 @@
-use super::templates::{base_auth, create_client};
 use crate::ayb_db::models::EntityType;
 use crate::server::config::AybConfig;
-use actix_web::{get, post, web, HttpResponse, Result};
+use crate::server::ui_endpoints::client::init_ayb_client;
+use crate::server::ui_endpoints::templates::base_auth;
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 
 static LOG_IN: &str = r#"<a href="/log_in" class="text-sm">Log in</a>"#;
 
@@ -42,10 +43,11 @@ pub struct RegisterForm {
 
 #[post("/register")]
 pub async fn register_submit(
+    req: HttpRequest,
     form: web::Form<RegisterForm>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
-    let client = create_client(&ayb_config, None);
+    let client = init_ayb_client(&ayb_config, &req);
 
     match client
         .register(&form.username, &form.email, &EntityType::User)

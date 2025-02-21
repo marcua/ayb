@@ -100,13 +100,3 @@ pub fn base_content(title: &str, content: &str) -> String {
     let wrapped_content = format!("{}{}</div>", nav, content);
     base_template(title, &wrapped_content, None)
 }
-
-pub fn create_client(
-    config: &crate::server::config::AybConfig,
-    auth_token: Option<String>,
-) -> crate::client::http::AybClient {
-    crate::client::http::AybClient {
-        base_url: format!("http://{}:{}", config.host, config.port),
-        api_token: auth_token,
-    }
-}

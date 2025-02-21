@@ -1,3 +1,4 @@
+mod client;
 mod confirm;
 mod entity_details;
 mod log_in;
