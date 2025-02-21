@@ -9,7 +9,7 @@ use crate::server::snapshots::storage::SnapshotStorage;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{post, web, HttpResponse};
 
-#[post("/v1/{entity}/{database}/restore_snapshot")]
+#[post("/{entity}/{database}/restore_snapshot")]
 async fn restore_snapshot(
     path: web::Path<EntityDatabasePath>,
     snapshot_id: String,

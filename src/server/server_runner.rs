@@ -2,15 +2,11 @@ use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
 use crate::server::config::read_config;
-use crate::server::config::AybConfigCors;
-use crate::server::endpoints::{
-    confirm_endpoint, create_db_endpoint, entity_details_endpoint, list_snapshots_endpoint,
-    log_in_endpoint, query_endpoint, register_endpoint, restore_snapshot_endpoint, share_endpoint,
-    update_db_endpoint, update_profile_endpoint,
-};
+use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
+use crate::server::{api_endpoints, ui_endpoints};
 use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
@@ -21,22 +17,37 @@ use std::env::consts::OS;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(confirm_endpoint);
-    cfg.service(log_in_endpoint);
-    cfg.service(register_endpoint);
+pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
+    // Unauthenticated API endpoints
+    cfg.service(api_endpoints::confirm_endpoint)
+        .service(api_endpoints::log_in_endpoint)
+        .service(api_endpoints::register_endpoint);
+
+    // Authenticated API endpoints
     cfg.service(
-        web::scope("")
+        web::scope("/v1")
             .wrap(HttpAuthentication::bearer(entity_validator))
-            .service(create_db_endpoint)
-            .service(update_db_endpoint)
-            .service(query_endpoint)
-            .service(entity_details_endpoint)
-            .service(update_profile_endpoint)
-            .service(list_snapshots_endpoint)
-            .service(restore_snapshot_endpoint)
-            .service(share_endpoint),
+            .service(api_endpoints::create_database_endpoint)
+            .service(api_endpoints::update_database_endpoint)
+            .service(api_endpoints::query_endpoint)
+            .service(api_endpoints::entity_details_endpoint)
+            .service(api_endpoints::update_profile_endpoint)
+            .service(api_endpoints::list_snapshots_endpoint)
+            .service(api_endpoints::restore_snapshot_endpoint)
+            .service(api_endpoints::share_endpoint),
     );
+
+    // Only add UI routes if web frontend is configured for local serving
+    if let Some(web_config) = &ayb_config.web {
+        if web_config.hosting_method == WebHostingMethod::Local {
+            cfg.service(ui_endpoints::log_in_endpoint)
+                .service(ui_endpoints::log_in_submit_endpoint)
+                .service(ui_endpoints::register_endpoint)
+                .service(ui_endpoints::register_submit_endpoint)
+                .service(ui_endpoints::confirm_endpoint)
+                .service(ui_endpoints::entity_details_endpoint);
+        }
+    }
 }
 
 async fn entity_validator(
@@ -93,9 +104,9 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
         .expect("unable to connect to ayb database");
     let web_details = if let Some(web_conf) = ayb_conf.web {
         Some(
-            WebFrontendDetails::from_url(&web_conf.info_url)
+            WebFrontendDetails::load(web_conf)
                 .await
-                .expect("failed to retrieve information from the web frontend"),
+                .expect("failed to load web frontend details"),
         )
     } else {
         None
@@ -127,10 +138,10 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(middleware::Compress::default())
             .wrap(cors)
-            .configure(config)
             .app_data(web::Data::new(web_details.clone()))
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
+            .configure(|cfg| config(cfg, &ayb_conf_for_server.clone()))
     })
     .bind((ayb_conf.host, ayb_conf.port))?
     .run()
