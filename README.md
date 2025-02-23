@@ -353,7 +353,7 @@ alias ayb="docker run --network host ghcr.io/marcua/ayb ayb"
 ```
 
 To run the server, you'll need to create an `ayb.toml` configuration 
-file (see [Running a server](https://github.com/marcua/ayb#running-a-server)), 
+file (see [Running a server](#running-a-server)), 
 create a data directory for the databases, and map the configuration and 
 data directory as volumes when running the container. For example:
 ```bash
