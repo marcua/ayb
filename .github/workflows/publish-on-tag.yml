@@ -47,5 +47,5 @@ jobs:
         # TODO(marcua): List more platforms here to get `linux-arm64` built: https://github.com/marcua/ayb/issues/523
         platforms: ${{ env.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        outputs: type=image,name=${{ env.REGISTRY }}/${{ env.REPO_NAME }},push-by-digest=true,name-canonical=true,push=true
+        tags: ${{ steps.meta.outputs.tags }}
         push: true
