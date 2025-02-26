@@ -64,12 +64,11 @@ pub async fn entity_details(
             .location
             .map_or_else(String::new, |loc| format!("📍 {}", loc)),
         
-        # AI! Links open in new window, nofollow
         entity_response
             .profile
             .links
             .into_iter()
-            .map(|link| format!(r#"<a class="block" href="{}">{}</a>"#, link.url, link.url))
+            .map(|link| format!(r#"<a class="block" href="{}" target="_blank" rel="nofollow">{}</a>"#, link.url, link.url))
             .collect::<Vec<_>>()
             .join("\n"),
         entity_response
