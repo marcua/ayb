@@ -12,6 +12,7 @@ pub async fn confirm(
     let token = path.into_inner();
     let client = init_ayb_client(&ayb_config, &req);
 
+    # AI! Keep failure behavior as it is. On success, save the cookie data, but don't return a page, and instead 302 redirect to the user's details page at /{api_token.entity}
     match client.confirm(&token).await {
         Ok(api_token) => {
             let content = format!(
