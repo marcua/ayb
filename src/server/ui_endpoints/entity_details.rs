@@ -63,7 +63,8 @@ pub async fn entity_details(
             .profile
             .location
             .map_or_else(String::new, |loc| format!("📍 {}", loc)),
-        // TODO(marcua): Links open in new window, nofollow, add verification bit.
+        
+        # AI! Links open in new window, nofollow
         entity_response
             .profile
             .links
