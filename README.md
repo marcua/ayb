@@ -338,31 +338,30 @@ nsjail_path = "path/to/nsjail"
 
 On every release, a docker image is built and pushed to
 `ghcr.io/marcua/ayb`. For now, docker images are available for
-`linux-amd64`. If you would like a `linux-arm64` image, follow [this
-issue](https://github.com/marcua/ayb/issues/523).
+`linux-amd64`. If you would like a `linux-arm64` image, follow 
+and comment on
+[this issue](https://github.com/marcua/ayb/issues/523).
 
 To pull the latest version of the image:
 ```bash
 docker pull ghcr.io/marcua/ayb
 ```
 
-To run the server, you'll need to:
-1. Create an `ayb.toml` configuration file (see [Running a server](#running-a-server))
-2. Create a data directory for the databases
-3. Map these as volumes when running the container
+You can then create an alias for convenience:
+```bash
+alias ayb="docker run --network host ghcr.io/marcua/ayb ayb"
+```
 
-For example:
+To run the server, you'll need to create an `ayb.toml` configuration 
+file (see [Running a server](#running-a-server)), 
+create a data directory for the databases, and map the configuration and 
+data directory as volumes when running the container. For example:
 ```bash
 docker run -v $(pwd)/ayb.toml:/ayb.toml \
           -v $(pwd)/ayb_data:/ayb_data \
           -p 5433:5433 \
           ghcr.io/marcua/ayb \
           ayb server --config /ayb.toml
-```
-
-To run client commands, you can create an alias for convenience:
-```bash
-alias ayb="docker run --network host ghcr.io/marcua/ayb ayb"
 ```
 
 Then use the client as normal:
