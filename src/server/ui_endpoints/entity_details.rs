@@ -54,21 +54,20 @@ pub async fn entity_details(
 "#,
         name,
         entity_response.profile.description.unwrap_or_default(),
-        // AI! Each of the next three uk-icons appears on its own line, whereas I want the icons to appear to the left of the text they precede.
         entity_response
             .profile
             .organization
-            .map_or_else(String::new, |org| format!(r#"<uk-icon icon="building"></uk-icon> {}"#, org)),
+            .map_or_else(String::new, |org| format!(r#"<div class="flex items-center"><uk-icon icon="building" class="mr-1"></uk-icon> {}</div>"#, org)),
         entity_response
             .profile
             .location
-            .map_or_else(String::new, |loc| format!(r#"<uk-icon icon="map-pin"></uk-icon> {}"#, loc)),
+            .map_or_else(String::new, |loc| format!(r#"<div class="flex items-center"><uk-icon icon="map-pin" class="mr-1"></uk-icon> {}</div>"#, loc)),
         
         entity_response
             .profile
             .links
             .into_iter()
-            .map(|link| format!(r#"<uk-icon icon="link"></uk-icon><a class="block" href="{}" rel="nofollow me">{}</a>"#, link.url, link.url))
+            .map(|link| format!(r#"<div class="flex items-center"><uk-icon icon="link" class="mr-1"></uk-icon><a href="{}" rel="nofollow me">{}</a></div>"#, link.url, link.url))
             .collect::<Vec<_>>()
             .join("\n"),
         entity_response
