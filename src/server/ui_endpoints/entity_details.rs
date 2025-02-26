@@ -54,21 +54,21 @@ pub async fn entity_details(
 "#,
         name,
         entity_response.profile.description.unwrap_or_default(),
-        // TODO(marcua): Actual icons
+        // AI! Each of the next three uk-icons appears on its own line, whereas I want the icons to appear to the left of the text they precede.
         entity_response
             .profile
             .organization
-            .map_or_else(String::new, |org| format!("🏢 {}", org)),
+            .map_or_else(String::new, |org| format!(r#"<uk-icon icon="building"></uk-icon> {}"#, org)),
         entity_response
             .profile
             .location
-            .map_or_else(String::new, |loc| format!("📍 {}", loc)),
+            .map_or_else(String::new, |loc| format!(r#"<uk-icon icon="map-pin"></uk-icon> {}"#, loc)),
         
         entity_response
             .profile
             .links
             .into_iter()
-            .map(|link| format!(r#"<a class="block" href="{}" target="_blank" rel="nofollow">{}</a>"#, link.url, link.url))
+            .map(|link| format!(r#"<uk-icon icon="link"></uk-icon><a class="block" href="{}" rel="nofollow me">{}</a>"#, link.url, link.url))
             .collect::<Vec<_>>()
             .join("\n"),
         entity_response
