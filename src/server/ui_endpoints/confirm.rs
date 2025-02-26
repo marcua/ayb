@@ -12,6 +12,7 @@ pub async fn confirm(
     let token = path.into_inner();
     let client = init_ayb_client(&ayb_config, &req);
 
+    // AI! Once I'm confirmed, I'm getting an entity not found on redirect to the entity details page. If I then reload that same URL, the entity details page loads fine. Is the cookie being set after the redirect or something like that?
     match client.confirm(&token).await {
         Ok(api_token) => {
             Ok(HttpResponse::Found()
