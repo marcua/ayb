@@ -20,11 +20,15 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
           font-style: normal;
       }}
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/css/core.min.css"/>
-    <link rel="stylesheet" href="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/css/utilities.min.css"/>
-    <script
-      src="https://unpkg.com/@tailwindcss/browser@4"
-    ></script>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css"
+    />
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/franken-ui@2.0.0/dist/css/utilities.min.css"
+    />
     <script
       src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/core.iife.js"
       type="module"
@@ -56,7 +60,7 @@ pub fn base_auth(
     let auth_content = format!(
         r#"
 <div class="min-h-screen grid xl:grid-cols-2">
-    <div class="hidden xl:flex flex-col justify-between bg-zinc-900 p-8 text-white">
+    <div class="hidden xl:flex flex-col justify-between bg-foreground text-background p-8">
         <div class="flex items-center text-lg font-medium">
             ayb
         </div>
