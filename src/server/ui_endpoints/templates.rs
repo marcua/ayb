@@ -84,7 +84,6 @@ pub fn base_auth(
 }
 
 pub fn base_content(title: &str, content: &str) -> String {
-    // TODO(marcua): Use https://franken-ui.dev/docs/2.0/nav#component-options
     // TODO(marcua): Log out (username) vs Log in, Register
     let nav = r#"
     <nav class="bg-white shadow-sm mb-6">
