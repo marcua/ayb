@@ -17,7 +17,7 @@ pub async fn test_permissions(
     // While first entity has query access to database and can find it
     // in a list (it's the owner), the second one can't do either.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions1\", \"last permissions1\");",
         FIRST_ENTITY_DB,
@@ -25,7 +25,7 @@ pub async fn test_permissions(
         "\nRows: 0",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -35,7 +35,7 @@ pub async fn test_permissions(
         "Database slug,Type\nanother.sqlite,sqlite\ntest.sqlite,sqlite",
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -43,7 +43,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-second can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -52,14 +52,14 @@ pub async fn test_permissions(
 
     // Second entity can't update database, but first can.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "fork",
         "Error: Authenticated entity e2e-second can't update database e2e-first/test.sqlite",
     )?;
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "fork",
@@ -68,7 +68,7 @@ pub async fn test_permissions(
 
     // With fork-level access, the second entity can't query the database, but can discover it.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -76,7 +76,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-second can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -89,14 +89,14 @@ pub async fn test_permissions(
     // read-only (SELECT) queries, but not modify the database (e.g.,
     // INSERT). It should also still be able to discover the database.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "read-only",
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -104,7 +104,7 @@ pub async fn test_permissions(
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
@@ -112,7 +112,7 @@ pub async fn test_permissions(
         "Error: Attempted to write to database while in read-only mode",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -121,7 +121,7 @@ pub async fn test_permissions(
     // Read-only access to e2e-first/test.sqlite doesn't grant access
     // to e2e-first/another.sqlite.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB2,
@@ -131,14 +131,14 @@ pub async fn test_permissions(
 
     // With no public permissions, the second entity can't query or discover the database.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "no-access",
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -146,7 +146,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-second can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -159,7 +159,7 @@ pub async fn test_permissions(
 
     // Ensure we can't update permissions for owner, even if we're ourselves.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         FIRST_ENTITY_SLUG,
@@ -169,7 +169,7 @@ pub async fn test_permissions(
 
     // First entity grants second entity read-only access.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         SECOND_ENTITY_SLUG,
@@ -178,7 +178,7 @@ pub async fn test_permissions(
     )?;
     // Second entity has read-only access.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -187,7 +187,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't modify database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
@@ -196,7 +196,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can discover database.
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -204,7 +204,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't manage snapshots on the database.
     list_snapshots_match_output(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -212,7 +212,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't update the database's metadata.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "fork",
@@ -220,7 +220,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't share the database with anyone else.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         THIRD_ENTITY_SLUG,
@@ -229,7 +229,7 @@ pub async fn test_permissions(
     )?;
     // Third entity has no access (only the second entity got access).
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -237,7 +237,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-third can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -246,7 +246,7 @@ pub async fn test_permissions(
 
     // First entity upgrades second entity's access to read-write.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         SECOND_ENTITY_SLUG,
@@ -255,7 +255,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can query database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -265,14 +265,14 @@ pub async fn test_permissions(
     // Even if the public sharing level of the database is read-only,
     // the second entity will be able to modify the database.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "read-only",
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
@@ -280,7 +280,7 @@ pub async fn test_permissions(
         "\nRows: 0",
     )?;
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "no-access",
@@ -288,7 +288,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can discover database.
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -296,7 +296,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't manage snapshots on the database.
     list_snapshots_match_output(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -304,7 +304,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't update database metadata.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "fork",
@@ -312,7 +312,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can't share the database with anyone else.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         THIRD_ENTITY_SLUG,
@@ -321,7 +321,7 @@ pub async fn test_permissions(
     )?;
     // Third entity has no access.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -329,7 +329,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-third can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -338,7 +338,7 @@ pub async fn test_permissions(
 
     // First entity updates second entity to manager access.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         SECOND_ENTITY_SLUG,
@@ -347,7 +347,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can query database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -356,7 +356,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can modify database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
@@ -365,7 +365,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can discover database.
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -373,7 +373,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can manage snapshots on the database.
     let snapshots = list_snapshots(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -386,7 +386,7 @@ pub async fn test_permissions(
     // Access to e2e-first/test.sqlite doesn't grant access to
     // e2e-first/another.sqlite.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB2,
@@ -395,7 +395,7 @@ pub async fn test_permissions(
     )?;
     // Second entity can update database metadata.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "read-only",
@@ -403,7 +403,7 @@ pub async fn test_permissions(
     )?;
     // Third entity can query database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -412,7 +412,7 @@ pub async fn test_permissions(
     )?;
     // Third entity can't modify database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
@@ -421,7 +421,7 @@ pub async fn test_permissions(
     )?;
     // Third entity can discover database.
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -429,7 +429,7 @@ pub async fn test_permissions(
     )?;
     // Second entity revokes public sharing access.
     update_database(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "no-access",
@@ -437,7 +437,7 @@ pub async fn test_permissions(
     )?;
     // Third entity is back to having no access.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -445,7 +445,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-third can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -454,7 +454,7 @@ pub async fn test_permissions(
 
     // Second entity can share the database with third entity.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         THIRD_ENTITY_SLUG,
@@ -463,7 +463,7 @@ pub async fn test_permissions(
     )?;
     // Third entity can query database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -472,7 +472,7 @@ pub async fn test_permissions(
     )?;
     // Third entity can't modify database.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
         FIRST_ENTITY_DB,
@@ -481,7 +481,7 @@ pub async fn test_permissions(
     )?;
     // Third entity can discover database.
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -489,7 +489,7 @@ pub async fn test_permissions(
     )?;
     // Second entity revokes third entity's access.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         THIRD_ENTITY_SLUG,
@@ -498,7 +498,7 @@ pub async fn test_permissions(
     )?;
     // Third entity is back to having no access.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -506,7 +506,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-third can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -515,7 +515,7 @@ pub async fn test_permissions(
 
     // A manager (second entity) can't modify the owner's (first entity's) access.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         FIRST_ENTITY_SLUG,
@@ -525,7 +525,7 @@ pub async fn test_permissions(
 
     // First entity revoke's second entity's access.
     share(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         SECOND_ENTITY_SLUG,
@@ -534,7 +534,7 @@ pub async fn test_permissions(
     )?;
     // Second entity now has no access.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -542,7 +542,7 @@ pub async fn test_permissions(
         "Error: Authenticated entity e2e-second can't query database e2e-first/test.sqlite",
     )?;
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",

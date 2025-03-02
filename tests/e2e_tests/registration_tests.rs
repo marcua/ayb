@@ -67,13 +67,13 @@ pub fn test_registration(
 ) -> Result<HashMap<String, Vec<String>>, Box<dyn std::error::Error>> {
     // Before running commands, we have no configuration file
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap_err().kind(),
+        fs::read_to_string(config_path).unwrap_err().kind(),
         std::io::ErrorKind::NotFound
     );
 
     // Register an entity.
     register(
-        &config_path,
+        config_path,
         server_url,
         FIRST_ENTITY_SLUG,
         "e2e@example.org",
@@ -83,13 +83,13 @@ pub fn test_registration(
     // The configuration file should register the server URL.
     expected_config.default_url = Some(server_url.to_string());
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
     // Register the same entity with the same email address.
     register(
-        &config_path,
+        config_path,
         server_url,
         FIRST_ENTITY_SLUG,
         "e2e@example.org",
@@ -99,7 +99,7 @@ pub fn test_registration(
     // Can start to register an entity twice with different email
     // addresses as long as you don't complete the process.
     register(
-        &config_path,
+        config_path,
         server_url,
         FIRST_ENTITY_SLUG,
         "e2e-another@example.org",
@@ -108,7 +108,7 @@ pub fn test_registration(
 
     // Start the registration process for a second user (e2e-second)
     register(
-        &config_path,
+        config_path,
         server_url,
         SECOND_ENTITY_SLUG,
         "e2e-another@example.org",
@@ -134,7 +134,7 @@ pub fn test_registration(
     });
     cmd.stdout("Error: Invalid or expired token\n");
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
@@ -152,7 +152,7 @@ pub fn test_registration(
         .authentication
         .insert(server_url.to_string(), first_api_key0.clone());
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
@@ -164,7 +164,7 @@ pub fn test_registration(
         .authentication
         .insert(server_url.to_string(), first_api_key1.clone());
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
@@ -173,7 +173,7 @@ pub fn test_registration(
     });
     cmd.stdout("Error: e2e-first has already been registered\n");
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
@@ -187,7 +187,7 @@ pub fn test_registration(
         .authentication
         .insert(server_url.to_string(), second_api_key0.clone());
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
@@ -211,13 +211,13 @@ pub fn test_registration(
         .authentication
         .insert(server_url.to_string(), first_api_key2.clone());
     assert_eq!(
-        fs::read_to_string(&config_path).unwrap(),
+        fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
     );
 
     // Start the registration process for a third user (e2e-third)
     register(
-        &config_path,
+        config_path,
         server_url,
         THIRD_ENTITY_SLUG,
         "e2e-a-third@example.org",

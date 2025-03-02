@@ -14,7 +14,6 @@ use regex::Regex;
 use std::process::Command;
 use std::thread;
 use std::time;
-use tokio;
 
 #[tokio::test]
 async fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,6 +44,10 @@ smtp_host = "localhost"
 smtp_port = 465
 smtp_username = "login@example.org"
 smtp_password = "the_password"
+
+[web]
+hosting_method = "Local"
+base_url = "http://localhost:5433/"
 
 [cors]
 origin = "*"

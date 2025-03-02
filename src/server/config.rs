@@ -15,8 +15,8 @@ pub enum WebHostingMethod {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AybConfigWeb {
-    pub base_url: Url,
     pub hosting_method: WebHostingMethod,
+    pub base_url: Url,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -123,8 +123,9 @@ pub fn default_server_config() -> AybConfig {
             origin: "*".to_string(),
         },
         web: Some(AybConfigWeb {
-            base_url: Url::parse(&format!("http://{}:{}", "0.0.0.0", 5433)).unwrap(),
             hosting_method: WebHostingMethod::Local,
+            // TODO(marcua): Remove base_url and all info_url tooling.
+            base_url: Url::parse(&format!("http://{}:{}", "localhost", 5433)).unwrap(),
         }),
         isolation: None,
         snapshots: None,

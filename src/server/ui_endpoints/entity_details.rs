@@ -14,7 +14,7 @@ pub async fn entity_details(
     let client = init_ayb_client(&ayb_config, &req);
 
     // Get entity details using the API client
-    let entity_response = match client.entity_details(&entity_slug).await {
+    let entity_response = match client.entity_details(entity_slug).await {
         Ok(response) => response,
         Err(_) => return Ok(HttpResponse::NotFound().body("Entity not found")),
     };
@@ -62,7 +62,7 @@ pub async fn entity_details(
             .profile
             .location
             .map_or_else(String::new, |loc| format!(r#"<div class="flex items-center"><uk-icon icon="map-pin" class="mr-1"></uk-icon> {}</div>"#, loc)),
-        
+
         entity_response
             .profile
             .links
@@ -87,5 +87,5 @@ pub async fn entity_details(
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(super::templates::base_content(&name, &content)))
+        .body(super::templates::base_content(name, &content)))
 }
