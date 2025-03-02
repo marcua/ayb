@@ -12,9 +12,25 @@ pub async fn confirm(
     let token = path.into_inner();
     let client = init_ayb_client(&ayb_config, &req);
 
+    # AI! Keep failure behavior as it is. On success, save the cookie data, but don't return a page, and instead 302 redirect to the user's details page at /{api_token.entity}
     match client.confirm(&token).await {
         Ok(api_token) => {
-            Ok(HttpResponse::Found()
+            let content = format!(
+                r#"
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h1 class="text-2xl font-bold mb-6">Success</h1>
+            <p class="text-sm text-muted-foreground mb-6">Confirmation complete. You are now logged in.</p>
+            <a href="/{}"
+               class="uk-btn uk-btn-primary w-full">
+                        Go to Your Profile
+            </a>
+        </div>
+                "#,
+                api_token.entity
+            );
+
+            Ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
                 .append_header((
                     "Set-Cookie",
                     format!(
@@ -22,8 +38,12 @@ pub async fn confirm(
                         api_token.token
                     ),
                 ))
-                .append_header(("Location", format!("/{}", api_token.entity)))
-                .finish())
+                .body(base_auth(
+                    "Success",
+                    "",
+                    &content,
+                    Some(format!("/{}", api_token.entity)),
+                )))
         }
         Err(_) => {
             let content = r#"
