@@ -15,10 +15,8 @@ pub async fn entity_details(
     // Get entity details using the API client
     let entity_response = match client.entity_details(&entity_slug).await {
         Ok(response) => response,
-        Err(err) => {
-            println!("Error fetching entity details for {}: {:?}", entity_slug, err);
-            return Ok(HttpResponse::NotFound().body("Entity not found"));
-        }
+        # AI! Capture the error on the next line and println it before returning
+        Err(_) => return Ok(HttpResponse::NotFound().body("Entity not found")),
     };
 
     let name = entity_response
