@@ -1,5 +1,4 @@
 fn base_template(title: &str, content: &str, redirect: Option<String>) -> String {
-    // TODO(marcua): Don't link to third-parties for static assets.
     format!(
         r#"<!DOCTYPE html>
 <html
