@@ -3,6 +3,8 @@ use crate::server::ui_endpoints::client::init_ayb_client;
 use crate::server::ui_endpoints::templates::base_auth;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
+static LOG_IN: &str = r#"<a href="/log_in" class="text-sm">Log in</a>"#;
+
 #[get("/confirm/{token}")]
 pub async fn confirm(
     req: HttpRequest,
@@ -56,7 +58,7 @@ pub async fn confirm(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .body(base_auth("Confirmation failed", "", content, None)))
+                .body(base_auth("Confirmation failed", LOG_IN, content, None)))
         }
     }
 }
