@@ -7,9 +7,16 @@ use url::Url;
 
 use crate::error::AybError;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Debug, Deserialize, PartialEq)]
+pub enum WebHostingMethod {
+    Local,
+    Remote,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AybConfigWeb {
-    pub info_url: Url,
+    pub hosting_method: WebHostingMethod,
+    pub base_url: Url,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -115,7 +122,11 @@ pub fn default_server_config() -> AybConfig {
         cors: AybConfigCors {
             origin: "*".to_string(),
         },
-        web: None,
+        web: Some(AybConfigWeb {
+            hosting_method: WebHostingMethod::Local,
+            // TODO(marcua): Remove base_url and all info_url tooling.
+            base_url: Url::parse(&format!("http://{}:{}", "localhost", 5433)).unwrap(),
+        }),
         isolation: None,
         snapshots: None,
     }

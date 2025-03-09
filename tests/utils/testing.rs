@@ -70,5 +70,5 @@ impl Drop for SmtpServer {
 
 pub async fn snapshot_storage(db_type: &str) -> Result<SnapshotStorage, AybError> {
     let config = read_config(&PathBuf::from(server_config_path(db_type)))?;
-    Ok(SnapshotStorage::new(&config.snapshots.unwrap()).await?)
+    SnapshotStorage::new(&config.snapshots.unwrap()).await
 }

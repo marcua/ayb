@@ -8,7 +8,7 @@ pub fn test_entity_details_and_profile(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // List databases from first account using its API key
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         "csv",
@@ -17,7 +17,7 @@ pub fn test_entity_details_and_profile(
 
     // List databases from first account using the API key of the second account
     list_databases(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -26,7 +26,7 @@ pub fn test_entity_details_and_profile(
 
     // Make some partial profile updates and verify profile details upon retrieval
     update_profile(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG,
         Some("Entity 0"),
@@ -38,7 +38,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     profile(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         "csv",
@@ -46,7 +46,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     update_profile(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG_CASED, // Entity slugs should be case-insensitive
         Some("Entity 0"),
@@ -58,7 +58,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     profile(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -66,7 +66,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     profile(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -74,7 +74,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     update_profile(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG,
         None,
@@ -86,7 +86,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     profile(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
@@ -94,7 +94,7 @@ pub fn test_entity_details_and_profile(
     )?;
 
     profile(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",

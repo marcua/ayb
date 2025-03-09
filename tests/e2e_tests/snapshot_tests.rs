@@ -14,7 +14,7 @@ pub async fn test_snapshots(
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Can't list snapshots from an account without access.
     list_snapshots_match_output(
-        &config_path,
+        config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -39,7 +39,7 @@ pub async fn test_snapshots(
 
     // Can list snapshots from the first set of API keys.
     list_snapshots_match_output(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB_CASED,
         "csv",
@@ -50,7 +50,7 @@ pub async fn test_snapshots(
     // snapshotting logic, which runs every 2 seconds, to execute.
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -65,7 +65,7 @@ pub async fn test_snapshots(
     // No change to database, so same number of snapshots after sleep.
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -82,7 +82,7 @@ pub async fn test_snapshots(
 
     // Modify database, wait, and ensure a new snapshot was taken.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"another first\", \"another last\");",
         FIRST_ENTITY_DB,
@@ -91,7 +91,7 @@ pub async fn test_snapshots(
     )?;
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -104,7 +104,7 @@ pub async fn test_snapshots(
 
     // Insert another row and ensure there are four.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"yet another first\", \"yet another last\");",
         FIRST_ENTITY_DB,
@@ -112,7 +112,7 @@ pub async fn test_snapshots(
         "\nRows: 0",
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -123,7 +123,7 @@ pub async fn test_snapshots(
     // Restore the previous snapshot, ensuring there are only three
     // rows.
     restore_snapshot(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         &snapshots[0].snapshot_id,
@@ -133,7 +133,7 @@ pub async fn test_snapshots(
         ),
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -144,7 +144,7 @@ pub async fn test_snapshots(
     // Restore the snapshot before that, ensuring there are only two
     // rows.
     restore_snapshot(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         &snapshots[1].snapshot_id,
@@ -154,7 +154,7 @@ pub async fn test_snapshots(
         ),
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "SELECT COUNT(*) AS the_count FROM test_table;",
         FIRST_ENTITY_DB,
@@ -168,7 +168,7 @@ pub async fn test_snapshots(
     // snapshots remaining due to pruning, 2) Get an error restoring
     // to the oldest snapshot, which should have been pruned.
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"a new first name\", \"a new last name\");",
         FIRST_ENTITY_DB,
@@ -178,7 +178,7 @@ pub async fn test_snapshots(
     thread::sleep(time::Duration::from_secs(4));
 
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
         FIRST_ENTITY_DB,
@@ -189,7 +189,7 @@ pub async fn test_snapshots(
 
     let old_snapshots = snapshots;
     let snapshots = list_snapshots(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
@@ -202,7 +202,7 @@ pub async fn test_snapshots(
 
     // Restoring the previous oldest snapshot fails
     restore_snapshot(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         &old_snapshots[1].snapshot_id,
@@ -212,7 +212,7 @@ pub async fn test_snapshots(
         ),
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
         FIRST_ENTITY_DB,
@@ -222,7 +222,7 @@ pub async fn test_snapshots(
 
     // Restoring the newer of the two oldest snapshot succeeds
     restore_snapshot(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         &old_snapshots[0].snapshot_id,
@@ -232,7 +232,7 @@ pub async fn test_snapshots(
         ),
     )?;
     query(
-        &config_path,
+        config_path,
         &api_keys.get("first").unwrap()[1],
         "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
         FIRST_ENTITY_DB,

@@ -157,7 +157,7 @@ pub fn list_snapshots_match_output(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(predicate::str::is_match(&format!("{}\n", result)).unwrap());
+    cmd.stdout(predicate::str::is_match(format!("{}\n", result)).unwrap());
     Ok(())
 }
 

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
 
-#[patch("/v1/entity/{entity}")]
+#[patch("/entity/{entity}")]
 pub async fn update_profile(
     path: web::Path<EntityPath>,
     profile: web::Json<HashMap<String, Option<String>>>,
