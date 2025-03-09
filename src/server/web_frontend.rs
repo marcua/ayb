@@ -26,7 +26,7 @@ impl WebFrontendDetails {
             base_url,
             endpoints: WebFrontendEndpoints {
                 profile: TemplateString {
-                    string: "d/{entity}".into(),
+                    string: "{entity}".into(),
                 },
                 confirmation: TemplateString {
                     string: "confirm/{token}".into(),
