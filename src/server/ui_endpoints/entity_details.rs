@@ -75,9 +75,9 @@ pub async fn entity_details(
             .into_iter()
             .map(|db| format!(
                 r#"<hr class="uk-hr" />
-                <a href="/d/{}/{}" class="block hover:bg-gray-50">
-                    <h3 class="uk-h3 flex" style="align-items: baseline;">{} <uk-icon icon="chevron-right"></uk-icon></h3>
-                    <p class="text-muted-foreground">Type: {}</p>
+                <a href="/d/{}/{}" class="block hover:bg-gray-50 uk-card">
+                    <h3 class="uk-h3 flex space-y-2 uk-card-header" style="align-items: baseline;"><uk-icon icon="database" class="mr-1"></uk-icon>{} <uk-icon icon="chevron-right"></uk-icon></h3>
+                    <p class="text-muted-foreground uk-card-body space-y-2">Type: {}</p>
                 </a>"#,
                 entity_slug, db.slug, db.slug, db.database_type
             ))
