@@ -3,7 +3,7 @@
 #### Overview:
 This page will allow users to interact with a specific database, run queries, view results, and download results in CSV/JSON format. It will adjust its functionality and appearance based on user permissions, ensuring that only authorized users can access certain actions. The page will also include navigation back to the entity that owns the database.
 
-Scaffold the work you do based on src/server/ui_endpoints/entity_details.rs, which by way of src/server/ui_endpoints/mod.rs, is included in src/server/server_runner.rs.
+Scaffold the work you do based on src/server/ui_endpoints/entity_details.rs, which by way of src/server/ui_endpoints/mod.rs, is included in src/server/server_runner.rs. The path to the page should be a http://server.domain/entity_slug/ddatabase_slug.
 
 
 ---
