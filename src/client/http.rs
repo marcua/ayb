@@ -1,7 +1,9 @@
 use crate::ayb_db::models::{DBType, EntityDatabaseSharingLevel, EntityType, PublicSharingLevel};
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
-use crate::http::structs::{APIToken, Database, EmptyResponse, EntityQueryResponse, SnapshotList};
+use crate::http::structs::{
+    APIToken, Database, DatabaseDetails, EmptyResponse, EntityQueryResponse, SnapshotList,
+};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -264,6 +266,24 @@ impl AybClient {
             .await?;
 
         self.handle_empty_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn database_details(
+        &self,
+        entity: &str,
+        database: &str,
+    ) -> Result<DatabaseDetails, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url(format!("{}/{}/details", entity, database)))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
             .await
     }
 

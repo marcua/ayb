@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec::Vec;
 
-#[derive(Debug)]
+#[derive(Serialize, Debug, Deserialize)]
 #[repr(i16)]
 pub enum QueryMode {
     ReadOnly = 0,

@@ -3,6 +3,7 @@ use crate::ayb_db::models::{
     InstantiatedEntity as PersistedEntity,
 };
 use crate::formatting::TabularFormatter;
+use crate::hosted_db::QueryMode;
 use crate::server::snapshots::models::ListSnapshotResult;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
@@ -173,6 +174,15 @@ pub struct EmptyResponse {}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SnapshotList {
     pub snapshots: Vec<ListSnapshotResult>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DatabaseDetails {
+    pub entity_slug: String,
+    pub database_slug: String,
+    pub database_type: String,
+    pub highest_query_access_level: Option<QueryMode>,
+    pub can_manage_database: bool,
 }
 
 impl TabularFormatter for Vec<ListSnapshotResult> {
