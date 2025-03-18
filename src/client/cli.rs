@@ -227,11 +227,6 @@ pub fn client_commands() -> Command {
                      .value_parser(ValueParser::new(entity_database_parser))
                      .required(true)
                 )
-                .arg(
-                    arg!(--format <type> "The format in which to output the result")
-                        .value_parser(value_parser!(OutputFormat))
-                        .default_value(OutputFormat::Table.to_str())
-                        .required(false))
         )
         .subcommand(
             Command::new("restore_snapshot")
@@ -602,7 +597,6 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     );
                     println!("Type: {}", details.database_type);
 
-                    // Handle Option<QueryMode> with a more user-friendly display
                     let access_level = match &details.highest_query_access_level {
                         Some(mode) => format!("{:?}", mode),
                         None => "No query access".to_string(),
