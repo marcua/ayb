@@ -2,7 +2,8 @@ use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG,
 };
 use crate::utils::ayb::{
-    list_databases, list_snapshots, list_snapshots_match_output, query, share, update_database,
+    database_details, list_databases, list_snapshots, list_snapshots_match_output, query, share,
+    update_database,
 };
 use std::collections::HashMap;
 
@@ -15,7 +16,9 @@ pub async fn test_permissions(
     // permissions).
 
     // While first entity has query access to database and can find it
-    // in a list (it's the owner), the second one can't do either.
+    // in a list (it's the owner), the second one can't do either. The
+    // first database has full database details access, whereas the
+    // second can't access the details.
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
@@ -34,6 +37,12 @@ pub async fn test_permissions(
         // test.sqlite, will not be able to see another.sqlite.
         "Database slug,Type\nanother.sqlite,sqlite\ntest.sqlite,sqlite",
     )?;
+    database_details(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite\nYou have management permissions for this database",
+    )?;
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
@@ -48,6 +57,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
     )?;
 
     // Second entity can't update database, but first can.
@@ -82,6 +97,13 @@ pub async fn test_permissions(
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: No query access",
+    )?;
+
     // TODO(marcua): When we implement forking, test that second
     // entity can fork now, but not before the permission was granted.
 
@@ -118,6 +140,12 @@ pub async fn test_permissions(
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadOnly",
+    )?;
     // Read-only access to e2e-first/test.sqlite doesn't grant access
     // to e2e-first/another.sqlite.
     query(
@@ -127,6 +155,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB2,
         "table",
         "Error: Authenticated entity e2e-second can\'t query database e2e-first/another.sqlite",
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB2,
+        "Error: Authenticated entity e2e-second can't access database e2e-first/another.sqlite",
     )?;
 
     // With no public permissions, the second entity can't query or discover the database.
@@ -151,6 +185,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
     )?;
 
     // The second set of tests cover an entity's individual
@@ -202,6 +242,13 @@ pub async fn test_permissions(
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
+    // Second entity can get details on its ReadOnly access level.
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadOnly",
+    )?;
     // Second entity can't manage snapshots on the database.
     list_snapshots_match_output(
         config_path,
@@ -242,6 +289,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("third").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-third can't access database e2e-first/test.sqlite",
     )?;
 
     // First entity upgrades second entity's access to read-write.
@@ -294,6 +347,13 @@ pub async fn test_permissions(
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
+    // Second entity can read its own ReadWrite access.
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite",
+    )?;
     // Second entity can't manage snapshots on the database.
     list_snapshots_match_output(
         config_path,
@@ -334,6 +394,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("third").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-third can't access database e2e-first/test.sqlite",
     )?;
 
     // First entity updates second entity to manager access.
@@ -383,6 +449,14 @@ pub async fn test_permissions(
         0,
         "e2e-second should be able to list snapshots"
     );
+    // Second entity can get database details and ReadWrite/management access.
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite\nYou have management permissions for this database",
+    )?;
+
     // Access to e2e-first/test.sqlite doesn't grant access to
     // e2e-first/another.sqlite.
     query(
@@ -392,6 +466,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB2,
         "table",
         "Error: Authenticated entity e2e-second can\'t query database e2e-first/another.sqlite",
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB2,
+        "Error: Authenticated entity e2e-second can't access database e2e-first/another.sqlite",
     )?;
     // Second entity can update database metadata.
     update_database(
@@ -427,6 +507,12 @@ pub async fn test_permissions(
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
+    database_details(
+        config_path,
+        &api_keys.get("third").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadOnly",
+    )?;
     // Second entity revokes public sharing access.
     update_database(
         config_path,
@@ -450,6 +536,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("third").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-third can't access database e2e-first/test.sqlite",
     )?;
 
     // Second entity can share the database with third entity.
@@ -487,6 +579,14 @@ pub async fn test_permissions(
         "csv",
         "Database slug,Type\ntest.sqlite,sqlite",
     )?;
+    // Third entity can identify its own ReadOnly access.
+    database_details(
+        config_path,
+        &api_keys.get("third").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadOnly",
+    )?;
+
     // Second entity revokes third entity's access.
     share(
         config_path,
@@ -511,6 +611,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("third").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-third can't access database e2e-first/test.sqlite",
     )?;
 
     // A manager (second entity) can't modify the owner's (first entity's) access.
@@ -547,6 +653,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_SLUG,
         "csv",
         &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+    )?;
+    database_details(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
     )?;
 
     Ok(())
