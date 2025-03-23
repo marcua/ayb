@@ -3,9 +3,6 @@
 #### Overview:
 This page will allow users to interact with a specific database, run queries, view results, and download results in CSV/JSON format. It will adjust its functionality and appearance based on user permissions, ensuring that only authorized users can access certain actions. The page will also include navigation back to the entity that owns the database.
 
-Scaffold the work you do based on src/server/ui_endpoints/entity_details.rs, which by way of src/server/ui_endpoints/mod.rs, is included in src/server/server_runner.rs. The path to the page should be a http://server.domain/entity_slug/database_slug.
-
-
 ---
 
 ### 1. **Page Layout & Navigation**
@@ -82,6 +79,10 @@ Below that information, display three tabs: Query (the default and active tab fo
 - When the database page is rendered, make a request to the database details endpoint to request the relevant context to render the template.
 - The database page only renders HTML for the title/breadcrumbs/relevant tabs depending on permissions.
 - Separate endpoints will actually execute the query (in src/server/ui_endpoints/query.rs, src/server/ui_endpoints/sharing.rs, and src/server/ui_endpoints/snapshots.rs)
+- The database page will be in src/server/ui_endpoints/database.rs, which you can model off of src/server/ui_endpoints/entity_details.rs. The path to the page should be a http://server.domain/entity_slug/database_slug.
+- The query endpoint will be in src/server/ui_endpoints/query.rs, and will accept a `format` parameter with values `html` or `json` or `csv`, and be served from http://server.domain/entity_slug/database_slug/query.
+- The database page will render the query interface and results table, but will query (POST) the `query` endpoint and update the results using HTMX so that the entire page doesn't have to reload.
+
 
 #### **Query Execution:**
 - When the user submits a query, the frontend will send it to the backend for execution.
