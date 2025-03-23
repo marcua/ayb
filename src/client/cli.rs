@@ -221,6 +221,14 @@ pub fn client_commands() -> Command {
                         .required(false))
         )
         .subcommand(
+            Command::new("database_details")
+                .about("Show detailed information about a database")
+                .arg(arg!(<database> "The database to get details for (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+        )
+        .subcommand(
             Command::new("restore_snapshot")
                 .about("Restore a database to a particular snapshot/backup")
                 .arg(arg!(<database> "The database for which to load a snapshot (e.g., entity/database.sqlite)")
@@ -570,6 +578,34 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                         "Permissions for {} on {}/{} updated successfully",
                         entity, entity_database.entity, entity_database.database
                     );
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("database_details") {
+        if let Some(entity_database) = matches.get_one::<EntityDatabasePath>("database") {
+            match client
+                .database_details(&entity_database.entity, &entity_database.database)
+                .await
+            {
+                Ok(details) => {
+                    println!(
+                        "Database: {}/{}",
+                        entity_database.entity, entity_database.database
+                    );
+                    println!("Type: {}", details.database_type);
+
+                    let access_level = match &details.highest_query_access_level {
+                        Some(mode) => format!("{:?}", mode),
+                        None => "No query access".to_string(),
+                    };
+                    println!("Access level: {}", access_level);
+
+                    if details.can_manage_database {
+                        println!("You have management permissions for this database");
+                    }
                 }
                 Err(err) => {
                     println!("Error: {}", err);

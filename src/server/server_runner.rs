@@ -28,6 +28,7 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
         web::scope("/v1")
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(api_endpoints::create_database_endpoint)
+            .service(api_endpoints::database_details_endpoint)
             .service(api_endpoints::update_database_endpoint)
             .service(api_endpoints::query_endpoint)
             .service(api_endpoints::entity_details_endpoint)

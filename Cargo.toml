@@ -9,42 +9,42 @@ license = "Apache-2.0"
 default-run = "ayb"
 
 [dependencies]
-actix-cors = { version = "0.7.0" }
-actix-web = { version = "4.9.0" }
+actix-cors = { version = "0.7.1" }
+actix-web = { version = "4.10.2" }
 actix-web-httpauth = { version = "0.8.2" }
-async-trait = { version = "0.1.86" }
-blake3 = { version = "1.6.0" }
-chrono = { version = "0.4.39", features = [ "serde" ] }
-clap = { version = "4.5.30", features = ["cargo", "derive", "env"] }
+async-trait = { version = "0.1.88" }
+blake3 = { version = "1.6.1" }
+chrono = { version = "0.4.40", features = [ "serde" ] }
+clap = { version = "4.5.32", features = ["cargo", "derive", "env"] }
 derive_more = { version = "2.0.1", features = ["error"] }
 directories = { version = "6.0" }
-dyn-clone = { version = "1.0.18" }
+dyn-clone = { version = "1.0.19" }
 env_logger = { version = "0.11.6" }
 fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.13", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.15", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.1" }
 regex = { version = "1.11.1"}
-reqwest = { version = "0.12.4", features = ["json"] }
+reqwest = { version = "0.12.15", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 rustyline = { version = "15.0.0" }
 rust-s3 = { version = "0.35.1" }
-scraper = { version = "0.22.0" }
+scraper = { version = "0.23.1" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.138", features = ["raw_value"] }
-serde_repr = { version = "0.1.19" }
+serde_json = { version = "1.0.140", features = ["raw_value"] }
+serde_repr = { version = "0.1.20" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
-time = { version = "0.3.37" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
+time = { version = "0.3.40" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
 toml = { version = "0.8.20" }
-tokio = { version = "1.43.0", features = ["macros", "process", "rt"] }
+tokio = { version = "1.44.1", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.13.0", features = ["signal"]}
 prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.2", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
-uuid = { version = "1.13.2", features = ["v7"] }
-zstd = { version = "0.13.2" }
+uuid = { version = "1.16.0", features = ["v7"] }
+zstd = { version = "0.13.3" }
 
 [dev-dependencies]
 assert_cmd = "2.0"
