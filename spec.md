@@ -3,7 +3,7 @@
 #### Overview:
 This page will allow users to interact with a specific database, run queries, view results, and download results in CSV/JSON format. It will adjust its functionality and appearance based on user permissions, ensuring that only authorized users can access certain actions. The page will also include navigation back to the entity that owns the database.
 
-Scaffold the work you do based on src/server/ui_endpoints/entity_details.rs, which by way of src/server/ui_endpoints/mod.rs, is included in src/server/server_runner.rs. The path to the page should be a http://server.domain/entity_slug/ddatabase_slug.
+Scaffold the work you do based on src/server/ui_endpoints/entity_details.rs, which by way of src/server/ui_endpoints/mod.rs, is included in src/server/server_runner.rs. The path to the page should be a http://server.domain/entity_slug/database_slug.
 
 
 ---
@@ -17,20 +17,21 @@ Scaffold the work you do based on src/server/ui_endpoints/entity_details.rs, whi
 #### **Metadata Display:**
 At the top of the page, the following information will be displayed:
 - **Database Name (Slug)**: The human-readable name of the database.
-- **Database Type (db_type)**: 
-  - 0 = SQLite
-  - 1 = DuckDB
-- **Entity Owner**: Display the `display_name` of the entity that owns this database.
-  
-#### **User Permissions:**
-- User permissions will be passed as a `QueryMode` value (e.g., `None`, `ForkOnly`, `ReadOnly`, `ReadWrite`).
-  - **No access** (`None`): Display an error message and link back to the entity's database list.
-  - **Fork-only access** (`ForkOnly`): Query interface will be disabled with an explanation, inviting the user to fork the database.
-  - **Read-only access** (`ReadOnly`): Query interface enabled, but modification queries will result in an error message.
-  - **Read-write access** (`ReadWrite`): Full query execution allowed with no restrictions.
+- **Entity Owner**: Display the entity slug that owns this database.
+- **Database Type**: The type of database (SQLite or DuckDB).
 
-#### **Permissions Tab (for Managers/Owners):**
-- Include a tab for editing the database's permissions, accessible only to database managers or owners.
+These can be displayed as breadcrumbs, for example "marcua / test.sqlite (SQLite)" as the "{entity} / {database} ({database type})". The entity should link back to the entity's page at `/{entity_slug}/`.
+
+Below that information, display three tabs: Query (the default and active tab for the page), Sharing, and Snapshots. Sharing and Snapshots should only be displayed when `can_manage_database` is true. In this version, we'll leave them as placeholders that tell you the `ayb client ...` command-line to run to modify sharing or list snapshots.
+
+#### **User Permissions:**
+- User permissions will be determined from the `database_details` endpoint response, which includes:
+  - `highest_query_access_level`: Determines what query operations the user can perform
+  - `can_manage_database`: Determines if the user can manage database permissions
+
+- Based on the `highest_query_access_level` value:
+  - **No access** (null/None): Query interface will be disabled with an explanation, inviting the user to request access or fork the database.
+  - **Read-only access**: Query interface enabled, but modification queries will result in an error message.
 
 ---
 
@@ -71,17 +72,16 @@ At the top of the page, the following information will be displayed:
 - **Permission Errors**: If a user tries to modify the database without sufficient access, an error message should explain the permission issue.
 
 #### **Permissions Errors:**
-- If a user without permission (e.g., `None` or `ForkOnly`) tries to run a query, show an error message explaining the permission level and provide a link to the entity's databases list or the option to fork the database.
+- If a user without permission tries to run a query, show an error message explaining the permission level and provide a link to the entity's databases list or the option to fork the database.
 
 ---
 
 ### 5. **Data Handling**
 
 #### **API/Backend Communication:**
-- When the database page is rendered, the backend will pass the `QueryMode` (e.g., `None`, `ForkOnly`, `ReadOnly`, `ReadWrite`).
-- The data passed should include:
-  - **Database information**: Name, type (SQLite/DuckDB), and entity owner.
-  - **User Permissions**: Based on the user’s `QueryMode`.
+- When the database page is rendered, make a request to the database details endpoint to request the relevant context to render the template.
+- The database page only renders HTML for the title/breadcrumbs/relevant tabs depending on permissions.
+- Separate endpoints will actually execute the query (in src/server/ui_endpoints/query.rs, src/server/ui_endpoints/sharing.rs, and src/server/ui_endpoints/snapshots.rs)
 
 #### **Query Execution:**
 - When the user submits a query, the frontend will send it to the backend for execution.
@@ -101,26 +101,5 @@ At the top of the page, the following information will be displayed:
 
 #### **UI Components:**
 - Use **Franken-UI 2** components for all UI elements, including the query input box, result table, pagination controls, error message display, and download buttons.
-  
----
 
-### 8. **Testing Plan**
 
-#### **Unit Tests:**
-- Test API responses for the correct `QueryMode` and proper database information.
-- Test query execution to ensure correct handling of valid and invalid queries based on user permissions.
-
-#### **Integration Tests:**
-- Test the interaction between the frontend and backend by simulating different user roles and query submissions.
-- Ensure correct behavior when results exceed 2000 rows and verify CSV/JSON downloads work as expected.
-
-#### **UI/UX Tests:**
-- Verify the visibility and behavior of the query input based on user permissions.
-- Ensure the error display works as intended for different types of errors.
-- Check the layout, breadcrumb navigation, and pagination for usability.
-
-#### **Edge Cases:**
-- Ensure that no more than 2000 rows are returned.
-- Validate query errors, ensuring they’re displayed clearly and in the correct area.
-- Test the behavior when no results are returned (e.g., empty query result).
-  
