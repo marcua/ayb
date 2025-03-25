@@ -47,12 +47,10 @@ pub async fn database_details(
 
     // Create query interface based on access level
     let query_interface = match database_response.highest_query_access_level {
-        None => format!(
-            r#"<div class="uk-card p-4 bg-red-50 border border-red-200 rounded mb-4">
+        None => r#"<div class="uk-card p-4 bg-red-50 border border-red-200 rounded mb-4">
                 <p class="text-red-700">You don't have access to query this database.</p>
                 <p class="mt-2">You can request access from the database owner or fork the database if public sharing allows it.</p>
-            </div>"#
-        ),
+            </div>"#.to_string(),
         Some(_) => format!(
             r##"<div class="query-interface mb-6">
                 <form id="query-form" class="mb-4" action="/{entity}/{database}/query" method="post" hx-post="/{entity}/{database}/query" hx-target="#query-results" hx-swap="innerHTML">
