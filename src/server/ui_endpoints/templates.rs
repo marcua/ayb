@@ -36,6 +36,10 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
       src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/icon.iife.js"
       type="module"
     ></script>
+    <!-- TODO(marcua): does it need type="module"? Can we only include it where necessary, like on the database page? -->
+    <script
+      src="https://unpkg.com/htmx.org@2.0.4">
+    </script>
 </head>
 <body class="bg-background text-foreground">
     {}
