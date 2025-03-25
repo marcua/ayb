@@ -31,15 +31,13 @@ pub async fn database_details(
 
     // Create tabs based on permissions
     let tabs = format!(
-        r#"<div class="tabs mb-6">
-            <div class="flex border-b">
-                <button class="py-2 px-4 border-b-2 border-blue-500 font-medium text-blue-500">Query</button>
-                {management_tabs}
-            </div>
-        </div>"#,
+        r#"<ul data-uk-tab class="mb-6">
+            <li class="uk-active"><a class="px-4 pb-3 pt-2" href="">Query</a></li>
+            {management_tabs}
+        </ul>"#,
         management_tabs = if database_response.can_manage_database {
-            r#"<button class="py-2 px-4 text-gray-500 hover:text-gray-700">Sharing</button>
-               <button class="py-2 px-4 text-gray-500 hover:text-gray-700">Snapshots</button>"#
+            r#"<li><a class="px-4 pb-3 pt-2" href="">Sharing</a></li>
+               <li><a class="px-4 pb-3 pt-2" href="">Snapshots</a></li>"#
         } else {
             ""
         }
@@ -52,7 +50,7 @@ pub async fn database_details(
                 <p class="mt-2">You can request access from the database owner or fork the database if public sharing allows it.</p>
             </div>"#.to_string(),
         Some(_) => format!(
-            r##"<div class="query-interface mb-6">
+            r##"<div class="query-interface">
                 <form id="query-form" class="mb-4" action="/{entity}/{database}/query" method="post" hx-post="/{entity}/{database}/query" hx-target="#query-results" hx-swap="innerHTML">
                     <div class="mb-2">
                         <label for="query" class="block text-sm font-medium text-gray-700">SQL Query</label>
@@ -75,6 +73,47 @@ pub async fn database_details(
         ),
     };
 
+    // Create sharing interface (placeholder)
+    let sharing_interface = format!(
+        r##"<div class="sharing-interface">
+            <div class="mb-4">
+                <h3 class="text-lg font-medium mb-2">Database Sharing</h3>
+                <p class="text-gray-600 mb-4">Manage who can access this database and what permissions they have.</p>
+                <div class="bg-gray-100 p-4 rounded">
+                    <p class="text-sm">Use the command line to manage sharing:</p>
+                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client share {}/{} [entity] [sharing-level]</pre>
+                </div>
+            </div>
+        </div>"##,
+        entity_slug, database_slug
+    );
+
+    // Create snapshots interface (placeholder)
+    let snapshots_interface = format!(
+        r##"<div class="snapshots-interface">
+            <div class="mb-4">
+                <h3 class="text-lg font-medium mb-2">Database Snapshots</h3>
+                <p class="text-gray-600 mb-4">View and restore database snapshots.</p>
+                <div class="bg-gray-100 p-4 rounded">
+                    <p class="text-sm">Use the command line to manage snapshots:</p>
+                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client list_snapshots {}/{}</pre>
+                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client restore_snapshot {}/{} [snapshot-id]</pre>
+                </div>
+            </div>
+        </div>"##,
+        entity_slug, database_slug, entity_slug, database_slug
+    );
+
+    // Create the tab switcher
+    let tab_content = format!(
+        r##"<ul class="uk-switcher mt-4">
+            <li>{}</li>
+            <li>{}</li>
+            <li>{}</li>
+        </ul>"##,
+        query_interface, sharing_interface, snapshots_interface
+    );
+
     // Combine all sections
     let content = format!(
         r#"
@@ -90,7 +129,7 @@ pub async fn database_details(
             </div>
         </div>
         "#,
-        breadcrumbs, tabs, query_interface, entity_slug, database_slug
+        breadcrumbs, tabs, tab_content, entity_slug, database_slug
     );
 
     let title = format!("{}/{}", entity_slug, database_slug);
