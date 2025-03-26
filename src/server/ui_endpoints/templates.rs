@@ -9,9 +9,9 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {}
     <title>{} - ayb</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin="anonymous">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap" rel="stylesheet" crossorigin="anonymous">
     <style>
       :root {{
           font-family: "Geist";
@@ -21,25 +21,31 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
     </style>
 
     <link
-        rel="stylesheet"
-        href="https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css"
+      rel="stylesheet"
+      href="https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css"
+      crossorigin="anonymous"
     />
     <link
-        rel="stylesheet"
-        href="https://unpkg.com/franken-ui@2.0.0/dist/css/utilities.min.css"
+      rel="stylesheet"
+      href="https://unpkg.com/franken-ui@2.0.0/dist/css/utilities.min.css"
+      crossorigin="anonymous"
     />
     <script
       src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/core.iife.js"
       type="module"
+      crossorigin="anonymous"
     ></script>
     <script
       src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/icon.iife.js"
       type="module"
+      crossorigin="anonymous"
     ></script>
-    <!-- TODO(marcua): does it need type="module"? Can we only include it where necessary, like on the database page? -->
+    <!-- TODO(marcua): Can we only include it where necessary, like on the database page? -->
     <script
-      src="https://unpkg.com/htmx.org@2.0.4">
-    </script>
+      src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js"
+      integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1"
+      crossorigin="anonymous"
+    ></script>
 </head>
 <body class="bg-background text-foreground">
     {}
