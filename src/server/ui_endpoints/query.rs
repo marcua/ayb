@@ -25,29 +25,34 @@ pub async fn query(
     let client = init_ayb_client(&ayb_config, &req);
 
     // Execute the query using the API client
-    let query_result =
-        match client.query(entity_slug, database_slug, query_text).await {
-            Ok(result) => result,
-            Err(err) => {
-                let error_message = format!("Query error: {}", err);
+    let query_result = match client.query(entity_slug, database_slug, query_text).await {
+        Ok(result) => result,
+        Err(err) => {
+            let error_message = format!("{}", err);
 
-                // Return error in the requested format
-                return match format {
+            // Return error in the requested format
+            return match format {
                 "json" => Ok(HttpResponse::BadRequest().json(serde_json::json!({
                     "error": error_message
                 }))),
                 "csv" => Ok(HttpResponse::BadRequest()
                     .content_type("text/plain")
-                    .body(format!("error,message\n\"{}\"", error_message.replace("\"", "\"\"")))),
-                _ => Ok(HttpResponse::BadRequest().content_type("text/html").body(format!(
-                    r#"<div class="error-message p-4 bg-red-50 border border-red-200 rounded">
-                        <p class="text-red-700">{}</p>
+                    .body(format!(
+                        "error,message\n\"{}\"",
+                        error_message.replace("\"", "\"\"")
+                    ))),
+                _ => Ok(HttpResponse::BadRequest()
+                    .content_type("text/html")
+                    .body(format!(
+                        r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
+                        <div class="uk-alert-title">Error running query</div>
+                        <p>{}</p>
                     </div>"#,
-                    error_message
-                ))),
+                        error_message
+                    ))),
             };
-            }
-        };
+        }
+    };
 
     // Return results in the requested format
     match format {
@@ -158,7 +163,7 @@ pub async fn query(
             );
 
             let html = format!(
-                r#"<div class="query-results">
+                r#"<div class="border rounded p-4 bg-gray-50">
                     <div class="overflow-x-auto">
                         <table class="min-w-full bg-white">
                             <thead>

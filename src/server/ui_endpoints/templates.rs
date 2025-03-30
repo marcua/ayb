@@ -46,8 +46,12 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
       integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1"
       crossorigin="anonymous"
     ></script>
+    <script
+      src="https://unpkg.com/htmx-ext-response-targets@2.0.3/dist/response-targets.min.js"
+      crossorigin="anonymous"
+    ></script>
 </head>
-<body class="bg-background text-foreground">
+<body class="bg-background text-foreground" hx-ext="response-targets">
     {}
 </body>
 </html>"#,

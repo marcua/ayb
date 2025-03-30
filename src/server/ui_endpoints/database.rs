@@ -51,7 +51,15 @@ pub async fn database_details(
             </div>"#.to_string(),
         Some(_) => format!(
             r##"<div class="query-interface">
-                <form id="query-form" class="mb-4" action="/{entity}/{database}/query" method="post" hx-post="/{entity}/{database}/query" hx-target="#query-results" hx-swap="innerHTML">
+                <form
+                  id="query-form"
+                  class="mb-4"
+                  action="/{entity}/{database}/query"
+                  method="post"
+                  hx-post="/{entity}/{database}/query"
+                  hx-target="#query-results"
+                  hx-target-400="#query-results"
+                  hx-swap="innerHTML">
                     <div class="mb-2">
                         <label for="query" class="block text-sm font-medium text-gray-700">SQL Query</label>
                         <textarea id="query" name="query" rows="5" 
@@ -64,8 +72,7 @@ pub async fn database_details(
                         </button>
                     </div>
                 </form>
-                <div id="query-results" class="border rounded p-4 bg-gray-50">
-                    <p class="text-gray-500">Query results will appear here</p>
+                <div id="query-results">
                 </div>
             </div>"##,
             entity = entity_slug,
