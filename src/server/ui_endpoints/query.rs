@@ -56,7 +56,20 @@ pub async fn query(
 
     // Return results in the requested format
     match format {
-        "json" => Ok(HttpResponse::Ok().json(query_result)),
+        "json" => {
+            let json_content = serde_json::to_string_pretty(&query_result).unwrap_or_default();
+
+            Ok(HttpResponse::Ok()
+                .content_type("application/json")
+                .append_header((
+                    "Content-Disposition",
+                    format!(
+                        "attachment; filename=\"query-result-{}-{}.json\"",
+                        entity_slug, database_slug
+                    ),
+                ))
+                .body(json_content))
+        }
         "csv" => {
             let mut csv_content = query_result.fields.join(",") + "\n";
 
