@@ -61,10 +61,9 @@ pub async fn database_details(
                   hx-target-400="#query-results"
                   hx-swap="innerHTML">
                     <div class="mb-2">
-                        <label for="query" class="block text-sm font-medium text-gray-700">SQL Query</label>
                         <textarea id="query" name="query" rows="5" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            placeholder="SELECT * FROM your_table LIMIT 10"></textarea>
+                            class="p-4 w-full border rounded focus:border-blue-500"
+                            placeholder="Enter a SQL query, like SELECT * FROM your_table LIMIT 10"></textarea>
                     </div>
                     <div>
                         <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -128,15 +127,9 @@ pub async fn database_details(
             {}
             {}
             {}
-            <div class="mt-4">
-                <p class="text-sm text-gray-500">
-                    For more advanced operations, use the command line:
-                </p>
-                <pre class="bg-gray-100 p-2 rounded mt-1 text-sm">ayb client query {} {}</pre>
-            </div>
         </div>
         "#,
-        breadcrumbs, tabs, tab_content, entity_slug, database_slug
+        breadcrumbs, tabs, tab_content
     );
 
     let title = format!("{}/{}", entity_slug, database_slug);

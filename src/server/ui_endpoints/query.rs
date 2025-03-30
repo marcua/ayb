@@ -132,20 +132,25 @@ pub async fn query(
                 .join("");
 
             let pagination_controls = if query_result.rows.len() >= 50 {
-                r#"<div class="pagination mt-4 flex justify-between items-center">
+                r#"<div class="pagination mt-4 px-4 flex justify-between items-center">
                     <div>
-                        <span class="text-sm text-gray-500">Showing 1-50 of results</span>
+                        Showing 1-50 of results
                     </div>
                     <div class="flex space-x-2">
                         <button disabled class="px-3 py-1 border rounded text-gray-400 bg-gray-100">Previous</button>
                         <button class="px-3 py-1 border rounded bg-white hover:bg-gray-50">Next</button>
                     </div>
                 </div>"#.to_string()
+            } else if query_result.rows.is_empty() {
+                r#"<div>
+                    Query executed successfully. No results returned.
+                </div>"#
+                    .to_string()
             } else {
                 format!(
-                    r#"<div class="mt-4">
-                    <span class="text-sm text-gray-500">Showing {} result{}</span>
-                </div>"#,
+                    r#"<div class="mt-4 px-4">
+                        Showing {} result{}</span>
+                    </div>"#,
                     query_result.rows.len(),
                     if query_result.rows.len() == 1 {
                         ""
@@ -156,24 +161,29 @@ pub async fn query(
             };
 
             // Create a form for downloading in different formats
-            let download_options = format!(
-                r#"<div class="mt-4 flex space-x-2">
-                    <form method="post" action="/{entity}/{database}/query" class="inline">
-                        <input type="hidden" name="query" value="{}">
-                        <input type="hidden" name="format" value="csv">
-                        <button type="submit" class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm">Download CSV</button>
-                    </form>
-                    <form method="post" action="/{entity}/{database}/query" class="inline">
-                        <input type="hidden" name="query" value="{}">
-                        <input type="hidden" name="format" value="json">
-                        <button type="submit" class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm">Download JSON</button>
-                    </form>
-                </div>"#,
-                query_text,
-                query_text,
-                entity = entity_slug,
-                database = database_slug
-            );
+            let download_options = if query_result.rows.is_empty() {
+                // Don't show download buttons when there are no results
+                String::new()
+            } else {
+                format!(
+                    r#"<div class="mt-4 flex space-x-2 px-4">
+                        <form method="post" action="/{entity}/{database}/query" class="inline">
+                            <input type="hidden" name="query" value="{}">
+                            <input type="hidden" name="format" value="csv">
+                            <button type="submit" class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm">Download CSV</button>
+                        </form>
+                        <form method="post" action="/{entity}/{database}/query" class="inline">
+                            <input type="hidden" name="query" value="{}">
+                            <input type="hidden" name="format" value="json">
+                            <button type="submit" class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm">Download JSON</button>
+                        </form>
+                    </div>"#,
+                    query_text,
+                    query_text,
+                    entity = entity_slug,
+                    database = database_slug
+                )
+            };
 
             let html = format!(
                 r#"<div class="border rounded p-4 bg-gray-50">
