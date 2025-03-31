@@ -42,8 +42,8 @@ fn base_template(title: &str, content: &str, redirect: Option<String>) -> String
     ></script>
     <!-- TODO(marcua): Can we only include it where necessary, like on the database page? -->
     <script
-      src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js"
-      integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1"
+      src="https://unpkg.com/htmx.org@2.0.4"
+      integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
       crossorigin="anonymous"
     ></script>
     <script

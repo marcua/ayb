@@ -51,28 +51,30 @@ pub async fn database_details(
             </div>"#.to_string(),
         Some(_) => format!(
             r##"<div class="query-interface">
-                <form
-                  id="query-form"
-                  class="mb-4"
-                  action="/{entity}/{database}/query"
-                  method="post"
-                  hx-post="/{entity}/{database}/query"
-                  hx-target="#query-results"
-                  hx-target-400="#query-results"
-                  hx-swap="innerHTML">
-                    <div class="mb-2">
-                        <textarea id="query" name="query" rows="5" 
-                            class="p-4 w-full border rounded focus:border-blue-500"
-                            placeholder="Enter a SQL query, like SELECT * FROM your_table LIMIT 10"></textarea>
+                    <h3 class="text-lg font-medium mb-2">Database querying</h3>
+                    <p class="text-muted-foreground mb-4">Select, add, and update data.</p>
+                    <form
+                      id="query-form"
+                      class="mb-4"
+                      action="/{entity}/{database}/query"
+                      method="post"
+                      hx-post="/{entity}/{database}/query"
+                      hx-target="#query-results"
+                      hx-target-400="#query-results"
+                      hx-swap="innerHTML">
+                        <div class="mb-2">
+                            <textarea id="query" name="query" rows="5"
+                                class="p-4 w-full border rounded focus:border-blue-500"
+                                placeholder="Enter a SQL query, like SELECT * FROM your_table LIMIT 10"></textarea>
+                        </div>
+                        <div>
+                            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Run query
+                            </button>
+                        </div>
+                    </form>
+                    <div id="query-results">
                     </div>
-                    <div>
-                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                            Run Query
-                        </button>
-                    </div>
-                </form>
-                <div id="query-results">
-                </div>
             </div>"##,
             entity = entity_slug,
             database = database_slug
@@ -82,15 +84,13 @@ pub async fn database_details(
     // Create sharing interface (placeholder)
     let sharing_interface = format!(
         r##"<div class="sharing-interface">
-            <div class="mb-4">
-                <h3 class="text-lg font-medium mb-2">Database Sharing</h3>
-                <p class="text-gray-600 mb-4">Manage who can access this database and what permissions they have.</p>
+                <h3 class="text-lg font-medium mb-2">Database sharing</h3>
+                <p class="text-muted-foreground mb-4">Manage who can access this database and what permissions they have.</p>
                 <div class="bg-gray-100 p-4 rounded">
                     <p class="text-sm">Use the command line to manage sharing:</p>
-                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client share {entity_slug}/{database_slug} [entity] [sharing-level]</pre>
-                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {entity_slug}/{database_slug}</pre>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client share {entity_slug}/{database_slug} [entity] [sharing-level]</pre>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {entity_slug}/{database_slug}</pre>
                 </div>
-            </div>
         </div>"##,
         entity_slug = entity_slug,
         database_slug = database_slug
@@ -99,15 +99,13 @@ pub async fn database_details(
     // Create snapshots interface (placeholder)
     let snapshots_interface = format!(
         r##"<div class="snapshots-interface">
-            <div class="mb-4">
-                <h3 class="text-lg font-medium mb-2">Database Snapshots</h3>
-                <p class="text-gray-600 mb-4">View and restore database snapshots.</p>
+                <h3 class="text-lg font-medium mb-2">Database snapshots</h3>
+                <p class="text-muted-foreground mb-4">View and restore database snapshots.</p>
                 <div class="bg-gray-100 p-4 rounded">
                     <p class="text-sm">Use the command line to manage snapshots:</p>
-                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client list_snapshots {}/{}</pre>
-                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client restore_snapshot {}/{} [snapshot-id]</pre>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client list_snapshots {}/{}</pre>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client restore_snapshot {}/{} [snapshot-id]</pre>
                 </div>
-            </div>
         </div>"##,
         entity_slug, database_slug, entity_slug, database_slug
     );
