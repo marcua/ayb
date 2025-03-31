@@ -87,11 +87,13 @@ pub async fn database_details(
                 <p class="text-gray-600 mb-4">Manage who can access this database and what permissions they have.</p>
                 <div class="bg-gray-100 p-4 rounded">
                     <p class="text-sm">Use the command line to manage sharing:</p>
-                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client share {}/{} [entity] [sharing-level]</pre>
+                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client share {entity_slug}/{database_slug} [entity] [sharing-level]</pre>
+                    <pre class="bg-gray-200 p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {entity_slug}/{database_slug}</pre>
                 </div>
             </div>
         </div>"##,
-        entity_slug, database_slug
+        entity_slug = entity_slug,
+        database_slug = database_slug
     );
 
     // Create snapshots interface (placeholder)
