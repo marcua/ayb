@@ -24,7 +24,7 @@ pub async fn query(
     let query_text = &query_req.query;
     let format = query_req.format.as_deref().unwrap_or("html");
     let page = query_req.page.unwrap_or(1);
-    let page_size = query_req.page_size.unwrap_or(50);
+    let page_size = std::cmp::min(query_req.page_size.unwrap_or(50), 100);
 
     let client = init_ayb_client(&ayb_config, &req);
 
