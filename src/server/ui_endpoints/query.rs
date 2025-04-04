@@ -8,6 +8,8 @@ use serde::Deserialize;
 pub struct QueryRequest {
     query: String,
     format: Option<String>,
+    page: Option<usize>,
+    page_size: Option<usize>,
 }
 
 #[post("/{entity}/{database}/query")]
@@ -21,8 +23,14 @@ pub async fn query(
     let database_slug = &path.database.to_lowercase();
     let query_text = &query_req.query;
     let format = query_req.format.as_deref().unwrap_or("html");
+    let page = query_req.page.unwrap_or(1);
+    let page_size = query_req.page_size.unwrap_or(50);
 
     let client = init_ayb_client(&ayb_config, &req);
+
+    // TODO(marcua): Using WITH queries: 1) determine queryset size
+    // without pulling entire resultset, and 2) push pagination logic
+    // into the DB.
 
     // Execute the query using the API client
     let query_result = match client.query(entity_slug, database_slug, query_text).await {
@@ -111,8 +119,20 @@ pub async fn query(
                 .collect::<Vec<String>>()
                 .join("");
 
-            let table_rows = query_result
-                .rows
+            // Calculate pagination information
+            let total_rows = query_result.rows.len();
+            let start_index = (page - 1) * page_size;
+            let end_index = std::cmp::min(start_index + page_size, total_rows);
+
+            // Only display the current page of results
+            let paginated_rows = if start_index < total_rows {
+                &query_result.rows[start_index..end_index]
+            } else {
+                &[]
+            };
+
+            // Create table rows only for the current page
+            let table_rows = paginated_rows
                 .iter()
                 .map(|row| {
                     let cells = row
@@ -131,16 +151,60 @@ pub async fn query(
                 .collect::<Vec<String>>()
                 .join("");
 
-            let pagination_controls = if query_result.rows.len() >= 50 {
-                r#"<div class="pagination mt-4 px-4 flex justify-between items-center">
-                    <div>
-                        Showing 1-50 of results
-                    </div>
-                    <div class="flex space-x-2">
-                        <button disabled class="px-3 py-1 border rounded text-gray-400 bg-gray-100">Previous</button>
-                        <button class="px-3 py-1 border rounded bg-white hover:bg-gray-50">Next</button>
-                    </div>
-                </div>"#.to_string()
+            let pagination_controls = if total_rows > page_size {
+                let has_prev = page > 1;
+                let has_next = end_index < total_rows;
+                let prev_class = if has_prev {
+                    "px-3 py-1 border rounded bg-white hover:bg-gray-50"
+                } else {
+                    "px-3 py-1 border rounded text-gray-400 bg-gray-100"
+                };
+                let next_class = if has_next {
+                    "px-3 py-1 border rounded bg-white hover:bg-gray-50"
+                } else {
+                    "px-3 py-1 border rounded text-gray-400 bg-gray-100"
+                };
+
+                format!(
+                    r###"<div class="pagination mt-4 px-4 flex justify-between items-center">
+                        <div>
+                            Showing {}-{} of {} results
+                        </div>
+                        <div class="flex space-x-2">
+                            <button
+                                hx-post="/{entity}/{database}/query"
+                                hx-target="#query-results"
+                                hx-swap="innerHTML"
+                                hx-vals='{{"query": "{query}", "page": "{prev_page}", "page_size": "{page_size}"}}'
+                                class="{prev_class}"
+                                {prev_disabled}>
+                                Previous
+                            </button>
+                            <button
+                                hx-post="/{entity}/{database}/query"
+                                hx-target="#query-results"
+                                hx-swap="innerHTML"
+                                hx-vals='{{"query": "{query}", "page": "{next_page}", "page_size": "{page_size}"}}'
+                                class="{next_class}"
+                                {next_disabled}>
+                                Next
+                            </button>
+                        </div>
+                    </div>"###,
+                    start_index + 1,
+                    end_index,
+                    total_rows,
+                    entity = entity_slug,
+                    database = database_slug,
+                    query = query_text,
+                    prev_page = page - 1,
+                    next_page = page + 1,
+                    page_size = page_size,
+                    prev_class = prev_class,
+                    next_class = next_class,
+                    prev_disabled = if has_prev { "" } else { "disabled" },
+                    next_disabled = if has_next { "" } else { "disabled" }
+                )
             } else if query_result.rows.is_empty() {
                 r#"<div>
                     Query executed successfully. No results returned.
