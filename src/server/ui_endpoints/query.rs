@@ -107,7 +107,7 @@ pub async fn query(
             let table_headers = query_result
                 .fields
                 .iter()
-                .map(|field| format!("<th class=\"px-4 py-2 text-left\">{}</th>", field))
+                .map(|field| format!("<th>{}</th>", field))
                 .collect::<Vec<String>>()
                 .join("");
 
@@ -131,7 +131,7 @@ pub async fn query(
                                 Some(value) => value,
                                 None => "",
                             };
-                            format!("<td class=\"px-4 py-2 border-t\">{}</td>", display_value)
+                            format!("<td>{}</td>", display_value)
                         })
                         .collect::<Vec<String>>()
                         .join("");
@@ -147,15 +147,15 @@ pub async fn query(
                     .to_string()
             } else if total_rows > display_limit {
                 format!(
-                    r#"<div class="mt-4 px-4">
-                        Showing first {} of {} results. Download to see full dataset.
+                    r#"<div class="mt-4">
+                        {}/{} rows. Download for full dataset.
                     </div>"#,
                     display_limit, total_rows
                 )
             } else {
                 format!(
-                    r#"<div class="mt-4 px-4">
-                        Showing {} result{}</span>
+                    r#"<div class="mt-4">
+                        {} row{}</span>
                     </div>"#,
                     total_rows,
                     if total_rows == 1 { "" } else { "s" }
@@ -168,16 +168,16 @@ pub async fn query(
                 String::new()
             } else {
                 format!(
-                    r#"<div class="mb-4 flex space-x-2 px-4">
+                    r#"<div class="space-x-2 flex justify-end">
                         <form method="post" action="/{entity}/{database}/query" class="inline">
                             <input type="hidden" name="query" value="{}">
                             <input type="hidden" name="format" value="csv">
-                            <button type="submit" class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm">Download CSV</button>
+                            <button type="submit" class="uk-btn uk-btn-default uk-btn-sm">Download CSV</button>
                         </form>
                         <form method="post" action="/{entity}/{database}/query" class="inline">
                             <input type="hidden" name="query" value="{}">
                             <input type="hidden" name="format" value="json">
-                            <button type="submit" class="px-3 py-1 border rounded bg-white hover:bg-gray-50 text-sm">Download JSON</button>
+                            <button type="submit" class="uk-btn uk-btn-default uk-btn-sm">Download JSON</button>
                         </form>
                     </div>"#,
                     query_text,
@@ -191,9 +191,9 @@ pub async fn query(
                 r#"<div class="border rounded p-4 bg-gray-50">
                     {}
                     <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white">
+                        <table class="uk-table uk-table-striped uk-table-sm">
                             <thead>
-                                <tr class="bg-gray-100">{}</tr>
+                                <tr>{}</tr>
                             </thead>
                             <tbody>{}</tbody>
                         </table>
