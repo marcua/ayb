@@ -77,7 +77,7 @@ pub async fn database(
                                     const queryTextarea = document.getElementById('query');
                                     const runButton = document.getElementById('run-query-btn');
                                     runButton.disabled = queryTextarea.value.trim() === '';
-                                    
+
                                     // Update button state when textarea content changes
                                     queryTextarea.addEventListener('input', function() {{
                                         runButton.disabled = this.value.trim() === '';
