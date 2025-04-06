@@ -8,8 +8,6 @@ use serde::Deserialize;
 pub struct QueryRequest {
     query: String,
     format: Option<String>,
-    page: Option<usize>,
-    page_size: Option<usize>,
 }
 
 #[post("/{entity}/{database}/query")]
@@ -23,14 +21,8 @@ pub async fn query(
     let database_slug = &path.database.to_lowercase();
     let query_text = &query_req.query;
     let format = query_req.format.as_deref().unwrap_or("html");
-    let page = query_req.page.unwrap_or(1);
-    let page_size = std::cmp::min(query_req.page_size.unwrap_or(50), 100);
 
     let client = init_ayb_client(&ayb_config, &req);
-
-    // TODO(marcua): Using WITH queries: 1) determine queryset size
-    // without pulling entire resultset, and 2) push pagination logic
-    // into the DB.
 
     // Execute the query using the API client
     let query_result = match client.query(entity_slug, database_slug, query_text).await {
@@ -119,20 +111,17 @@ pub async fn query(
                 .collect::<Vec<String>>()
                 .join("");
 
-            // Calculate pagination information
+            // Get total number of rows and limit display to 500
             let total_rows = query_result.rows.len();
-            let start_index = (page - 1) * page_size;
-            let end_index = std::cmp::min(start_index + page_size, total_rows);
-
-            // Only display the current page of results
-            let paginated_rows = if start_index < total_rows {
-                &query_result.rows[start_index..end_index]
+            let display_limit = 500;
+            let display_rows = if total_rows > display_limit {
+                &query_result.rows[0..display_limit]
             } else {
-                &[]
+                &query_result.rows
             };
 
-            // Create table rows only for the current page
-            let table_rows = paginated_rows
+            // Create table rows for the displayed results
+            let table_rows = display_rows
                 .iter()
                 .map(|row| {
                     let cells = row
@@ -151,76 +140,25 @@ pub async fn query(
                 .collect::<Vec<String>>()
                 .join("");
 
-            let pagination_controls = if total_rows > page_size {
-                let has_prev = page > 1;
-                let has_next = end_index < total_rows;
-                let prev_class = if has_prev {
-                    "px-3 py-1 border rounded bg-white hover:bg-gray-50"
-                } else {
-                    "px-3 py-1 border rounded text-gray-400 bg-gray-100"
-                };
-                let next_class = if has_next {
-                    "px-3 py-1 border rounded bg-white hover:bg-gray-50"
-                } else {
-                    "px-3 py-1 border rounded text-gray-400 bg-gray-100"
-                };
-
-                format!(
-                    r###"<div class="pagination mt-4 px-4 flex justify-between items-center">
-                        <div>
-                            Showing {}-{} of {} results
-                        </div>
-                        <div class="flex space-x-2">
-                            <button
-                                hx-post="/{entity}/{database}/query"
-                                hx-target="#query-results"
-                                hx-swap="innerHTML"
-                                hx-vals='{{"query": "{query}", "page": "{prev_page}", "page_size": "{page_size}"}}'
-                                class="{prev_class}"
-                                {prev_disabled}>
-                                Previous
-                            </button>
-                            <button
-                                hx-post="/{entity}/{database}/query"
-                                hx-target="#query-results"
-                                hx-swap="innerHTML"
-                                hx-vals='{{"query": "{query}", "page": "{next_page}", "page_size": "{page_size}"}}'
-                                class="{next_class}"
-                                {next_disabled}>
-                                Next
-                            </button>
-                        </div>
-                    </div>"###,
-                    start_index + 1,
-                    end_index,
-                    total_rows,
-                    entity = entity_slug,
-                    database = database_slug,
-                    query = query_text,
-                    prev_page = page - 1,
-                    next_page = page + 1,
-                    page_size = page_size,
-                    prev_class = prev_class,
-                    next_class = next_class,
-                    prev_disabled = if has_prev { "" } else { "disabled" },
-                    next_disabled = if has_next { "" } else { "disabled" }
-                )
-            } else if query_result.rows.is_empty() {
+            let results_message = if query_result.rows.is_empty() {
                 r#"<div>
                     Query executed successfully. No results returned.
                 </div>"#
                     .to_string()
+            } else if total_rows > display_limit {
+                format!(
+                    r#"<div class="mt-4 px-4">
+                        Showing first {} of {} results. Download to see full dataset.
+                    </div>"#,
+                    display_limit, total_rows
+                )
             } else {
                 format!(
                     r#"<div class="mt-4 px-4">
                         Showing {} result{}</span>
                     </div>"#,
-                    query_result.rows.len(),
-                    if query_result.rows.len() == 1 {
-                        ""
-                    } else {
-                        "s"
-                    }
+                    total_rows,
+                    if total_rows == 1 { "" } else { "s" }
                 )
             };
 
@@ -230,7 +168,7 @@ pub async fn query(
                 String::new()
             } else {
                 format!(
-                    r#"<div class="mt-4 flex space-x-2 px-4">
+                    r#"<div class="mb-4 flex space-x-2 px-4">
                         <form method="post" action="/{entity}/{database}/query" class="inline">
                             <input type="hidden" name="query" value="{}">
                             <input type="hidden" name="format" value="csv">
@@ -251,6 +189,7 @@ pub async fn query(
 
             let html = format!(
                 r#"<div class="border rounded p-4 bg-gray-50">
+                    {}
                     <div class="overflow-x-auto">
                         <table class="min-w-full bg-white">
                             <thead>
@@ -260,9 +199,8 @@ pub async fn query(
                         </table>
                     </div>
                     {}
-                    {}
                 </div>"#,
-                table_headers, table_rows, pagination_controls, download_options
+                download_options, table_headers, table_rows, results_message
             );
 
             Ok(HttpResponse::Ok().content_type("text/html").body(html))
