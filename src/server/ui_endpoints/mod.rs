@@ -8,7 +8,7 @@ mod register;
 mod templates;
 
 pub use confirm::confirm as confirm_endpoint;
-pub use database::database_details as database_details_endpoint;
+pub use database::database as database_endpoint;
 pub use entity_details::entity_details as entity_details_endpoint;
 pub use log_in::{log_in as log_in_endpoint, log_in_submit as log_in_submit_endpoint};
 pub use query::query as query_endpoint;

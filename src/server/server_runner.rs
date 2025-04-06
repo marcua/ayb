@@ -47,7 +47,7 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::register_submit_endpoint)
                 .service(ui_endpoints::confirm_endpoint)
                 .service(ui_endpoints::entity_details_endpoint)
-                .service(ui_endpoints::database_details_endpoint)
+                .service(ui_endpoints::database_endpoint)
                 .service(ui_endpoints::query_endpoint);
         }
     }

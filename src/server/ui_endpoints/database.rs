@@ -4,7 +4,7 @@ use crate::server::ui_endpoints::client::init_ayb_client;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}/{database}")]
-pub async fn database_details(
+pub async fn database(
     req: HttpRequest,
     path: web::Path<EntityDatabasePath>,
     ayb_config: web::Data<AybConfig>,
@@ -65,12 +65,25 @@ pub async fn database_details(
                         <div class="mb-2">
                             <textarea id="query" name="query" rows="5"
                                 class="p-4 w-full border rounded focus:border-blue-500"
-                                placeholder="Enter a SQL query, like SELECT * FROM your_table LIMIT 10"></textarea>
+                                placeholder="Enter a SQL query, like 'SELECT * FROM your_table LIMIT 10'"></textarea>
                         </div>
                         <div>
-                            <button type="submit" class="uk-btn uk-btn-default">
+                            <button type="submit" class="uk-btn uk-btn-primary" disabled id="run-query-btn">
                                 Run query
                             </button>
+                            <script>
+                                // Set initial button state based on textarea content
+                                document.addEventListener('DOMContentLoaded', function() {{
+                                    const queryTextarea = document.getElementById('query');
+                                    const runButton = document.getElementById('run-query-btn');
+                                    runButton.disabled = queryTextarea.value.trim() === '';
+                                    
+                                    // Update button state when textarea content changes
+                                    queryTextarea.addEventListener('input', function() {{
+                                        runButton.disabled = this.value.trim() === '';
+                                    }});
+                                }});
+                            </script>
                         </div>
                     </form>
                     <div id="query-results">
