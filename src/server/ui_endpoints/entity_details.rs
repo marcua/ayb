@@ -43,8 +43,11 @@ pub async fn entity_details(
         </div>
     </div>
     <div class="w-full md:w-2/3 lg:w-3/4">
-        <div class="uk-card-header space-y-2 pr-0">
+        <div class="uk-card-header space-y-2 pr-0 flex justify-between items-center">
             <h2 class="uk-h2">Databases</h2>
+            <a href="/{}/create_database" class="uk-btn {} uk-btn-sm">
+                <uk-icon icon="plus"></uk-icon> Create database
+            </a>
         </div>
         <div class="uk-card-body space-y-2 pr-0">
             <hr class="uk-hr" />
@@ -71,19 +74,32 @@ pub async fn entity_details(
             .map(|link| format!(r#"<div class="flex items-center"><uk-icon icon="link" class="mr-1"></uk-icon><a href="{}" rel="nofollow me">{}</a></div>"#, link.url, link.url))
             .collect::<Vec<_>>()
             .join("\n"),
-        entity_response
-            .databases
-            .into_iter()
-            .map(|db| format!(
+        entity_slug,
+        if entity_response.databases.is_empty() { "uk-btn-primary" } else { "uk-btn-default" },
+        if entity_response.databases.is_empty() {
+            format!(
                 r#"
-                <a href="{}/{}" class="block hover:bg-gray-50 uk-card">
-                    <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal" style="align-items: baseline;"><uk-icon icon="database" class="mr-1"></uk-icon>{} <uk-icon icon="chevron-right"></uk-icon></h3>
-                    <p class="text-muted-foreground uk-card-body space-y-2">Type: {}</p>
-                </a>"#,
-                entity_slug, db.slug, db.slug, db.database_type
-            ))
-            .collect::<Vec<_>>()
-            .join("\n")
+                <div class="block uk-card">
+                    <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
+                    <p class="uk-card-body space-y-2">Let's fix that by <a href="/{}/create_database" class="uk-link">creating your first database</a>.</p>
+                </div>"#,
+                entity_slug
+            )
+        } else {
+            entity_response
+                .databases
+                .into_iter()
+                .map(|db| format!(
+                    r#"
+                    <a href="{}/{}" class="block hover:bg-gray-50 uk-card">
+                        <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal" style="align-items: baseline;"><uk-icon icon="database" class="mr-1"></uk-icon>{} <uk-icon icon="chevron-right"></uk-icon></h3>
+                        <p class="text-muted-foreground uk-card-body space-y-2">Type: {}</p>
+                    </a>"#,
+                    entity_slug, db.slug, db.slug, db.database_type
+                ))
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
     );
 
     Ok(HttpResponse::Ok()
