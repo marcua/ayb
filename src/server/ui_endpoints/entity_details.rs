@@ -24,6 +24,7 @@ pub async fn entity_details(
         .display_name
         .as_deref()
         .unwrap_or(&entity_response.slug);
+    // TODO(marcua): Only show database creation button/form if you're allowed to create one. Add that detail to entity_details endpoint.
     let content = format!(
         r#"
 <div class="flex flex-col md:flex-row gap-4">
