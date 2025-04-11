@@ -100,11 +100,9 @@ pub async fn database(
         r##"<div class="sharing-interface">
                 <h3 class="text-lg font-medium mb-2">Database sharing</h3>
                 <p class="text-muted-foreground mb-4">Manage who can access this database and what permissions they have.</p>
-                <div class="bg-gray-100 p-4 rounded">
-                    <p class="text-sm">Use the command line to manage sharing:</p>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client share {entity_slug}/{database_slug} [entity] [sharing-level]</pre>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {entity_slug}/{database_slug}</pre>
-                </div>
+                <p class="text-sm">Use the command line to manage sharing:</p>
+                <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client share {entity_slug}/{database_slug} [entity] [sharing-level]</pre>
+                <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {entity_slug}/{database_slug}</pre>
         </div>"##,
         entity_slug = entity_slug,
         database_slug = database_slug
@@ -115,11 +113,9 @@ pub async fn database(
         r##"<div class="snapshots-interface">
                 <h3 class="text-lg font-medium mb-2">Database snapshots</h3>
                 <p class="text-muted-foreground mb-4">View and restore database snapshots.</p>
-                <div class="bg-gray-100 p-4 rounded">
-                    <p class="text-sm">Use the command line to manage snapshots:</p>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client list_snapshots {}/{}</pre>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client restore_snapshot {}/{} [snapshot-id]</pre>
-                </div>
+                <p class="text-sm">Use the command line to manage snapshots:</p>
+                <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client list_snapshots {}/{}</pre>
+                <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client restore_snapshot {}/{} [snapshot-id]</pre>
         </div>"##,
         entity_slug, database_slug, entity_slug, database_slug
     );
