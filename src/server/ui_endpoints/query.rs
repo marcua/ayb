@@ -71,6 +71,7 @@ pub async fn query(
                 .body(json_content))
         }
         "csv" => {
+            // TODO(marcua): replace with CSV serde the first time this hacky code poses a problem.
             let mut csv_content = query_result.fields.join(",") + "\n";
 
             for row in query_result.rows {
@@ -188,7 +189,7 @@ pub async fn query(
             };
 
             let html = format!(
-                r#"<div class="border rounded p-4 bg-gray-50">
+                r#"<div class="border rounded p-4">
                     {}
                     <div class="overflow-x-auto">
                         <table class="uk-table uk-table-striped uk-table-sm">
