@@ -26,7 +26,7 @@ pub async fn entity_details(
         .unwrap_or(&entity_response.slug);
     // TODO(marcua): Only show database creation button/form if you're allowed to create one. Add that detail to entity_details endpoint.
     let content = format!(
-        r#"
+        r###"
 <div class="flex flex-col md:flex-row gap-4">
     <div class="w-full md:w-1/3 lg:w-1/4">
         <div class="uk-card">
@@ -46,17 +46,22 @@ pub async fn entity_details(
     <div class="w-full md:w-2/3 lg:w-3/4">
         <div class="uk-card-header space-y-2 pr-0 flex justify-between items-center">
             <h2 class="uk-h2">Databases</h2>
-            <a href="/{}/create_database" class="uk-btn {} uk-btn-sm">
+            <button
+                hx-get="/{}/_fragments/create_database"
+                hx-target="#create-database"
+                hx-on:htmx:after-on-load="this.disabled = true"
+                class="uk-btn {} uk-btn-sm">
                 <uk-icon icon="plus"></uk-icon> Create database
-            </a>
+            </button>
         </div>
         <div class="uk-card-body space-y-2 pr-0">
             <hr class="uk-hr" />
+            <div id="create-database"></div>
             {}
        </div>
     </div>
 </div>
-"#,
+"###,
         name,
         entity_response.profile.description.unwrap_or_default(),
         entity_response
@@ -82,9 +87,8 @@ pub async fn entity_details(
                 r#"
                 <div class="block uk-card">
                     <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
-                    <p class="uk-card-body space-y-2">Let's fix that by <a href="/{}/create_database" class="uk-link">creating your first database</a>.</p>
-                </div>"#,
-                entity_slug
+                    <p class="uk-card-body space-y-2">Let's fix that by creating your first database.</p>
+                </div>"#
             )
         } else {
             entity_response
