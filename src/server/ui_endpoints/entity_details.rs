@@ -192,13 +192,11 @@ pub async fn entity_details(
         create_db_button = create_db_button,
         create_db_form = create_db_form,
         database_list = if entity_response.databases.is_empty() {
-            format!(
-                r#"
+            r#"
                 <div class="block uk-card">
                     <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
                     <p class="uk-card-body space-y-2">Let's fix that by creating your first database.</p>
-                </div>"#
-            )
+                </div>"#.to_string()
         } else {
             entity_response
                 .databases
