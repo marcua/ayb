@@ -20,8 +20,26 @@ pub async fn entity_details(
         Err(_) => return Ok(HttpResponse::NotFound().body("Entity not found")),
     };
 
-    let create_db_form = format!(
-        r##"<div id="create-database-form" hidden>
+    let create_db_button = if entity_response.permissions.can_create_database {
+        format!(
+            r#"<button
+                data-uk-toggle="target: #create-database-form"
+                class="uk-btn {style} uk-btn-sm">
+                <uk-icon icon="plus"></uk-icon> Create database
+            </button>"#,
+            style = if entity_response.databases.is_empty() {
+                "uk-btn-primary"
+            } else {
+                "uk-btn-default"
+            }
+        )
+    } else {
+        String::new()
+    };
+
+    let create_db_form = if entity_response.permissions.can_create_database {
+        format!(
+            r##"<div id="create-database-form" hidden>
           <div class="block hover:bg-gray-50 uk-card">
             <h3 class="uk-h3 flex uk-card-header font-normal pb-0">Create a new database</h3>
             <div class="uk-card-body">
@@ -107,18 +125,20 @@ pub async fn entity_details(
             </script>
           </div>
         </div>"##,
-        entity = entity_slug,
-        no_access = PublicSharingLevel::NoAccess.to_str(),
-        fork = PublicSharingLevel::Fork.to_str(),
-        read_only = PublicSharingLevel::ReadOnly.to_str()
-    );
+            entity = entity_slug,
+            no_access = PublicSharingLevel::NoAccess.to_str(),
+            fork = PublicSharingLevel::Fork.to_str(),
+            read_only = PublicSharingLevel::ReadOnly.to_str()
+        )
+    } else {
+        String::new()
+    };
 
     let name = entity_response
         .profile
         .display_name
         .as_deref()
         .unwrap_or(&entity_response.slug);
-    // TODO(marcua): Only show database creation button/form if you're allowed to create one. Add that detail to entity_details endpoint.
     let content = format!(
         r###"
 <div class="flex flex-col md:flex-row gap-4">
@@ -141,11 +161,7 @@ pub async fn entity_details(
         <div class="uk-card-header space-y-2 pr-0 flex justify-between items-center">
             <h2 class="uk-h2">Databases</h2>
 <button  type="button"></button>
-            <button
-                data-uk-toggle="target: #create-database-form"
-                class="uk-btn {create_db_button_style} uk-btn-sm">
-                <uk-icon icon="plus"></uk-icon> Create database
-            </button>
+            {create_db_button}
         </div>
         <div class="uk-card-body space-y-2 pr-0">
             <hr class="uk-hr" />
@@ -173,7 +189,7 @@ pub async fn entity_details(
             .map(|link| format!(r#"<div class="flex items-center"><uk-icon icon="link" class="mr-1"></uk-icon><a href="{}" rel="nofollow me">{}</a></div>"#, link.url, link.url))
             .collect::<Vec<_>>()
             .join("\n"),
-        create_db_button_style = if entity_response.databases.is_empty() { "uk-btn-primary" } else { "uk-btn-default" },
+        create_db_button = create_db_button,
         create_db_form = create_db_form,
         database_list = if entity_response.databases.is_empty() {
             format!(

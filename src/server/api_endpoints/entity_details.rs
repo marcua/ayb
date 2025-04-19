@@ -1,8 +1,10 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
-use crate::http::structs::{EntityPath, EntityProfile, EntityProfileLink, EntityQueryResponse};
-use crate::server::permissions::can_discover_database;
+use crate::http::structs::{
+    EntityPath, EntityPermissions, EntityProfile, EntityProfileLink, EntityQueryResponse,
+};
+use crate::server::permissions::{can_create_database, can_discover_database};
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
@@ -23,7 +25,7 @@ pub async fn entity_details(
         }
     }
 
-    let links: Vec<EntityProfileLink> = desired_entity.links.map_or_else(Vec::new, |l| {
+    let links: Vec<EntityProfileLink> = desired_entity.links.clone().map_or_else(Vec::new, |l| {
         l.iter()
             .map(|l| EntityProfileLink {
                 url: l.url.to_string(),
@@ -31,6 +33,8 @@ pub async fn entity_details(
             })
             .collect()
     });
+
+    let can_create = can_create_database(&authenticated_entity, &desired_entity);
 
     Ok(web::Json(EntityQueryResponse {
         slug: entity_slug.to_string(),
@@ -42,5 +46,8 @@ pub async fn entity_details(
             links,
         },
         databases,
+        permissions: EntityPermissions {
+            can_create_database: can_create,
+        },
     }))
 }
