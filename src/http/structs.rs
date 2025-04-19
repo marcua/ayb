@@ -78,10 +78,16 @@ pub struct EntityProfile {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct EntityPermissions {
+    pub can_create_database: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct EntityQueryResponse {
     pub slug: String,
     pub profile: EntityProfile,
     pub databases: Vec<EntityDatabase>,
+    pub permissions: EntityPermissions,
 }
 
 impl TabularFormatter for EntityProfile {

@@ -73,13 +73,11 @@ pub async fn database(
                                 Run query
                             </button>
                             <script>
-                                // Set initial button state based on textarea content
+                                // Form is submittable once a query exists.
                                 document.addEventListener('DOMContentLoaded', function() {{
                                     const queryTextarea = document.getElementById('query');
                                     const runButton = document.getElementById('run-query-btn');
                                     runButton.disabled = queryTextarea.value.trim() === '';
-
-                                    // Update button state when textarea content changes
                                     queryTextarea.addEventListener('input', function() {{
                                         runButton.disabled = this.value.trim() === '';
                                     }});
