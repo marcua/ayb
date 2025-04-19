@@ -43,6 +43,7 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
         if web_config.hosting_method == WebHostingMethod::Local {
             cfg.service(ui_endpoints::log_in_endpoint)
                 .service(ui_endpoints::log_in_submit_endpoint)
+                .service(ui_endpoints::log_out_endpoint)
                 .service(ui_endpoints::register_endpoint)
                 .service(ui_endpoints::register_submit_endpoint)
                 .service(ui_endpoints::confirm_endpoint)

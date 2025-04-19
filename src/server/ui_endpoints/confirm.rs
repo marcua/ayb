@@ -35,8 +35,8 @@ pub async fn confirm(
                 .append_header((
                     "Set-Cookie",
                     format!(
-                        "auth={}; Path=/; HttpOnly; Secure; SameSite=Strict",
-                        api_token.token
+                        "auth={}:{}; Path=/; HttpOnly; Secure; SameSite=Strict",
+                        api_token.entity, api_token.token
                     ),
                 ))
                 .body(base_auth(
