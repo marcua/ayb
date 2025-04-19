@@ -43,8 +43,6 @@ pub async fn entity_details(
           <div class="block hover:bg-gray-50 uk-card">
             <h3 class="uk-h3 flex uk-card-header font-normal pb-0">Create a new database</h3>
             <div class="uk-card-body">
-                <p class="text-muted-foreground">Create a new SQLite database for your entity.</p>
-
                 <form
                   class="mt-4"
                   hx-post="/{entity}/create_database"
