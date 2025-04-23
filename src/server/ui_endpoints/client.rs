@@ -2,17 +2,7 @@ use crate::http::structs::APIToken;
 use crate::server::utils::get_optional_header;
 use actix_web::HttpRequest;
 
-pub fn init_ayb_client(
-    config: &crate::server::config::AybConfig,
-    req: &HttpRequest,
-) -> crate::client::http::AybClient {
-    let request_token = authentication_details(req).map(|details| details.token);
-
-    crate::client::http::AybClient {
-        base_url: format!("http://localhost:{}", config.port),
-        api_token: request_token,
-    }
-}
+pub const COOKIE_FOR_LOGOUT: &str = "auth=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
 
 pub fn authentication_details(req: &HttpRequest) -> Option<APIToken> {
     // Get auth token from cookie if present
@@ -33,4 +23,23 @@ pub fn authentication_details(req: &HttpRequest) -> Option<APIToken> {
         }
     }
     None
+}
+
+pub fn cookie_for_token(token: &APIToken) -> String {
+    format!(
+        "auth={}:{}; Path=/; HttpOnly; Secure; SameSite=Strict",
+        token.entity, token.token
+    )
+}
+
+pub fn init_ayb_client(
+    config: &crate::server::config::AybConfig,
+    req: &HttpRequest,
+) -> crate::client::http::AybClient {
+    let request_token = authentication_details(req).map(|details| details.token);
+
+    crate::client::http::AybClient {
+        base_url: format!("http://localhost:{}", config.port),
+        api_token: request_token,
+    }
 }
