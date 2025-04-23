@@ -142,7 +142,7 @@ pub async fn database(
 
     let title = format!("{}/{}", entity_slug, database_slug);
 
-    let current_entity = authentication_details(&req).map(|details| details.username);
+    let current_entity = authentication_details(&req).map(|details| details.entity);
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")

@@ -1,10 +1,6 @@
+use crate::http::structs::APIToken;
 use crate::server::utils::get_optional_header;
 use actix_web::HttpRequest;
-
-pub struct AuthenticationDetails {
-    pub username: String,
-    pub token: String,
-}
 
 pub fn init_ayb_client(
     config: &crate::server::config::AybConfig,
@@ -18,7 +14,7 @@ pub fn init_ayb_client(
     }
 }
 
-pub fn authentication_details(req: &HttpRequest) -> Option<AuthenticationDetails> {
+pub fn authentication_details(req: &HttpRequest) -> Option<APIToken> {
     // Get auth token from cookie if present
     if let Ok(Some(token)) = get_optional_header(req, "Cookie") {
         if let Some(auth_token) = token
@@ -29,8 +25,8 @@ pub fn authentication_details(req: &HttpRequest) -> Option<AuthenticationDetails
             // Parse the auth token to extract username and token parts
             let parts: Vec<&str> = auth_token.split(':').collect();
             if parts.len() >= 2 {
-                return Some(AuthenticationDetails {
-                    username: parts[0].to_string(),
+                return Some(APIToken {
+                    entity: parts[0].to_string(),
                     token: parts[1].to_string(),
                 });
             }
