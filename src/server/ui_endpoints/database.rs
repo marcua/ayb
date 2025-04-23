@@ -1,6 +1,6 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::client::{init_ayb_client, logged_in_entity};
+use crate::server::ui_endpoints::client::{authentication_details, init_ayb_client};
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}/{database}")]
@@ -142,7 +142,7 @@ pub async fn database(
 
     let title = format!("{}/{}", entity_slug, database_slug);
 
-    let current_entity = logged_in_entity(&req);
+    let current_entity = authentication_details(&req).map(|details| details.username);
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
