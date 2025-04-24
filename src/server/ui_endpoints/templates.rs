@@ -96,22 +96,33 @@ pub fn base_auth(
     base_template(title, &auth_content, redirect)
 }
 
-pub fn base_content(title: &str, content: &str) -> String {
-    // TODO(marcua): Log out (username) vs Log in, Register
-    let nav = r#"
+pub fn base_content(title: &str, content: &str, logged_in_entity: Option<&str>) -> String {
+    let auth_links = match logged_in_entity {
+        Some(entity) => format!(
+            r#"<a href="/{entity}">{entity}</a> <span>(<a href="/log_out">log out</a>)</span>"#,
+            entity = entity
+        ),
+        None => r#"<a href="/register">Register</a>
+                <a href="/log_in">Log in</a>"#
+            .to_string(),
+    };
+
+    let nav = format!(
+        r#"
     <nav class="bg-white shadow-sm mb-6">
         <div class="max-w-screen-xl mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
                 <a href="/" class="text-xl font-bold">ayb</a>
-                <div class="flex gap-4">
-                    <a href="/register" class="text-gray-600 hover:text-gray-900">Register</a>
-                    <a href="/log_in" class="text-gray-600 hover:text-gray-900">Log in</a>
+                <div>
+                    {}
                 </div>
             </div>
         </div>
     </nav>
     <div class="max-w-screen-xl mx-auto px-6">
-        "#;
+        "#,
+        auth_links
+    );
 
     let wrapped_content = format!("{}{}</div>", nav, content);
     base_template(title, &wrapped_content, None)

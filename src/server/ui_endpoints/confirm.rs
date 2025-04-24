@@ -1,5 +1,5 @@
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::client::init_ayb_client;
+use crate::server::ui_endpoints::auth::{cookie_for_token, init_ayb_client};
 use crate::server::ui_endpoints::templates::base_auth;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
@@ -32,13 +32,7 @@ pub async fn confirm(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
-                .append_header((
-                    "Set-Cookie",
-                    format!(
-                        "auth={}; Path=/; HttpOnly; Secure; SameSite=Strict",
-                        api_token.token
-                    ),
-                ))
+                .append_header(("Set-Cookie", cookie_for_token(&api_token)))
                 .body(base_auth(
                     "Success",
                     "",
