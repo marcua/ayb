@@ -1,4 +1,4 @@
-mod client;
+mod auth;
 mod confirm;
 mod create_database;
 mod database;

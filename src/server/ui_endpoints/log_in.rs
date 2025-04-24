@@ -1,5 +1,5 @@
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::client::init_ayb_client;
+use crate::server::ui_endpoints::auth::init_ayb_client;
 use crate::server::ui_endpoints::templates::base_auth;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 

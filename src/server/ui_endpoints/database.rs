@@ -1,6 +1,6 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::client::{authentication_details, init_ayb_client};
+use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}/{database}")]

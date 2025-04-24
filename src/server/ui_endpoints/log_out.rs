@@ -1,4 +1,4 @@
-use crate::server::ui_endpoints::client::COOKIE_FOR_LOGOUT;
+use crate::server::ui_endpoints::auth::COOKIE_FOR_LOGOUT;
 use actix_web::{get, HttpResponse, Result};
 
 #[get("/log_out")]

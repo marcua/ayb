@@ -1,7 +1,7 @@
 use crate::ayb_db::models::PublicSharingLevel;
 use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::client::{authentication_details, init_ayb_client};
+use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}")]
