@@ -70,7 +70,7 @@ impl WebFrontendDetails {
                             message: "Remote web hosting method requires a base_url".to_string(),
                         });
                     }
-                },
+                }
                 WebHostingMethod::Local => Self::from_local(&config),
             }))
         } else {
