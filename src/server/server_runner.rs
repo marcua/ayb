@@ -101,21 +101,16 @@ fn build_cors(ayb_cors: AybConfigCors) -> Cors {
 pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
 
-    let ayb_conf = read_config(config_path).expect("unable to find an ayb.toml configuration file");
+    let ayb_conf = read_config(config_path)
+        .unwrap_or_else(|e| panic!("unable to read ayb.toml configuration file: {}", e));
     let mut ayb_conf_for_server = ayb_conf.clone();
     fs::create_dir_all(&ayb_conf.data_path).expect("unable to create data directory");
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
         .await
         .expect("unable to connect to ayb database");
-    let web_details = if let Some(web_conf) = ayb_conf.web {
-        Some(
-            WebFrontendDetails::load(web_conf)
-                .await
-                .expect("failed to load web frontend details"),
-        )
-    } else {
-        None
-    };
+    let web_details = WebFrontendDetails::load(ayb_conf_for_server.clone())
+        .await
+        .expect("failed to load web frontend details");
     schedule_periodic_snapshots(ayb_conf_for_server.clone(), ayb_db.clone())
         .await
         .expect("unable to start periodic snapshot scheduler");

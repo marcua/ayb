@@ -133,6 +133,13 @@ pub fn default_server_config() -> AybConfig {
 }
 
 pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
-    let contents = fs::read_to_string(config_path)?;
-    Ok(toml::from_str(&contents)?)
+    let contents = fs::read_to_string(config_path).map_err(|err| AybError::ConfigurationError {
+        message: err.to_string(),
+    })?;
+    match toml::from_str(&contents) {
+        Ok(config) => Ok(config),
+        Err(err) => Err(AybError::ConfigurationError {
+            message: err.to_string(),
+        }),
+    }
 }
