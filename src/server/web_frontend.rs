@@ -62,7 +62,15 @@ impl WebFrontendDetails {
     pub async fn load(config: AybConfig) -> Result<Option<Self>, AybError> {
         if let Some(ref web_conf) = config.web {
             Ok(Some(match web_conf.hosting_method {
-                WebHostingMethod::Remote => Self::from_url(&web_conf.base_url).await?,
+                WebHostingMethod::Remote => {
+                    if let Some(base_url) = &web_conf.base_url {
+                        Self::from_url(base_url).await?
+                    } else {
+                        return Err(AybError::ConfigurationError {
+                            message: "Remote web hosting method requires a base_url".to_string(),
+                        });
+                    }
+                },
                 WebHostingMethod::Local => Self::from_local(&config),
             }))
         } else {
