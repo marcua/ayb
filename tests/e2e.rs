@@ -47,7 +47,6 @@ smtp_password = "the_password"
 
 [web]
 hosting_method = "Local"
-base_url = "http://localhost:5433/"
 
 [cors]
 origin = "*"

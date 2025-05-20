@@ -16,7 +16,7 @@ pub enum WebHostingMethod {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct AybConfigWeb {
     pub hosting_method: WebHostingMethod,
-    pub base_url: Url,
+    pub base_url: Option<Url>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -124,8 +124,7 @@ pub fn default_server_config() -> AybConfig {
         },
         web: Some(AybConfigWeb {
             hosting_method: WebHostingMethod::Local,
-            // TODO(marcua): Remove base_url and all info_url tooling.
-            base_url: Url::parse(&format!("http://{}:{}", "localhost", 5433)).unwrap(),
+            base_url: None,
         }),
         isolation: None,
         snapshots: None,
@@ -133,6 +132,13 @@ pub fn default_server_config() -> AybConfig {
 }
 
 pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
-    let contents = fs::read_to_string(config_path)?;
-    Ok(toml::from_str(&contents)?)
+    let contents = fs::read_to_string(config_path).map_err(|err| AybError::ConfigurationError {
+        message: err.to_string(),
+    })?;
+    match toml::from_str(&contents) {
+        Ok(config) => Ok(config),
+        Err(err) => Err(AybError::ConfigurationError {
+            message: err.to_string(),
+        }),
+    }
 }

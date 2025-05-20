@@ -1,5 +1,6 @@
 use crate::http::structs::APIToken;
 use crate::server::utils::get_optional_header;
+use crate::server::web_frontend::local_base_url;
 use actix_web::HttpRequest;
 
 pub const COOKIE_FOR_LOGOUT: &str = "auth=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
@@ -39,7 +40,7 @@ pub fn init_ayb_client(
     let request_token = authentication_details(req).map(|details| details.token);
 
     crate::client::http::AybClient {
-        base_url: format!("http://localhost:{}", config.port),
+        base_url: local_base_url(config),
         api_token: request_token,
     }
 }

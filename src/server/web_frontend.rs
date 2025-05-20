@@ -1,5 +1,5 @@
 use crate::error::AybError;
-use crate::server::config::{AybConfigWeb, WebHostingMethod};
+use crate::server::config::{AybConfig, WebHostingMethod};
 use crate::templating::TemplateString;
 use serde::Deserialize;
 use url::Url;
@@ -16,14 +16,18 @@ pub struct WebFrontendEndpoints {
     confirmation: TemplateString,
 }
 
+pub fn local_base_url(config: &AybConfig) -> String {
+    format!("http://localhost:{}", config.port)
+}
+
 impl WebFrontendDetails {
     async fn from_url(url: &Url) -> Result<Self, AybError> {
         Ok(reqwest::get(url.to_string()).await?.json().await?)
     }
 
-    fn from_local(base_url: Url) -> Self {
+    fn from_local(config: &AybConfig) -> Self {
         WebFrontendDetails {
-            base_url,
+            base_url: Url::parse(&local_base_url(config)).unwrap(),
             endpoints: WebFrontendEndpoints {
                 profile: TemplateString {
                     string: "{entity}".into(),
@@ -55,10 +59,22 @@ impl WebFrontendDetails {
         absolute.to_string()
     }
 
-    pub async fn load(web_conf: AybConfigWeb) -> Result<Self, AybError> {
-        match web_conf.hosting_method {
-            WebHostingMethod::Remote => Self::from_url(&web_conf.base_url).await,
-            WebHostingMethod::Local => Ok(Self::from_local(web_conf.base_url)),
+    pub async fn load(config: AybConfig) -> Result<Option<Self>, AybError> {
+        if let Some(ref web_conf) = config.web {
+            Ok(Some(match web_conf.hosting_method {
+                WebHostingMethod::Remote => {
+                    if let Some(base_url) = &web_conf.base_url {
+                        Self::from_url(base_url).await?
+                    } else {
+                        return Err(AybError::ConfigurationError {
+                            message: "Remote web hosting method requires a base_url".to_string(),
+                        });
+                    }
+                }
+                WebHostingMethod::Local => Self::from_local(&config),
+            }))
+        } else {
+            Ok(None)
         }
     }
 }
