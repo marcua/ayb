@@ -128,27 +128,22 @@ pub async fn database(
         query_interface, sharing_interface, snapshots_interface
     );
 
-    // Combine all sections
-    let content = format!(
-        r#"
-        <div class="max-w-screen-xl mx-auto">
-            {}
-            {}
-            {}
-        </div>
-        "#,
-        breadcrumbs, tabs, tab_content
-    );
-
-    let title = format!("{}/{}", entity_slug, database_slug);
-
-    let current_entity = authentication_details(&req).map(|details| details.entity);
+    let mut context = tera::Context::new();
+    context.insert("entity", entity_slug);
+    context.insert("database", database_slug);
+    context.insert("database_type", &database_response.database_type);
+    context.insert("can_manage_database", &database_response.can_manage_database);
+    context.insert("highest_query_access_level", &database_response.highest_query_access_level);
+    context.insert("logged_in_entity", &authentication_details(&req).map(|details| details.entity));
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(super::templates::base_content(
-            &title,
-            &content,
-            current_entity.as_deref(),
-        )))
+        .body(
+            super::templates::TEMPLATES
+                .render("database.html", &context)
+                .unwrap_or_else(|e| {
+                    eprintln!("Template error: {}", e);
+                    format!("Error rendering template: {}", e)
+                }),
+        ))
 }

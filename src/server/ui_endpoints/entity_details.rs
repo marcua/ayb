@@ -137,88 +137,79 @@ pub async fn entity_details(
         .display_name
         .as_deref()
         .unwrap_or(&entity_response.slug);
-    let content = format!(
-        r###"
-<div class="flex flex-col md:flex-row gap-4">
-    <div class="w-full md:w-1/3 lg:w-1/4">
-        <div class="uk-card">
-            <div class="uk-card-header space-y-2">
-                <h1 class="uk-h2">{name}</h1>
-                <p class="text-muted-foreground">{description}</p>
-            </div>
-            <div class="uk-card-body space-y-2">
-                <p class="text-muted-foreground">{organization}</p>
-                <p class="text-muted-foreground">{location}</p>
-                <div class="mt-3">
-                    {links}
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="w-full md:w-2/3 lg:w-3/4">
-        <div class="uk-card-header space-y-2 pr-0 flex justify-between items-center">
-            <h2 class="uk-h2">Databases</h2>
-<button  type="button"></button>
-            {create_db_button}
-        </div>
-        <div class="uk-card-body space-y-2 pr-0">
-            <hr class="uk-hr" />
-            {create_db_form}
-            {database_list}
-       </div>
-    </div>
-</div>
-"###,
-        name = name,
-        description = entity_response.profile.description.unwrap_or_default(),
-        organization = entity_response
-            .profile
-            .organization
-            .map_or_else(String::new, |org| format!(r#"<div class="flex items-center"><uk-icon icon="building" class="mr-1"></uk-icon> {}</div>"#, org)),
-        location = entity_response
-            .profile
-            .location
-            .map_or_else(String::new, |loc| format!(r#"<div class="flex items-center"><uk-icon icon="map-pin" class="mr-1"></uk-icon> {}</div>"#, loc)),
-
-        links = entity_response
-            .profile
-            .links
+    
+    let mut context = tera::Context::new();
+    context.insert("name", name);
+    context.insert("entity", entity_slug);
+    context.insert("description", &entity_response.profile.description.unwrap_or_default());
+    
+    // Format organization with icon if present
+    let organization = entity_response
+        .profile
+        .organization
+        .map_or_else(String::new, |org| 
+            format!(r#"<div class="flex items-center"><uk-icon icon="building" class="mr-1"></uk-icon> {}</div>"#, org)
+        );
+    context.insert("organization", &organization);
+    
+    // Format location with icon if present
+    let location = entity_response
+        .profile
+        .location
+        .map_or_else(String::new, |loc| 
+            format!(r#"<div class="flex items-center"><uk-icon icon="map-pin" class="mr-1"></uk-icon> {}</div>"#, loc)
+        );
+    context.insert("location", &location);
+    
+    // Format links
+    let links = entity_response
+        .profile
+        .links
+        .into_iter()
+        .map(|link| 
+            format!(r#"<div class="flex items-center"><uk-icon icon="link" class="mr-1"></uk-icon><a href="{}" rel="nofollow me">{}</a></div>"#, link.url, link.url)
+        )
+        .collect::<Vec<_>>()
+        .join("\n");
+    context.insert("links", &links);
+    
+    context.insert("create_db_button", &create_db_button);
+    context.insert("create_db_form", &create_db_form);
+    
+    // Format database list
+    let database_list = if entity_response.databases.is_empty() {
+        r#"
+            <div class="block uk-card">
+                <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
+                <p class="uk-card-body space-y-2">Let's fix that by creating your first database.</p>
+            </div>"#.to_string()
+    } else {
+        entity_response
+            .databases
             .into_iter()
-            .map(|link| format!(r#"<div class="flex items-center"><uk-icon icon="link" class="mr-1"></uk-icon><a href="{}" rel="nofollow me">{}</a></div>"#, link.url, link.url))
+            .map(|db| format!(
+                r#"
+                <a href="{}/{}" class="block hover:bg-gray-50 uk-card">
+                    <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal" style="align-items: baseline;"><uk-icon icon="database" class="mr-1"></uk-icon>{} <uk-icon icon="chevron-right"></uk-icon></h3>
+                    <p class="text-muted-foreground uk-card-body space-y-2">Type: {}</p>
+                </a>"#,
+                entity_slug, db.slug, db.slug, db.database_type
+            ))
             .collect::<Vec<_>>()
-            .join("\n"),
-        create_db_button = create_db_button,
-        create_db_form = create_db_form,
-        database_list = if entity_response.databases.is_empty() {
-            r#"
-                <div class="block uk-card">
-                    <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
-                    <p class="uk-card-body space-y-2">Let's fix that by creating your first database.</p>
-                </div>"#.to_string()
-        } else {
-            entity_response
-                .databases
-                .into_iter()
-                .map(|db| format!(
-                    r#"
-                    <a href="{}/{}" class="block hover:bg-gray-50 uk-card">
-                        <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal" style="align-items: baseline;"><uk-icon icon="database" class="mr-1"></uk-icon>{} <uk-icon icon="chevron-right"></uk-icon></h3>
-                        <p class="text-muted-foreground uk-card-body space-y-2">Type: {}</p>
-                    </a>"#,
-                    entity_slug, db.slug, db.slug, db.database_type
-                ))
-                .collect::<Vec<_>>()
-                .join("\n")
-        }
-    );
-
-    let current_entity = authentication_details(&req).map(|details| details.entity);
+            .join("\n")
+    };
+    context.insert("database_list", &database_list);
+    
+    context.insert("logged_in_entity", &authentication_details(&req).map(|details| details.entity));
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(super::templates::base_content(
-            name,
-            &content,
-            current_entity.as_deref(),
-        )))
+        .body(
+            super::templates::TEMPLATES
+                .render("entity_details.html", &context)
+                .unwrap_or_else(|e| {
+                    eprintln!("Template error: {}", e);
+                    format!("Error rendering template: {}", e)
+                }),
+        ))
 }

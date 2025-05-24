@@ -14,16 +14,3 @@ lazy_static! {
     };
 }
 
-pub fn base_content(title: &str, content: &str, logged_in_entity: Option<&str>) -> String {
-    let mut context = tera::Context::new();
-    context.insert("title", title);
-    context.insert("content", content);
-    context.insert("logged_in_entity", &logged_in_entity);
-
-    TEMPLATES
-        .render("base_content.html", &context)
-        .unwrap_or_else(|e| {
-            eprintln!("Template error: {}", e);
-            format!("Error rendering template: {}", e)
-        })
-}

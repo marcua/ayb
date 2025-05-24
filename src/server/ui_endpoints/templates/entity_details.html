@@ -1,0 +1,52 @@
+{% extends "base_content.html" %}
+
+{% block title %}{{ name }} - Profile{% endblock %}
+
+{% block content %}
+<nav class="bg-white shadow-sm mb-6">
+    <div class="max-w-screen-xl mx-auto px-6 py-4">
+        <div class="flex justify-between items-center">
+            <a href="/" class="text-xl font-bold">ayb</a>
+            <div>
+                {% if logged_in_entity %}
+                <a href="/{{ logged_in_entity }}">{{ logged_in_entity }}</a> <span>(<a href="/log_out">log out</a>)</span>
+                {% else %}
+                <a href="/register">Register</a>
+                <a href="/log_in">Log in</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+<div class="max-w-screen-xl mx-auto px-6">
+    <div class="flex flex-col md:flex-row gap-4">
+        <div class="w-full md:w-1/3 lg:w-1/4">
+            <div class="uk-card">
+                <div class="uk-card-header space-y-2">
+                    <h1 class="uk-h2">{{ name }}</h1>
+                    <p class="text-muted-foreground">{{ description }}</p>
+                </div>
+                <div class="uk-card-body space-y-2">
+                    <p class="text-muted-foreground">{{ organization|safe }}</p>
+                    <p class="text-muted-foreground">{{ location|safe }}</p>
+                    <div class="mt-3">
+                        {{ links|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="w-full md:w-2/3 lg:w-3/4">
+            <div class="uk-card-header space-y-2 pr-0 flex justify-between items-center">
+                <h2 class="uk-h2">Databases</h2>
+                <button type="button"></button>
+                {{ create_db_button|safe }}
+            </div>
+            <div class="uk-card-body space-y-2 pr-0">
+                <hr class="uk-hr" />
+                {{ create_db_form|safe }}
+                {{ database_list|safe }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
