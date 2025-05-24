@@ -1,5 +1,5 @@
 <div class="border rounded p-4">
-    {% if rows | length > 0 %}
+    {% if total_rows > 0 %}
     <div class="space-x-2 flex justify-end">
         <form method="post" action="/{{ entity }}/{{ database }}/query" class="inline">
             <input type="hidden" name="query" value="{{ query }}">
@@ -33,7 +33,7 @@
             </tbody>
         </table>
     </div>
-    {% if rows | length == 0 %}
+    {% if total_rows == 0 %}
     <div>
         Query executed successfully. No results returned.
     </div>
