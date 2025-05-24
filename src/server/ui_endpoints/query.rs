@@ -105,6 +105,7 @@ pub async fn query(
                 .body(csv_content))
         }
         _ => {
+            #AI! Move all of this Rust-generated HTML into a query_results.html that we then render.
             // Format as HTML table
             let table_headers = query_result
                 .fields
