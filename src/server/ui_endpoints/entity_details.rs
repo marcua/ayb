@@ -11,7 +11,6 @@ pub async fn entity_details(
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
-
     let client = init_ayb_client(&ayb_config, &req);
 
     // Get entity details using the API client
@@ -49,7 +48,7 @@ pub async fn entity_details(
             super::templates::TEMPLATES
                 .render("entity_details.html", &context)
                 .unwrap_or_else(|e| {
-                    eprintln!("Template error: {}", e);
+                    eprintln!("Template error: {:?}", e);
                     format!("Error rendering template: {}", e)
                 }),
         ))
