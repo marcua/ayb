@@ -44,12 +44,5 @@ pub async fn entity_details(
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(
-            super::templates::TEMPLATES
-                .render("entity_details.html", &context)
-                .unwrap_or_else(|e| {
-                    eprintln!("Template error: {:?}", e);
-                    format!("Error rendering template: {}", e)
-                }),
-        ))
+        .body(super::templates::render("entity_details.html", &context)))
 }

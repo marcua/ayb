@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use tera::Tera;
+use tera::{Context, Tera};
 
 lazy_static! {
     pub static ref TEMPLATES: Tera = {
@@ -12,5 +12,14 @@ lazy_static! {
         };
         tera
     };
+}
+
+pub fn render(template_name: &str, context: &Context) -> String {
+    TEMPLATES
+        .render(template_name, context)
+        .unwrap_or_else(|e| {
+            eprintln!("Template error: {}", e);
+            format!("Error rendering template: {}", e)
+        })
 }
 

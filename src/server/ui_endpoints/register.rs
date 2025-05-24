@@ -8,14 +8,7 @@ use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 pub async fn register() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(
-            TEMPLATES
-                .render("register.html", &tera::Context::new())
-                .unwrap_or_else(|e| {
-                    eprintln!("Template error: {}", e);
-                    format!("Error rendering template: {}", e)
-                }),
-        ))
+        .body(super::templates::render("register.html", &tera::Context::new())))
 }
 
 #[derive(serde::Deserialize)]
@@ -38,23 +31,9 @@ pub async fn register_submit(
     {
         Ok(_) => Ok(HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(
-                TEMPLATES
-                    .render("register_check_email.html", &tera::Context::new())
-                    .unwrap_or_else(|e| {
-                        eprintln!("Template error: {}", e);
-                        format!("Error rendering template: {}", e)
-                    }),
-            )),
+            .body(super::templates::render("register_check_email.html", &tera::Context::new()))),
         Err(_) => Ok(HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(
-                TEMPLATES
-                    .render("register_error.html", &tera::Context::new())
-                    .unwrap_or_else(|e| {
-                        eprintln!("Template error: {}", e);
-                        format!("Error rendering template: {}", e)
-                    }),
-            )),
+            .body(super::templates::render("register_error.html", &tera::Context::new()))),
     }
 }

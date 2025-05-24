@@ -21,24 +21,10 @@ pub async fn confirm(
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .append_header(("Set-Cookie", cookie_for_token(&api_token)))
-                .body(
-                    TEMPLATES
-                        .render("confirm_success.html", &context)
-                        .unwrap_or_else(|e| {
-                            eprintln!("Template error: {}", e);
-                            format!("Error rendering template: {}", e)
-                        }),
-                ))
+                .body(super::templates::render("confirm_success.html", &context)))
         }
         Err(_) => Ok(HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(
-                TEMPLATES
-                    .render("confirm_error.html", &tera::Context::new())
-                    .unwrap_or_else(|e| {
-                        eprintln!("Template error: {}", e);
-                        format!("Error rendering template: {}", e)
-                    }),
-            )),
+            .body(super::templates::render("confirm_error.html", &tera::Context::new()))),
     }
 }

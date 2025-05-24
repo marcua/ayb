@@ -7,14 +7,7 @@ use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 pub async fn log_in() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(
-            TEMPLATES
-                .render("log_in.html", &tera::Context::new())
-                .unwrap_or_else(|e| {
-                    eprintln!("Template error: {:?}", e);
-                    format!("Error rendering template: {}", e)
-                }),
-        ))
+        .body(super::templates::render("log_in.html", &tera::Context::new())))
 }
 
 #[derive(serde::Deserialize)]
@@ -33,23 +26,9 @@ pub async fn log_in_submit(
     match client.log_in(&form.username).await {
         Ok(_) => Ok(HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(
-                TEMPLATES
-                    .render("log_in_check_email.html", &tera::Context::new())
-                    .unwrap_or_else(|e| {
-                        eprintln!("Template error: {}", e);
-                        format!("Error rendering template: {}", e)
-                    }),
-            )),
+            .body(super::templates::render("log_in_check_email.html", &tera::Context::new()))),
         Err(_) => Ok(HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(
-                TEMPLATES
-                    .render("log_in_error.html", &tera::Context::new())
-                    .unwrap_or_else(|e| {
-                        eprintln!("Template error: {}", e);
-                        format!("Error rendering template: {}", e)
-                    }),
-            )),
+            .body(super::templates::render("log_in_error.html", &tera::Context::new()))),
     }
 }
