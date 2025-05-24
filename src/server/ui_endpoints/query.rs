@@ -105,15 +105,6 @@ pub async fn query(
                 .body(csv_content))
         }
         _ => {
-            #AI! Move all of this Rust-generated HTML into a query_results.html that we then render.
-            // Format as HTML table
-            let table_headers = query_result
-                .fields
-                .iter()
-                .map(|field| format!("<th>{}</th>", field))
-                .collect::<Vec<String>>()
-                .join("");
-
             // Get total number of rows and limit display to 500
             let total_rows = query_result.rows.len();
             let display_limit = 500;
@@ -123,90 +114,19 @@ pub async fn query(
                 &query_result.rows
             };
 
-            // Create table rows for the displayed results
-            let table_rows = display_rows
-                .iter()
-                .map(|row| {
-                    let cells = row
-                        .iter()
-                        .map(|cell| {
-                            let display_value = match cell {
-                                Some(value) => value,
-                                None => "",
-                            };
-                            format!("<td>{}</td>", display_value)
-                        })
-                        .collect::<Vec<String>>()
-                        .join("");
-                    format!("<tr>{}</tr>", cells)
-                })
-                .collect::<Vec<String>>()
-                .join("");
+            let mut context = tera::Context::new();
+            context.insert("entity", entity_slug);
+            context.insert("database", database_slug);
+            context.insert("query", query_text);
+            context.insert("fields", &query_result.fields);
+            context.insert("rows", &query_result.rows);
+            context.insert("display_rows", &display_rows);
+            context.insert("total_rows", &total_rows);
+            context.insert("display_limit", &display_limit);
 
-            let results_message = if query_result.rows.is_empty() {
-                r#"<div>
-                    Query executed successfully. No results returned.
-                </div>"#
-                    .to_string()
-            } else if total_rows > display_limit {
-                format!(
-                    r#"<div class="mt-4">
-                        {}/{} rows. Download for full dataset.
-                    </div>"#,
-                    display_limit, total_rows
-                )
-            } else {
-                format!(
-                    r#"<div class="mt-4">
-                        {} row{}</span>
-                    </div>"#,
-                    total_rows,
-                    if total_rows == 1 { "" } else { "s" }
-                )
-            };
-
-            // Create a form for downloading in different formats
-            let download_options = if query_result.rows.is_empty() {
-                // Don't show download buttons when there are no results
-                String::new()
-            } else {
-                format!(
-                    r#"<div class="space-x-2 flex justify-end">
-                        <form method="post" action="/{entity}/{database}/query" class="inline">
-                            <input type="hidden" name="query" value="{}">
-                            <input type="hidden" name="format" value="csv">
-                            <button type="submit" class="uk-btn uk-btn-default uk-btn-sm">Download CSV</button>
-                        </form>
-                        <form method="post" action="/{entity}/{database}/query" class="inline">
-                            <input type="hidden" name="query" value="{}">
-                            <input type="hidden" name="format" value="json">
-                            <button type="submit" class="uk-btn uk-btn-default uk-btn-sm">Download JSON</button>
-                        </form>
-                    </div>"#,
-                    query_text,
-                    query_text,
-                    entity = entity_slug,
-                    database = database_slug
-                )
-            };
-
-            let html = format!(
-                r#"<div class="border rounded p-4">
-                    {}
-                    <div class="overflow-x-auto">
-                        <table class="uk-table uk-table-striped uk-table-sm">
-                            <thead>
-                                <tr>{}</tr>
-                            </thead>
-                            <tbody>{}</tbody>
-                        </table>
-                    </div>
-                    {}
-                </div>"#,
-                download_options, table_headers, table_rows, results_message
-            );
-
-            Ok(HttpResponse::Ok().content_type("text/html").body(html))
+            Ok(HttpResponse::Ok()
+                .content_type("text/html")
+                .body(render("query_results.html", &context)))
         }
     }
 }

@@ -1,0 +1,49 @@
+<div class="border rounded p-4">
+    {% if rows | length > 0 %}
+    <div class="space-x-2 flex justify-end">
+        <form method="post" action="/{{ entity }}/{{ database }}/query" class="inline">
+            <input type="hidden" name="query" value="{{ query }}">
+            <input type="hidden" name="format" value="csv">
+            <button type="submit" class="uk-btn uk-btn-default uk-btn-sm">Download CSV</button>
+        </form>
+        <form method="post" action="/{{ entity }}/{{ database }}/query" class="inline">
+            <input type="hidden" name="query" value="{{ query }}">
+            <input type="hidden" name="format" value="json">
+            <button type="submit" class="uk-btn uk-btn-default uk-btn-sm">Download JSON</button>
+        </form>
+    </div>
+    {% endif %}
+    <div class="overflow-x-auto">
+        <table class="uk-table uk-table-striped uk-table-sm">
+            <thead>
+                <tr>
+                    {% for field in fields %}
+                    <th>{{ field }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in display_rows %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell | default(value="") }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if rows | length == 0 %}
+    <div>
+        Query executed successfully. No results returned.
+    </div>
+    {% elif total_rows > display_limit %}
+    <div class="mt-4">
+        {{ display_limit }}/{{ total_rows }} rows. Download for full dataset.
+    </div>
+    {% else %}
+    <div class="mt-4">
+        {{ total_rows }} row{% if total_rows != 1 %}s{% endif %}
+    </div>
+    {% endif %}
+</div>
