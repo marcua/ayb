@@ -57,7 +57,7 @@
                 {% if can_create_database %}
                 <button
                     data-uk-toggle="target: #create-database-form"
-                    class="uk-btn {% if databases is empty %}uk-btn-primary{% else %}uk-btn-default{% endif %} uk-btn-sm">
+                    class="uk-btn {% if databases | length == 0 %}uk-btn-primary{% else %}uk-btn-default{% endif %} uk-btn-sm">
                     <uk-icon icon="plus"></uk-icon> Create database
                 </button>
                 {% endif %}
@@ -152,7 +152,7 @@
                 </div>
                 {% endif %}
                 
-                {% if databases is empty %}
+                {% if databases | length == 0 %}
                 <div class="block uk-card">
                     <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
                     <p class="uk-card-body space-y-2">Let's fix that by creating your first database.</p>
