@@ -1,6 +1,7 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
+use crate::server::ui_endpoints::templates::render;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}/{database}")]
@@ -29,5 +30,5 @@ pub async fn database(
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(super::templates::render("database.html", &context)))
+        .body(render("database.html", &context)))
 }

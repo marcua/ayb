@@ -1,6 +1,7 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
+use crate::server::ui_endpoints::templates::render;
 use actix_web::{post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 

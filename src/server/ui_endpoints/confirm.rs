@@ -1,6 +1,6 @@
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{cookie_for_token, init_ayb_client};
-use crate::server::ui_endpoints::templates::TEMPLATES;
+use crate::server::ui_endpoints::templates::render;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/confirm/{token}")]
@@ -21,10 +21,10 @@ pub async fn confirm(
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .append_header(("Set-Cookie", cookie_for_token(&api_token)))
-                .body(super::templates::render("confirm_success.html", &context)))
+                .body(render("confirm_success.html", &context)))
         }
         Err(_) => Ok(HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(super::templates::render("confirm_error.html", &tera::Context::new()))),
+            .body(render("confirm_error.html", &tera::Context::new()))),
     }
 }
