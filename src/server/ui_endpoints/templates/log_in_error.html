@@ -1,0 +1,16 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Login error{% endblock %}
+
+{% block other_action %}
+<a href="/register" class="text-sm">Create account</a>
+{% endblock %}
+
+{% block auth_content %}
+<div class="uk-alert uk-alert-destructive" data-uk-alert>
+  <div class="uk-alert-title">Unable to log in</div>
+  <p>
+    You were unable to log in. Please try again.
+  </p>
+</div>
+{% endblock %}

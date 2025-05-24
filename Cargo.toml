@@ -23,6 +23,7 @@ env_logger = { version = "0.11.6" }
 fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
+lazy_static = { version = "1.5.0" }
 lettre = { version = "0.11.15", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.1" }
 regex = { version = "1.11.1"}
@@ -36,6 +37,7 @@ serde_json = { version = "1.0.140", features = ["raw_value"] }
 serde_repr = { version = "0.1.20" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 time = { version = "0.3.41" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
+tera = { version = "1.20.0" }
 toml = { version = "0.8.22" }
 tokio = { version = "1.45.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.14.0", features = ["signal"]}

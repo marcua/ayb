@@ -1,32 +1,20 @@
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::base_auth;
+use crate::server::ui_endpoints::templates::TEMPLATES;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
-
-static CREATE_ACCOUNT: &str = r#"<a href="/register" class="text-sm">Create account</a>"#;
 
 #[get("/log_in")]
 pub async fn log_in() -> Result<HttpResponse> {
-    let content = r#"
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <h1 class="text-2xl font-bold mb-6">Log in</h1>
-            <form method="POST" class="space-y-4">
-                <div>
-                    <label class="uk-form-label">Username</label>
-                    <input type="text" name="username" required 
-                           class="uk-input">
-                </div>
-                <button type="submit" 
-                        class="uk-btn uk-btn-primary w-full">
-                    Log in
-                </button>
-            </form>
-        </div>
-    "#;
-
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
-        .body(base_auth("Log in", CREATE_ACCOUNT, content, None)))
+        .body(
+            TEMPLATES
+                .render("log_in.html", &tera::Context::new())
+                .unwrap_or_else(|e| {
+                    eprintln!("Template error: {:?}", e);
+                    format!("Error rendering template: {}", e)
+                }),
+        ))
 }
 
 #[derive(serde::Deserialize)]
@@ -43,33 +31,25 @@ pub async fn log_in_submit(
     let client = init_ayb_client(&ayb_config, &req);
 
     match client.log_in(&form.username).await {
-        Ok(_) => {
-            let content = r#"
-<div class="uk-alert" data-uk-alert>
-  <div class="uk-alert-title">Check email</div>
-  <p>
-    Please check your email for a confirmation link.
-  </p>
-</div>
-            "#;
-
-            Ok(HttpResponse::Ok()
-                .content_type("text/html; charset=utf-8")
-                .body(base_auth("Check email", CREATE_ACCOUNT, content, None)))
-        }
-        Err(_) => {
-            let content = r#"
-<div class="uk-alert uk-alert-destructive" data-uk-alert>
-  <div class="uk-alert-title">Unable to log in</div>
-  <p>
-    You were unable to log in. Please try again.
-  </p>
-</div>
-            "#;
-
-            Ok(HttpResponse::Ok()
-                .content_type("text/html; charset=utf-8")
-                .body(base_auth("Login error", CREATE_ACCOUNT, content, None)))
-        }
+        Ok(_) => Ok(HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(
+                TEMPLATES
+                    .render("log_in_check_email.html", &tera::Context::new())
+                    .unwrap_or_else(|e| {
+                        eprintln!("Template error: {}", e);
+                        format!("Error rendering template: {}", e)
+                    }),
+            )),
+        Err(_) => Ok(HttpResponse::Ok()
+            .content_type("text/html; charset=utf-8")
+            .body(
+                TEMPLATES
+                    .render("log_in_error.html", &tera::Context::new())
+                    .unwrap_or_else(|e| {
+                        eprintln!("Template error: {}", e);
+                        format!("Error rendering template: {}", e)
+                    }),
+            )),
     }
 }
