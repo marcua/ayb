@@ -20,6 +20,7 @@ pub async fn entity_details(
         Err(_) => return Ok(HttpResponse::NotFound().body("Entity not found")),
     };
 
+    #AI! There's a lot of rust-generated HTML in this file. We don't do that in databases.rs, where we pass whatever facts as context into the template and all of the HTML lives in the template. Do the same thing here: all HTML should move into entity_details.html and the only thing you pass into context are the fact necessary to drive the template.
     let create_db_button = if entity_response.permissions.can_create_database {
         format!(
             r#"<button
