@@ -18,7 +18,7 @@ pub fn render(template_name: &str, context: &Context) -> String {
     TEMPLATES
         .render(template_name, context)
         .unwrap_or_else(|e| {
-            eprintln!("Template error: {}", e);
+            eprintln!("Template error: {:?}", e);
             format!("Error rendering template: {}", e)
         })
 }
