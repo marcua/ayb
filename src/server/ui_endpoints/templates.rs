@@ -21,7 +21,7 @@ pub fn base_content(title: &str, content: &str, logged_in_entity: Option<&str>) 
     context.insert("logged_in_entity", &logged_in_entity);
 
     TEMPLATES
-        .render("content.html", &context)
+        .render("base_content.html", &context)
         .unwrap_or_else(|e| {
             eprintln!("Template error: {}", e);
             format!("Error rendering template: {}", e)
