@@ -23,25 +23,37 @@ static TEMPLATES: OnceLock<Tera> = OnceLock::new();
 fn templates() -> &'static Tera {
     TEMPLATES.get_or_init(|| {
         let mut tera = Tera::default();
-        
+
         // Add all templates manually
         tera.add_raw_template("base.html", BASE_HTML).unwrap();
-        tera.add_raw_template("base_auth.html", BASE_AUTH_HTML).unwrap();
-        tera.add_raw_template("base_content.html", BASE_CONTENT_HTML).unwrap();
-        tera.add_raw_template("confirm_error.html", CONFIRM_ERROR_HTML).unwrap();
-        tera.add_raw_template("confirm_success.html", CONFIRM_SUCCESS_HTML).unwrap();
-        tera.add_raw_template("database.html", DATABASE_HTML).unwrap();
-        tera.add_raw_template("entity_details.html", ENTITY_DETAILS_HTML).unwrap();
+        tera.add_raw_template("base_auth.html", BASE_AUTH_HTML)
+            .unwrap();
+        tera.add_raw_template("base_content.html", BASE_CONTENT_HTML)
+            .unwrap();
+        tera.add_raw_template("confirm_error.html", CONFIRM_ERROR_HTML)
+            .unwrap();
+        tera.add_raw_template("confirm_success.html", CONFIRM_SUCCESS_HTML)
+            .unwrap();
+        tera.add_raw_template("database.html", DATABASE_HTML)
+            .unwrap();
+        tera.add_raw_template("entity_details.html", ENTITY_DETAILS_HTML)
+            .unwrap();
         tera.add_raw_template("log_in.html", LOG_IN_HTML).unwrap();
-        tera.add_raw_template("log_in_check_email.html", LOG_IN_CHECK_EMAIL_HTML).unwrap();
-        tera.add_raw_template("log_in_error.html", LOG_IN_ERROR_HTML).unwrap();
-        tera.add_raw_template("query_results.html", QUERY_RESULTS_HTML).unwrap();
-        tera.add_raw_template("register.html", REGISTER_HTML).unwrap();
-        tera.add_raw_template("register_check_email.html", REGISTER_CHECK_EMAIL_HTML).unwrap();
-        tera.add_raw_template("register_error.html", REGISTER_ERROR_HTML).unwrap();
-        
+        tera.add_raw_template("log_in_check_email.html", LOG_IN_CHECK_EMAIL_HTML)
+            .unwrap();
+        tera.add_raw_template("log_in_error.html", LOG_IN_ERROR_HTML)
+            .unwrap();
+        tera.add_raw_template("query_results.html", QUERY_RESULTS_HTML)
+            .unwrap();
+        tera.add_raw_template("register.html", REGISTER_HTML)
+            .unwrap();
+        tera.add_raw_template("register_check_email.html", REGISTER_CHECK_EMAIL_HTML)
+            .unwrap();
+        tera.add_raw_template("register_error.html", REGISTER_ERROR_HTML)
+            .unwrap();
+
         tera.build_inheritance_chains().unwrap();
-        
+
         tera
     })
 }
