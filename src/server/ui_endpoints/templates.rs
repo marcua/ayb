@@ -22,4 +22,3 @@ pub fn render(template_name: &str, context: &Context) -> String {
             format!("Error rendering template: {}", e)
         })
 }
-

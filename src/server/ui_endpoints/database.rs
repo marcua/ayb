@@ -24,9 +24,18 @@ pub async fn database(
     context.insert("entity", entity_slug);
     context.insert("database", database_slug);
     context.insert("database_type", &database_response.database_type);
-    context.insert("can_manage_database", &database_response.can_manage_database);
-    context.insert("highest_query_access_level", &database_response.highest_query_access_level);
-    context.insert("logged_in_entity", &authentication_details(&req).map(|details| details.entity));
+    context.insert(
+        "can_manage_database",
+        &database_response.can_manage_database,
+    );
+    context.insert(
+        "highest_query_access_level",
+        &database_response.highest_query_access_level,
+    );
+    context.insert(
+        "logged_in_entity",
+        &authentication_details(&req).map(|details| details.entity),
+    );
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")

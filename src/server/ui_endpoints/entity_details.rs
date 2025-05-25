@@ -25,23 +25,32 @@ pub async fn entity_details(
         .display_name
         .as_deref()
         .unwrap_or(&entity_response.slug);
-    
+
     let mut context = tera::Context::new();
     context.insert("name", name);
     context.insert("entity", entity_slug);
-    context.insert("description", &entity_response.profile.description.unwrap_or_default());
+    context.insert(
+        "description",
+        &entity_response.profile.description.unwrap_or_default(),
+    );
     context.insert("organization", &entity_response.profile.organization);
     context.insert("location", &entity_response.profile.location);
     context.insert("links", &entity_response.profile.links);
-    context.insert("can_create_database", &entity_response.permissions.can_create_database);
+    context.insert(
+        "can_create_database",
+        &entity_response.permissions.can_create_database,
+    );
     context.insert("databases", &entity_response.databases);
-    
+
     // Add sharing level values for the template
     context.insert("no_access", PublicSharingLevel::NoAccess.to_str());
     context.insert("fork", PublicSharingLevel::Fork.to_str());
     context.insert("read_only", PublicSharingLevel::ReadOnly.to_str());
-    
-    context.insert("logged_in_entity", &authentication_details(&req).map(|details| details.entity));
+
+    context.insert(
+        "logged_in_entity",
+        &authentication_details(&req).map(|details| details.entity),
+    );
 
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
