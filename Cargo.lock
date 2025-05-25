@@ -479,7 +479,6 @@ dependencies = [
  "fernet",
  "futures-util",
  "go-parse-duration",
- "lazy_static",
  "lettre",
  "predicates",
  "prefixed-api-key",
