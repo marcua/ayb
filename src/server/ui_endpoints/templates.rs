@@ -2,6 +2,7 @@ use std::sync::OnceLock;
 use tera::{Context, Tera};
 
 // Embed all template files directly into the binary
+// AI: Since these are only used in the `templates` function, inline the calls to `include_str!` in that function and don't define the constants globally. AI!
 const BASE_HTML: &str = include_str!("templates/base.html");
 const BASE_AUTH_HTML: &str = include_str!("templates/base_auth.html");
 const BASE_CONTENT_HTML: &str = include_str!("templates/base_content.html");
