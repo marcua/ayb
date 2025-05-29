@@ -8,33 +8,63 @@ fn templates() -> &'static Tera {
     TEMPLATES.get_or_init(|| {
         let mut tera = Tera::default();
 
-        // Add all templates manually, inline the include_str! calls
-        tera.add_raw_template("base.html", include_str!("templates/base.html")).unwrap();
+        // Add all templates manually, using include_str! calls to
+        // embed the templates in compiled binary.
+        tera.add_raw_template("base.html", include_str!("templates/base.html"))
+            .unwrap();
         tera.add_raw_template("base_auth.html", include_str!("templates/base_auth.html"))
             .unwrap();
-        tera.add_raw_template("base_content.html", include_str!("templates/base_content.html"))
-            .unwrap();
-        tera.add_raw_template("confirm_error.html", include_str!("templates/confirm_error.html"))
-            .unwrap();
-        tera.add_raw_template("confirm_success.html", include_str!("templates/confirm_success.html"))
-            .unwrap();
+        tera.add_raw_template(
+            "base_content.html",
+            include_str!("templates/base_content.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "confirm_error.html",
+            include_str!("templates/confirm_error.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "confirm_success.html",
+            include_str!("templates/confirm_success.html"),
+        )
+        .unwrap();
         tera.add_raw_template("database.html", include_str!("templates/database.html"))
             .unwrap();
-        tera.add_raw_template("entity_details.html", include_str!("templates/entity_details.html"))
+        tera.add_raw_template(
+            "entity_details.html",
+            include_str!("templates/entity_details.html"),
+        )
+        .unwrap();
+        tera.add_raw_template("log_in.html", include_str!("templates/log_in.html"))
             .unwrap();
-        tera.add_raw_template("log_in.html", include_str!("templates/log_in.html")).unwrap();
-        tera.add_raw_template("log_in_check_email.html", include_str!("templates/log_in_check_email.html"))
-            .unwrap();
-        tera.add_raw_template("log_in_error.html", include_str!("templates/log_in_error.html"))
-            .unwrap();
-        tera.add_raw_template("query_results.html", include_str!("templates/query_results.html"))
-            .unwrap();
+        tera.add_raw_template(
+            "log_in_check_email.html",
+            include_str!("templates/log_in_check_email.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "log_in_error.html",
+            include_str!("templates/log_in_error.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "query_results.html",
+            include_str!("templates/query_results.html"),
+        )
+        .unwrap();
         tera.add_raw_template("register.html", include_str!("templates/register.html"))
             .unwrap();
-        tera.add_raw_template("register_check_email.html", include_str!("templates/register_check_email.html"))
-            .unwrap();
-        tera.add_raw_template("register_error.html", include_str!("templates/register_error.html"))
-            .unwrap();
+        tera.add_raw_template(
+            "register_check_email.html",
+            include_str!("templates/register_check_email.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "register_error.html",
+            include_str!("templates/register_error.html"),
+        )
+        .unwrap();
 
         tera.build_inheritance_chains().unwrap();
 
