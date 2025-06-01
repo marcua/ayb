@@ -26,7 +26,7 @@ pub async fn update_public_sharing(
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database.to_lowercase();
-    
+
     let public_sharing_level = match PublicSharingLevel::from_str(&form.public_sharing_level) {
         Ok(level) => level,
         Err(_) => {
@@ -48,12 +48,12 @@ pub async fn update_public_sharing(
         .update_database(entity_slug, database_slug, &public_sharing_level)
         .await
     {
-        Ok(_) => Ok(HttpResponse::Ok()
-            .content_type("text/html")
-            .body(r#"<div class="uk-alert uk-alert-success" data-uk-alert="">
+        Ok(_) => Ok(HttpResponse::Ok().content_type("text/html").body(
+            r#"<div class="uk-alert uk-alert-success" data-uk-alert="">
                 <div class="uk-alert-title">Success</div>
                 <p>Public sharing level updated successfully.</p>
-            </div>"#)),
+            </div>"#,
+        )),
         Err(err) => {
             let error_message = format!("{}", err);
             Ok(HttpResponse::BadRequest()
@@ -79,7 +79,7 @@ pub async fn share_with_entity(
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database.to_lowercase();
     let target_entity = &form.entity.trim().to_lowercase();
-    
+
     let sharing_level = match EntityDatabaseSharingLevel::from_str(&form.sharing_level) {
         Ok(level) => level,
         Err(_) => {
@@ -96,12 +96,12 @@ pub async fn share_with_entity(
     };
 
     if target_entity.is_empty() {
-        return Ok(HttpResponse::BadRequest()
-            .content_type("text/html")
-            .body(r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
+        return Ok(HttpResponse::BadRequest().content_type("text/html").body(
+            r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
                 <div class="uk-alert-title">Missing username</div>
                 <p>Please enter a username to share with.</p>
-            </div>"#));
+            </div>"#,
+        ));
     }
 
     let client = init_ayb_client(&ayb_config, &req);
@@ -110,15 +110,13 @@ pub async fn share_with_entity(
         .share_database(entity_slug, database_slug, target_entity, &sharing_level)
         .await
     {
-        Ok(_) => Ok(HttpResponse::Ok()
-            .content_type("text/html")
-            .body(format!(
-                r#"<div class="uk-alert uk-alert-success" data-uk-alert="">
+        Ok(_) => Ok(HttpResponse::Ok().content_type("text/html").body(format!(
+            r#"<div class="uk-alert uk-alert-success" data-uk-alert="">
                     <div class="uk-alert-title">Success</div>
                     <p>Database access updated for user '{}'.</p>
                 </div>"#,
-                target_entity
-            ))),
+            target_entity
+        ))),
         Err(err) => {
             let error_message = format!("{}", err);
             Ok(HttpResponse::BadRequest()
