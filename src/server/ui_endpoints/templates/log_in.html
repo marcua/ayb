@@ -1,0 +1,24 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Log in{% endblock %}
+
+{% block other_action %}
+<a href="/register" class="text-sm">Create account</a>
+{% endblock %}
+
+{% block auth_content %}
+<div class="bg-white rounded-lg shadow-sm p-6">
+    <h1 class="text-2xl font-bold mb-6">Log in</h1>
+    <form method="POST" class="space-y-4">
+        <div>
+            <label class="uk-form-label">Username</label>
+            <input type="text" name="username" required 
+                   class="uk-input">
+        </div>
+        <button type="submit" 
+                class="uk-btn uk-btn-primary w-full">
+            Log in
+        </button>
+    </form>
+</div>
+{% endblock %}

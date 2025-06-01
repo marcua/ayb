@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen grid xl:grid-cols-2">
+    <div class="hidden xl:flex flex-col justify-between bg-foreground text-background p-8">
+        <div class="flex items-center text-lg font-medium">
+            ayb
+        </div>
+        <blockquote class="space-y-2">
+            <p class="text-lg">You're a minute away from creating, sharing, and querying a database.</p>
+        </blockquote>
+    </div>
+    <div class="flex flex-col p-8">
+        <div class="flex justify-end">
+            {% block other_action %}{% endblock %}
+        </div>
+        <div class="flex flex-1 items-center justify-center">
+            {% block auth_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}

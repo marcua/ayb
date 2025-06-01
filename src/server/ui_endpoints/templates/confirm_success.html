@@ -1,0 +1,16 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Confirmation successful{% endblock %}
+
+{% block other_action %}{% endblock %}
+
+{% block auth_content %}
+<div class="bg-white rounded-lg shadow-sm p-6">
+    <h1 class="text-2xl font-bold mb-6">Success</h1>
+    <p class="text-sm text-muted-foreground mb-6">Confirmation complete. You are now logged in.</p>
+    <a href="/{{ entity }}"
+       class="uk-btn uk-btn-primary w-full">
+                Go to Your Profile
+    </a>
+</div>
+{% endblock %}

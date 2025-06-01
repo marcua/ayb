@@ -1,0 +1,87 @@
+{% extends "base_content.html" %}
+
+{% block title %}Explore {{ entity }}/{{ database }}{% endblock %}
+
+{% block page_content %}
+<div class="max-w-screen-xl mx-auto px-6">
+    <div class="max-w-screen-xl mx-auto">
+        <div class="breadcrumbs mb-4">
+            <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> / 
+            <span class="font-semibold">{{ database }}</span> ({{ database_type }})
+        </div>
+        <ul data-uk-tab class="mb-6">
+            <li class="uk-active"><a class="px-4 pb-3 pt-2" href="">Query</a></li>
+            {% if can_manage_database %}
+                <li><a class="px-4 pb-3 pt-2" href="">Sharing</a></li>
+                <li><a class="px-4 pb-3 pt-2" href="">Snapshots</a></li>
+            {% endif %}
+        </ul>
+        <ul class="uk-switcher mt-4">
+            <li>
+                {% if highest_query_access_level %}
+                    <div class="query-interface">
+                        <h3 class="text-lg font-medium mb-2">Database querying</h3>
+                        <p class="text-muted-foreground mb-4">Select, add, and update data.</p>
+                        <form
+                          id="query-form"
+                          class="mb-4"
+                          action="/{{ entity }}/{{ database }}/query"
+                          method="post"
+                          hx-post="/{{ entity }}/{{ database }}/query"
+                          hx-target="#query-results"
+                          hx-target-400="#query-results"
+                          hx-swap="innerHTML">
+                            <div class="mb-2">
+                                <textarea id="query" name="query" rows="5"
+                                    class="p-4 w-full border rounded focus:border-blue-500"
+                                    placeholder="Enter a SQL query, like 'SELECT * FROM your_table LIMIT 10'"></textarea>
+                            </div>
+                            <div>
+                                <button type="submit" class="uk-btn uk-btn-primary" disabled id="run-query-btn">
+                                    Run query
+                                </button>
+                                <script>
+                                    // Form is submittable once a query exists.
+                                    document.addEventListener('DOMContentLoaded', function() {
+                                        const queryTextarea = document.getElementById('query');
+                                        const runButton = document.getElementById('run-query-btn');
+                                        runButton.disabled = queryTextarea.value.trim() === '';
+                                        queryTextarea.addEventListener('input', function() {
+                                            runButton.disabled = this.value.trim() === '';
+                                        });
+                                    });
+                                </script>
+                            </div>
+                        </form>
+                        <div id="query-results">
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="uk-alert uk-alert-destructive" data-uk-alert="">
+                        <div class="uk-alert-title">You don't have query access to this database.</div>
+                        <p>You can request access from the database owner or fork a copy.</p>
+                    </div>
+                {% endif %}
+            </li>
+            <li>
+                <div class="sharing-interface">
+                    <h3 class="text-lg font-medium mb-2">Database sharing</h3>
+                    <p class="text-muted-foreground mb-4">Manage who can access this database and what permissions they have.</p>
+                    <p class="text-sm">Use the command line to manage sharing:</p>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client share {{ entity }}/{{ database }} [entity] [sharing-level]</pre>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {{ entity }}/{{ database }}</pre>
+                </div>
+            </li>
+            <li>
+                <div class="snapshots-interface">
+                    <h3 class="text-lg font-medium mb-2">Database snapshots</h3>
+                    <p class="text-muted-foreground mb-4">View and restore database snapshots.</p>
+                    <p class="text-sm">Use the command line to manage snapshots:</p>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client list_snapshots {{ entity }}/{{ database }}</pre>
+                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client restore_snapshot {{ entity }}/{{ database }} [snapshot-id]</pre>
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

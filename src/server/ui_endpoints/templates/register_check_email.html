@@ -1,0 +1,16 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Check email{% endblock %}
+
+{% block other_action %}
+<a href="/log_in" class="text-sm">Log in</a>
+{% endblock %}
+
+{% block auth_content %}
+<div class="uk-alert" data-uk-alert>
+  <div class="uk-alert-title">Check email</div>
+  <p>
+    Please check your email for a confirmation link.
+  </p>
+</div>
+{% endblock %}

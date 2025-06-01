@@ -1,9 +1,7 @@
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{cookie_for_token, init_ayb_client};
-use crate::server::ui_endpoints::templates::base_auth;
+use crate::server::ui_endpoints::templates::{ok_response, render};
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
-
-static LOG_IN: &str = r#"<a href="/log_in" class="text-sm">Log in</a>"#;
 
 #[get("/confirm/{token}")]
 pub async fn confirm(
@@ -16,43 +14,14 @@ pub async fn confirm(
 
     match client.confirm(&token).await {
         Ok(api_token) => {
-            let content = format!(
-                r#"
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <h1 class="text-2xl font-bold mb-6">Success</h1>
-            <p class="text-sm text-muted-foreground mb-6">Confirmation complete. You are now logged in.</p>
-            <a href="/{}"
-               class="uk-btn uk-btn-primary w-full">
-                        Go to Your Profile
-            </a>
-        </div>
-                "#,
-                api_token.entity
-            );
-
+            let mut context = tera::Context::new();
+            context.insert("entity", &api_token.entity);
+            context.insert("redirect", &format!("/{}", api_token.entity));
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .append_header(("Set-Cookie", cookie_for_token(&api_token)))
-                .body(base_auth(
-                    "Success",
-                    "",
-                    &content,
-                    Some(format!("/{}", api_token.entity)),
-                )))
+                .body(render("confirm_success.html", &context)))
         }
-        Err(_) => {
-            let content = r#"
-<div class="uk-alert uk-alert-destructive" data-uk-alert>
-  <div class="uk-alert-title">Unable to log in</div>
-  <p>
-    Invalid or expired confirmation link. Please try again.
-  </p>
-</div>
-            "#;
-
-            Ok(HttpResponse::Ok()
-                .content_type("text/html; charset=utf-8")
-                .body(base_auth("Confirmation failed", LOG_IN, content, None)))
-        }
+        Err(_) => ok_response("confirm_error.html", &tera::Context::new()),
     }
 }
