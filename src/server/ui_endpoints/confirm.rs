@@ -1,6 +1,6 @@
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{cookie_for_token, init_ayb_client};
-use crate::server::ui_endpoints::templates::{ok_response, ok_response_builder};
+use crate::server::ui_endpoints::templates::{ok_response, render};
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/confirm/{token}")]
@@ -17,10 +17,10 @@ pub async fn confirm(
             let mut context = tera::Context::new();
             context.insert("entity", &api_token.entity);
             context.insert("redirect", &format!("/{}", api_token.entity));
-
-            let mut builder = ok_response_builder("confirm_success.html", &context);
-            builder.append_header(("Set-Cookie", cookie_for_token(&api_token)));
-            Ok(builder.finish())
+            Ok(HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .append_header(("Set-Cookie", cookie_for_token(&api_token)))
+                .body(render("confirm_success.html", &context)))
         }
         Err(_) => ok_response("confirm_error.html", &tera::Context::new()),
     }

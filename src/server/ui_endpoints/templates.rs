@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, HttpResponseBuilder, Result};
+use actix_web::{HttpResponse, Result};
 use std::sync::OnceLock;
 use tera::{Context, Tera};
 
@@ -73,7 +73,7 @@ fn templates() -> &'static Tera {
     })
 }
 
-fn render(template_name: &str, context: &Context) -> String {
+pub fn render(template_name: &str, context: &Context) -> String {
     templates()
         .render(template_name, context)
         .unwrap_or_else(|e| {
@@ -83,12 +83,7 @@ fn render(template_name: &str, context: &Context) -> String {
 }
 
 pub fn ok_response(template_name: &str, context: &Context) -> Result<HttpResponse> {
-    Ok(ok_response_builder(template_name, context).finish())
-}
-
-pub fn ok_response_builder(template_name: &str, context: &Context) -> HttpResponseBuilder {
-    let mut builder = HttpResponse::Ok();
-    builder.content_type("text/html; charset=utf-8");
-    builder.body(render(template_name, context));
-    builder
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(render(template_name, context)))
 }
