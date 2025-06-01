@@ -33,7 +33,10 @@ pub async fn database_details(
             database_type: DBType::try_from(database.db_type).unwrap().to_str().into(),
             highest_query_access_level: access_level,
             can_manage_database: can_manage,
-            public_sharing_level: PublicSharingLevel::try_from(database.public_sharing_level).unwrap().to_str().to_string(),
+            public_sharing_level: PublicSharingLevel::try_from(database.public_sharing_level)
+                .unwrap()
+                .to_str()
+                .to_string(),
         };
 
         Ok(HttpResponse::Ok().json(details))
