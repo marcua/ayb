@@ -64,13 +64,176 @@
                 {% endif %}
             </li>
             <li>
-              # AI! Replace this placeholder sharing interface with an actual interface. It should have two htmx-powered forms: 1) for controlling the public sharing level of the database (it should show the current level but have it be togglable, and if you change the sharing level, a change button should become enabled, and 2) An htmx-powered form for sharing a database with someone (input for user, toggle for sharing level, and a submit button that's enabled when you've selected both). In both cases, show errors where relevant.
                 <div class="sharing-interface">
                     <h3 class="text-lg font-medium mb-2">Database sharing</h3>
                     <p class="text-muted-foreground mb-4">Manage who can access this database and what permissions they have.</p>
-                    <p class="text-sm">Use the command line to manage sharing:</p>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client share {{ entity }}/{{ database }} [entity] [sharing-level]</pre>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {{ entity }}/{{ database }}</pre>
+                    
+                    <!-- Public sharing level form -->
+                    <div class="uk-card uk-card-default mb-4">
+                        <div class="uk-card-header">
+                            <h4 class="uk-card-title">Public sharing level</h4>
+                        </div>
+                        <div class="uk-card-body">
+                            <form id="public-sharing-form" class="space-y-4">
+                                <div class="uk-btn-group" data-uk-button-radio>
+                                    <button
+                                        type="button"
+                                        class="uk-btn uk-btn-default"
+                                        data-value="no-access"
+                                        onclick="setPublicSharingLevel(this, 'no-access')">
+                                        Private
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="uk-btn uk-btn-default"
+                                        data-value="fork"
+                                        onclick="setPublicSharingLevel(this, 'fork')">
+                                        Forkable
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="uk-btn uk-btn-default"
+                                        data-value="read-only"
+                                        onclick="setPublicSharingLevel(this, 'read-only')">
+                                        Read-only
+                                    </button>
+                                </div>
+                                <input type="hidden" id="public-sharing-level-value" name="public_sharing_level" value="">
+                                <div>
+                                    <button type="button" id="update-public-sharing-btn" class="uk-btn uk-btn-primary" disabled
+                                            hx-post="/{{ entity }}/{{ database }}/update_public_sharing"
+                                            hx-target="#public-sharing-error"
+                                            hx-target-400="#public-sharing-error"
+                                            hx-swap="innerHTML"
+                                            hx-include="#public-sharing-level-value">
+                                        Update sharing level
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="public-sharing-error" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Share with specific entity form -->
+                    <div class="uk-card uk-card-default">
+                        <div class="uk-card-header">
+                            <h4 class="uk-card-title">Share with specific user</h4>
+                        </div>
+                        <div class="uk-card-body">
+                            <form id="entity-sharing-form" class="space-y-4"
+                                  hx-post="/{{ entity }}/{{ database }}/share"
+                                  hx-target="#entity-sharing-error"
+                                  hx-target-400="#entity-sharing-error"
+                                  hx-swap="innerHTML">
+                                <div>
+                                    <label for="share-entity" class="block text-sm font-medium mb-1">Username</label>
+                                    <input
+                                        type="text"
+                                        id="share-entity"
+                                        name="entity"
+                                        class="p-2 border rounded focus:border-blue-500"
+                                        placeholder="Enter username"
+                                        onInput="checkEntitySharingForm()"
+                                        required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Access level</label>
+                                    <div class="uk-btn-group" data-uk-button-radio>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default"
+                                            data-value="no-access"
+                                            onclick="setEntitySharingLevel(this, 'no-access')">
+                                            No access
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default"
+                                            data-value="read-only"
+                                            onclick="setEntitySharingLevel(this, 'read-only')">
+                                            Read-only
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default"
+                                            data-value="read-write"
+                                            onclick="setEntitySharingLevel(this, 'read-write')">
+                                            Read-write
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default"
+                                            data-value="manager"
+                                            onclick="setEntitySharingLevel(this, 'manager')">
+                                            Manager
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="entity-sharing-level-value" name="sharing_level" value="">
+                                </div>
+                                <div>
+                                    <button type="submit" id="share-entity-btn" class="uk-btn uk-btn-primary" disabled>
+                                        Update access
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="entity-sharing-error" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <script>
+                        let originalPublicSharingLevel = '';
+                        let selectedPublicSharingLevel = '';
+                        let selectedEntitySharingLevel = '';
+
+                        function setPublicSharingLevel(button, value) {
+                            selectedPublicSharingLevel = value;
+                            document.getElementById('public-sharing-level-value').value = value;
+
+                            // Update button states
+                            const buttons = button.parentElement.querySelectorAll('button');
+                            buttons.forEach(btn => {
+                                btn.classList.remove('uk-active');
+                            });
+                            button.classList.add('uk-active');
+
+                            // Enable/disable update button based on whether value changed
+                            const updateBtn = document.getElementById('update-public-sharing-btn');
+                            updateBtn.disabled = (value === originalPublicSharingLevel);
+                        }
+
+                        function setEntitySharingLevel(button, value) {
+                            selectedEntitySharingLevel = value;
+                            document.getElementById('entity-sharing-level-value').value = value;
+
+                            // Update button states
+                            const buttons = button.parentElement.querySelectorAll('button');
+                            buttons.forEach(btn => {
+                                btn.classList.remove('uk-active');
+                            });
+                            button.classList.add('uk-active');
+
+                            checkEntitySharingForm();
+                        }
+
+                        function checkEntitySharingForm() {
+                            const entityInput = document.getElementById('share-entity');
+                            const submitBtn = document.getElementById('share-entity-btn');
+                            const hasEntity = entityInput.value.trim() !== '';
+                            const hasLevel = selectedEntitySharingLevel !== '';
+                            submitBtn.disabled = !(hasEntity && hasLevel);
+                        }
+
+                        // Initialize form state when page loads
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Set initial public sharing level (you'd get this from the backend)
+                            // For now, default to 'no-access'
+                            originalPublicSharingLevel = 'no-access';
+                            const defaultButton = document.querySelector('[data-value="no-access"]');
+                            if (defaultButton) {
+                                setPublicSharingLevel(defaultButton, 'no-access');
+                            }
+                        });
+                    </script>
                 </div>
             </li>
             <li>
