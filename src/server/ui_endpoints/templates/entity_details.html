@@ -1,23 +1,8 @@
 {% extends "base_content.html" %}
 
-{% block title %}{{ name }} - Profile{% endblock %}
+{% block title %}{{ name }}{% endblock %}
 
-{% block content %}
-<nav class="bg-white shadow-sm mb-6">
-    <div class="max-w-screen-xl mx-auto px-6 py-4">
-        <div class="flex justify-between items-center">
-            <a href="/" class="text-xl font-bold">ayb</a>
-            <div>
-                {% if logged_in_entity %}
-                <a href="/{{ logged_in_entity }}">{{ logged_in_entity }}</a> <span>(<a href="/log_out">log out</a>)</span>
-                {% else %}
-                <a href="/register">Register</a>
-                <a href="/log_in">Log in</a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</nav>
+{% block page_content %}
 <div class="max-w-screen-xl mx-auto px-6">
     <div class="flex flex-col md:flex-row gap-4">
         <div class="w-full md:w-1/3 lg:w-1/4">
