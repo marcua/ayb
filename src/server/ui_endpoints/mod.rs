@@ -18,4 +18,7 @@ pub use log_in::{log_in as log_in_endpoint, log_in_submit as log_in_submit_endpo
 pub use log_out::log_out as log_out_endpoint;
 pub use query::query as query_endpoint;
 pub use register::{register as register_endpoint, register_submit as register_submit_endpoint};
-pub use sharing::{share_with_entity as share_with_entity_endpoint, update_public_sharing as update_public_sharing_endpoint};
+pub use sharing::{
+    share_with_entity as share_with_entity_endpoint,
+    update_public_sharing as update_public_sharing_endpoint,
+};
