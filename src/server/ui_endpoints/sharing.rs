@@ -107,7 +107,7 @@ pub async fn share_with_entity(
     let client = init_ayb_client(&ayb_config, &req);
 
     match client
-        .share_database(entity_slug, database_slug, target_entity, &sharing_level)
+        .share(entity_slug, database_slug, target_entity, &sharing_level)
         .await
     {
         Ok(_) => Ok(HttpResponse::Ok().content_type("text/html").body(format!(
