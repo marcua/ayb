@@ -76,24 +76,23 @@
                         <div class="uk-card-body">
                             <form id="public-sharing-form" class="space-y-4">
                                 <div class="uk-btn-group" data-uk-button-radio>
-                                  #AI! Bug: When the page loads, you should select the currently set public sharing level to be the active button.
                                     <button
                                         type="button"
-                                        class="uk-btn uk-btn-default"
+                                        class="uk-btn uk-btn-default{% if current_public_sharing_level == 'no-access' %} uk-active{% endif %}"
                                         data-value="no-access"
                                         onclick="setPublicSharingLevel(this, 'no-access')">
                                         Private
                                     </button>
                                     <button
                                         type="button"
-                                        class="uk-btn uk-btn-default"
+                                        class="uk-btn uk-btn-default{% if current_public_sharing_level == 'fork' %} uk-active{% endif %}"
                                         data-value="fork"
                                         onclick="setPublicSharingLevel(this, 'fork')">
                                         Forkable
                                     </button>
                                     <button
                                         type="button"
-                                        class="uk-btn uk-btn-default"
+                                        class="uk-btn uk-btn-default{% if current_public_sharing_level == 'read-only' %} uk-active{% endif %}"
                                         data-value="read-only"
                                         onclick="setPublicSharingLevel(this, 'read-only')">
                                         Read-only
@@ -226,12 +225,11 @@
 
                         // Initialize form state when page loads
                         document.addEventListener('DOMContentLoaded', function() {
-                            // Set initial public sharing level (you'd get this from the backend)
-                            // For now, default to 'no-access'
-                            originalPublicSharingLevel = 'no-access';
-                            const defaultButton = document.querySelector('[data-value="no-access"]');
-                            if (defaultButton) {
-                                setPublicSharingLevel(defaultButton, 'no-access');
+                            // Set initial public sharing level from the backend
+                            originalPublicSharingLevel = '{{ current_public_sharing_level }}';
+                            const currentButton = document.querySelector('[data-value="{{ current_public_sharing_level }}"]');
+                            if (currentButton) {
+                                setPublicSharingLevel(currentButton, '{{ current_public_sharing_level }}');
                             }
                         });
                     </script>
