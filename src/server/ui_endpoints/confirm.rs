@@ -18,8 +18,9 @@ pub async fn confirm(
             context.insert("entity", &api_token.entity);
             context.insert("redirect", &format!("/{}", api_token.entity));
 
-            Ok(ok_response_builder("confirm_success.html", &context)
-                .append_header(("Set-Cookie", cookie_for_token(&api_token))))
+            let mut builder = ok_response_builder("confirm_success.html", &context);
+            builder.append_header(("Set-Cookie", cookie_for_token(&api_token)));
+            Ok(builder.finish())
         }
         Err(_) => ok_response("confirm_error.html", &tera::Context::new()),
     }

@@ -89,7 +89,8 @@ pub fn ok_response(template_name: &str, context: &Context) -> Result<HttpRespons
 }
 
 pub fn ok_response_builder(template_name: &str, context: &Context) -> HttpResponseBuilder {
-    HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(render(template_name, context))
+    let mut builder = HttpResponse::Ok();
+    builder.content_type("text/html; charset=utf-8");
+    builder.body(render(template_name, context));
+    builder
 }
