@@ -36,7 +36,7 @@ pub async fn database_details(
             public_sharing_level: PublicSharingLevel::try_from(database.public_sharing_level)
                 .unwrap()
                 .to_str()
-                .to_string(),
+                .into(),
         };
 
         Ok(HttpResponse::Ok().json(details))
