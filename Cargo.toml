@@ -23,7 +23,7 @@ env_logger = { version = "0.11.6" }
 fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.15", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.16", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.1" }
 regex = { version = "1.11.1"}
 reqwest = { version = "0.12.15", features = ["json"] }
