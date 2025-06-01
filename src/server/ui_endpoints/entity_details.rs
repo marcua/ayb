@@ -2,7 +2,7 @@ use crate::ayb_db::models::PublicSharingLevel;
 use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
-use crate::server::ui_endpoints::templates::render;
+use crate::server::ui_endpoints::templates::ok_response;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}")]
@@ -52,7 +52,5 @@ pub async fn entity_details(
         &authentication_details(&req).map(|details| details.entity),
     );
 
-    Ok(HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(render("entity_details.html", &context)))
+    ok_response("entity_details.html", &context)
 }

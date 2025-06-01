@@ -1,14 +1,12 @@
 use crate::ayb_db::models::EntityType;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::render;
+use crate::server::ui_endpoints::templates::{ok_response, render};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 
 #[get("/register")]
 pub async fn register() -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(render("register.html", &tera::Context::new())))
+    ok_response("register.html", &tera::Context::new())
 }
 
 #[derive(serde::Deserialize)]
@@ -29,11 +27,7 @@ pub async fn register_submit(
         .register(&form.username, &form.email, &EntityType::User)
         .await
     {
-        Ok(_) => Ok(HttpResponse::Ok()
-            .content_type("text/html; charset=utf-8")
-            .body(render("register_check_email.html", &tera::Context::new()))),
-        Err(_) => Ok(HttpResponse::Ok()
-            .content_type("text/html; charset=utf-8")
-            .body(render("register_error.html", &tera::Context::new()))),
+        Ok(_) => ok_response("register_check_email.html", &tera::Context::new()),
+        Err(_) => ok_response("register_error.html", &tera::Context::new()),
     }
 }

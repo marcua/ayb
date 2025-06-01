@@ -1,7 +1,7 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::render;
+use crate::server::ui_endpoints::templates::ok_response;
 use actix_web::{post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 
@@ -126,7 +126,7 @@ pub async fn query(
 
             Ok(HttpResponse::Ok()
                 .content_type("text/html")
-                .body(render("query_results.html", &context)))
+                .body(ok_response("query_results.html", &context)?.into_body()))
         }
     }
 }

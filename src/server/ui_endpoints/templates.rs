@@ -1,3 +1,4 @@
+use actix_web::{HttpResponse, HttpResponseBuilder, Result};
 use std::sync::OnceLock;
 use tera::{Context, Tera};
 
@@ -79,4 +80,16 @@ pub fn render(template_name: &str, context: &Context) -> String {
             eprintln!("Template error: {:?}", e);
             format!("Error rendering template: {}", e)
         })
+}
+
+pub fn ok_response(template_name: &str, context: &Context) -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(render(template_name, context)))
+}
+
+pub fn ok_response_builder(template_name: &str, context: &Context) -> HttpResponseBuilder {
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(render(template_name, context))
 }

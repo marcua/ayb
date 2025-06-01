@@ -1,13 +1,11 @@
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::render;
+use crate::server::ui_endpoints::templates::{ok_response, render};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 
 #[get("/log_in")]
 pub async fn log_in() -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(render("log_in.html", &tera::Context::new())))
+    ok_response("log_in.html", &tera::Context::new())
 }
 
 #[derive(serde::Deserialize)]
@@ -24,11 +22,7 @@ pub async fn log_in_submit(
     let client = init_ayb_client(&ayb_config, &req);
 
     match client.log_in(&form.username).await {
-        Ok(_) => Ok(HttpResponse::Ok()
-            .content_type("text/html; charset=utf-8")
-            .body(render("log_in_check_email.html", &tera::Context::new()))),
-        Err(_) => Ok(HttpResponse::Ok()
-            .content_type("text/html; charset=utf-8")
-            .body(render("log_in_error.html", &tera::Context::new()))),
+        Ok(_) => ok_response("log_in_check_email.html", &tera::Context::new()),
+        Err(_) => ok_response("log_in_error.html", &tera::Context::new()),
     }
 }
