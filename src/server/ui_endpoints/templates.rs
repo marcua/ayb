@@ -83,10 +83,7 @@ fn render(template_name: &str, context: &Context) -> String {
 }
 
 pub fn ok_response(template_name: &str, context: &Context) -> Result<HttpResponse> {
-    #AI! Implement this function using ok_response_builder
-    Ok(HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(render(template_name, context)))
+    Ok(ok_response_builder(template_name, context).finish())
 }
 
 pub fn ok_response_builder(template_name: &str, context: &Context) -> HttpResponseBuilder {
