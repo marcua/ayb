@@ -123,10 +123,7 @@ pub async fn query(
             context.insert("display_rows", &display_rows);
             context.insert("total_rows", &total_rows);
             context.insert("display_limit", &display_limit);
-
-            Ok(HttpResponse::Ok()
-                .content_type("text/html")
-                .body(ok_response("query_results.html", &context)?.into_body()))
+            ok_response("query_results.html", &context)
         }
     }
 }
