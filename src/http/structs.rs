@@ -189,6 +189,7 @@ pub struct DatabaseDetails {
     pub database_type: String,
     pub highest_query_access_level: Option<QueryMode>,
     pub can_manage_database: bool,
+    pub public_sharing_level: String,
 }
 
 impl TabularFormatter for Vec<ListSnapshotResult> {
