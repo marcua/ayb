@@ -181,7 +181,6 @@
                     </div>
 
                     <script>
-                      #AI! Bug: after submitting the public sharing level form, originalPublicSharingLevel isn't updated do our button is no longer properly enabled/disabled.
                         let originalPublicSharingLevel = '';
                         let selectedPublicSharingLevel = '';
                         let selectedEntitySharingLevel = '';
@@ -232,6 +231,16 @@
                             if (currentButton) {
                                 setPublicSharingLevel(currentButton, '{{ current_public_sharing_level }}');
                             }
+
+                            // Listen for successful HTMX requests to update the original value
+                            document.body.addEventListener('htmx:afterRequest', function(event) {
+                                if (event.detail.xhr.status === 200 && event.target.id === 'update-public-sharing-btn') {
+                                    // Update the original value to the newly selected value
+                                    originalPublicSharingLevel = selectedPublicSharingLevel;
+                                    // Disable the button since it now matches the original value
+                                    event.target.disabled = true;
+                                }
+                            });
                         });
                     </script>
                 </div>
