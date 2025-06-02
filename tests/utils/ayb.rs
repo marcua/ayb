@@ -274,3 +274,18 @@ pub fn database_details(
     cmd.stdout(predicate::str::contains(result));
     Ok(())
 }
+
+pub fn share_list(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "share_list", database, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{}\n", result));
+    Ok(())
+}

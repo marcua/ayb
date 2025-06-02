@@ -3,7 +3,7 @@ use crate::e2e_tests::{
 };
 use crate::utils::ayb::{
     database_details, list_databases, list_snapshots, list_snapshots_match_output, query, share,
-    update_database,
+    share_list, update_database,
 };
 use std::collections::HashMap;
 
@@ -215,6 +215,14 @@ pub async fn test_permissions(
         SECOND_ENTITY_SLUG,
         "read-only",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
+    )?;
+    // Verify that share_list shows the granted permission.
+    share_list(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Entity,Sharing Level\ne2e-second,read-only",
     )?;
     // Second entity has read-only access.
     query(
@@ -553,6 +561,14 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
     )?;
+    // Verify that share_list shows both entities with permissions.
+    share_list(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Entity,Sharing Level\ne2e-second,manager\ne2e-third,read-only",
+    )?;
     // Third entity can query database.
     query(
         config_path,
@@ -637,6 +653,22 @@ pub async fn test_permissions(
         SECOND_ENTITY_SLUG,
         "no-access",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
+    )?;
+    // Verify that share_list shows no shared permissions after all are revoked.
+    share(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        THIRD_ENTITY_SLUG,
+        "no-access",
+        "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
+    )?;
+    share_list(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "No shared permissions for e2e-first/test.sqlite",
     )?;
     // Second entity now has no access.
     query(
