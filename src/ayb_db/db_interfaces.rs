@@ -532,9 +532,9 @@ ORDER BY id DESC
             async fn list_entity_database_permissions(
                 &self,
                 database: &InstantiatedDatabase,
-            ) -> Result<Vec<crate::http::structs::SharingEntry>, AybError> {
-                use crate::ayb_db::models::EntityDatabaseSharingLevel;
-                use crate::http::structs::SharingEntry;
+            ) -> Result<Vec<$crate::http::structs::SharingEntry>, AybError> {
+                use $crate::ayb_db::models::EntityDatabaseSharingLevel;
+                use $crate::http::structs::SharingEntry;
 
                 let permissions: Vec<(String, i16)> = sqlx::query_as(
                     r#"
