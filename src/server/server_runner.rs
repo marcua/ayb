@@ -35,7 +35,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
             .service(api_endpoints::update_profile_endpoint)
             .service(api_endpoints::list_snapshots_endpoint)
             .service(api_endpoints::restore_snapshot_endpoint)
-            .service(api_endpoints::share_endpoint),
+            .service(api_endpoints::share_endpoint)
+            .service(api_endpoints::share_list_endpoint),
     );
 
     // Only add UI routes if web frontend is configured for local serving

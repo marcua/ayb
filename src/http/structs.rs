@@ -183,6 +183,17 @@ pub struct SnapshotList {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SharingEntry {
+    pub entity_slug: String,
+    pub sharing_level: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShareList {
+    pub sharing_entries: Vec<SharingEntry>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DatabaseDetails {
     pub entity_slug: String,
     pub database_slug: String,
@@ -205,6 +216,29 @@ impl TabularFormatter for Vec<ListSnapshotResult> {
                 Row::new(vec![
                     Cell::new(&v.snapshot_id),
                     Cell::new(&v.last_modified_at.to_rfc3339()),
+                ])
+            })
+            .for_each(|c| {
+                table.add_row(c);
+            });
+
+        table
+    }
+}
+
+impl TabularFormatter for Vec<SharingEntry> {
+    fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![
+            Cell::new("Entity"),
+            Cell::new("Sharing Level"),
+        ]));
+
+        self.iter()
+            .map(|v| {
+                Row::new(vec![
+                    Cell::new(&v.entity_slug),
+                    Cell::new(&v.sharing_level),
                 ])
             })
             .for_each(|c| {

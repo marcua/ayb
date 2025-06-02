@@ -235,7 +235,21 @@ pub fn client_commands() -> Command {
                      .value_parser(ValueParser::new(entity_database_parser))
                      .required(true)
                 )
-                .arg(arg!(<snapshot_id> "The id of the snapshot to load").required(true))               )
+                .arg(arg!(<snapshot_id> "The id of the snapshot to load").required(true))
+        )
+        .subcommand(
+            Command::new("share_list")
+                .about("List entities that have access to a database")
+                .arg(arg!(<database> "The database to list permissions for (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+                .arg(
+                    arg!(--format <type> "The format in which to output the result")
+                        .value_parser(value_parser!(OutputFormat))
+                        .default_value(OutputFormat::Table.to_str())
+                        .required(false))
+        )
 }
 
 pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()> {
@@ -605,6 +619,33 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
 
                     if details.can_manage_database {
                         println!("You have management permissions for this database");
+                    }
+                }
+                Err(err) => {
+                    println!("Error: {}", err);
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("share_list") {
+        if let (Some(entity_database), Some(format)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<OutputFormat>("format"),
+        ) {
+            match client
+                .share_list(&entity_database.entity, &entity_database.database)
+                .await
+            {
+                Ok(response) => {
+                    if response.sharing_entries.is_empty() {
+                        println!(
+                            "No shared permissions for {}/{}",
+                            entity_database.entity, entity_database.database
+                        );
+                    } else {
+                        match format {
+                            OutputFormat::Table => response.sharing_entries.generate_table()?,
+                            OutputFormat::Csv => response.sharing_entries.generate_csv()?,
+                        }
                     }
                 }
                 Err(err) => {

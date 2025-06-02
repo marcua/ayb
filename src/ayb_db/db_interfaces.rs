@@ -72,6 +72,10 @@ pub trait AybDb: DynClone + Send + Sync {
         &self,
         entity: &InstantiatedEntity,
     ) -> Result<Vec<InstantiatedDatabase>, AybError>;
+    async fn list_entity_database_permissions(
+        &self,
+        database: &InstantiatedDatabase,
+    ) -> Result<Vec<crate::http::structs::SharingEntry>, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -523,6 +527,45 @@ ORDER BY id DESC
                 .await?;
 
                 Ok(databases)
+            }
+
+            async fn list_entity_database_permissions(
+                &self,
+                database: &InstantiatedDatabase,
+            ) -> Result<Vec<crate::http::structs::SharingEntry>, AybError> {
+                use crate::ayb_db::models::EntityDatabaseSharingLevel;
+                use crate::http::structs::SharingEntry;
+
+                let permissions: Vec<(String, i16)> = sqlx::query_as(
+                    r#"
+SELECT
+    entity.slug,
+    entity_database_permission.sharing_level
+FROM entity_database_permission
+JOIN entity ON entity_database_permission.entity_id = entity.id
+WHERE entity_database_permission.database_id = $1
+ORDER BY entity.slug
+                    "#,
+                )
+                .bind(database.id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                let sharing_entries = permissions
+                    .into_iter()
+                    .map(|(entity_slug, sharing_level)| {
+                        let sharing_level_enum = EntityDatabaseSharingLevel::try_from(sharing_level)
+                            .map_err(|_| AybError::Other {
+                                message: format!("Invalid sharing level: {}", sharing_level),
+                            })?;
+                        Ok(SharingEntry {
+                            entity_slug,
+                            sharing_level: sharing_level_enum.to_str().to_string(),
+                        })
+                    })
+                    .collect::<Result<Vec<_>, AybError>>()?;
+
+                Ok(sharing_entries)
             }
         }
     };
