@@ -67,7 +67,7 @@
                 <div class="sharing-interface">
                     <h3 class="text-lg font-medium mb-2">Database sharing</h3>
                     <p class="text-muted-foreground mb-4">Manage who can access this database and what permissions they have.</p>
-                    
+
                     <!-- Public sharing level form -->
                     <div class="uk-card uk-card-default mb-4">
                         <div class="uk-card-header">
@@ -78,21 +78,21 @@
                                 <div class="uk-btn-group" data-uk-button-radio>
                                     <button
                                         type="button"
-                                        class="uk-btn uk-btn-default{% if current_public_sharing_level == 'no-access' %} uk-active{% endif %}"
+                                        class="uk-btn uk-btn-default{% if public_sharing_level == 'no-access' %} uk-active{% endif %}"
                                         data-value="no-access"
                                         onclick="setPublicSharingLevel(this, 'no-access')">
                                         Private
                                     </button>
                                     <button
                                         type="button"
-                                        class="uk-btn uk-btn-default{% if current_public_sharing_level == 'fork' %} uk-active{% endif %}"
+                                        class="uk-btn uk-btn-default{% if public_sharing_level == 'fork' %} uk-active{% endif %}"
                                         data-value="fork"
                                         onclick="setPublicSharingLevel(this, 'fork')">
                                         Forkable
                                     </button>
                                     <button
                                         type="button"
-                                        class="uk-btn uk-btn-default{% if current_public_sharing_level == 'read-only' %} uk-active{% endif %}"
+                                        class="uk-btn uk-btn-default{% if public_sharing_level == 'read-only' %} uk-active{% endif %}"
                                         data-value="read-only"
                                         onclick="setPublicSharingLevel(this, 'read-only')">
                                         Read-only
@@ -226,10 +226,10 @@
                         // Initialize form state when page loads
                         document.addEventListener('DOMContentLoaded', function() {
                             // Set initial public sharing level from the backend
-                            originalPublicSharingLevel = '{{ current_public_sharing_level }}';
-                            const currentButton = document.querySelector('[data-value="{{ current_public_sharing_level }}"]');
+                            originalPublicSharingLevel = '{{ public_sharing_level }}';
+                            const currentButton = document.querySelector('[data-value="{{ public_sharing_level }}"]');
                             if (currentButton) {
-                                setPublicSharingLevel(currentButton, '{{ current_public_sharing_level }}');
+                                setPublicSharingLevel(currentButton, '{{ public_sharing_level }}');
                             }
 
                             // Listen for successful HTMX requests to update the original value

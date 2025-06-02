@@ -33,7 +33,7 @@ pub async fn database(
         &database_response.highest_query_access_level,
     );
     context.insert(
-        "current_public_sharing_level",
+        "public_sharing_level",
         &database_response.public_sharing_level,
     );
     context.insert(
