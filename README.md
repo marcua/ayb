@@ -307,6 +307,9 @@ $ ayb client share marcua/test.sqlite sofia read-write
 # Allow an entity to not only modify a database, but also to manage
 # snapshots and change the permissions of any non-owner entity.
 $ ayb client share marcua/test.sqlite sofia manager
+
+# List all entities that have access to a database.
+$ ayb client share_list marcua/test.sqlite
 ```
 
 ### Isolation
