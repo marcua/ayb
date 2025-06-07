@@ -177,53 +177,47 @@
                                 </div>
                             </form>
                             <div id="entity-sharing-error" class="mt-2"></div>
+                            
+                            {% if share_list and share_list | length > 0 %}
+                            <div class="mt-4">
+                                <h5 class="text-sm font-medium mb-2">Current shares</h5>
+                                <table class="uk-table uk-table-striped uk-table-small">
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Access Level</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for share in share_list %}
+                                        <tr>
+                                            <td>{{ share.entity_slug }}</td>
+                                            <td>{{ share.sharing_level }}</td>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    class="uk-btn uk-btn-default uk-btn-sm"
+                                                    onclick="editShare('{{ share.entity_slug }}', '{{ share.sharing_level }}')"
+                                                    title="Edit access">
+                                                    <uk-icon icon="pencil"></uk-icon>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="uk-btn uk-btn-danger uk-btn-sm ml-1"
+                                                    onclick="confirmRemoveShare('{{ share.entity_slug }}')"
+                                                    title="Remove access">
+                                                    <uk-icon icon="trash"></uk-icon>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
-
-                    <!-- Current shares table -->
-                    // AI!  Move this table into the card above it
-                    {% if share_list and share_list | length > 0 %}
-                    <div class="uk-card uk-card-default mt-4">
-                        <div class="uk-card-header">
-                            <h4 class="uk-card-title">Current shares</h4>
-                        </div>
-                        <div class="uk-card-body">
-                            <table class="uk-table uk-table-striped uk-table-small">
-                                <thead>
-                                    <tr>
-                                        <th>Username</th>
-                                        <th>Access Level</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for share in share_list %}
-                                    <tr>
-                                        <td>{{ share.entity_slug }}</td>
-                                        <td>{{ share.sharing_level }}</td>
-                                        <td>
-                                            <button
-                                                type="button"
-                                                class="uk-btn uk-btn-default uk-btn-sm"
-                                                onclick="editShare('{{ share.entity_slug }}', '{{ share.sharing_level }}')"
-                                                title="Edit access">
-                                                <uk-icon icon="pencil"></uk-icon>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="uk-btn uk-btn-danger uk-btn-sm ml-1"
-                                                onclick="confirmRemoveShare('{{ share.entity_slug }}')"
-                                                title="Remove access">
-                                                <uk-icon icon="trash"></uk-icon>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    {% endif %}
 
                     <!-- Remove access confirmation modal -->
                     <div id="remove-share-modal" class="uk-flex-top" data-uk-modal>
