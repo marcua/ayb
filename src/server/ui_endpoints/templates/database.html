@@ -9,11 +9,11 @@
             <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> / 
             <span class="font-semibold">{{ database }}</span> ({{ database_type }})
         </div>
-        <ul data-uk-tab class="mb-6">
-            <li class="uk-active"><a class="px-4 pb-3 pt-2" href="">Query</a></li>
+        <ul data-uk-tab class="mb-6" id="database-tabs">
+            <li><a class="px-4 pb-3 pt-2" href="#query">Query</a></li>
             {% if can_manage_database %}
-                <li><a class="px-4 pb-3 pt-2" href="">Sharing</a></li>
-                <li><a class="px-4 pb-3 pt-2" href="">Snapshots</a></li>
+                <li><a class="px-4 pb-3 pt-2" href="#sharing">Sharing</a></li>
+                <li><a class="px-4 pb-3 pt-2" href="#snapshots">Snapshots</a></li>
             {% endif %}
         </ul>
         <ul class="uk-switcher mt-4">
@@ -321,8 +321,40 @@
                             UIkit.modal('#remove-share-modal').hide();
                         }
 
+                        // Handle URL hash navigation for tabs
+                        function setActiveTabFromHash() {
+                            const hash = window.location.hash;
+                            const tabs = document.querySelectorAll('#database-tabs li');
+                            const tabContents = document.querySelectorAll('.uk-switcher li');
+                            
+                            // Map hash to tab index
+                            let activeIndex = 0; // Default to query tab
+                            if (hash === '#sharing' && tabs.length > 1) {
+                                activeIndex = 1;
+                            } else if (hash === '#snapshots' && tabs.length > 2) {
+                                activeIndex = 2;
+                            }
+                            
+                            // Remove active class from all tabs and contents
+                            tabs.forEach(tab => tab.classList.remove('uk-active'));
+                            tabContents.forEach(content => content.style.display = 'none');
+                            
+                            // Set active tab and content
+                            if (tabs[activeIndex]) {
+                                tabs[activeIndex].classList.add('uk-active');
+                            }
+                            if (tabContents[activeIndex]) {
+                                tabContents[activeIndex].style.display = 'block';
+                            }
+                        }
+
+                        // Listen for hash changes
+                        window.addEventListener('hashchange', setActiveTabFromHash);
+
                         // Initialize form state when page loads
                         document.addEventListener('DOMContentLoaded', function() {
+                            // Set active tab based on URL hash
+                            setActiveTabFromHash();
                             // Set initial public sharing level from the backend
                             originalPublicSharingLevel = '{{ public_sharing_level }}';
                             const currentButton = document.querySelector('[data-value="{{ public_sharing_level }}"]');
