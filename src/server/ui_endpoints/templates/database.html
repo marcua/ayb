@@ -351,8 +351,23 @@
                         // Listen for hash changes
                         window.addEventListener('hashchange', setActiveTabFromHash);
 
+                        // Add click handlers to tab links to update URL hash
+                        function addTabClickHandlers() {
+                            const tabLinks = document.querySelectorAll('#database-tabs a');
+                            tabLinks.forEach(link => {
+                                link.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    const hash = this.getAttribute('href');
+                                    window.location.hash = hash;
+                                });
+                            });
+                        }
+
                         // Initialize form state when page loads
                         document.addEventListener('DOMContentLoaded', function() {
+                            // Add tab click handlers
+                            addTabClickHandlers();
+                            
                             // Set active tab based on URL hash
                             setActiveTabFromHash();
                             // Set initial public sharing level from the backend
