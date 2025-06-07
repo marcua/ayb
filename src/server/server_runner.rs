@@ -53,7 +53,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::database_endpoint)
                 .service(ui_endpoints::query_endpoint)
                 .service(ui_endpoints::update_public_sharing_endpoint)
-                .service(ui_endpoints::share_with_entity_endpoint);
+                .service(ui_endpoints::share_with_entity_endpoint)
+                .service(ui_endpoints::share_list_ui_endpoint);
         }
     }
 }

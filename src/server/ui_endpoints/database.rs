@@ -20,15 +20,6 @@ pub async fn database(
         Err(_) => return Ok(HttpResponse::NotFound().body("Database not found")),
     };
 
-    // Get share list if user can manage the database
-    let share_list = if database_response.can_manage_database {
-        match client.share_list(entity_slug, database_slug).await {
-            Ok(shares) => Some(shares.sharing_entries),
-            Err(_) => None,
-        }
-    } else {
-        None
-    };
 
     let mut context = tera::Context::new();
     context.insert("entity", entity_slug);
@@ -50,7 +41,6 @@ pub async fn database(
         "logged_in_entity",
         &authentication_details(&req).map(|details| details.entity),
     );
-    context.insert("share_list", &share_list);
 
     ok_response("database.html", &context)
 }

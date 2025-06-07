@@ -2,7 +2,8 @@ use crate::ayb_db::models::{EntityDatabaseSharingLevel, PublicSharingLevel};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use actix_web::{post, web, HttpRequest, HttpResponse, Result};
+use crate::server::ui_endpoints::templates::render;
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 use std::str::FromStr;
 
@@ -61,6 +62,40 @@ pub async fn update_public_sharing(
                 .body(format!(
                     r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
                         <div class="uk-alert-title">Error updating sharing level</div>
+                        <p>{}</p>
+                    </div>"#,
+                    error_message
+                )))
+        }
+    }
+}
+
+#[get("/{entity}/{database}/share_list_ui")]
+pub async fn share_list_ui(
+    req: HttpRequest,
+    path: web::Path<EntityDatabasePath>,
+    ayb_config: web::Data<AybConfig>,
+) -> Result<HttpResponse> {
+    let entity_slug = &path.entity.to_lowercase();
+    let database_slug = &path.database.to_lowercase();
+
+    let client = init_ayb_client(&ayb_config, &req);
+
+    match client.share_list(entity_slug, database_slug).await {
+        Ok(shares) => {
+            let mut context = tera::Context::new();
+            context.insert("share_list", &shares.sharing_entries);
+            
+            let html = render("share_list_partial.html", &context);
+            Ok(HttpResponse::Ok().content_type("text/html").body(html))
+        }
+        Err(err) => {
+            let error_message = format!("{}", err);
+            Ok(HttpResponse::BadRequest()
+                .content_type("text/html")
+                .body(format!(
+                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
+                        <div class="uk-alert-title">Error loading shares</div>
                         <p>{}</p>
                     </div>"#,
                     error_message

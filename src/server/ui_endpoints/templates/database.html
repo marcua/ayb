@@ -178,44 +178,12 @@
                             </form>
                             <div id="entity-sharing-error" class="mt-2"></div>
                             
-                            {% if share_list and share_list | length > 0 %}
-                            <div class="mt-4">
-                                <h5 class="text-sm font-medium mb-2">Current shares</h5>
-                                <table class="uk-table uk-table-striped uk-table-small">
-                                    <thead>
-                                        <tr>
-                                            <th>Username</th>
-                                            <th>Access Level</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for share in share_list %}
-                                        <tr>
-                                            <td>{{ share.entity_slug }}</td>
-                                            <td>{{ share.sharing_level }}</td>
-                                            <td>
-                                                <button
-                                                    type="button"
-                                                    class="uk-btn uk-btn-default uk-btn-sm"
-                                                    onclick="editShare('{{ share.entity_slug }}', '{{ share.sharing_level }}')"
-                                                    title="Edit access">
-                                                    <uk-icon icon="pencil"></uk-icon>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="uk-btn uk-btn-danger uk-btn-sm ml-1"
-                                                    onclick="confirmRemoveShare('{{ share.entity_slug }}')"
-                                                    title="Remove access">
-                                                    <uk-icon icon="trash"></uk-icon>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div id="share-list-container">
+                                <div class="mt-4 text-center">
+                                    <div uk-spinner></div>
+                                    <p class="text-sm text-muted-foreground mt-2">Loading shares...</p>
+                                </div>
                             </div>
-                            {% endif %}
                         </div>
                     </div>
 
@@ -316,6 +284,19 @@
                             UIkit.modal('#remove-share-modal').hide();
                         }
 
+                        function loadShareList() {
+                            fetch('/{{ entity }}/{{ database }}/share_list_ui')
+                                .then(response => response.text())
+                                .then(html => {
+                                    document.getElementById('share-list-container').innerHTML = html;
+                                })
+                                .catch(error => {
+                                    console.error('Error loading share list:', error);
+                                    document.getElementById('share-list-container').innerHTML = 
+                                        '<div class="mt-4"><p class="text-sm text-red-600">Error loading shares.</p></div>';
+                                });
+                        }
+
                         // Handle URL hash navigation for tabs
                         function setActiveTabFromHash() {
                             const hash = window.location.hash;
@@ -326,6 +307,8 @@
                             let activeIndex = 0; // Default to query tab
                             if (hash === '#sharing' && tabs.length > 1) {
                                 activeIndex = 1;
+                                // Load share list when switching to sharing tab
+                                loadShareList();
                             } else if (hash === '#snapshots' && tabs.length > 2) {
                                 activeIndex = 2;
                             }
