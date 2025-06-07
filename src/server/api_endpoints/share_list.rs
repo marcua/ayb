@@ -6,8 +6,8 @@ use crate::server::permissions::can_manage_database;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web, HttpResponse};
 
-#[get("/{entity}/{database}/share_list")]
-async fn share_list(
+#[get("/{entity}/{database}/list_shares")]
+async fn list_shares(
     path: web::Path<EntityDatabasePath>,
     ayb_db: web::Data<Box<dyn AybDb>>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,

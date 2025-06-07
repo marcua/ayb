@@ -3,7 +3,7 @@ use crate::e2e_tests::{
 };
 use crate::utils::ayb::{
     database_details, list_databases, list_snapshots, list_snapshots_match_output, query, share,
-    share_list, update_database,
+    list_shares, update_database,
 };
 use std::collections::HashMap;
 
@@ -216,8 +216,8 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
-    // Verify that share_list shows the granted permission.
-    share_list(
+    // Verify that list_shares shows the granted permission.
+    list_shares(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -561,8 +561,8 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
     )?;
-    // Verify that share_list shows both entities with permissions.
-    share_list(
+    // Verify that list_shares shows both entities with permissions.
+    list_shares(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -654,7 +654,7 @@ pub async fn test_permissions(
         "no-access",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
-    // Verify that share_list shows no shared permissions after all are revoked.
+    // Verify that list_shares shows no shared permissions after all are revoked.
     share(
         config_path,
         &api_keys.get("second").unwrap()[0],
@@ -663,7 +663,7 @@ pub async fn test_permissions(
         "no-access",
         "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
     )?;
-    share_list(
+    list_shares(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,

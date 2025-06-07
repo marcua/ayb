@@ -275,14 +275,14 @@ pub fn database_details(
     Ok(())
 }
 
-pub fn share_list(
+pub fn list_shares(
     config: &str,
     api_key: &str,
     database: &str,
     format: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "share_list", database, "--format", format; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "list_shares", database, "--format", format; {
         "AYB_API_TOKEN" => api_key,
     });
 
