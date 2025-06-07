@@ -364,8 +364,19 @@
                                     event.target.disabled = true;
                                 } else if (event.detail.xhr.status === 200 && 
                                           (event.target.id === 'share-entity-btn' || event.target.closest('#remove-share-form'))) {
-                                    // Reload the page to refresh the shares table
-                                    window.location.reload();
+                                    // Refresh the shares list
+                                    loadShareList();
+                                    // Clear the form
+                                    if (event.target.id === 'share-entity-btn') {
+                                        document.getElementById('share-entity').value = '';
+                                        selectedEntitySharingLevel = '';
+                                        document.getElementById('entity-sharing-level-value').value = '';
+                                        // Remove active class from all sharing level buttons
+                                        document.querySelectorAll('#entity-sharing-form .uk-btn-group button').forEach(btn => {
+                                            btn.classList.remove('uk-active');
+                                        });
+                                        checkEntitySharingForm();
+                                    }
                                 }
                             });
                         });
