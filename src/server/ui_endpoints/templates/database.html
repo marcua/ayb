@@ -256,9 +256,10 @@
                             // Prefill the form with the entity name and current sharing level
                             document.getElementById('share-entity').value = entityName;
                             
-                            // Set the sharing level button
-                            const levelButton = document.querySelector(`[data-value="${currentLevel}"]`);
-                            if (levelButton && levelButton.closest('.uk-btn-group').querySelector('[name="sharing_level"]')) {
+                            // Set the sharing level button - find the button within the entity sharing form
+                            const entitySharingForm = document.getElementById('entity-sharing-form');
+                            const levelButton = entitySharingForm.querySelector(`[data-value="${currentLevel}"]`);
+                            if (levelButton) {
                                 setEntitySharingLevel(levelButton, currentLevel);
                             }
                             
@@ -359,9 +360,9 @@
                                     event.target.disabled = true;
                                 } else if (event.detail.xhr.status === 200 && 
                                           (event.target.id === 'share-entity-btn' || event.target.closest('#remove-share-form'))) {
-                                    // Refresh the shares list
+                                    // Refresh the shares list after any successful sharing operation
                                     loadShareList();
-                                    // Clear the form
+                                    // Clear the form after adding/updating a share
                                     if (event.target.id === 'share-entity-btn') {
                                         document.getElementById('share-entity').value = '';
                                         selectedEntitySharingLevel = '';
