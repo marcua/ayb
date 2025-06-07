@@ -120,56 +120,57 @@
                             <h4 class="uk-card-title">Share with specific user</h4>
                         </div>
                         <div class="uk-card-body">
-                          // AI! put Username and access level on the same row on desktop. On narrower screens it's OK if they remain one above the other. Use flexbox tooling in tailwind is possible.
                             <form id="entity-sharing-form" class="space-y-4"
                                   hx-post="/{{ entity }}/{{ database }}/share"
                                   hx-target="#entity-sharing-error"
                                   hx-target-400="#entity-sharing-error"
                                   hx-swap="innerHTML">
-                                <div>
-                                    <label for="share-entity" class="block text-sm font-medium mb-1">Username</label>
-                                    <input
-                                        type="text"
-                                        id="share-entity"
-                                        name="entity"
-                                        class="p-2 border rounded focus:border-blue-500"
-                                        placeholder="Enter username"
-                                        onInput="checkEntitySharingForm()"
-                                        required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-1">Access level</label>
-                                    <div class="uk-btn-group" data-uk-button-radio>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default"
-                                            data-value="no-access"
-                                            onclick="setEntitySharingLevel(this, 'no-access')">
-                                            No access
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default"
-                                            data-value="read-only"
-                                            onclick="setEntitySharingLevel(this, 'read-only')">
-                                            Read-only
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default"
-                                            data-value="read-write"
-                                            onclick="setEntitySharingLevel(this, 'read-write')">
-                                            Read-write
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default"
-                                            data-value="manager"
-                                            onclick="setEntitySharingLevel(this, 'manager')">
-                                            Manager
-                                        </button>
+                                <div class="flex flex-col md:flex-row md:gap-4">
+                                    <div class="flex-none md:w-1/3">
+                                        <label for="share-entity" class="block text-sm font-medium mb-1">Username</label>
+                                        <input
+                                            type="text"
+                                            id="share-entity"
+                                            name="entity"
+                                            class="p-2 border rounded focus:border-blue-500 w-full"
+                                            placeholder="Enter username"
+                                            onInput="checkEntitySharingForm()"
+                                            required>
                                     </div>
-                                    <input type="hidden" id="entity-sharing-level-value" name="sharing_level" value="">
+                                    <div class="flex-grow">
+                                        <label class="block text-sm font-medium mb-1">Access level</label>
+                                        <div class="uk-btn-group" data-uk-button-radio>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="no-access"
+                                                onclick="setEntitySharingLevel(this, 'no-access')">
+                                                No access
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="read-only"
+                                                onclick="setEntitySharingLevel(this, 'read-only')">
+                                                Read-only
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="read-write"
+                                                onclick="setEntitySharingLevel(this, 'read-write')">
+                                                Read-write
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="manager"
+                                                onclick="setEntitySharingLevel(this, 'manager')">
+                                                Manager
+                                            </button>
+                                        </div>
+                                        <input type="hidden" id="entity-sharing-level-value" name="sharing_level" value="">
+                                    </div>
                                 </div>
                                 <div>
                                     <button type="submit" id="share-entity-btn" class="uk-btn uk-btn-primary" disabled>
