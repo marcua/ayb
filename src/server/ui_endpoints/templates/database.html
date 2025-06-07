@@ -359,11 +359,11 @@
                                     // Disable the button since it now matches the original value
                                     event.target.disabled = true;
                                 } else if (event.detail.xhr.status === 200 && 
-                                          (event.target.id === 'share-entity-btn' || event.target.closest('#remove-share-form'))) {
+                                          (event.target.closest('#entity-sharing-form') || event.target.closest('#remove-share-form'))) {
                                     // Refresh the shares list after any successful sharing operation
                                     loadShareList();
                                     // Clear the form after adding/updating a share
-                                    if (event.target.id === 'share-entity-btn') {
+                                    if (event.target.closest('#entity-sharing-form')) {
                                         document.getElementById('share-entity').value = '';
                                         selectedEntitySharingLevel = '';
                                         document.getElementById('entity-sharing-level-value').value = '';
