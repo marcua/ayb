@@ -23,7 +23,7 @@ pub async fn database(
     // Get share list if user can manage the database
     let share_list = if database_response.can_manage_database {
         match client.share_list(entity_slug, database_slug).await {
-            Ok(shares) => Some(shares.shares),
+            Ok(shares) => Some(shares.sharing_entries),
             Err(_) => None,
         }
     } else {
