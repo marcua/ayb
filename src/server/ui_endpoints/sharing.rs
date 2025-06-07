@@ -70,8 +70,8 @@ pub async fn update_public_sharing(
     }
 }
 
-#[get("/{entity}/{database}/share_list")]
-pub async fn share_list(
+#[get("/{entity}/{database}/list_shares")]
+pub async fn list_shares(
     req: HttpRequest,
     path: web::Path<EntityDatabasePath>,
     ayb_config: web::Data<AybConfig>,
@@ -81,7 +81,7 @@ pub async fn share_list(
 
     let client = init_ayb_client(&ayb_config, &req);
 
-    match client.share_list(entity_slug, database_slug).await {
+    match client.list_shares(entity_slug, database_slug).await {
         Ok(shares) => {
             let mut context = tera::Context::new();
             context.insert("share_list", &shares.sharing_entries);

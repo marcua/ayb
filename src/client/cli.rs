@@ -238,7 +238,7 @@ pub fn client_commands() -> Command {
                 .arg(arg!(<snapshot_id> "The id of the snapshot to load").required(true))
         )
         .subcommand(
-            Command::new("share_list")
+            Command::new("list_shares")
                 .about("List entities that have access to a database")
                 .arg(arg!(<database> "The database to list permissions for (e.g., entity/database.sqlite)")
                      .value_parser(ValueParser::new(entity_database_parser))
@@ -626,13 +626,13 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                 }
             }
         }
-    } else if let Some(matches) = matches.subcommand_matches("share_list") {
+    } else if let Some(matches) = matches.subcommand_matches("list_shares") {
         if let (Some(entity_database), Some(format)) = (
             matches.get_one::<EntityDatabasePath>("database"),
             matches.get_one::<OutputFormat>("format"),
         ) {
             match client
-                .share_list(&entity_database.entity, &entity_database.database)
+                .list_shares(&entity_database.entity, &entity_database.database)
                 .await
             {
                 Ok(response) => {

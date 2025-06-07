@@ -309,7 +309,7 @@ $ ayb client share marcua/test.sqlite sofia read-write
 $ ayb client share marcua/test.sqlite sofia manager
 
 # List all entities that have access to a database.
-$ ayb client share_list marcua/test.sqlite
+$ ayb client list_shares marcua/test.sqlite
 ```
 
 ### Isolation

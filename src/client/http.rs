@@ -342,12 +342,12 @@ impl AybClient {
             .await
     }
 
-    pub async fn share_list(&self, entity: &str, database: &str) -> Result<ShareList, AybError> {
+    pub async fn list_shares(&self, entity: &str, database: &str) -> Result<ShareList, AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .get(self.make_url(format!("{}/{}/share_list", entity, database)))
+            .get(self.make_url(format!("{}/{}/list_shares", entity, database)))
             .headers(headers)
             .send()
             .await?;
