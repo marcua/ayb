@@ -8,6 +8,7 @@ mod query;
 mod register;
 mod restore_snapshot;
 mod share;
+mod share_list;
 mod update_database;
 mod update_profile;
 
@@ -21,5 +22,6 @@ pub use query::query as query_endpoint;
 pub use register::register as register_endpoint;
 pub use restore_snapshot::restore_snapshot as restore_snapshot_endpoint;
 pub use share::share as share_endpoint;
+pub use share_list::share_list as share_list_endpoint;
 pub use update_database::update_database as update_database_endpoint;
 pub use update_profile::update_profile as update_profile_endpoint;

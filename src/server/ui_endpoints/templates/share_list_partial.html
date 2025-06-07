@@ -1,0 +1,42 @@
+{% if share_list and share_list | length > 0 %}
+<div class="mt-4">
+    <h5 class="text-sm font-medium mb-2">Current shares</h5>
+    <table class="uk-table uk-table-striped uk-table-small">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Access Level</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for share in share_list %}
+            <tr>
+                <td>{{ share.entity_slug }}</td>
+                <td>{{ share.sharing_level }}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="uk-btn uk-btn-default uk-btn-sm"
+                        onclick="editShare('{{ share.entity_slug }}', '{{ share.sharing_level }}')"
+                        title="Edit access">
+                        <uk-icon icon="pencil"></uk-icon>
+                    </button>
+                    <button
+                        type="button"
+                        class="uk-btn uk-btn-danger uk-btn-sm ml-1"
+                        onclick="confirmRemoveShare('{{ share.entity_slug }}')"
+                        title="Remove access">
+                        <uk-icon icon="trash"></uk-icon>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="mt-4">
+    <p class="text-sm text-muted-foreground">No shares configured for this database.</p>
+</div>
+{% endif %}

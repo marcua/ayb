@@ -20,6 +20,7 @@ pub async fn database(
         Err(_) => return Ok(HttpResponse::NotFound().body("Database not found")),
     };
 
+
     let mut context = tera::Context::new();
     context.insert("entity", entity_slug);
     context.insert("database", database_slug);
@@ -31,6 +32,10 @@ pub async fn database(
     context.insert(
         "highest_query_access_level",
         &database_response.highest_query_access_level,
+    );
+    context.insert(
+        "public_sharing_level",
+        &database_response.public_sharing_level,
     );
     context.insert(
         "logged_in_entity",
