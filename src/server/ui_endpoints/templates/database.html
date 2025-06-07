@@ -181,6 +181,7 @@
                     </div>
 
                     <!-- Current shares table -->
+                    // AI!  Move this table into the card above it
                     {% if share_list and share_list | length > 0 %}
                     <div class="uk-card uk-card-default mt-4">
                         <div class="uk-card-header">
@@ -225,8 +226,8 @@
                     {% endif %}
 
                     <!-- Remove access confirmation modal -->
-                    <div id="remove-share-modal" data-uk-modal>
-                        <div class="uk-modal-dialog uk-modal-body">
+                    <div id="remove-share-modal" class="uk-flex-top" data-uk-modal>
+                        <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
                             <h2 class="uk-modal-title">Remove access</h2>
                             <p>Are you sure you want to remove access for <strong id="remove-username"></strong>?</p>
                             <p class="uk-text-right">
