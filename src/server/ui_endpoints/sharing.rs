@@ -70,8 +70,8 @@ pub async fn update_public_sharing(
     }
 }
 
-#[get("/{entity}/{database}/share_list_ui")]
-pub async fn share_list_ui(
+#[get("/{entity}/{database}/share_list")]
+pub async fn share_list(
     req: HttpRequest,
     path: web::Path<EntityDatabasePath>,
     ayb_config: web::Data<AybConfig>,
@@ -85,8 +85,8 @@ pub async fn share_list_ui(
         Ok(shares) => {
             let mut context = tera::Context::new();
             context.insert("share_list", &shares.sharing_entries);
-            
-            let html = render("share_list_partial.html", &context);
+
+            let html = render("share_list.html", &context);
             Ok(HttpResponse::Ok().content_type("text/html").body(html))
         }
         Err(err) => {

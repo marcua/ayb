@@ -6,7 +6,7 @@
 <div class="max-w-screen-xl mx-auto px-6">
     <div class="max-w-screen-xl mx-auto">
         <div class="breadcrumbs mb-4">
-            <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> / 
+            <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> /
             <span class="font-semibold">{{ database }}</span> ({{ database_type }})
         </div>
         <ul data-uk-tab class="mb-6" id="database-tabs">
@@ -137,7 +137,7 @@
                                             onInput="checkEntitySharingForm()"
                                             required>
                                     </div>
-                                    <div class="flex-grow">
+                                    <div class="flex-grow mt-2 md:mt-0">
                                         <label class="block text-sm font-medium mb-1">Access level</label>
                                         <div class="uk-btn-group" data-uk-button-radio>
                                             <button
@@ -172,7 +172,7 @@
                                 </div>
                             </form>
                             <div id="entity-sharing-error" class="mt-2"></div>
-                            
+
                             <div id="share-list-container">
                                 <div class="mt-4 text-center">
                                     <div uk-spinner></div>
@@ -186,8 +186,8 @@
                     <div id="remove-share-modal" class="uk-flex-top" data-uk-modal>
                         <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
                             <h2 class="uk-modal-title">Remove access</h2>
-                            <p>Are you sure you want to remove access for <strong id="remove-username"></strong>?</p>
-                            <p class="uk-text-right">
+                            <p class="mt-1">Are you sure you want to remove access for <strong id="remove-username"></strong>?</p>
+                            <p class="uk-text-right mt-4">
                                 <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
                                 <button
                                     class="uk-btn uk-btn-danger"
@@ -255,14 +255,14 @@
                         function editShare(entityName, currentLevel) {
                             // Prefill the form with the entity name and current sharing level
                             document.getElementById('share-entity').value = entityName;
-                            
+
                             // Set the sharing level button - find the button within the entity sharing form
                             const entitySharingForm = document.getElementById('entity-sharing-form');
                             const levelButton = entitySharingForm.querySelector(`[data-value="${currentLevel}"]`);
                             if (levelButton) {
                                 setEntitySharingLevel(levelButton, currentLevel);
                             }
-                            
+
                             // Scroll to the form
                             document.getElementById('entity-sharing-form').scrollIntoView({ behavior: 'smooth' });
                         }
@@ -281,14 +281,14 @@
                         }
 
                         function loadShareList() {
-                            fetch('/{{ entity }}/{{ database }}/share_list_ui')
+                            fetch('/{{ entity }}/{{ database }}/share_list')
                                 .then(response => response.text())
                                 .then(html => {
                                     document.getElementById('share-list-container').innerHTML = html;
                                 })
                                 .catch(error => {
                                     console.error('Error loading share list:', error);
-                                    document.getElementById('share-list-container').innerHTML = 
+                                    document.getElementById('share-list-container').innerHTML =
                                         '<div class="mt-4"><p class="text-sm text-red-600">Error loading shares.</p></div>';
                                 });
                         }
@@ -298,7 +298,7 @@
                             const hash = window.location.hash;
                             const tabs = document.querySelectorAll('#database-tabs li');
                             const tabContents = document.querySelectorAll('.uk-switcher li');
-                            
+
                             // Map hash to tab index
                             let activeIndex = 0; // Default to query tab
                             if (hash === '#sharing' && tabs.length > 1) {
@@ -308,11 +308,11 @@
                             } else if (hash === '#snapshots' && tabs.length > 2) {
                                 activeIndex = 2;
                             }
-                            
+
                             // Remove active class from all tabs and contents
                             tabs.forEach(tab => tab.classList.remove('uk-active'));
                             tabContents.forEach(content => content.style.display = 'none');
-                            
+
                             // Set active tab and content
                             if (tabs[activeIndex]) {
                                 tabs[activeIndex].classList.add('uk-active');
@@ -341,7 +341,7 @@
                         document.addEventListener('DOMContentLoaded', function() {
                             // Add tab click handlers
                             addTabClickHandlers();
-                            
+
                             // Set active tab based on URL hash
                             setActiveTabFromHash();
                             // Set initial public sharing level from the backend
@@ -358,7 +358,7 @@
                                     originalPublicSharingLevel = selectedPublicSharingLevel;
                                     // Disable the button since it now matches the original value
                                     event.target.disabled = true;
-                                } else if (event.detail.xhr.status === 200 && 
+                                } else if (event.detail.xhr.status === 200 &&
                                           (event.target.closest('#entity-sharing-form') || event.target.closest('#remove-share-form'))) {
                                     // Refresh the shares list after any successful sharing operation
                                     loadShareList();

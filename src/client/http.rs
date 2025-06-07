@@ -342,11 +342,7 @@ impl AybClient {
             .await
     }
 
-    pub async fn share_list(
-        &self,
-        entity: &str,
-        database: &str,
-    ) -> Result<ShareList, AybError> {
+    pub async fn share_list(&self, entity: &str, database: &str) -> Result<ShareList, AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers)?;
 

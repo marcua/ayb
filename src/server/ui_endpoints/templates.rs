@@ -67,8 +67,8 @@ fn templates() -> &'static Tera {
         )
         .unwrap();
         tera.add_raw_template(
-            "share_list_partial.html",
-            include_str!("templates/share_list_partial.html"),
+            "share_list.html",
+            include_str!("templates/share_list.html"),
         )
         .unwrap();
 

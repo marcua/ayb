@@ -20,7 +20,6 @@ pub async fn database(
         Err(_) => return Ok(HttpResponse::NotFound().body("Database not found")),
     };
 
-
     let mut context = tera::Context::new();
     context.insert("entity", entity_slug);
     context.insert("database", database_slug);

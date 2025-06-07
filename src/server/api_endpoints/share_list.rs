@@ -14,13 +14,11 @@ async fn share_list(
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database;
-    
-    let database = ayb_db
-        .get_database(entity_slug, database_slug)
-        .await?;
-    
+
+    let database = ayb_db.get_database(entity_slug, database_slug).await?;
+
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
-    
+
     if !can_manage_database(&authenticated_entity, &database, &ayb_db).await? {
         return Err(AybError::Other {
             message: format!(
@@ -29,14 +27,10 @@ async fn share_list(
             ),
         });
     }
-    
-    let sharing_entries = ayb_db
-        .list_entity_database_permissions(&database)
-        .await?;
-    
-    let share_list = ShareList {
-        sharing_entries,
-    };
-    
+
+    let sharing_entries = ayb_db.list_entity_database_permissions(&database).await?;
+
+    let share_list = ShareList { sharing_entries };
+
     Ok(HttpResponse::Ok().json(share_list))
 }

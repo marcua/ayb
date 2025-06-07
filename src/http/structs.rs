@@ -235,12 +235,7 @@ impl TabularFormatter for Vec<SharingEntry> {
         ]));
 
         self.iter()
-            .map(|v| {
-                Row::new(vec![
-                    Cell::new(&v.entity_slug),
-                    Cell::new(&v.sharing_level),
-                ])
-            })
+            .map(|v| Row::new(vec![Cell::new(&v.entity_slug), Cell::new(&v.sharing_level)]))
             .for_each(|c| {
                 table.add_row(c);
             });
