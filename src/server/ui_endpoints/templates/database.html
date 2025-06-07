@@ -180,10 +180,81 @@
                         </div>
                     </div>
 
+                    <!-- Current shares table -->
+                    {% if share_list and share_list | length > 0 %}
+                    <div class="uk-card uk-card-default mt-4">
+                        <div class="uk-card-header">
+                            <h4 class="uk-card-title">Current shares</h4>
+                        </div>
+                        <div class="uk-card-body">
+                            <table class="uk-table uk-table-striped uk-table-small">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Access Level</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for share in share_list %}
+                                    <tr>
+                                        <td>{{ share.entity_slug }}</td>
+                                        <td>{{ share.sharing_level }}</td>
+                                        <td>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default uk-btn-sm"
+                                                onclick="editShare('{{ share.entity_slug }}', '{{ share.sharing_level }}')"
+                                                title="Edit access">
+                                                <uk-icon icon="pencil"></uk-icon>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-danger uk-btn-sm ml-1"
+                                                onclick="confirmRemoveShare('{{ share.entity_slug }}')"
+                                                title="Remove access">
+                                                <uk-icon icon="trash"></uk-icon>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Remove access confirmation modal -->
+                    <div id="remove-share-modal" data-uk-modal>
+                        <div class="uk-modal-dialog uk-modal-body">
+                            <h2 class="uk-modal-title">Remove access</h2>
+                            <p>Are you sure you want to remove access for <strong id="remove-username"></strong>?</p>
+                            <p class="uk-text-right">
+                                <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
+                                <button
+                                    class="uk-btn uk-btn-danger"
+                                    id="confirm-remove-btn"
+                                    type="button"
+                                    onclick="removeShare()">
+                                    Remove access
+                                </button>
+                            </p>
+                            <form id="remove-share-form" style="display: none;"
+                                  hx-post="/{{ entity }}/{{ database }}/share"
+                                  hx-target="#entity-sharing-error"
+                                  hx-target-400="#entity-sharing-error"
+                                  hx-swap="innerHTML">
+                                <input type="hidden" name="entity" id="remove-entity-input">
+                                <input type="hidden" name="sharing_level" value="no-access">
+                            </form>
+                        </div>
+                    </div>
+
                     <script>
                         let originalPublicSharingLevel = '';
                         let selectedPublicSharingLevel = '';
                         let selectedEntitySharingLevel = '';
+                        let removeEntityName = '';
 
                         function setPublicSharingLevel(button, value) {
                             selectedPublicSharingLevel = value;
@@ -223,6 +294,33 @@
                             submitBtn.disabled = !(hasEntity && hasLevel);
                         }
 
+                        function editShare(entityName, currentLevel) {
+                            // Prefill the form with the entity name and current sharing level
+                            document.getElementById('share-entity').value = entityName;
+                            
+                            // Set the sharing level button
+                            const levelButton = document.querySelector(`[data-value="${currentLevel}"]`);
+                            if (levelButton && levelButton.closest('.uk-btn-group').querySelector('[name="sharing_level"]')) {
+                                setEntitySharingLevel(levelButton, currentLevel);
+                            }
+                            
+                            // Scroll to the form
+                            document.getElementById('entity-sharing-form').scrollIntoView({ behavior: 'smooth' });
+                        }
+
+                        function confirmRemoveShare(entityName) {
+                            removeEntityName = entityName;
+                            document.getElementById('remove-username').textContent = entityName;
+                            document.getElementById('remove-entity-input').value = entityName;
+                            UIkit.modal('#remove-share-modal').show();
+                        }
+
+                        function removeShare() {
+                            // Submit the hidden form to remove access
+                            htmx.trigger('#remove-share-form', 'submit');
+                            UIkit.modal('#remove-share-modal').hide();
+                        }
+
                         // Initialize form state when page loads
                         document.addEventListener('DOMContentLoaded', function() {
                             // Set initial public sharing level from the backend
@@ -239,6 +337,10 @@
                                     originalPublicSharingLevel = selectedPublicSharingLevel;
                                     // Disable the button since it now matches the original value
                                     event.target.disabled = true;
+                                } else if (event.detail.xhr.status === 200 && 
+                                          (event.target.id === 'share-entity-btn' || event.target.closest('#remove-share-form'))) {
+                                    // Reload the page to refresh the shares table
+                                    window.location.reload();
                                 }
                             });
                         });
