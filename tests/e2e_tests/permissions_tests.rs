@@ -2,7 +2,7 @@ use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG,
 };
 use crate::utils::ayb::{
-    database_details, list_databases, list_shares, list_snapshots, list_snapshots_match_output,
+    database_details, list_databases, list_database_permissions, list_snapshots, list_snapshots_match_output,
     query, share, update_database,
 };
 use std::collections::HashMap;
@@ -216,8 +216,8 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
-    // Verify that list_shares shows the granted permission.
-    list_shares(
+    // Verify that list_database_permissions shows the granted permission.
+    list_database_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -561,8 +561,8 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
     )?;
-    // Verify that list_shares shows both entities with permissions.
-    list_shares(
+    // Verify that list_database_permissions shows both entities with permissions.
+    list_database_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -654,7 +654,7 @@ pub async fn test_permissions(
         "no-access",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
-    // Verify that list_shares shows no shared permissions after all are revoked.
+    // Verify that list_database_permissions shows no shared permissions after all are revoked.
     share(
         config_path,
         &api_keys.get("second").unwrap()[0],
@@ -663,7 +663,7 @@ pub async fn test_permissions(
         "no-access",
         "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
     )?;
-    list_shares(
+    list_database_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
