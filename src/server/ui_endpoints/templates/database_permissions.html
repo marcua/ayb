@@ -1,6 +1,6 @@
-{% if share_list and share_list | length > 0 %}
+{% if permissions and permissions | length > 0 %}
 <div class="mt-4">
-    <h5 class="text-sm font-medium mb-2">Current shares</h5>
+    <h5 class="text-sm font-medium mb-2">Current permissions</h5>
     <table class="uk-table uk-table-striped uk-table-small">
         <thead>
             <tr>
@@ -10,22 +10,22 @@
             </tr>
         </thead>
         <tbody>
-            {% for share in share_list %}
+            {% for permission in permissions %}
             <tr>
-                <td>{{ share.entity_slug }}</td>
-                <td>{{ share.sharing_level }}</td>
+                <td>{{ permission.entity_slug }}</td>
+                <td>{{ permission.sharing_level }}</td>
                 <td>
                     <button
                         type="button"
                         class="uk-btn uk-btn-default uk-btn-sm"
-                        onclick="editShare('{{ share.entity_slug }}', '{{ share.sharing_level }}')"
+                        onclick="editPermission('{{ permission.entity_slug }}', '{{ permission.sharing_level }}')"
                         title="Edit access">
                         <uk-icon icon="pencil"></uk-icon>
                     </button>
                     <button
                         type="button"
                         class="uk-btn uk-btn-danger uk-btn-sm ml-1"
-                        onclick="confirmRemoveShare('{{ share.entity_slug }}')"
+                        onclick="confirmRemovePermission('{{ permission.entity_slug }}')"
                         title="Remove access">
                         <uk-icon icon="trash"></uk-icon>
                     </button>
@@ -34,9 +34,5 @@
             {% endfor %}
         </tbody>
     </table>
-</div>
-{% else %}
-<div class="mt-4">
-    <p class="text-sm text-muted-foreground">No shares configured for this database.</p>
 </div>
 {% endif %}

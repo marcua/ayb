@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{
-    APIToken, AuthenticationMethod, Database, Entity, EntityDatabasePermission,
-    InstantiatedAuthenticationMethod, InstantiatedDatabase, InstantiatedEntity, PartialDatabase,
-    PartialEntity,
+    APIToken, AuthenticationMethod, Database, DatabasePermission, Entity, EntityDatabasePermission,
+    EntityDatabaseSharingLevel, InstantiatedAuthenticationMethod, InstantiatedDatabase,
+    InstantiatedEntity, PartialDatabase, PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -72,10 +72,10 @@ pub trait AybDb: DynClone + Send + Sync {
         &self,
         entity: &InstantiatedEntity,
     ) -> Result<Vec<InstantiatedDatabase>, AybError>;
-    async fn list_entity_database_permissions(
+    async fn list_database_permissions(
         &self,
         database: &InstantiatedDatabase,
-    ) -> Result<Vec<crate::http::structs::SharingEntry>, AybError>;
+    ) -> Result<Vec<DatabasePermission>, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -529,13 +529,10 @@ ORDER BY id DESC
                 Ok(databases)
             }
 
-            async fn list_entity_database_permissions(
+            async fn list_database_permissions(
                 &self,
                 database: &InstantiatedDatabase,
-            ) -> Result<Vec<$crate::http::structs::SharingEntry>, AybError> {
-                use $crate::ayb_db::models::EntityDatabaseSharingLevel;
-                use $crate::http::structs::SharingEntry;
-
+            ) -> Result<Vec<DatabasePermission>, AybError> {
                 let permissions: Vec<(String, i16)> = sqlx::query_as(
                     r#"
 SELECT
@@ -544,7 +541,6 @@ SELECT
 FROM entity_database_permission
 JOIN entity ON entity_database_permission.entity_id = entity.id
 WHERE entity_database_permission.database_id = $1
-ORDER BY entity.slug
                     "#,
                 )
                 .bind(database.id)
@@ -558,7 +554,7 @@ ORDER BY entity.slug
                             .map_err(|_| AybError::Other {
                                 message: format!("Invalid sharing level: {}", sharing_level),
                             })?;
-                        Ok(SharingEntry {
+                        Ok(DatabasePermission {
                             entity_slug,
                             sharing_level: sharing_level_enum.to_str().to_string(),
                         })

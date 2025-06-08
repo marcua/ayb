@@ -1,13 +1,13 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
-use crate::http::structs::{EntityDatabasePath, ShareList};
+use crate::http::structs::{DatabasePermissions, EntityDatabasePath};
 use crate::server::permissions::can_manage_database;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web, HttpResponse};
 
-#[get("/{entity}/{database}/list_shares")]
-async fn list_shares(
+#[get("/{entity}/{database}/permissions")]
+async fn list_database_permissions(
     path: web::Path<EntityDatabasePath>,
     ayb_db: web::Data<Box<dyn AybDb>>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
@@ -28,9 +28,11 @@ async fn list_shares(
         });
     }
 
-    let sharing_entries = ayb_db.list_entity_database_permissions(&database).await?;
+    let permissions_list = ayb_db.list_database_permissions(&database).await?;
 
-    let share_list = ShareList { sharing_entries };
+    let permissions = DatabasePermissions {
+        permissions: permissions_list,
+    };
 
-    Ok(HttpResponse::Ok().json(share_list))
+    Ok(HttpResponse::Ok().json(permissions))
 }

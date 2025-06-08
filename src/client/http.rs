@@ -2,7 +2,7 @@ use crate::ayb_db::models::{DBType, EntityDatabaseSharingLevel, EntityType, Publ
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{
-    APIToken, Database, DatabaseDetails, EmptyResponse, EntityQueryResponse, ShareList,
+    APIToken, Database, DatabaseDetails, DatabasePermissions, EmptyResponse, EntityQueryResponse,
     SnapshotList,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -342,12 +342,16 @@ impl AybClient {
             .await
     }
 
-    pub async fn list_shares(&self, entity: &str, database: &str) -> Result<ShareList, AybError> {
+    pub async fn list_database_permissions(
+        &self,
+        entity: &str,
+        database: &str,
+    ) -> Result<DatabasePermissions, AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .get(self.make_url(format!("{}/{}/list_shares", entity, database)))
+            .get(self.make_url(format!("{}/{}/permissions", entity, database)))
             .headers(headers)
             .send()
             .await?;

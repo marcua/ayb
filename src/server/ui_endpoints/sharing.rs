@@ -70,8 +70,8 @@ pub async fn update_public_sharing(
     }
 }
 
-#[get("/{entity}/{database}/list_shares")]
-pub async fn list_shares(
+#[get("/{entity}/{database}/permissions")]
+pub async fn database_permissions(
     req: HttpRequest,
     path: web::Path<EntityDatabasePath>,
     ayb_config: web::Data<AybConfig>,
@@ -81,12 +81,15 @@ pub async fn list_shares(
 
     let client = init_ayb_client(&ayb_config, &req);
 
-    match client.list_shares(entity_slug, database_slug).await {
-        Ok(shares) => {
+    match client
+        .list_database_permissions(entity_slug, database_slug)
+        .await
+    {
+        Ok(permissions) => {
             let mut context = tera::Context::new();
-            context.insert("share_list", &shares.sharing_entries);
+            context.insert("permissions", &permissions.permissions);
 
-            let html = render("share_list.html", &context);
+            let html = render("database_permissions.html", &context);
             Ok(HttpResponse::Ok().content_type("text/html").body(html))
         }
         Err(err) => {
@@ -95,7 +98,7 @@ pub async fn list_shares(
                 .content_type("text/html")
                 .body(format!(
                     r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Error loading shares</div>
+                        <div class="uk-alert-title">Error loading permissions</div>
                         <p>{}</p>
                     </div>"#,
                     error_message

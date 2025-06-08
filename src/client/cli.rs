@@ -238,7 +238,7 @@ pub fn client_commands() -> Command {
                 .arg(arg!(<snapshot_id> "The id of the snapshot to load").required(true))
         )
         .subcommand(
-            Command::new("list_shares")
+            Command::new("list_database_permissions")
                 .about("List entities that have access to a database")
                 .arg(arg!(<database> "The database to list permissions for (e.g., entity/database.sqlite)")
                      .value_parser(ValueParser::new(entity_database_parser))
@@ -626,25 +626,25 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                 }
             }
         }
-    } else if let Some(matches) = matches.subcommand_matches("list_shares") {
+    } else if let Some(matches) = matches.subcommand_matches("list_database_permissions") {
         if let (Some(entity_database), Some(format)) = (
             matches.get_one::<EntityDatabasePath>("database"),
             matches.get_one::<OutputFormat>("format"),
         ) {
             match client
-                .list_shares(&entity_database.entity, &entity_database.database)
+                .list_database_permissions(&entity_database.entity, &entity_database.database)
                 .await
             {
                 Ok(response) => {
-                    if response.sharing_entries.is_empty() {
+                    if response.permissions.is_empty() {
                         println!(
                             "No shared permissions for {}/{}",
                             entity_database.entity, entity_database.database
                         );
                     } else {
                         match format {
-                            OutputFormat::Table => response.sharing_entries.generate_table()?,
-                            OutputFormat::Csv => response.sharing_entries.generate_csv()?,
+                            OutputFormat::Table => response.permissions.generate_table()?,
+                            OutputFormat::Csv => response.permissions.generate_csv()?,
                         }
                     }
                 }

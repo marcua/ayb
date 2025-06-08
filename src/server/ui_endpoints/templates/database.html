@@ -193,7 +193,7 @@
                                     class="uk-btn uk-btn-danger"
                                     id="confirm-remove-btn"
                                     type="button"
-                                    onclick="removeShare()">
+                                    onclick="removePermission()">
                                     Remove access
                                 </button>
                             </p>
@@ -252,7 +252,7 @@
                             submitBtn.disabled = !(hasEntity && hasLevel);
                         }
 
-                        function editShare(entityName, currentLevel) {
+                        function editPermission(entityName, currentLevel) {
                             // Prefill the form with the entity name and current sharing level
                             document.getElementById('share-entity').value = entityName;
 
@@ -267,21 +267,21 @@
                             document.getElementById('entity-sharing-form').scrollIntoView({ behavior: 'smooth' });
                         }
 
-                        function confirmRemoveShare(entityName) {
+                        function confirmRemovePermission(entityName) {
                             removeEntityName = entityName;
                             document.getElementById('remove-username').textContent = entityName;
                             document.getElementById('remove-entity-input').value = entityName;
                             UIkit.modal('#remove-share-modal').show();
                         }
 
-                        function removeShare() {
+                        function removePermission() {
                             // Submit the hidden form to remove access
                             htmx.trigger('#remove-share-form', 'submit');
                             UIkit.modal('#remove-share-modal').hide();
                         }
 
-                        function loadShareList() {
-                            fetch('/{{ entity }}/{{ database }}/share_list')
+                        function loadPermissions() {
+                            fetch('/{{ entity }}/{{ database }}/permissions')
                                 .then(response => response.text())
                                 .then(html => {
                                     document.getElementById('share-list-container').innerHTML = html;
@@ -289,7 +289,7 @@
                                 .catch(error => {
                                     console.error('Error loading share list:', error);
                                     document.getElementById('share-list-container').innerHTML =
-                                        '<div class="mt-4"><p class="text-sm text-red-600">Error loading shares.</p></div>';
+                                        '<div class="mt-4"><p class="text-sm text-red-600">Error loading permissions.</p></div>';
                                 });
                         }
 
@@ -304,7 +304,7 @@
                             if (hash === '#sharing' && tabs.length > 1) {
                                 activeIndex = 1;
                                 // Load share list when switching to sharing tab
-                                loadShareList();
+                                loadPermissions();
                             } else if (hash === '#snapshots' && tabs.length > 2) {
                                 activeIndex = 2;
                             }
@@ -361,8 +361,8 @@
                                 } else if (event.detail.xhr.status === 200 &&
                                           (event.target.closest('#entity-sharing-form') || event.target.closest('#remove-share-form'))) {
                                     // Refresh the shares list after any successful sharing operation
-                                    loadShareList();
-                                    // Clear the form after adding/updating a share
+                                    loadPermissions();
+                                    // Clear the form after adding/updating permissions
                                     if (event.target.closest('#entity-sharing-form')) {
                                         document.getElementById('share-entity').value = '';
                                         selectedEntitySharingLevel = '';

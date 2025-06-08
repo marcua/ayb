@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
-    DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
-    InstantiatedEntity as PersistedEntity,
+    DBType, DatabasePermission, EntityType, InstantiatedDatabase as PersistedDatabase,
+    InstantiatedDatabase, InstantiatedEntity as PersistedEntity,
 };
 use crate::formatting::TabularFormatter;
 use crate::hosted_db::QueryMode;
@@ -183,14 +183,8 @@ pub struct SnapshotList {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SharingEntry {
-    pub entity_slug: String,
-    pub sharing_level: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ShareList {
-    pub sharing_entries: Vec<SharingEntry>,
+pub struct DatabasePermissions {
+    pub permissions: Vec<DatabasePermission>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -226,12 +220,12 @@ impl TabularFormatter for Vec<ListSnapshotResult> {
     }
 }
 
-impl TabularFormatter for Vec<SharingEntry> {
+impl TabularFormatter for Vec<DatabasePermission> {
     fn to_table(&self) -> Table {
         let mut table = Table::new();
         table.set_titles(Row::new(vec![
             Cell::new("Entity"),
-            Cell::new("Sharing Level"),
+            Cell::new("Sharing level"),
         ]));
 
         self.iter()
