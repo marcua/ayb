@@ -387,6 +387,8 @@ pub async fn test_permissions(
         "read-only",
         "Error: Authenticated entity e2e-second can\'t set permissions for database e2e-first/test.sqlite",
     )?;
+    // AI: Second entity can't list_database_permissions for this database (it's not a manager)
+
     // Third entity has no access.
     query(
         config_path,
@@ -464,6 +466,7 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite\nYou have management permissions for this database",
     )?;
+    // AI: Second can list database permissions on FIRST_ENTITY_DB
 
     // Access to e2e-first/test.sqlite doesn't grant access to
     // e2e-first/another.sqlite.
@@ -481,6 +484,8 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB2,
         "Error: Authenticated entity e2e-second can't access database e2e-first/another.sqlite",
     )?;
+    // AI: Second can't list database permissions on FIRST_ENTITY_DB2
+
     // Second entity can update database metadata.
     update_database(
         config_path,
@@ -684,6 +689,7 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
     )?;
+    // AI! Second entity can't query list_database_permissions
 
     Ok(())
 }
