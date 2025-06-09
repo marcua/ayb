@@ -387,7 +387,14 @@ pub async fn test_permissions(
         "read-only",
         "Error: Authenticated entity e2e-second can\'t set permissions for database e2e-first/test.sqlite",
     )?;
-    // AI: Second entity can't list_database_permissions for this database (it's not a manager)
+    // Second entity can't list_database_permissions for this database (it's not a manager)
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Error: Authenticated entity e2e-second can't manage database permissions for e2e-first/test.sqlite",
+    )?;
 
     // Third entity has no access.
     query(
@@ -466,7 +473,14 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite\nYou have management permissions for this database",
     )?;
-    // AI: Second can list database permissions on FIRST_ENTITY_DB
+    // Second can list database permissions on FIRST_ENTITY_DB
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Entity,Sharing level\ne2e-second,manager",
+    )?;
 
     // Access to e2e-first/test.sqlite doesn't grant access to
     // e2e-first/another.sqlite.
@@ -484,7 +498,14 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB2,
         "Error: Authenticated entity e2e-second can't access database e2e-first/another.sqlite",
     )?;
-    // AI: Second can't list database permissions on FIRST_ENTITY_DB2
+    // Second can't list database permissions on FIRST_ENTITY_DB2
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB2,
+        "csv",
+        "Error: Authenticated entity e2e-second can't manage database permissions for e2e-first/another.sqlite",
+    )?;
 
     // Second entity can update database metadata.
     update_database(
@@ -689,7 +710,14 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
     )?;
-    // AI! Second entity can't query list_database_permissions
+    // Second entity can't query list_database_permissions
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Error: Authenticated entity e2e-second can't manage database permissions for e2e-first/test.sqlite",
+    )?;
 
     Ok(())
 }
