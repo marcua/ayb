@@ -393,7 +393,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        "Error: Authenticated entity e2e-second can't manage database permissions for e2e-first/test.sqlite",
+        "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/test.sqlite",
     )?;
 
     // Third entity has no access.
@@ -473,7 +473,7 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite\nYou have management permissions for this database",
     )?;
-    // Second can list database permissions on FIRST_ENTITY_DB
+    // Second can list database permissions on FIRST_ENTITY_DB.
     list_database_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
@@ -498,13 +498,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB2,
         "Error: Authenticated entity e2e-second can't access database e2e-first/another.sqlite",
     )?;
-    // Second can't list database permissions on FIRST_ENTITY_DB2
     list_database_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB2,
         "csv",
-        "Error: Authenticated entity e2e-second can't manage database permissions for e2e-first/another.sqlite",
+        "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/another.sqlite",
     )?;
 
     // Second entity can update database metadata.
@@ -710,13 +709,12 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
     )?;
-    // Second entity can't query list_database_permissions
     list_database_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        "Error: Authenticated entity e2e-second can't manage database permissions for e2e-first/test.sqlite",
+        "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/test.sqlite",
     )?;
 
     Ok(())
