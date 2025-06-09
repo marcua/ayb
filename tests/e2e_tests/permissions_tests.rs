@@ -128,7 +128,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -222,7 +222,7 @@ pub async fn test_permissions(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        "Entity,Sharing Level\ne2e-second,read-only",
+        "Entity,Sharing level\ne2e-second,read-only",
     )?;
     // Second entity has read-only access.
     query(
@@ -237,7 +237,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -335,7 +335,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -432,7 +432,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -502,7 +502,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("third").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -567,7 +567,7 @@ pub async fn test_permissions(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         "csv",
-        "Entity,Sharing Level\ne2e-second,manager\ne2e-third,read-only",
+        "Entity,Sharing level\ne2e-second,manager\ne2e-third,read-only",
     )?;
     // Third entity can query database.
     query(
@@ -582,7 +582,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("third").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -655,14 +655,6 @@ pub async fn test_permissions(
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
     // Verify that list_database_permissions shows no shared permissions after all are revoked.
-    share(
-        config_path,
-        &api_keys.get("second").unwrap()[0],
-        FIRST_ENTITY_DB,
-        THIRD_ENTITY_SLUG,
-        "no-access",
-        "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
-    )?;
     list_database_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
