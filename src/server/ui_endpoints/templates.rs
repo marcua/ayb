@@ -71,6 +71,16 @@ fn templates() -> &'static Tera {
             include_str!("templates/database_permissions.html"),
         )
         .unwrap();
+        tera.add_raw_template(
+            "sharing_success.html",
+            include_str!("templates/sharing_success.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "sharing_error.html",
+            include_str!("templates/sharing_error.html"),
+        )
+        .unwrap();
 
         tera.build_inheritance_chains().unwrap();
 

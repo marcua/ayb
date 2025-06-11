@@ -2,7 +2,7 @@ use crate::ayb_db::models::{EntityDatabaseSharingLevel, PublicSharingLevel};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::render;
+use crate::server::ui_endpoints::templates::{render, ok_response};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 use std::str::FromStr;
@@ -31,15 +31,12 @@ pub async fn update_public_sharing(
     let public_sharing_level = match PublicSharingLevel::from_str(&form.public_sharing_level) {
         Ok(level) => level,
         Err(_) => {
+            let mut context = tera::Context::new();
+            context.insert("title", "Invalid sharing level");
+            context.insert("message", &format!("The sharing level '{}' is not valid.", form.public_sharing_level));
             return Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
-                .body(format!(
-                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Invalid sharing level</div>
-                        <p>The sharing level '{}' is not valid.</p>
-                    </div>"#,
-                    form.public_sharing_level
-                )));
+                .body(render("sharing_error.html", &context)));
         }
     };
 
@@ -49,23 +46,20 @@ pub async fn update_public_sharing(
         .update_database(entity_slug, database_slug, &public_sharing_level)
         .await
     {
-        Ok(_) => Ok(HttpResponse::Ok().content_type("text/html").body(
-            r#"<div class="uk-alert uk-alert-success" data-uk-alert="">
-                <div class="uk-alert-title">Success</div>
-                <p>Public sharing level updated successfully.</p>
-            </div>"#,
-        )),
+        Ok(_) => {
+            let mut context = tera::Context::new();
+            context.insert("message", "Public sharing level updated successfully.");
+            Ok(HttpResponse::Ok()
+                .content_type("text/html")
+                .body(render("sharing_success.html", &context)))
+        }
         Err(err) => {
-            let error_message = format!("{}", err);
+            let mut context = tera::Context::new();
+            context.insert("title", "Error updating sharing level");
+            context.insert("message", &format!("{}", err));
             Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
-                .body(format!(
-                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Error updating sharing level</div>
-                        <p>{}</p>
-                    </div>"#,
-                    error_message
-                )))
+                .body(render("sharing_error.html", &context)))
         }
     }
 }
@@ -93,16 +87,12 @@ pub async fn database_permissions(
             Ok(HttpResponse::Ok().content_type("text/html").body(html))
         }
         Err(err) => {
-            let error_message = format!("{}", err);
+            let mut context = tera::Context::new();
+            context.insert("title", "Error loading permissions");
+            context.insert("message", &format!("{}", err));
             Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
-                .body(format!(
-                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Error loading permissions</div>
-                        <p>{}</p>
-                    </div>"#,
-                    error_message
-                )))
+                .body(render("sharing_error.html", &context)))
         }
     }
 }
@@ -121,25 +111,22 @@ pub async fn share_with_entity(
     let sharing_level = match EntityDatabaseSharingLevel::from_str(&form.sharing_level) {
         Ok(level) => level,
         Err(_) => {
+            let mut context = tera::Context::new();
+            context.insert("title", "Invalid sharing level");
+            context.insert("message", &format!("The sharing level '{}' is not valid.", form.sharing_level));
             return Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
-                .body(format!(
-                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Invalid sharing level</div>
-                        <p>The sharing level '{}' is not valid.</p>
-                    </div>"#,
-                    form.sharing_level
-                )));
+                .body(render("sharing_error.html", &context)));
         }
     };
 
     if target_entity.is_empty() {
-        return Ok(HttpResponse::BadRequest().content_type("text/html").body(
-            r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                <div class="uk-alert-title">Missing username</div>
-                <p>Please enter a username to share with.</p>
-            </div>"#,
-        ));
+        let mut context = tera::Context::new();
+        context.insert("title", "Missing username");
+        context.insert("message", "Please enter a username to share with.");
+        return Ok(HttpResponse::BadRequest()
+            .content_type("text/html")
+            .body(render("sharing_error.html", &context)));
     }
 
     let client = init_ayb_client(&ayb_config, &req);
@@ -148,24 +135,20 @@ pub async fn share_with_entity(
         .share(entity_slug, database_slug, target_entity, &sharing_level)
         .await
     {
-        Ok(_) => Ok(HttpResponse::Ok().content_type("text/html").body(format!(
-            r#"<div class="uk-alert uk-alert-success" data-uk-alert="">
-                    <div class="uk-alert-title">Success</div>
-                    <p>Database access updated for user '{}'.</p>
-                </div>"#,
-            target_entity
-        ))),
+        Ok(_) => {
+            let mut context = tera::Context::new();
+            context.insert("message", &format!("Database access updated for user '{}'.", target_entity));
+            Ok(HttpResponse::Ok()
+                .content_type("text/html")
+                .body(render("sharing_success.html", &context)))
+        }
         Err(err) => {
-            let error_message = format!("{}", err);
+            let mut context = tera::Context::new();
+            context.insert("title", "Error updating access");
+            context.insert("message", &format!("{}", err));
             Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
-                .body(format!(
-                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Error updating access</div>
-                        <p>{}</p>
-                    </div>"#,
-                    error_message
-                )))
+                .body(render("sharing_error.html", &context)))
         }
     }
 }
