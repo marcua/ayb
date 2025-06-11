@@ -1,7 +1,7 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::ok_response;
+use crate::server::ui_endpoints::templates::{error_snippet, ok_response};
 use actix_web::{post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 
@@ -42,15 +42,7 @@ pub async fn query(
                         "error,message\n\"{}\"",
                         error_message.replace("\"", "\"\"")
                     ))),
-                _ => Ok(HttpResponse::BadRequest()
-                    .content_type("text/html")
-                    .body(format!(
-                        r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Error running query</div>
-                        <p>{}</p>
-                    </div>"#,
-                        error_message
-                    ))),
+                _ => error_snippet("Error running query", &error_message),
             };
         }
     };

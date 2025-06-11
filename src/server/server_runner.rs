@@ -35,7 +35,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
             .service(api_endpoints::update_profile_endpoint)
             .service(api_endpoints::list_snapshots_endpoint)
             .service(api_endpoints::restore_snapshot_endpoint)
-            .service(api_endpoints::share_endpoint),
+            .service(api_endpoints::share_endpoint)
+            .service(api_endpoints::list_database_permissions_endpoint),
     );
 
     // Only add UI routes if web frontend is configured for local serving
@@ -50,7 +51,10 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::entity_details_endpoint)
                 .service(ui_endpoints::create_database_endpoint)
                 .service(ui_endpoints::database_endpoint)
-                .service(ui_endpoints::query_endpoint);
+                .service(ui_endpoints::query_endpoint)
+                .service(ui_endpoints::update_public_sharing_endpoint)
+                .service(ui_endpoints::share_with_entity_endpoint)
+                .service(ui_endpoints::database_permissions_endpoint);
         }
     }
 }

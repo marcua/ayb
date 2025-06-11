@@ -1,0 +1,38 @@
+{% if permissions and permissions | length > 0 %}
+<div class="mt-4">
+    <h5 class="text-sm font-medium mb-2">Current permissions</h5>
+    <table class="uk-table uk-table-striped uk-table-small">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Access level</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for permission in permissions %}
+            <tr>
+                <td>{{ permission.entity_slug }}</td>
+                <td>{{ permission.sharing_level }}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="uk-btn uk-btn-default uk-btn-sm"
+                        onclick="editPermission('{{ permission.entity_slug }}', '{{ permission.sharing_level }}')"
+                        title="Edit access">
+                        <uk-icon icon="pencil"></uk-icon>
+                    </button>
+                    <button
+                        type="button"
+                        class="uk-btn uk-btn-danger uk-btn-sm ml-1"
+                        onclick="confirmRemovePermission('{{ permission.entity_slug }}')"
+                        title="Remove access">
+                        <uk-icon icon="trash"></uk-icon>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}

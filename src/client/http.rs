@@ -2,7 +2,8 @@ use crate::ayb_db::models::{DBType, EntityDatabaseSharingLevel, EntityType, Publ
 use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{
-    APIToken, Database, DatabaseDetails, EmptyResponse, EntityQueryResponse, SnapshotList,
+    APIToken, Database, DatabaseDetails, DatabasePermissions, EmptyResponse, EntityQueryResponse,
+    SnapshotList,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
@@ -338,6 +339,24 @@ impl AybClient {
             .await?;
 
         self.handle_empty_response(response, reqwest::StatusCode::NO_CONTENT)
+            .await
+    }
+
+    pub async fn list_database_permissions(
+        &self,
+        entity: &str,
+        database: &str,
+    ) -> Result<DatabasePermissions, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url(format!("{}/{}/permissions", entity, database)))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
             .await
     }
 }

@@ -2,8 +2,8 @@ use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG,
 };
 use crate::utils::ayb::{
-    database_details, list_databases, list_snapshots, list_snapshots_match_output, query, share,
-    update_database,
+    database_details, list_database_permissions, list_databases, list_snapshots,
+    list_snapshots_match_output, query, share, update_database,
 };
 use std::collections::HashMap;
 
@@ -128,7 +128,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -216,6 +216,14 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
+    // Verify that list_database_permissions shows the granted permission.
+    list_database_permissions(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Entity,Sharing level\ne2e-second,read-only",
+    )?;
     // Second entity has read-only access.
     query(
         config_path,
@@ -229,7 +237,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -327,7 +335,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -379,6 +387,15 @@ pub async fn test_permissions(
         "read-only",
         "Error: Authenticated entity e2e-second can\'t set permissions for database e2e-first/test.sqlite",
     )?;
+    // Second entity can't list_database_permissions for this database (it's not a manager)
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/test.sqlite",
+    )?;
+
     // Third entity has no access.
     query(
         config_path,
@@ -424,7 +441,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -456,6 +473,14 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: ReadWrite\nYou have management permissions for this database",
     )?;
+    // Second can list database permissions on FIRST_ENTITY_DB.
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Entity,Sharing level\ne2e-second,manager",
+    )?;
 
     // Access to e2e-first/test.sqlite doesn't grant access to
     // e2e-first/another.sqlite.
@@ -473,6 +498,14 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB2,
         "Error: Authenticated entity e2e-second can't access database e2e-first/another.sqlite",
     )?;
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB2,
+        "csv",
+        "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/another.sqlite",
+    )?;
+
     // Second entity can update database metadata.
     update_database(
         config_path,
@@ -494,7 +527,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("third").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -553,6 +586,14 @@ pub async fn test_permissions(
         "read-only",
         "Permissions for e2e-third on e2e-first/test.sqlite updated successfully",
     )?;
+    // Verify that list_database_permissions shows both entities with permissions.
+    list_database_permissions(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Entity,Sharing level\ne2e-second,manager\ne2e-third,read-only",
+    )?;
     // Third entity can query database.
     query(
         config_path,
@@ -566,7 +607,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("third").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",        
+        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -638,6 +679,14 @@ pub async fn test_permissions(
         "no-access",
         "Permissions for e2e-second on e2e-first/test.sqlite updated successfully",
     )?;
+    // Verify that list_database_permissions shows no shared permissions after all are revoked.
+    list_database_permissions(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "No shared permissions for e2e-first/test.sqlite",
+    )?;
     // Second entity now has no access.
     query(
         config_path,
@@ -659,6 +708,13 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
         "Error: Authenticated entity e2e-second can't access database e2e-first/test.sqlite",
+    )?;
+    list_database_permissions(
+        config_path,
+        &api_keys.get("second").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+        "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/test.sqlite",
     )?;
 
     Ok(())

@@ -1,6 +1,6 @@
 use crate::ayb_db::models::{
-    DBType, EntityType, InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
-    InstantiatedEntity as PersistedEntity,
+    DBType, DatabasePermission, EntityType, InstantiatedDatabase as PersistedDatabase,
+    InstantiatedDatabase, InstantiatedEntity as PersistedEntity,
 };
 use crate::formatting::TabularFormatter;
 use crate::hosted_db::QueryMode;
@@ -183,12 +183,18 @@ pub struct SnapshotList {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct DatabasePermissions {
+    pub permissions: Vec<DatabasePermission>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DatabaseDetails {
     pub entity_slug: String,
     pub database_slug: String,
     pub database_type: String,
     pub highest_query_access_level: Option<QueryMode>,
     pub can_manage_database: bool,
+    pub public_sharing_level: String,
 }
 
 impl TabularFormatter for Vec<ListSnapshotResult> {
@@ -206,6 +212,24 @@ impl TabularFormatter for Vec<ListSnapshotResult> {
                     Cell::new(&v.last_modified_at.to_rfc3339()),
                 ])
             })
+            .for_each(|c| {
+                table.add_row(c);
+            });
+
+        table
+    }
+}
+
+impl TabularFormatter for Vec<DatabasePermission> {
+    fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![
+            Cell::new("Entity"),
+            Cell::new("Sharing level"),
+        ]));
+
+        self.iter()
+            .map(|v| Row::new(vec![Cell::new(&v.entity_slug), Cell::new(&v.sharing_level)]))
             .for_each(|c| {
                 table.add_row(c);
             });
