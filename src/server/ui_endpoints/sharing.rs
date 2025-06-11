@@ -2,7 +2,7 @@ use crate::ayb_db::models::{EntityDatabaseSharingLevel, PublicSharingLevel};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::{render, ok_response};
+use crate::server::ui_endpoints::templates::{ok_response, render};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 use std::str::FromStr;
@@ -33,7 +33,13 @@ pub async fn update_public_sharing(
         Err(_) => {
             let mut context = tera::Context::new();
             context.insert("title", "Invalid sharing level");
-            context.insert("message", &format!("The sharing level '{}' is not valid.", form.public_sharing_level));
+            context.insert(
+                "message",
+                &format!(
+                    "The sharing level '{}' is not valid.",
+                    form.public_sharing_level
+                ),
+            );
             return Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
                 .body(render("sharing_error.html", &context)));
@@ -113,7 +119,10 @@ pub async fn share_with_entity(
         Err(_) => {
             let mut context = tera::Context::new();
             context.insert("title", "Invalid sharing level");
-            context.insert("message", &format!("The sharing level '{}' is not valid.", form.sharing_level));
+            context.insert(
+                "message",
+                &format!("The sharing level '{}' is not valid.", form.sharing_level),
+            );
             return Ok(HttpResponse::BadRequest()
                 .content_type("text/html")
                 .body(render("sharing_error.html", &context)));
@@ -137,7 +146,10 @@ pub async fn share_with_entity(
     {
         Ok(_) => {
             let mut context = tera::Context::new();
-            context.insert("message", &format!("Database access updated for user '{}'.", target_entity));
+            context.insert(
+                "message",
+                &format!("Database access updated for user '{}'.", target_entity),
+            );
             Ok(HttpResponse::Ok()
                 .content_type("text/html")
                 .body(render("sharing_success.html", &context)))
