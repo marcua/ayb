@@ -33,7 +33,10 @@ pub async fn update_public_sharing(
         Err(_) => {
             return error_snippet(
                 "Invalid sharing level",
-                &format!("The sharing level '{}' is not valid.", form.public_sharing_level),
+                &format!(
+                    "The sharing level '{}' is not valid.",
+                    form.public_sharing_level
+                ),
             );
         }
     };
