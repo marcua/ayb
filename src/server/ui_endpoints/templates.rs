@@ -77,8 +77,8 @@ fn templates() -> &'static Tera {
         )
         .unwrap();
         tera.add_raw_template(
-            "sharing_error.html",
-            include_str!("templates/sharing_error.html"),
+            "error_snippet.html",
+            include_str!("templates/error_snippet.html"),
         )
         .unwrap();
 
@@ -101,4 +101,13 @@ pub fn ok_response(template_name: &str, context: &Context) -> Result<HttpRespons
     Ok(HttpResponse::Ok()
         .content_type("text/html; charset=utf-8")
         .body(render(template_name, context)))
+}
+
+pub fn error_snippet(title: &str, message: &str) -> Result<HttpResponse> {
+    let mut context = tera::Context::new();
+    context.insert("title", title);
+    context.insert("message", message);
+    Ok(HttpResponse::BadRequest()
+        .content_type("text/html")
+        .body(render("error_snippet.html", &context)))
 }
