@@ -249,3 +249,71 @@ pub fn test_registration(
     api_keys.insert("third".to_string(), vec![third_api_key0]);
     Ok(api_keys)
 }
+
+pub fn test_banned_username_registration(
+    config_path: &str,
+    server_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Test that banned usernames are rejected during registration
+
+    // Test ayb-specific route conflicts
+    let ayb_banned = ["register", "log_in", "log_out", "confirm", "v1"];
+    for banned_username in ayb_banned {
+        let cmd = ayb_assert_cmd!("client", "register", banned_username, "test@example.org"; {
+            "AYB_CLIENT_CONFIG_FILE" => config_path,
+            "AYB_SERVER_URL" => server_url,
+        });
+        cmd.stdout(format!(
+            "Error: Username '{}' is reserved and cannot be used\n",
+            banned_username
+        ));
+    }
+
+    // Test common reserved names from shouldbee/reserved-usernames
+    let common_banned = ["admin", "root", "www", "api", "support", "help"];
+    for banned_username in common_banned {
+        let cmd = ayb_assert_cmd!("client", "register", banned_username, "test@example.org"; {
+            "AYB_CLIENT_CONFIG_FILE" => config_path,
+            "AYB_SERVER_URL" => server_url,
+        });
+        cmd.stdout(format!(
+            "Error: Username '{}' is reserved and cannot be used\n",
+            banned_username
+        ));
+    }
+
+    // Test additional comprehensive reserved names
+    let extended_banned = ["blog", "news", "email", "contact", "about", "null"];
+    for banned_username in extended_banned {
+        let cmd = ayb_assert_cmd!("client", "register", banned_username, "test@example.org"; {
+            "AYB_CLIENT_CONFIG_FILE" => config_path,
+            "AYB_SERVER_URL" => server_url,
+        });
+        cmd.stdout(format!(
+            "Error: Username '{}' is reserved and cannot be used\n",
+            banned_username
+        ));
+    }
+
+    // Test that case doesn't matter - all should be banned
+    let case_banned = ["REGISTER", "Log_In", "API", "ROOT"];
+    for banned_username in case_banned {
+        let cmd = ayb_assert_cmd!("client", "register", banned_username, "test@example.org"; {
+            "AYB_CLIENT_CONFIG_FILE" => config_path,
+            "AYB_SERVER_URL" => server_url,
+        });
+        cmd.stdout(format!(
+            "Error: Username '{}' is reserved and cannot be used\n",
+            banned_username.to_lowercase()
+        ));
+    }
+
+    // Test that valid usernames still work
+    let cmd = ayb_assert_cmd!("client", "register", "validusername", "test@example.org"; {
+        "AYB_CLIENT_CONFIG_FILE" => config_path,
+        "AYB_SERVER_URL" => server_url,
+    });
+    cmd.stdout("Check your email to finish registering validusername\n");
+
+    Ok(())
+}
