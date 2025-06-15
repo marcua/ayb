@@ -79,26 +79,26 @@
                                     <button
                                         type="button"
                                         class="uk-btn uk-btn-default uk-active"
-                                        data-value="{{ no_access }}"
-                                        onclick="setPublicSharingLevel(this, '{{ no_access }}')">
+                                        data-value="no-access"
+                                        onclick="setPublicSharingLevel(this, 'no-access')">
                                         Private
                                     </button>
                                     <button
                                         type="button"
                                         class="uk-btn uk-btn-default"
-                                        data-value="{{ fork }}"
-                                        onclick="setPublicSharingLevel(this, '{{ fork }}')">
+                                        data-value="fork"
+                                        onclick="setPublicSharingLevel(this, 'fork')">
                                         Forkable
                                     </button>
                                     <button
                                         type="button"
                                         class="uk-btn uk-btn-default"
-                                        data-value="{{ read_only }}"
-                                        onclick="setPublicSharingLevel(this, '{{ read_only }}')">
+                                        data-value="read-only"
+                                        onclick="setPublicSharingLevel(this, 'read-only')">
                                         Read-only
                                     </button>
                                 </div>
-                                <input type="hidden" id="public-sharing-level" name="public_sharing_level" value="{{ no_access }}">
+                                <input type="hidden" id="public-sharing-level" name="public_sharing_level" value="no-access">
                             </div>
                             <div class="mt-4">
                                 <button type="submit" id="create-database-submit" class="uk-btn uk-btn-primary">
