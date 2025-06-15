@@ -2,6 +2,7 @@ use crate::ayb_db::models::{DBType, PublicSharingLevel};
 use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
+use crate::server::ui_endpoints::templates::error_snippet;
 use actix_web::{post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 use std::str::FromStr;
@@ -42,18 +43,6 @@ pub async fn create_database(
                 .append_header(("HX-Redirect", redirect_url))
                 .finish())
         }
-        Err(err) => {
-            // Return error in HTML format
-            let error_message = format!("{}", err);
-            Ok(HttpResponse::BadRequest()
-                .content_type("text/html")
-                .body(format!(
-                    r#"<div class="uk-alert uk-alert-destructive" data-uk-alert="">
-                        <div class="uk-alert-title">Error creating database</div>
-                        <p>{}</p>
-                    </div>"#,
-                    error_message
-                )))
-        }
+        Err(err) => error_snippet("Error creating database", &format!("{}", err)),
     }
 }
