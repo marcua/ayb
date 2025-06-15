@@ -17,10 +17,9 @@ e2e.sh
 ayb_data
 reset_db.sh
 smtp_data
-tests/ayb_data_postgres
-tests/ayb_data_sqlite
-tests/smtp_data_10025
-tests/smtp_data_10026
+tests/ayb_data*
+tests/ayb_data*
+tests/smtp_data*
 tests/nsjail
 tests/localstack_init.sh
 tests/localstack_data*
