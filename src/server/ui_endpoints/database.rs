@@ -33,6 +33,10 @@ pub async fn database(
         &database_response.highest_query_access_level,
     );
     context.insert(
+        "public_sharing_level",
+        &database_response.public_sharing_level,
+    );
+    context.insert(
         "logged_in_entity",
         &authentication_details(&req).map(|details| details.entity),
     );

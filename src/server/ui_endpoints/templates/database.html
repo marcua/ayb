@@ -6,14 +6,14 @@
 <div class="max-w-screen-xl mx-auto px-6">
     <div class="max-w-screen-xl mx-auto">
         <div class="breadcrumbs mb-4">
-            <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> / 
+            <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> /
             <span class="font-semibold">{{ database }}</span> ({{ database_type }})
         </div>
-        <ul data-uk-tab class="mb-6">
-            <li class="uk-active"><a class="px-4 pb-3 pt-2" href="">Query</a></li>
+        <ul data-uk-tab class="mb-6" id="database-tabs">
+            <li><a class="px-4 pb-3 pt-2" href="#query">Query</a></li>
             {% if can_manage_database %}
-                <li><a class="px-4 pb-3 pt-2" href="">Sharing</a></li>
-                <li><a class="px-4 pb-3 pt-2" href="">Snapshots</a></li>
+                <li><a class="px-4 pb-3 pt-2" href="#sharing">Sharing</a></li>
+                <li><a class="px-4 pb-3 pt-2" href="#snapshots">Snapshots</a></li>
             {% endif %}
         </ul>
         <ul class="uk-switcher mt-4">
@@ -67,9 +67,316 @@
                 <div class="sharing-interface">
                     <h3 class="text-lg font-medium mb-2">Database sharing</h3>
                     <p class="text-muted-foreground mb-4">Manage who can access this database and what permissions they have.</p>
-                    <p class="text-sm">Use the command line to manage sharing:</p>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client share {{ entity }}/{{ database }} [entity] [sharing-level]</pre>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client update_database --public_sharing_level [level] {{ entity }}/{{ database }}</pre>
+
+                    <!-- Public sharing level form -->
+                    <div class="uk-card uk-card-default mb-4">
+                        <div class="uk-card-header">
+                            <h4 class="uk-card-title">Public sharing level</h4>
+                        </div>
+                        <div class="uk-card-body">
+                            <form id="public-sharing-form" class="space-y-4">
+                                <div class="uk-btn-group" data-uk-button-radio>
+                                    <button
+                                        type="button"
+                                        class="uk-btn uk-btn-default{% if public_sharing_level == 'no-access' %} uk-active{% endif %}"
+                                        data-value="no-access"
+                                        onclick="setPublicSharingLevel(this, 'no-access')">
+                                        Private
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="uk-btn uk-btn-default{% if public_sharing_level == 'fork' %} uk-active{% endif %}"
+                                        data-value="fork"
+                                        onclick="setPublicSharingLevel(this, 'fork')">
+                                        Forkable
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="uk-btn uk-btn-default{% if public_sharing_level == 'read-only' %} uk-active{% endif %}"
+                                        data-value="read-only"
+                                        onclick="setPublicSharingLevel(this, 'read-only')">
+                                        Read-only
+                                    </button>
+                                </div>
+                                <input type="hidden" id="public-sharing-level-value" name="public_sharing_level" value="">
+                                <div>
+                                    <button type="button" id="update-public-sharing-btn" class="uk-btn uk-btn-primary" disabled
+                                            hx-post="/{{ entity }}/{{ database }}/update_public_sharing"
+                                            hx-target="#public-sharing-error"
+                                            hx-target-400="#public-sharing-error"
+                                            hx-swap="innerHTML"
+                                            hx-include="#public-sharing-level-value">
+                                        Update sharing level
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="public-sharing-error" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Share with specific entity form -->
+                    <div class="uk-card uk-card-default">
+                        <div class="uk-card-header">
+                            <h4 class="uk-card-title">Share with specific user</h4>
+                        </div>
+                        <div class="uk-card-body">
+                            <form id="entity-sharing-form" class="space-y-4"
+                                  hx-post="/{{ entity }}/{{ database }}/share"
+                                  hx-target="#entity-sharing-error"
+                                  hx-target-400="#entity-sharing-error"
+                                  hx-swap="innerHTML">
+                                <div class="flex flex-col md:flex-row md:gap-4">
+                                    <div class="flex-none md:w-1/3">
+                                        <label for="share-entity" class="block text-sm font-medium mb-1">Username</label>
+                                        <input
+                                            type="text"
+                                            id="share-entity"
+                                            name="entity"
+                                            class="p-2 border rounded focus:border-blue-500 w-full"
+                                            placeholder="Enter username"
+                                            onInput="checkEntitySharingForm()"
+                                            required>
+                                    </div>
+                                    <div class="flex-grow mt-2 md:mt-0">
+                                        <label class="block text-sm font-medium mb-1">Access level</label>
+                                        <div class="uk-btn-group" data-uk-button-radio>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="read-only"
+                                                onclick="setEntitySharingLevel(this, 'read-only')">
+                                                Read-only
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="read-write"
+                                                onclick="setEntitySharingLevel(this, 'read-write')">
+                                                Read-write
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="uk-btn uk-btn-default"
+                                                data-value="manager"
+                                                onclick="setEntitySharingLevel(this, 'manager')">
+                                                Manager
+                                            </button>
+                                        </div>
+                                        <input type="hidden" id="entity-sharing-level-value" name="sharing_level" value="">
+                                    </div>
+                                </div>
+                                <div>
+                                    <button type="submit" id="share-entity-btn" class="uk-btn uk-btn-primary" disabled>
+                                        Update access
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="entity-sharing-error" class="mt-2"></div>
+
+                            <div id="share-list-container">
+                                <div class="mt-4 text-center">
+                                    <div uk-spinner></div>
+                                    <p class="text-sm text-muted-foreground mt-2">Loading permissions...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Remove access confirmation modal -->
+                    <div id="remove-share-modal" class="uk-flex-top" data-uk-modal>
+                        <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+                            <h2 class="uk-modal-title">Remove access</h2>
+                            <p class="mt-1">Are you sure you want to remove access for <strong id="remove-username"></strong>?</p>
+                            <p class="uk-text-right mt-4">
+                                <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
+                                <button
+                                    class="uk-btn uk-btn-danger"
+                                    id="confirm-remove-btn"
+                                    type="button"
+                                    onclick="removePermission()">
+                                    Remove access
+                                </button>
+                            </p>
+                            <form id="remove-share-form" style="display: none;"
+                                  hx-post="/{{ entity }}/{{ database }}/share"
+                                  hx-target="#entity-sharing-error"
+                                  hx-target-400="#entity-sharing-error"
+                                  hx-swap="innerHTML">
+                                <input type="hidden" name="entity" id="remove-entity-input">
+                                <input type="hidden" name="sharing_level" value="no-access">
+                            </form>
+                        </div>
+                    </div>
+
+                    <script>
+                        let originalPublicSharingLevel = '';
+                        let selectedPublicSharingLevel = '';
+                        let selectedEntitySharingLevel = '';
+                        let removeEntityName = '';
+
+                        function setPublicSharingLevel(button, value) {
+                            selectedPublicSharingLevel = value;
+                            document.getElementById('public-sharing-level-value').value = value;
+
+                            // Update button states
+                            const buttons = button.parentElement.querySelectorAll('button');
+                            buttons.forEach(btn => {
+                                btn.classList.remove('uk-active');
+                            });
+                            button.classList.add('uk-active');
+
+                            // Enable/disable update button based on whether value changed
+                            const updateBtn = document.getElementById('update-public-sharing-btn');
+                            updateBtn.disabled = (value === originalPublicSharingLevel);
+                        }
+
+                        function setEntitySharingLevel(button, value) {
+                            selectedEntitySharingLevel = value;
+                            document.getElementById('entity-sharing-level-value').value = value;
+
+                            // Update button states
+                            const buttons = button.parentElement.querySelectorAll('button');
+                            buttons.forEach(btn => {
+                                btn.classList.remove('uk-active');
+                            });
+                            button.classList.add('uk-active');
+
+                            checkEntitySharingForm();
+                        }
+
+                        function checkEntitySharingForm() {
+                            const entityInput = document.getElementById('share-entity');
+                            const submitBtn = document.getElementById('share-entity-btn');
+                            const hasEntity = entityInput.value.trim() !== '';
+                            const hasLevel = selectedEntitySharingLevel !== '';
+                            submitBtn.disabled = !(hasEntity && hasLevel);
+                        }
+
+                        function editPermission(entityName, currentLevel) {
+                            // Prefill the form with the entity name and current sharing level
+                            document.getElementById('share-entity').value = entityName;
+
+                            // Set the sharing level button - find the button within the entity sharing form
+                            const entitySharingForm = document.getElementById('entity-sharing-form');
+                            const levelButton = entitySharingForm.querySelector(`[data-value="${currentLevel}"]`);
+                            if (levelButton) {
+                                setEntitySharingLevel(levelButton, currentLevel);
+                            }
+
+                            // Scroll to the form
+                            document.getElementById('entity-sharing-form').scrollIntoView({ behavior: 'smooth' });
+                        }
+
+                        function confirmRemovePermission(entityName) {
+                            removeEntityName = entityName;
+                            document.getElementById('remove-username').textContent = entityName;
+                            document.getElementById('remove-entity-input').value = entityName;
+                            UIkit.modal('#remove-share-modal').show();
+                        }
+
+                        function removePermission() {
+                            // Submit the hidden form to remove access
+                            htmx.trigger('#remove-share-form', 'submit');
+                            UIkit.modal('#remove-share-modal').hide();
+                        }
+
+                        function loadPermissions() {
+                            fetch('/{{ entity }}/{{ database }}/permissions')
+                                .then(response => response.text())
+                                .then(html => {
+                                    document.getElementById('share-list-container').innerHTML = html;
+                                })
+                                .catch(error => {
+                                    console.error('Error loading share list:', error);
+                                    document.getElementById('share-list-container').innerHTML =
+                                        '<div class="mt-4"><p class="text-sm text-red-600">Error loading permissions.</p></div>';
+                                });
+                        }
+
+                        // Handle URL hash navigation for tabs
+                        function setActiveTabFromHash() {
+                            const hash = window.location.hash;
+                            const tabs = document.querySelectorAll('#database-tabs li');
+                            const tabContents = document.querySelectorAll('.uk-switcher li');
+
+                            // Map hash to tab index
+                            let activeIndex = 0; // Default to query tab
+                            if (hash === '#sharing' && tabs.length > 1) {
+                                activeIndex = 1;
+                                // Load share list when switching to sharing tab
+                                loadPermissions();
+                            } else if (hash === '#snapshots' && tabs.length > 2) {
+                                activeIndex = 2;
+                            }
+
+                            // Remove active class from all tabs and contents
+                            tabs.forEach(tab => tab.classList.remove('uk-active'));
+                            tabContents.forEach(content => content.style.display = 'none');
+
+                            // Set active tab and content
+                            if (tabs[activeIndex]) {
+                                tabs[activeIndex].classList.add('uk-active');
+                            }
+                            if (tabContents[activeIndex]) {
+                                tabContents[activeIndex].style.display = 'block';
+                            }
+                        }
+
+                        // Listen for hash changes
+                        window.addEventListener('hashchange', setActiveTabFromHash);
+
+                        // Add click handlers to tab links to update URL hash
+                        function addTabClickHandlers() {
+                            const tabLinks = document.querySelectorAll('#database-tabs a');
+                            tabLinks.forEach(link => {
+                                link.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    const hash = this.getAttribute('href');
+                                    window.location.hash = hash;
+                                });
+                            });
+                        }
+
+                        // Initialize form state when page loads
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Add tab click handlers
+                            addTabClickHandlers();
+
+                            // Set active tab based on URL hash
+                            setActiveTabFromHash();
+                            // Set initial public sharing level from the backend
+                            originalPublicSharingLevel = '{{ public_sharing_level }}';
+                            const currentButton = document.querySelector('[data-value="{{ public_sharing_level }}"]');
+                            if (currentButton) {
+                                setPublicSharingLevel(currentButton, '{{ public_sharing_level }}');
+                            }
+
+                            // Listen for successful HTMX requests to update the original value
+                            document.body.addEventListener('htmx:afterRequest', function(event) {
+                                if (event.detail.xhr.status === 200 && event.target.id === 'update-public-sharing-btn') {
+                                    // Update the original value to the newly selected value
+                                    originalPublicSharingLevel = selectedPublicSharingLevel;
+                                    // Disable the button since it now matches the original value
+                                    event.target.disabled = true;
+                                } else if (event.detail.xhr.status === 200 &&
+                                          (event.target.closest('#entity-sharing-form') || event.target.closest('#remove-share-form'))) {
+                                    // Refresh the shares list after any successful sharing operation
+                                    loadPermissions();
+                                    // Clear the form after adding/updating permissions
+                                    if (event.target.closest('#entity-sharing-form')) {
+                                        document.getElementById('share-entity').value = '';
+                                        selectedEntitySharingLevel = '';
+                                        document.getElementById('entity-sharing-level-value').value = '';
+                                        // Remove active class from all sharing level buttons
+                                        document.querySelectorAll('#entity-sharing-form .uk-btn-group button').forEach(btn => {
+                                            btn.classList.remove('uk-active');
+                                        });
+                                        checkEntitySharingForm();
+                                    }
+                                }
+                            });
+                        });
+                    </script>
                 </div>
             </li>
             <li>

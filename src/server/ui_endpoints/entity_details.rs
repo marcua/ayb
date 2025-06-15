@@ -1,4 +1,3 @@
-use crate::ayb_db::models::PublicSharingLevel;
 use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
@@ -41,11 +40,6 @@ pub async fn entity_details(
         &entity_response.permissions.can_create_database,
     );
     context.insert("databases", &entity_response.databases);
-
-    // Add sharing level values for the template
-    context.insert("no_access", PublicSharingLevel::NoAccess.to_str());
-    context.insert("fork", PublicSharingLevel::Fork.to_str());
-    context.insert("read_only", PublicSharingLevel::ReadOnly.to_str());
 
     context.insert(
         "logged_in_entity",
