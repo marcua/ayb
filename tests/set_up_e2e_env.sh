@@ -6,6 +6,11 @@ source tests/test-env/bin/activate || python3 -m venv tests/test-env && source t
 # Install requirements
 pip install aiosmtpd awscli localstack
 
+# Install Playwright and browser binaries for browser testing
+# Note: Playwright Rust bindings use the same browser binaries as the Python version
+pip install playwright
+playwright install chromium
+
 # Start LocalStack
 tests/run_localstack.sh
 
