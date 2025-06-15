@@ -13,8 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build the project
 cargo build
 
-# Run server (requires ayb.toml config file)
-ayb server --config ayb.toml
+# Run server with debug logging
+make server
 
 # Generate default server config
 ayb default_server_config > ayb.toml
@@ -31,10 +31,10 @@ See README.md for the full set of documented commands/use cases.
 tests/set_up_e2e_env.sh
 
 # Run all tests
-cargo test --verbose -- --nocapture
+make test
 
 # Run specific integration test
-RUST_BACKTRACE=1 cargo test client_server_integration_sqlite --verbose -- --nocapture
+make test TEST=client_server_integration_sqlite
 
 # The test setup script installs:
 # - Python virtual environment with aiosmtpd, awscli, localstack
@@ -43,14 +43,11 @@ RUST_BACKTRACE=1 cargo test client_server_integration_sqlite --verbose -- --noca
 ```
 
 ### Code Quality
-Before completing any task, run `cargo`'s `fmt` and `clippy` as indicated below. Your task is not complete if either of these report an error: fix all warnings and errors before reporting back.
+Before completing any task, run the lint target as indicated below. Your task is not complete if either of these report an error: fix all warnings and errors before reporting back.
 
 ```bash
-# Format code
-cargo fmt
-
-# Run clippy lints
-cargo clippy -- -D warnings
+# Format code and run clippy lints
+make lint
 ```
 
 ## Architecture
