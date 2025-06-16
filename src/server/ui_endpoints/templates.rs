@@ -77,6 +77,16 @@ fn templates() -> &'static Tera {
         )
         .unwrap();
         tera.add_raw_template(
+            "database_snapshots.html",
+            include_str!("templates/database_snapshots.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "snapshot_success.html",
+            include_str!("templates/snapshot_success.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
             "error_snippet.html",
             include_str!("templates/error_snippet.html"),
         )

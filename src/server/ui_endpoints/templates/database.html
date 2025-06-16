@@ -187,6 +187,7 @@
                         <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
                             <h2 class="uk-modal-title">Remove access</h2>
                             <p class="mt-1">Are you sure you want to remove access for <strong id="remove-username"></strong>?</p>
+                            <div id="remove-share-error" class="mt-2"></div>
                             <p class="uk-text-right mt-4">
                                 <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
                                 <button
@@ -199,8 +200,8 @@
                             </p>
                             <form id="remove-share-form" style="display: none;"
                                   hx-post="/{{ entity }}/{{ database }}/share"
-                                  hx-target="#entity-sharing-error"
-                                  hx-target-400="#entity-sharing-error"
+                                  hx-target="#remove-share-error"
+                                  hx-target-400="#remove-share-error"
                                   hx-swap="innerHTML">
                                 <input type="hidden" name="entity" id="remove-entity-input">
                                 <input type="hidden" name="sharing_level" value="no-access">
@@ -213,6 +214,7 @@
                         let selectedPublicSharingLevel = '';
                         let selectedEntitySharingLevel = '';
                         let removeEntityName = '';
+                        let restoreSnapshotId = '';
 
                         function setPublicSharingLevel(button, value) {
                             selectedPublicSharingLevel = value;
@@ -293,6 +295,35 @@
                                 });
                         }
 
+                        function loadSnapshots() {
+                            fetch('/{{ entity }}/{{ database }}/snapshots')
+                                .then(response => response.text())
+                                .then(html => {
+                                    document.getElementById('snapshots-list-container').innerHTML = html;
+                                })
+                                .catch(error => {
+                                    console.error('Error loading snapshots:', error);
+                                    document.getElementById('snapshots-list-container').innerHTML =
+                                        '<div class="mt-4"><p class="text-sm text-red-600">Error loading snapshots.</p></div>';
+                                });
+                        }
+
+                        function confirmRestoreSnapshot(snapshotId, snapshotDate) {
+                            restoreSnapshotId = snapshotId;
+                            // Show only first 10 characters of snapshot ID
+                            const truncatedId = snapshotId.length > 10 ? snapshotId.substring(0, 10) + '...' : snapshotId;
+                            document.getElementById('restore-snapshot-id').textContent = truncatedId;
+                            document.getElementById('restore-snapshot-date').textContent = snapshotDate;
+                            document.getElementById('restore-snapshot-input').value = snapshotId;
+                            UIkit.modal('#restore-snapshot-modal').show();
+                        }
+
+                        function restoreSnapshot() {
+                            // Submit the hidden form to restore the snapshot
+                            htmx.trigger('#restore-snapshot-form', 'submit');
+                            UIkit.modal('#restore-snapshot-modal').hide();
+                        }
+
                         // Handle URL hash navigation for tabs
                         function setActiveTabFromHash() {
                             const hash = window.location.hash;
@@ -307,6 +338,8 @@
                                 loadPermissions();
                             } else if (hash === '#snapshots' && tabs.length > 2) {
                                 activeIndex = 2;
+                                // Load snapshots when switching to snapshots tab
+                                loadSnapshots();
                             }
 
                             // Remove active class from all tabs and contents
@@ -373,6 +406,9 @@
                                         });
                                         checkEntitySharingForm();
                                     }
+                                } else if (event.detail.xhr.status === 200 && event.target.closest('#restore-snapshot-form')) {
+                                    // Refresh the snapshots list after successful restore
+                                    loadSnapshots();
                                 }
                             });
                         });
@@ -383,9 +419,41 @@
                 <div class="snapshots-interface">
                     <h3 class="text-lg font-medium mb-2">Database snapshots</h3>
                     <p class="text-muted-foreground mb-4">View and restore database snapshots.</p>
-                    <p class="text-sm">Use the command line to manage snapshots:</p>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client list_snapshots {{ entity }}/{{ database }}</pre>
-                    <pre class="bg-muted p-2 rounded mt-1 text-sm">ayb client restore_snapshot {{ entity }}/{{ database }} [snapshot-id]</pre>
+
+                    <div id="snapshots-list-container">
+                        <div class="mt-4 text-center">
+                            <div uk-spinner></div>
+                            <p class="text-sm text-muted-foreground mt-2">Loading snapshots...</p>
+                        </div>
+                    </div>
+
+                    <!-- Restore snapshot confirmation modal -->
+                    <div id="restore-snapshot-modal" class="uk-flex-top" data-uk-modal>
+                        <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+                            <h2 class="uk-modal-title">Restore snapshot</h2>
+                            <p class="mt-1">Are you sure you want to restore the database from snapshot <code id="restore-snapshot-id"></code>?</p>
+                            <p class="uk-text-muted text-sm">Created: <span id="restore-snapshot-date"></span></p>
+                            <p class="uk-text-muted text-sm mt-2">This will replace the current database content with the snapshot data.</p>
+                            <div id="restore-snapshot-error" class="mt-2"></div>
+                            <p class="uk-text-right mt-4">
+                                <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
+                                <button
+                                    class="uk-btn uk-btn-primary"
+                                    id="confirm-restore-btn"
+                                    type="button"
+                                    onclick="restoreSnapshot()">
+                                    Restore database
+                                </button>
+                            </p>
+                            <form id="restore-snapshot-form" style="display: none;"
+                                  hx-post="/{{ entity }}/{{ database }}/restore_snapshot"
+                                  hx-target="#restore-snapshot-error"
+                                  hx-target-400="#restore-snapshot-error"
+                                  hx-swap="innerHTML">
+                                <input type="hidden" name="snapshot_id" id="restore-snapshot-input">
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </li>
         </ul>
