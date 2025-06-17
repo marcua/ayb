@@ -72,23 +72,18 @@ fn templates() -> &'static Tera {
         )
         .unwrap();
         tera.add_raw_template(
-            "sharing_success.html",
-            include_str!("templates/sharing_success.html"),
-        )
-        .unwrap();
-        tera.add_raw_template(
             "database_snapshots.html",
             include_str!("templates/database_snapshots.html"),
         )
         .unwrap();
         tera.add_raw_template(
-            "snapshot_success.html",
-            include_str!("templates/snapshot_success.html"),
+            "error_snippet.html",
+            include_str!("templates/error_snippet.html"),
         )
         .unwrap();
         tera.add_raw_template(
-            "error_snippet.html",
-            include_str!("templates/error_snippet.html"),
+            "success_snippet.html",
+            include_str!("templates/success_snippet.html"),
         )
         .unwrap();
 
@@ -120,4 +115,12 @@ pub fn error_snippet(title: &str, message: &str) -> Result<HttpResponse> {
     Ok(HttpResponse::BadRequest()
         .content_type("text/html")
         .body(render("error_snippet.html", &context)))
+}
+
+pub fn success_snippet(message: &str) -> Result<HttpResponse> {
+    let mut context = tera::Context::new();
+    context.insert("message", message);
+    Ok(HttpResponse::Ok()
+        .content_type("text/html")
+        .body(render("success_snippet.html", &context)))
 }

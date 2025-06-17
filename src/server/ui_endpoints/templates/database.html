@@ -191,7 +191,7 @@
                             <p class="uk-text-right mt-4">
                                 <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
                                 <button
-                                    class="uk-btn uk-btn-danger"
+                                    class="uk-btn uk-btn-destructive"
                                     id="confirm-remove-btn"
                                     type="button"
                                     onclick="removePermission()">
@@ -315,6 +315,9 @@
                             document.getElementById('restore-snapshot-id').textContent = truncatedId;
                             document.getElementById('restore-snapshot-date').textContent = snapshotDate;
                             document.getElementById('restore-snapshot-input').value = snapshotId;
+                            // Clear any previous success or error messages
+                            document.getElementById('restore-snapshot-success').innerHTML = '';
+                            document.getElementById('restore-snapshot-error').innerHTML = '';
                             UIkit.modal('#restore-snapshot-modal').show();
                         }
 
@@ -420,6 +423,7 @@
                     <h3 class="text-lg font-medium mb-2">Database snapshots</h3>
                     <p class="text-muted-foreground mb-4">View and restore database snapshots.</p>
 
+                    <div id="restore-snapshot-success" class="mb-4"></div>
                     <div id="snapshots-list-container">
                         <div class="mt-4 text-center">
                             <div uk-spinner></div>
@@ -431,8 +435,7 @@
                     <div id="restore-snapshot-modal" class="uk-flex-top" data-uk-modal>
                         <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
                             <h2 class="uk-modal-title">Restore snapshot</h2>
-                            <p class="mt-1">Are you sure you want to restore the database from snapshot <code id="restore-snapshot-id"></code>?</p>
-                            <p class="uk-text-muted text-sm">Created: <span id="restore-snapshot-date"></span></p>
+                            <p class="mt-1">Are you sure you want to restore the database from snapshot <code id="restore-snapshot-id"></code> (Created: <span id="restore-snapshot-date"></span>)?</p>
                             <p class="uk-text-muted text-sm mt-2">This will replace the current database content with the snapshot data.</p>
                             <div id="restore-snapshot-error" class="mt-2"></div>
                             <p class="uk-text-right mt-4">
@@ -447,7 +450,7 @@
                             </p>
                             <form id="restore-snapshot-form" style="display: none;"
                                   hx-post="/{{ entity }}/{{ database }}/restore_snapshot"
-                                  hx-target="#restore-snapshot-error"
+                                  hx-target="#restore-snapshot-success"
                                   hx-target-400="#restore-snapshot-error"
                                   hx-swap="innerHTML">
                                 <input type="hidden" name="snapshot_id" id="restore-snapshot-input">

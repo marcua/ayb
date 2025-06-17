@@ -17,10 +17,10 @@
                 <td>
                     <button
                         type="button"
-                        class="uk-btn uk-btn-primary uk-btn-sm"
+                        class="uk-btn uk-btn-default uk-btn-sm"
                         onclick="confirmRestoreSnapshot('{{ snapshot.snapshot_id }}', '{{ snapshot.last_modified_at | date(format="%Y-%m-%d %H:%M:%S UTC") }}')"
                         title="Restore from this snapshot">
-                        <uk-icon icon="refresh"></uk-icon>
+                        <uk-icon icon="history"></uk-icon>
                     </button>
                 </td>
             </tr>

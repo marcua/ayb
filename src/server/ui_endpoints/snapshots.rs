@@ -1,7 +1,7 @@
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::{error_snippet, render};
+use crate::server::ui_endpoints::templates::{error_snippet, render, success_snippet};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 
@@ -54,19 +54,10 @@ pub async fn restore_snapshot(
         .restore_snapshot(entity_slug, database_slug, snapshot_id)
         .await
     {
-        Ok(_) => {
-            let mut context = tera::Context::new();
-            context.insert(
-                "message",
-                &format!(
-                    "Database successfully restored from snapshot '{}'.",
-                    snapshot_id
-                ),
-            );
-            Ok(HttpResponse::Ok()
-                .content_type("text/html")
-                .body(render("snapshot_success.html", &context)))
-        }
+        Ok(_) => success_snippet(&format!(
+            "Database successfully restored from snapshot '{}'.",
+            snapshot_id
+        )),
         Err(err) => error_snippet("Error restoring snapshot", &format!("{}", err)),
     }
 }
