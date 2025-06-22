@@ -1,0 +1,35 @@
+{% if snapshots and (snapshots | length > 0) %}
+<div class="mt-4">
+    <h5 class="text-sm font-medium mb-2">Available snapshots</h5>
+    <table class="uk-table uk-table-striped uk-table-small">
+        <thead>
+            <tr>
+                <th>Snapshot ID</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for snapshot in snapshots %}
+            <tr>
+                <td><code class="text-sm">{{ snapshot.snapshot_id }}</code></td>
+                <td>{{ snapshot.last_modified_at | date(format="%Y-%m-%d %H:%M:%S UTC") }}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="uk-btn uk-btn-default uk-btn-sm"
+                        onclick="confirmRestoreSnapshot('{{ snapshot.snapshot_id }}', '{{ snapshot.last_modified_at | date(format="%Y-%m-%d %H:%M:%S UTC") }}')"
+                        title="Restore from this snapshot">
+                        <uk-icon icon="history"></uk-icon>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="mt-4">
+    <p class="text-sm text-muted-foreground">No snapshots available for this database.</p>
+</div>
+{% endif %}
