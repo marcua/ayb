@@ -31,11 +31,25 @@ fn server_config_path(db_type: &str) -> String {
     format!("tests/test-server-config-{}.toml", db_type)
 }
 
+fn browser_server_config_path(db_type: &str) -> String {
+    format!("tests/test-server-config-browser-{}.toml", db_type)
+}
+
 pub struct AybServer(Child);
 impl AybServer {
     pub fn run(db_type: &str) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self(
             ayb_cmd!("server", "--config", &server_config_path(db_type); {
+                "RUST_LOG" => "actix_web=debug",
+                "RUST_BACKTRACE" => "1"
+            })
+            .spawn()?,
+        ))
+    }
+
+    pub fn run_browser(db_type: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self(
+            ayb_cmd!("server", "--config", &browser_server_config_path(db_type); {
                 "RUST_LOG" => "actix_web=debug",
                 "RUST_BACKTRACE" => "1"
             })
