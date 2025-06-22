@@ -311,8 +311,7 @@
 
                         function confirmRestoreSnapshot(snapshotId, snapshotDate) {
                             restoreSnapshotId = snapshotId;
-                            // Show only first 10 characters of snapshot ID
-                            const truncatedId = snapshotId.length > 10 ? snapshotId.substring(0, 10) + '...' : snapshotId;
+                            const truncatedId = snapshotId.substring(0, 10) + '...';
                             document.getElementById('restore-snapshot-id').textContent = truncatedId;
                             document.getElementById('restore-snapshot-date').textContent = snapshotDate;
                             document.getElementById('restore-snapshot-input').value = snapshotId;

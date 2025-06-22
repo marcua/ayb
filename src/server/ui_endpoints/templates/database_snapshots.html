@@ -1,11 +1,11 @@
-{% if snapshots and snapshots | length > 0 %}
+{% if snapshots and (snapshots | length > 0) %}
 <div class="mt-4">
     <h5 class="text-sm font-medium mb-2">Available snapshots</h5>
     <table class="uk-table uk-table-striped uk-table-small">
         <thead>
             <tr>
                 <th>Snapshot ID</th>
-                <th>Last Modified</th>
+                <th>Created</th>
                 <th>Actions</th>
             </tr>
         </thead>
