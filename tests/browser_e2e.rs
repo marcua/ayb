@@ -47,6 +47,7 @@ async fn browser_integration(
 
     test_ui_navigation(&page, server_url).await?;
     test_error_pages_ui(&page, server_url).await?;
+    test_screenshot_comparison(&page, server_url).await?;
 
     println!("✓ All browser tests completed successfully");
     Ok(())
@@ -245,7 +246,7 @@ async fn test_ui_navigation(
     // Check if there are links to other parts of the UI
     let navigation_links = vec![("login", "/log_in"), ("sign in", "/log_in")];
 
-    for (link_text, expected_path) in navigation_links {
+    for (link_text, _expected_path) in navigation_links {
         if BrowserHelpers::wait_for_page_content(page, link_text, 1000).await? {
             println!("✓ Found '{}' link on registration page", link_text);
         }
@@ -768,5 +769,50 @@ async fn test_error_pages_ui(
     }
 
     println!("✓ Error pages and security testing completed");
+    Ok(())
+}
+
+async fn test_screenshot_comparison(
+    page: &Page,
+    server_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Testing screenshot comparison functionality");
+
+    // Navigate to registration page for screenshot test
+    BrowserHelpers::navigate_and_wait(page, &format!("{}/register", server_url)).await?;
+
+    // Example: Compare registration page, ignoring timestamp or dynamic elements
+    let selectors_to_grey = &[
+        ".timestamp",     // Grey out any timestamps
+        ".session-info",  // Grey out session-specific info
+        "[data-dynamic]", // Grey out elements marked as dynamic
+    ];
+
+    let matches =
+        BrowserHelpers::screenshot_compare(page, "registration_page", selectors_to_grey).await?;
+
+    if matches {
+        println!("✓ Registration page screenshot matches reference");
+    } else {
+        println!("⚠ Registration page screenshot differs from reference - check diff image");
+    }
+
+    // Example of login page comparison
+    BrowserHelpers::navigate_and_wait(page, &format!("{}/log_in", server_url)).await?;
+
+    let login_matches = BrowserHelpers::screenshot_compare(
+        page,
+        "login_page",
+        &[], // No elements to grey out for login page
+    )
+    .await?;
+
+    if login_matches {
+        println!("✓ Login page screenshot matches reference");
+    } else {
+        println!("⚠ Login page screenshot differs from reference - check diff image");
+    }
+
+    println!("✓ Screenshot comparison testing completed");
     Ok(())
 }

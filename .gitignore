@@ -24,4 +24,6 @@ tests/nsjail
 tests/localstack_init.sh
 tests/localstack_data*
 tests/test-env
+tests/screenshots/*_current.png
+tests/screenshots/*_diff.png
 .aider*
