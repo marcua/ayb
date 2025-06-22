@@ -4,7 +4,7 @@
 source tests/test-env/bin/activate || python3 -m venv tests/test-env && source tests/test-env/bin/activate
 
 # Install requirements
-pip install aiosmtpd awscli localstack
+pip install aiosmtpd awscli localstack awscli-local
 
 # Install Playwright and browser binaries for browser testing
 # Note: Playwright Rust bindings use the same browser binaries as the Python version

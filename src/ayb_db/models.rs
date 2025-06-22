@@ -324,3 +324,9 @@ pub struct EntityDatabasePermission {
     pub database_id: i32,
     pub sharing_level: i16,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DatabasePermission {
+    pub entity_slug: String,
+    pub sharing_level: String,
+}
