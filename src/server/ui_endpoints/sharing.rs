@@ -2,7 +2,7 @@ use crate::ayb_db::models::{EntityDatabaseSharingLevel, PublicSharingLevel};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
-use crate::server::ui_endpoints::templates::{error_snippet, render};
+use crate::server::ui_endpoints::templates::{error_snippet, render, success_snippet};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Result};
 use serde::Deserialize;
 use std::str::FromStr;
@@ -47,13 +47,7 @@ pub async fn update_public_sharing(
         .update_database(entity_slug, database_slug, &public_sharing_level)
         .await
     {
-        Ok(_) => {
-            let mut context = tera::Context::new();
-            context.insert("message", "Public sharing level updated successfully.");
-            Ok(HttpResponse::Ok()
-                .content_type("text/html")
-                .body(render("sharing_success.html", &context)))
-        }
+        Ok(_) => success_snippet("Public sharing level updated successfully."),
         Err(err) => error_snippet("Error updating sharing level", &format!("{}", err)),
     }
 }
@@ -115,16 +109,10 @@ pub async fn share_with_entity(
         .share(entity_slug, database_slug, target_entity, &sharing_level)
         .await
     {
-        Ok(_) => {
-            let mut context = tera::Context::new();
-            context.insert(
-                "message",
-                &format!("Database access updated for user '{}'.", target_entity),
-            );
-            Ok(HttpResponse::Ok()
-                .content_type("text/html")
-                .body(render("sharing_success.html", &context)))
-        }
+        Ok(_) => success_snippet(&format!(
+            "Database access updated for user '{}'.",
+            target_entity
+        )),
         Err(err) => error_snippet("Error updating access", &format!("{}", err)),
     }
 }
