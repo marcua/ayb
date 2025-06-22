@@ -8,7 +8,6 @@ mod log_out;
 mod query;
 mod register;
 mod sharing;
-mod snapshots;
 mod templates;
 
 pub use confirm::confirm as confirm_endpoint;
@@ -23,8 +22,4 @@ pub use sharing::{
     database_permissions as database_permissions_endpoint,
     share_with_entity as share_with_entity_endpoint,
     update_public_sharing as update_public_sharing_endpoint,
-};
-pub use snapshots::{
-    database_snapshots as database_snapshots_endpoint,
-    restore_snapshot as restore_snapshot_endpoint,
 };

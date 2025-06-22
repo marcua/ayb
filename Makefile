@@ -1,4 +1,4 @@
-.PHONY: lint server test copyconfig
+.PHONY: lint server test
 
 lint:
 	cargo fmt
@@ -13,6 +13,3 @@ ifdef TEST
 else
 	RUST_BACKTRACE=1 cargo test --verbose -- --nocapture
 endif
-
-copyconfig:
-	cp ../main-checkout/ayb.toml .
