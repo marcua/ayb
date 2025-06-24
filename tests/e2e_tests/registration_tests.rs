@@ -23,8 +23,8 @@ fn extract_api_key(output: &Output) -> Result<String, AybError> {
     }
 }
 
-const SQLITE_EMAIL_FILE: &str = "tests/email_data_sqlite.jsonl";
-const POSTGRES_EMAIL_FILE: &str = "tests/email_data_postgres.jsonl";
+const SQLITE_EMAIL_FILE: &str = "tests/ayb_data_sqlite/emails.jsonl";
+const POSTGRES_EMAIL_FILE: &str = "tests/ayb_data_postgres/emails.jsonl";
 
 fn get_email_file_for_test(config_path: &str) -> &'static str {
     if config_path.contains("sqlite") {
