@@ -2,15 +2,10 @@ host = "0.0.0.0"
 port = 5433
 database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
 data_path = "./tests/ayb_data_postgres"
-e2e_testing = true
 
 [email]
-from = "Server Sender <server@example.org>"
-reply_to = "Server Reply <replyto@example.org>"
-smtp_host = "localhost"
-smtp_port = 10025
-smtp_username = "login@example.org"
-smtp_password = "the_password"
+[email.file]
+path = "tests/ayb_data_postgres/emails.jsonl"
 
 [authentication]
 fernet_key = "y3UdMqGh6si7pvQb8wsuW3ryiJcacp0H1QoHUPfsjb0="

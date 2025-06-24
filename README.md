@@ -45,13 +45,16 @@ data_path = "./ayb_data"
 fernet_key = "<UNIQUE_KEY_GENERATED_BY_COMMAND>="
 token_expiration_seconds = 3600
 
-[email]
+[email.smtp]
 from = "Server Sender <server@example.org>"
 reply_to = "Server Reply <replyto@example.org>"
 smtp_host = "localhost"
 smtp_port = 465
 smtp_username = "login@example.org"
 smtp_password = "the_password"
+
+[email.file]
+path = "./ayb_data/emails.jsonl"
 
 [web]
 hosting_method = "Local"
@@ -178,6 +181,47 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 `ayb` comes with a fully functional web interface. With the server configuration shown above, visit [http://localhost:5433/register](http://localhost:5433/register) to get started. The web interface allows you to register, log in, create databases, and run queries through your browser without needing to use the command line client.
 
 The default configuration (with `web.hosting_method` set to `Local`) enables it automatically, though you can remove the `web` section from your configuration if you only want an API server.
+
+### Email Configuration
+
+`ayb` supports multiple email backends for sending registration and login emails:
+
+#### SMTP Only
+For production deployments, configure SMTP to send emails through your email provider:
+
+```toml
+[email.smtp]
+from = "Your App <app@example.com>"
+reply_to = "Support <support@example.com>" 
+smtp_host = "smtp.example.com"
+smtp_port = 587
+smtp_username = "your_username"
+smtp_password = "your_password"
+```
+
+#### File Only (Development/Testing)
+For development or testing, you can write emails to a local file instead:
+
+```toml
+[email.file]
+path = "/path/to/emails.jsonl"
+```
+
+#### Both SMTP and File (Recommended for Production)
+You can enable both backends to send emails via SMTP while keeping an audit trail:
+
+```toml
+[email.smtp]
+from = "Your App <app@example.com>"
+reply_to = "Support <support@example.com>" 
+smtp_host = "smtp.example.com"
+smtp_port = 587
+smtp_username = "your_username"
+smtp_password = "your_password"
+
+[email.file]
+path = "./ayb_data/emails.jsonl"
+```
 
 ### Snapshots / backups
 

@@ -40,11 +40,10 @@ async fn log_in(
                     &ayb_config.authentication,
                 )?;
                 send_registration_email(
+                    &ayb_config.email,
                     &method.email_address,
                     &token,
-                    &ayb_config.email,
                     web_details.get_ref(),
-                    ayb_config.e2e_testing_on(),
                 )
                 .await?;
                 return Ok(HttpResponse::Ok().json(EmptyResponse {}));

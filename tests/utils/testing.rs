@@ -50,23 +50,7 @@ impl Drop for AybServer {
     }
 }
 
-pub struct SmtpServer(Child);
-
-impl SmtpServer {
-    pub fn run(smtp_port: u16) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(SmtpServer(
-            Command::new("tests/smtp_server.sh")
-                .args([&*format!("{}", smtp_port)])
-                .spawn()?,
-        ))
-    }
-}
-
-impl Drop for SmtpServer {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-    }
-}
+// SMTP server no longer needed - using file-based email
 
 pub async fn snapshot_storage(db_type: &str) -> Result<SnapshotStorage, AybError> {
     let config = read_config(&PathBuf::from(server_config_path(db_type)))?;

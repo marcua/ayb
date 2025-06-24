@@ -31,13 +31,35 @@ pub struct AybConfigAuthentication {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigEmail {
+pub struct AybConfigEmailSmtp {
     pub from: String,
     pub reply_to: String,
     pub smtp_host: String,
     pub smtp_port: u16,
     pub smtp_username: String,
     pub smtp_password: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmailFile {
+    pub path: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmailBackends {
+    pub smtp: Option<AybConfigEmailSmtp>,
+    pub file: Option<AybConfigEmailFile>,
+}
+
+impl AybConfigEmailBackends {
+    pub fn validate(&self) -> Result<(), AybError> {
+        if self.smtp.is_none() && self.file.is_none() {
+            return Err(AybError::ConfigurationError {
+                message: "At least one email backend (smtp or file) must be configured".to_string(),
+            });
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -83,7 +105,7 @@ pub struct AybConfig {
     pub data_path: String,
     pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
-    pub email: AybConfigEmail,
+    pub email: AybConfigEmailBackends,
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
     pub isolation: Option<AybConfigIsolation>,
@@ -111,13 +133,18 @@ pub fn default_server_config() -> AybConfig {
             fernet_key: fernet::Fernet::generate_key(),
             token_expiration_seconds: 3600,
         },
-        email: AybConfigEmail {
-            from: "Server Sender <server@example.org>".to_string(),
-            reply_to: "Server Reply <replyto@example.org>".to_string(),
-            smtp_host: "localhost".to_string(),
-            smtp_port: 465,
-            smtp_username: "login@example.org".to_string(),
-            smtp_password: "the_password".to_string(),
+        email: AybConfigEmailBackends {
+            smtp: Some(AybConfigEmailSmtp {
+                from: "Server Sender <server@example.org>".to_string(),
+                reply_to: "Server Reply <replyto@example.org>".to_string(),
+                smtp_host: "localhost".to_string(),
+                smtp_port: 465,
+                smtp_username: "login@example.org".to_string(),
+                smtp_password: "the_password".to_string(),
+            }),
+            file: Some(AybConfigEmailFile {
+                path: "./ayb_data/emails.jsonl".to_string(),
+            }),
         },
         cors: AybConfigCors {
             origin: "*".to_string(),

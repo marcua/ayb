@@ -1,11 +1,11 @@
 use crate::ayb_assert_cmd;
 use crate::e2e_tests::{FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG};
+use crate::email_helpers::{clear_email_file, extract_token_from_emails, parse_email_file};
 use crate::utils::ayb::register;
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use ayb::error::AybError;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::process::{Command, Output};
@@ -23,48 +23,52 @@ fn extract_api_key(output: &Output) -> Result<String, AybError> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct EmailEntry {
-    from: String,
-    to: String,
-    reply_to: String,
-    subject: String,
-    content_type: String,
-    content_transfer_encoding: String,
-    date: String,
-    content: Vec<String>,
+const SQLITE_EMAIL_FILE: &str = "tests/email_data_sqlite.jsonl";
+const POSTGRES_EMAIL_FILE: &str = "tests/email_data_postgres.jsonl";
+
+fn get_email_file_for_test(config_path: &str) -> &'static str {
+    if config_path.contains("sqlite") {
+        SQLITE_EMAIL_FILE
+    } else {
+        POSTGRES_EMAIL_FILE
+    }
 }
 
-fn extract_token(email: &EmailEntry) -> Result<String, AybError> {
-    let prefix = "\tayb client confirm ";
-    assert_eq!(email.subject, "Your login credentials");
-    for line in &email.content {
-        if line.starts_with(prefix) && line.len() > prefix.len() {
-            return Ok(String::from_utf8(quoted_printable::decode(
-                &line[prefix.len()..],
-                quoted_printable::ParseMode::Robust,
-            )?)?);
-        }
-    }
-    Err(AybError::Other {
-        message: "No token found in email".to_string(),
-    })
+pub fn clear_email_data(config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let email_file = get_email_file_for_test(config_path);
+    clear_email_file(email_file)?;
+    Ok(())
 }
 
-fn parse_smtp_log(file_path: &str) -> Result<Vec<EmailEntry>, serde_json::Error> {
-    let mut entries = Vec::new();
-    for line in fs::read_to_string(file_path).unwrap().lines() {
-        entries.push(serde_json::from_str(line)?);
-    }
-    Ok(entries)
+fn count_emails_in_file(config_path: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    let email_file = get_email_file_for_test(config_path);
+    let emails = parse_email_file(email_file)?;
+    Ok(emails.len())
+}
+
+fn get_emails_for_recipient(
+    config_path: &str,
+    recipient: &str,
+) -> Result<Vec<crate::email_helpers::EmailEntry>, Box<dyn std::error::Error>> {
+    let email_file = get_email_file_for_test(config_path);
+    let emails = parse_email_file(email_file)?;
+
+    let filtered_emails = emails
+        .into_iter()
+        .filter(|email| email.to == recipient)
+        .collect();
+
+    Ok(filtered_emails)
 }
 
 pub fn test_registration(
     config_path: &str,
     server_url: &str,
-    smtp_port: u16,
     expected_config: &mut ClientConfig,
 ) -> Result<HashMap<String, Vec<String>>, Box<dyn std::error::Error>> {
+    // Clear any existing email data
+    clear_email_data(config_path)?;
+
     // Before running commands, we have no configuration file
     assert_eq!(
         fs::read_to_string(config_path).unwrap_err().kind(),
@@ -115,18 +119,19 @@ pub fn test_registration(
         "Check your email to finish registering e2e-second",
     )?;
 
-    // Check that two emails were received
-    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
-    assert_eq!(entries.len(), 2);
-    let first_token0 = extract_token(&entries[0])?;
-    let first_token1 = extract_token(&entries[1])?;
-    let entries = parse_smtp_log(&format!(
-        "tests/smtp_data_{}/e2e-another@example.org",
-        smtp_port
-    ))?;
-    assert_eq!(entries.len(), 2);
-    let first_token2 = extract_token(&entries[0])?;
-    let second_token0 = extract_token(&entries[1])?;
+    // Check that four emails were received total
+    assert_eq!(count_emails_in_file(config_path)?, 4);
+
+    // Get emails for each recipient
+    let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
+    assert_eq!(e2e_emails.len(), 2);
+    let first_token0 = extract_token_from_emails(&[e2e_emails[0].clone()]).unwrap();
+    let first_token1 = extract_token_from_emails(&[e2e_emails[1].clone()]).unwrap();
+
+    let another_emails = get_emails_for_recipient(config_path, "e2e-another@example.org")?;
+    assert_eq!(another_emails.len(), 2);
+    let first_token2 = extract_token_from_emails(&[another_emails[0].clone()]).unwrap();
+    let second_token0 = extract_token_from_emails(&[another_emails[1].clone()]).unwrap();
 
     // Using a bad token (appending a letter) doesn't work.
     let cmd = ayb_assert_cmd!("client", "confirm", &format!("{}a", first_token0); {
@@ -199,9 +204,12 @@ pub fn test_registration(
 
     cmd.stdout("Check your email to finish logging in e2e-first\n");
 
-    let entries = parse_smtp_log(&format!("tests/smtp_data_{}/e2e@example.org", smtp_port))?;
-    assert_eq!(entries.len(), 3);
-    let login_token = extract_token(&entries[2])?;
+    // Check that we now have 5 total emails (4 from registration + 1 from login)
+    assert_eq!(count_emails_in_file(config_path)?, 5);
+
+    let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
+    assert_eq!(e2e_emails.len(), 3);
+    let login_token = extract_token_from_emails(&[e2e_emails[2].clone()]).unwrap();
 
     let cmd = ayb_assert_cmd!("client", "confirm", &login_token; {
         "AYB_CLIENT_CONFIG_FILE" => config_path,
@@ -223,12 +231,14 @@ pub fn test_registration(
         "e2e-a-third@example.org",
         "Check your email to finish registering e2e-third",
     )?;
-    let entries = parse_smtp_log(&format!(
-        "tests/smtp_data_{}/e2e-a-third@example.org",
-        smtp_port
-    ))?;
-    assert_eq!(entries.len(), 1);
-    let third_token0 = extract_token(&entries[0])?;
+
+    // Check that we now have 6 total emails (5 previous + 1 for third user)
+    assert_eq!(count_emails_in_file(config_path)?, 6);
+
+    let third_emails = get_emails_for_recipient(config_path, "e2e-a-third@example.org")?;
+    assert_eq!(third_emails.len(), 1);
+    let third_token0 = extract_token_from_emails(&[third_emails[0].clone()]).unwrap();
+
     let cmd = ayb_assert_cmd!("client", "confirm", &third_token0; {
         "AYB_CLIENT_CONFIG_FILE" => format!("{}-throwaway", config_path), // Don't save this third account's credentials as our default token in the main configuration file.
         "AYB_SERVER_URL" => server_url,

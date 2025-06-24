@@ -4,7 +4,7 @@
 source tests/test-env/bin/activate || python3 -m venv tests/test-env && source tests/test-env/bin/activate
 
 # Install requirements
-pip install aiosmtpd awscli localstack awscli-local
+pip install awscli localstack awscli-local
 
 # Start LocalStack
 tests/run_localstack.sh

@@ -55,11 +55,10 @@ async fn register(
         &ayb_config.authentication,
     )?;
     send_registration_email(
+        &ayb_config.email,
         &email_address,
         &token,
-        &ayb_config.email,
         web_info.get_ref(),
-        ayb_config.e2e_testing_on(),
     )
     .await?;
     Ok(HttpResponse::Ok().json(EmptyResponse {}))
