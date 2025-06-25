@@ -84,9 +84,9 @@ $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
 
 $ ayb client list marcua
- Database slug | Type 
+ Database slug | Type
 ---------------+--------
- test.sqlite   | sqlite 
+ test.sqlite   | sqlite
 
 $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 
@@ -105,11 +105,11 @@ marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("DuckDB
 
 Rows: 0
 marcua/test.sqlite> SELECT * FROM favorite_databases;
- name       | score 
+ name       | score
 ------------+-------
- PostgreSQL | 10 
- SQLite     | 9 
- DuckDB     | 9 
+ PostgreSQL | 10
+ SQLite     | 9
+ DuckDB     | 9
 
 Rows: 3
 marcua/test.sqlite>
@@ -119,9 +119,9 @@ $ ayb client update_profile marcua --display_name 'Adam Marcus' --links 'http://
 Successfully updated profile
 
 $ ayb client profile marcua
- Display name | Description | Organization | Location | Links 
+ Display name | Description | Organization | Location | Links
 --------------+-------------+--------------+----------+-------------------
- Adam Marcus  |             |              |          | http://marcua.net 
+ Adam Marcus  |             |              |          | http://marcua.net
 ```
 
 Note that the command line also saved a configuration file for your
@@ -184,43 +184,27 @@ The default configuration (with `web.hosting_method` set to `Local`) enables it 
 
 ### Email Configuration
 
-`ayb` supports multiple email backends for sending registration and login emails:
+`ayb` supports multiple email backends for sending registration and login emails. A standard SMTP configuration can be used in production settings, and a file-based log can also be configured to help with development and testing. At least one of the backends must be configured for `ayb` to start.
 
-#### SMTP Only
+#### SMTP email backend
 For production deployments, configure SMTP to send emails through your email provider:
 
 ```toml
 [email.smtp]
 from = "Your App <app@example.com>"
-reply_to = "Support <support@example.com>" 
+reply_to = "Support <support@example.com>"
 smtp_host = "smtp.example.com"
 smtp_port = 587
 smtp_username = "your_username"
 smtp_password = "your_password"
 ```
 
-#### File Only (Development/Testing)
-For development or testing, you can write emails to a local file instead:
+#### Local file email backend (development/testing)
+For development or testing, you can write emails to a local file instead, where each email is JSON-encoded with one JSON-encoded email per line:
 
 ```toml
 [email.file]
 path = "/path/to/emails.jsonl"
-```
-
-#### Both SMTP and File (Recommended for Production)
-You can enable both backends to send emails via SMTP while keeping an audit trail:
-
-```toml
-[email.smtp]
-from = "Your App <app@example.com>"
-reply_to = "Support <support@example.com>" 
-smtp_host = "smtp.example.com"
-smtp_port = 587
-smtp_username = "your_username"
-smtp_password = "your_password"
-
-[email.file]
-path = "./ayb_data/emails.jsonl"
 ```
 
 ### Snapshots / backups
@@ -396,7 +380,7 @@ nsjail_path = "path/to/nsjail"
 
 On every release, a docker image is built and pushed to
 `ghcr.io/marcua/ayb`. For now, docker images are available for
-`linux-amd64`. If you would like a `linux-arm64` image, follow 
+`linux-amd64`. If you would like a `linux-arm64` image, follow
 and comment on
 [this issue](https://github.com/marcua/ayb/issues/523).
 
@@ -410,9 +394,9 @@ You can then create an alias for convenience:
 alias ayb="docker run --network host ghcr.io/marcua/ayb ayb"
 ```
 
-To run the server, you'll need to create an `ayb.toml` configuration 
-file (see [Running a server](#running-a-server)), 
-create a data directory for the databases, and map the configuration and 
+To run the server, you'll need to create an `ayb.toml` configuration
+file (see [Running a server](#running-a-server)),
+create a data directory for the databases, and map the configuration and
 data directory as volumes when running the container. For example:
 ```bash
 docker run -v $(pwd)/ayb.toml:/ayb.toml \

@@ -55,7 +55,7 @@ impl AybConfigEmailBackends {
     pub fn validate(&self) -> Result<(), AybError> {
         if self.smtp.is_none() && self.file.is_none() {
             return Err(AybError::ConfigurationError {
-                message: "At least one email backend (smtp or file) must be configured".to_string(),
+                message: "At least one email backend (smtp or file) must be configured. See email configuration documentation at https://github.com/marcua/ayb#email-configuration".to_string(),
             });
         }
         Ok(())
@@ -162,10 +162,12 @@ pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
     let contents = fs::read_to_string(config_path).map_err(|err| AybError::ConfigurationError {
         message: err.to_string(),
     })?;
-    match toml::from_str(&contents) {
-        Ok(config) => Ok(config),
-        Err(err) => Err(AybError::ConfigurationError {
-            message: err.to_string(),
-        }),
-    }
+    let config: AybConfig = toml::from_str(&contents).map_err(|err| AybError::ConfigurationError {
+        message: err.to_string(),
+    })?;
+    
+    // Validate email configuration
+    config.email.validate()?;
+    
+    Ok(config)
 }
