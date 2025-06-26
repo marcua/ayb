@@ -49,7 +49,7 @@ fn count_emails_in_file(config_path: &str) -> Result<usize, Box<dyn std::error::
 fn get_emails_for_recipient(
     config_path: &str,
     recipient: &str,
-) -> Result<Vec<crate::email_helpers::EmailEntry>, Box<dyn std::error::Error>> {
+) -> Result<Vec<ayb::email::backend::EmailEntry>, Box<dyn std::error::Error>> {
     let email_file = get_email_file_for_test(config_path);
     let emails = parse_email_file(email_file)?;
 

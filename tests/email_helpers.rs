@@ -1,17 +1,5 @@
-use serde::{Deserialize, Serialize};
+use ayb::email::backend::EmailEntry;
 use std::path::Path;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct EmailEntry {
-    pub from: String,
-    pub to: String,
-    pub reply_to: String,
-    pub subject: String,
-    pub content_type: String,
-    pub content_transfer_encoding: String,
-    pub date: String,
-    pub content: Vec<String>,
-}
 
 pub fn parse_email_file<P: AsRef<Path>>(
     path: P,

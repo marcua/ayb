@@ -9,7 +9,7 @@ use lettre::{
     AsyncTransport, Message, Tokio1Executor,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EmailEntry {
     pub from: String,
     pub to: String,
