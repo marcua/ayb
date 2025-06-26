@@ -50,8 +50,6 @@ impl Drop for AybServer {
     }
 }
 
-// SMTP server no longer needed - using file-based email
-
 pub async fn snapshot_storage(db_type: &str) -> Result<SnapshotStorage, AybError> {
     let config = read_config(&PathBuf::from(server_config_path(db_type)))?;
     SnapshotStorage::new(&config.snapshots.unwrap()).await

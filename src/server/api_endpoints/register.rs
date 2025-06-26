@@ -1,6 +1,6 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{AuthenticationMethodType, EntityType};
-use crate::email::send_registration_email;
+use crate::email::{backend::EmailBackends, send_registration_email};
 use crate::error::AybError;
 use crate::http::structs::{AuthenticationDetails, EmptyResponse};
 use crate::server::config::AybConfig;
@@ -16,6 +16,7 @@ async fn register(
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
     web_info: web::Data<Option<WebFrontendDetails>>,
+    email_backends: web::Data<EmailBackends>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
     let email_address = get_lowercased_header(&req, "email-address")?;
@@ -55,6 +56,7 @@ async fn register(
         &ayb_config.authentication,
     )?;
     send_registration_email(
+        &email_backends,
         &ayb_config.email,
         &email_address,
         &token,

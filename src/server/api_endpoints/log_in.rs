@@ -1,6 +1,6 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{AuthenticationMethodStatus, AuthenticationMethodType};
-use crate::email::send_registration_email;
+use crate::email::{backend::EmailBackends, send_registration_email};
 use crate::error::AybError;
 
 use crate::http::structs::{AuthenticationDetails, EmptyResponse};
@@ -16,6 +16,7 @@ async fn log_in(
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
     web_details: web::Data<Option<WebFrontendDetails>>,
+    email_backends: web::Data<EmailBackends>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
     let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
@@ -40,6 +41,7 @@ async fn log_in(
                     &ayb_config.authentication,
                 )?;
                 send_registration_email(
+                    &email_backends,
                     &ayb_config.email,
                     &method.email_address,
                     &token,

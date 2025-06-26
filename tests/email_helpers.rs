@@ -32,7 +32,7 @@ pub fn parse_email_file<P: AsRef<Path>>(
 pub fn extract_token_from_emails(emails: &[EmailEntry]) -> Option<String> {
     for email in emails {
         for line in &email.content {
-            if line.starts_with('\t') && line.contains("ayb client confirm ") {
+            if line.starts_with('\t') {
                 if let Some(token_part) = line.split("ayb client confirm ").nth(1) {
                     return Some(token_part.trim().to_string());
                 }

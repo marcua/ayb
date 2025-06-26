@@ -33,6 +33,7 @@ pub trait EmailBackend {
     ) -> Result<(), AybError>;
 }
 
+#[derive(Clone)]
 pub struct SmtpBackend {
     config: AybConfigEmailSmtp,
 }
@@ -75,7 +76,7 @@ impl EmailBackend for SmtpBackend {
                 .build();
 
         if let Err(e) = mailer.send(email).await {
-            return Err(AybError::Other {
+            return Err(AybError::EmailError {
                 message: format!("Could not send email: {e:?}"),
             });
         }
@@ -84,6 +85,7 @@ impl EmailBackend for SmtpBackend {
     }
 }
 
+#[derive(Clone)]
 pub struct FileBackend {
     config: AybConfigEmailFile,
 }
@@ -115,7 +117,7 @@ impl EmailBackend for FileBackend {
             content: body.lines().map(|s| s.to_string()).collect(),
         };
 
-        let json_line = serde_json::to_string(&email_entry).map_err(|e| AybError::Other {
+        let json_line = serde_json::to_string(&email_entry).map_err(|e| AybError::EmailError {
             message: format!("Failed to serialize email: {e:?}"),
         })? + "\n";
 
@@ -123,7 +125,7 @@ impl EmailBackend for FileBackend {
         if let Some(parent) = std::path::Path::new(&self.config.path).parent() {
             tokio::fs::create_dir_all(parent)
                 .await
-                .map_err(|e| AybError::Other {
+                .map_err(|e| AybError::EmailError {
                     message: format!("Failed to create email directory: {e:?}"),
                 })?;
         }
@@ -134,13 +136,13 @@ impl EmailBackend for FileBackend {
             .append(true)
             .open(&self.config.path)
             .await
-            .map_err(|e| AybError::Other {
+            .map_err(|e| AybError::EmailError {
                 message: format!("Failed to open email file: {e:?}"),
             })?;
 
         file.write_all(json_line.as_bytes())
             .await
-            .map_err(|e| AybError::Other {
+            .map_err(|e| AybError::EmailError {
                 message: format!("Failed to write email to file: {e:?}"),
             })?;
 
@@ -148,19 +150,18 @@ impl EmailBackend for FileBackend {
     }
 }
 
-pub struct MultiBackend {
-    backends: Vec<Box<dyn EmailBackend + Send + Sync>>,
+#[derive(Clone)]
+pub struct EmailBackends {
+    pub smtp: Option<SmtpBackend>,
+    pub file: Option<FileBackend>,
 }
 
-impl MultiBackend {
-    pub fn new(backends: Vec<Box<dyn EmailBackend + Send + Sync>>) -> Self {
-        Self { backends }
+impl EmailBackends {
+    pub fn new(smtp: Option<SmtpBackend>, file: Option<FileBackend>) -> Self {
+        Self { smtp, file }
     }
-}
 
-#[async_trait]
-impl EmailBackend for MultiBackend {
-    async fn send_email(
+    pub async fn send_email(
         &self,
         to: &str,
         subject: &str,
@@ -170,19 +171,63 @@ impl EmailBackend for MultiBackend {
     ) -> Result<(), AybError> {
         let mut errors = Vec::new();
 
-        for backend in &self.backends {
-            if let Err(e) = backend.send_email(to, subject, body, from, reply_to).await {
-                errors.push(e);
+        if let Some(smtp_backend) = &self.smtp {
+            if let Err(e) = smtp_backend
+                .send_email(to, subject, body, from, reply_to)
+                .await
+            {
+                errors.push(format!("SMTP backend failed: {}", e));
             }
         }
 
-        // Return error only if ALL backends fail
-        if errors.len() == self.backends.len() && !errors.is_empty() {
-            return Err(AybError::Other {
-                message: format!("All email backends failed: {:?}", errors),
+        if let Some(file_backend) = &self.file {
+            if let Err(e) = file_backend
+                .send_email(to, subject, body, from, reply_to)
+                .await
+            {
+                errors.push(format!("File backend failed: {}", e));
+            }
+        }
+
+        // Return error if ANY backend fails
+        if !errors.is_empty() {
+            return Err(AybError::EmailError {
+                message: errors.join("; "),
             });
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::config::AybConfigEmailFile;
+
+    #[tokio::test]
+    async fn test_email_backends_succeeds_if_file_only_works() {
+        // Create backends with only file backend that should work
+        let file_backend = FileBackend::new(AybConfigEmailFile {
+            path: "/tmp/test_emails.jsonl".to_string(),
+        });
+
+        let email_backends = EmailBackends::new(None, Some(file_backend));
+
+        // This should succeed since file backend should work
+        let result = email_backends
+            .send_email(
+                "test@example.com",
+                "Test",
+                "Test body",
+                "from@example.com",
+                "reply@example.com",
+            )
+            .await;
+
+        assert!(result.is_ok());
+
+        // Clean up
+        let _ = std::fs::remove_file("/tmp/test_emails.jsonl");
     }
 }
