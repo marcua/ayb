@@ -77,8 +77,6 @@ async fn client_server_integration(
     // Run server
     let _ayb_server = AybServer::run(db_type).expect("failed to start the ayb server");
 
-    // No SMTP server needed - using file-based email
-
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
 

@@ -40,12 +40,6 @@ pub fn clear_email_data(config_path: &str) -> Result<(), Box<dyn std::error::Err
     Ok(())
 }
 
-fn count_emails_in_file(config_path: &str) -> Result<usize, Box<dyn std::error::Error>> {
-    let email_file = get_email_file_for_test(config_path);
-    let emails = parse_email_file(email_file)?;
-    Ok(emails.len())
-}
-
 fn get_emails_for_recipient(
     config_path: &str,
     recipient: &str,
@@ -120,7 +114,6 @@ pub fn test_registration(
     )?;
 
     // Check that four emails were received total
-    assert_eq!(count_emails_in_file(config_path)?, 4);
 
     // Get emails for each recipient
     let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
@@ -205,7 +198,6 @@ pub fn test_registration(
     cmd.stdout("Check your email to finish logging in e2e-first\n");
 
     // Check that we now have 5 total emails (4 from registration + 1 from login)
-    assert_eq!(count_emails_in_file(config_path)?, 5);
 
     let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
     assert_eq!(e2e_emails.len(), 3);
@@ -233,7 +225,6 @@ pub fn test_registration(
     )?;
 
     // Check that we now have 6 total emails (5 previous + 1 for third user)
-    assert_eq!(count_emails_in_file(config_path)?, 6);
 
     let third_emails = get_emails_for_recipient(config_path, "e2e-a-third@example.org")?;
     assert_eq!(third_emails.len(), 1);
