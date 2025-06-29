@@ -113,8 +113,6 @@ pub fn test_registration(
         "Check your email to finish registering e2e-second",
     )?;
 
-    // Check that four emails were received total
-
     // Get emails for each recipient
     let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
     assert_eq!(e2e_emails.len(), 2);
@@ -197,8 +195,6 @@ pub fn test_registration(
 
     cmd.stdout("Check your email to finish logging in e2e-first\n");
 
-    // Check that we now have 5 total emails (4 from registration + 1 from login)
-
     let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
     assert_eq!(e2e_emails.len(), 3);
     let login_token = extract_token_from_emails(&[e2e_emails[2].clone()]).unwrap();
@@ -223,8 +219,6 @@ pub fn test_registration(
         "e2e-a-third@example.org",
         "Check your email to finish registering e2e-third",
     )?;
-
-    // Check that we now have 6 total emails (5 previous + 1 for third user)
 
     let third_emails = get_emails_for_recipient(config_path, "e2e-a-third@example.org")?;
     assert_eq!(third_emails.len(), 1);

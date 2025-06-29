@@ -199,35 +199,3 @@ impl EmailBackends {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::server::config::AybConfigEmailFile;
-
-    #[tokio::test]
-    async fn test_email_backends_succeeds_if_file_only_works() {
-        // Create backends with only file backend that should work
-        let file_backend = FileBackend::new(AybConfigEmailFile {
-            path: "/tmp/test_emails.jsonl".to_string(),
-        });
-
-        let email_backends = EmailBackends::new(None, Some(file_backend));
-
-        // This should succeed since file backend should work
-        let result = email_backends
-            .send_email(
-                "test@example.com",
-                "Test",
-                "Test body",
-                "from@example.com",
-                "reply@example.com",
-            )
-            .await;
-
-        assert!(result.is_ok());
-
-        // Clean up
-        let _ = std::fs::remove_file("/tmp/test_emails.jsonl");
-    }
-}
