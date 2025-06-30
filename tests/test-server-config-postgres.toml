@@ -18,11 +18,11 @@ nsjail_path = "tests/nsjail"
 
 [snapshots]
 sqlite_method = "Vacuum"
-access_key_id = "test"
-secret_access_key = "test"
+access_key_id = "minioadmin"
+secret_access_key = "minioadmin"
 bucket = "bucket"
 path_prefix = "postgres"
-endpoint_url = "http://localhost:4566"
+endpoint_url = "http://localhost:9000"
 force_path_style = true
 
 [snapshots.automation]
