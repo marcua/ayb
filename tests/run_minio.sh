@@ -6,14 +6,27 @@ echo "Starting MinIO..."
 docker stop minio-test >/dev/null 2>&1 || true
 docker rm minio-test >/dev/null 2>&1 || true
 
-# Start MinIO container with host networking for Colima compatibility
-docker run -d \
-  --name minio-test \
-  # **Note for Colima users:** The setup uses `--network host` for better compatibility with Colima's QEMU networking on macOS.
-  --network host \
-  -e "MINIO_ROOT_USER=minioadmin" \
-  -e "MINIO_ROOT_PASSWORD=minioadmin" \
-  minio/minio server /data --address :9000 --console-address :9001 >/dev/null
+# Detect environment and choose networking approach
+if [[ "$CI" == "true" ]] || [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  echo "Detected CI/Linux environment - using port mapping"
+  # Use port mapping for CI/standard Linux Docker
+  docker run -d \
+    --name minio-test \
+    -p 9000:9000 \
+    -p 9001:9001 \
+    -e "MINIO_ROOT_USER=minioadmin" \
+    -e "MINIO_ROOT_PASSWORD=minioadmin" \
+    minio/minio server /data --console-address ":9001" >/dev/null
+else
+  echo "Detected macOS/Colima environment - using host networking"
+  # Use host networking for Colima compatibility on macOS
+  docker run -d \
+    --name minio-test \
+    --network host \
+    -e "MINIO_ROOT_USER=minioadmin" \
+    -e "MINIO_ROOT_PASSWORD=minioadmin" \
+    minio/minio server /data --address :9000 --console-address :9001 >/dev/null
+fi
 
 # Give MinIO time to start
 sleep 3
