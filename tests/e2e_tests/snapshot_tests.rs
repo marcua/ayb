@@ -3,6 +3,7 @@ use crate::e2e_tests::{
 };
 use crate::utils::ayb::{list_snapshots, list_snapshots_match_output, query, restore_snapshot};
 use crate::utils::testing::snapshot_storage;
+use chrono::Utc;
 use std::collections::HashMap;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -259,9 +260,36 @@ pub async fn test_snapshots(
     // Restore the previous snapshot, ensuring there are only three
     // rows.
     println!(
-        "[SNAPSHOT_TEST] Step 7: Testing snapshot restoration to {}",
-        snapshots[0].snapshot_id
+        "[SNAPSHOT_TEST] Step 7: Testing snapshot restoration to {} at {}",
+        snapshots[0].snapshot_id,
+        Utc::now()
     );
+    println!(
+        "[SNAPSHOT_TEST] Snapshot to restore: index=0, id={}, modified={}",
+        snapshots[0].snapshot_id, snapshots[0].last_modified_at
+    );
+
+    // CRITICAL: Re-list snapshots immediately before restore to check for race condition
+    println!("[SNAPSHOT_TEST] Re-listing snapshots immediately before restore attempt");
+    let pre_restore_snapshots = list_snapshots(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        "csv",
+    )?;
+    println!(
+        "[SNAPSHOT_TEST] Pre-restore snapshot count: {} (was {} when initially listed)",
+        pre_restore_snapshots.len(),
+        snapshots.len()
+    );
+    if pre_restore_snapshots.len() != snapshots.len() {
+        println!("[SNAPSHOT_TEST] WARNING: Snapshot count changed between listing and restore!");
+        println!("[SNAPSHOT_TEST] New snapshots:");
+        for snap in &pre_restore_snapshots {
+            println!("  - {} ({})", snap.snapshot_id, snap.last_modified_at);
+        }
+    }
+
     let restore_start = Instant::now();
     restore_snapshot(
         config_path,
@@ -274,8 +302,9 @@ pub async fn test_snapshots(
         ),
     )?;
     println!(
-        "[SNAPSHOT_TEST] Snapshot restoration completed in {:?}",
-        restore_start.elapsed()
+        "[SNAPSHOT_TEST] Snapshot restoration completed in {:?} at {}",
+        restore_start.elapsed(),
+        Utc::now()
     );
     query(
         config_path,
@@ -348,7 +377,10 @@ pub async fn test_snapshots(
     );
 
     let old_snapshots = snapshots;
-    println!("[SNAPSHOT_TEST] Step 8c: Checking snapshot count after pruning");
+    println!(
+        "[SNAPSHOT_TEST] Step 8c: Checking snapshot count after pruning at {}",
+        Utc::now()
+    );
     let list_start = Instant::now();
     let snapshots = list_snapshots(
         config_path,
