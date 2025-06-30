@@ -37,8 +37,8 @@ make test
 make test TEST=client_server_integration_sqlite
 
 # The test setup script installs:
-# - Python virtual environment with aiosmtpd, awscli, localstack
-# - LocalStack for S3-compatible storage testing
+# - Python virtual environment with awscli
+# - MinIO for S3-compatible storage testing
 # - nsjail binary for isolation testing
 ```
 
@@ -122,6 +122,6 @@ Server configuration uses TOML format (`ayb.toml`) with sections for:
 
 ### Testing Strategy
 - End-to-end integration tests that mirror realistic usage
-- Mock services: SMTP server, LocalStack S3, isolated environments
+- Mock services: SMTP server, MinIO S3, isolated environments
 - Tests both SQLite and PostgreSQL metadata storage backends
 - Minimal unit tests, focuses on comprehensive integration testing
