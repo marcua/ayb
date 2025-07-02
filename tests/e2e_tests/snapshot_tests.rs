@@ -162,9 +162,10 @@ pub async fn test_snapshots(
 
     // Restoring a snapshot causes another snapshot to be taken (the
     // contents of the database are logically equivalent but
-    // physically different). Note that there's a theoretical race
-    // condition here in case a snapshot is taken between the two
-    // restores above. Make tests less brittle if it ever arises.
+    // physically different). The sleep below ensures that snapshot is
+    // taken. Note that there's a theoretical race condition here in
+    // case a snapshot is taken between the two restores above. Make
+    // tests less brittle if it ever arises.
     thread::sleep(time::Duration::from_secs(4));
 
     // There are 4 max_snapshots, so let's force 2 more snapshots to
