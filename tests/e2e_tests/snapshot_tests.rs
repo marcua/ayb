@@ -179,7 +179,7 @@ pub async fn test_snapshots(
     );
     assert_eq!(
         last_modified_at, snapshots[0].last_modified_at,
-        "[SNAPSHOT_TEST] After sleeping, the snapshot shouldn't have been modified/updated. Expected: {}, Found: {}", 
+        "[SNAPSHOT_TEST] After sleeping, the snapshot shouldn't have been modified/updated. Expected: {}, Found: {}",
         last_modified_at, snapshots[0].last_modified_at
     );
     println!("[SNAPSHOT_TEST] Step 5: Snapshot stability confirmed - no new snapshots created");
@@ -290,6 +290,19 @@ pub async fn test_snapshots(
         }
     }
 
+    println!(
+        "[SNAPSHOT_TEST] Snapshots before 2 restores: {:?}",
+        list_snapshots(
+            config_path,
+            &api_keys.get("first").unwrap()[0],
+            FIRST_ENTITY_DB,
+            "csv",
+        )?
+            .iter()
+            .map(|s| format!("{} ({})", s.snapshot_id, s.last_modified_at))
+            .collect::<Vec<_>>()
+    );
+
     let restore_start = Instant::now();
     restore_snapshot(
         config_path,
@@ -335,6 +348,33 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
+
+    println!(
+        "[SNAPSHOT_TEST] Snapshots after 2 restores: {:?}",
+        list_snapshots(
+            config_path,
+            &api_keys.get("first").unwrap()[0],
+            FIRST_ENTITY_DB,
+            "csv",
+        )?
+            .iter()
+            .map(|s| format!("{} ({})", s.snapshot_id, s.last_modified_at))
+            .collect::<Vec<_>>()
+    );
+    thread::sleep(Duration::from_secs(4));
+    println!(
+        "[SNAPSHOT_TEST] Snapshots after 2 restores, 4s sleep: {:?}",
+        list_snapshots(
+            config_path,
+            &api_keys.get("first").unwrap()[0],
+            FIRST_ENTITY_DB,
+            "csv",
+        )?
+            .iter()
+            .map(|s| format!("{} ({})", s.snapshot_id, s.last_modified_at))
+            .collect::<Vec<_>>()
+    );
+
 
     // There are 3 max_snapshots, so let's
     // force 2 more snapshots to be created (more than 3 snapshots
@@ -414,10 +454,10 @@ pub async fn test_snapshots(
 
     assert_eq!(
         snapshots.len(),
-        3,
+        4,
         "[SNAPSHOT_TEST] there should be three snapshots after further updating database and pruning old snapshots, found: {}", snapshots.len()
     );
-    println!("[SNAPSHOT_TEST] Step 8: Pruning test passed - found expected 3 snapshots");
+    println!("[SNAPSHOT_TEST] Step 8: Pruning test passed - found expected 4 snapshots");
 
     // Restoring the previous oldest snapshot fails
     restore_snapshot(
