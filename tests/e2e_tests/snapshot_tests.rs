@@ -81,14 +81,16 @@ pub async fn test_snapshots(
         last_modified_at, snapshots[0].last_modified_at,
         "After sleeping, the snapshot shouldn't have been modified/updated"
     );
-    // Modify database, wait, and ensure a new snapshot was taken.    query(
+    // Modify database, wait, and ensure a new snapshot was taken.
+    query(
         config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"another first\", \"another last\");",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
-    )?;    thread::sleep(time::Duration::from_secs(4));
+    )?;
+    thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
         config_path,
         &api_keys.get("first").unwrap()[0],
@@ -174,14 +176,17 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
-    )?;    thread::sleep(time::Duration::from_secs(4));    query(
+    )?;
+    thread::sleep(time::Duration::from_secs(4));
+    query(
         config_path,
         &api_keys.get("first").unwrap()[1],
         "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
-    )?;    thread::sleep(time::Duration::from_secs(4));
+    )?;
+    thread::sleep(time::Duration::from_secs(4));
     let old_snapshots = snapshots;
     let snapshots = list_snapshots(
         config_path,
@@ -192,7 +197,7 @@ pub async fn test_snapshots(
     assert_eq!(
         snapshots.len(),
         4,
-        "there four snapshots after further updating database and pruning old snapshots"
+        "there are four snapshots after further updating database and pruning old snapshots"
     );
 
     // Restoring the previous oldest snapshot fails
@@ -235,5 +240,5 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 0 \n\nRows: 1",
     )?;
 
-    Ok()
+    Ok(())
 }
