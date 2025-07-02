@@ -165,7 +165,10 @@ pub async fn test_snapshots(
     // physically different). The sleep below ensures that snapshot is
     // taken. Note that there's a theoretical race condition here in
     // case a snapshot is taken between the two restores above. Make
-    // tests less brittle if it ever arises.
+    // tests less brittle if it ever arises: either behavior is
+    // acceptable/correct, so we'd have to more carefully accept the
+    // case where two snapshots were created due to restores rather
+    // than the one we see on most/all test runs.
     thread::sleep(time::Duration::from_secs(4));
 
     // There are 4 max_snapshots, so let's force 2 more snapshots to
