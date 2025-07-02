@@ -479,7 +479,6 @@ dependencies = [
  "futures-util",
  "go-parse-duration",
  "lettre",
- "log",
  "predicates",
  "prefixed-api-key",
  "prettytable-rs",

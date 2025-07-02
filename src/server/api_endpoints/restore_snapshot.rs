@@ -19,13 +19,6 @@ async fn restore_snapshot(
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database;
-    println!(
-        "[SNAPSHOT_RESTORE] Restore request for {}/{} snapshot {} at {}",
-        entity_slug,
-        database_slug,
-        snapshot_id,
-        chrono::Utc::now()
-    );
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 
@@ -39,49 +32,12 @@ async fn restore_snapshot(
             // Retrieve the snapshot, move it to the active databases
             // directory, and set it as the current active database.
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
-
-            // List available snapshots before attempting restore
-            println!("[SNAPSHOT_RESTORE] Listing available snapshots before restore attempt");
-            let available_snapshots = snapshot_storage
-                .list_snapshots(entity_slug, database_slug)
-                .await?;
-            println!(
-                "[SNAPSHOT_RESTORE] Found {} available snapshots:",
-                available_snapshots.len()
-            );
-            for (i, snap) in available_snapshots.iter().enumerate() {
-                println!(
-                    "  [{}] {} (last modified: {})",
-                    i, snap.snapshot_id, snap.last_modified_at
-                );
-            }
-
-            let snapshot_exists = available_snapshots
-                .iter()
-                .any(|s| s.snapshot_id == snapshot_id);
-            println!(
-                "[SNAPSHOT_RESTORE] Target snapshot {} exists: {}",
-                snapshot_id, snapshot_exists
-            );
-
             let db_path = &new_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
-            println!(
-                "[SNAPSHOT_RESTORE] Attempting to retrieve snapshot to {:?}",
-                db_path
-            );
 
             snapshot_storage
                 .retrieve_snapshot(entity_slug, database_slug, &snapshot_id, db_path)
                 .await?;
-
-            println!(
-                "[SNAPSHOT_RESTORE] Successfully retrieved snapshot, setting as current database"
-            );
             set_current_database_and_clean_up(db_path)?;
-            println!(
-                "[SNAPSHOT_RESTORE] Restore completed successfully at {}",
-                chrono::Utc::now()
-            );
         }
         Ok(HttpResponse::Ok().json(EmptyResponse {}))
     } else {

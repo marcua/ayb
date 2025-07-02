@@ -78,7 +78,6 @@ pub async fn schedule_periodic_snapshots(
 #[allow(clippy::borrowed_box)]
 async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result<(), AybError> {
     // Walk the data path for entity slugs, database slugs
-    println!("Creating snapshots...");
     let entity_paths =
         fs::read_dir(database_parent_path(&config.data_path, true).unwrap())?.map(|entry| {
             let entry_path = entry?.path();
@@ -130,12 +129,7 @@ pub async fn snapshot_database(
     entity_slug: &str,
     database_slug: &str,
 ) -> Result<(), AybError> {
-    println!(
-        "[SNAPSHOT_AUTOMATION] Starting backup of {}/{} at {}",
-        entity_slug,
-        database_slug,
-        chrono::Utc::now()
-    );
+    println!("Trying to back up {}/{}", entity_slug, database_slug);
     if config.snapshots.is_none() {
         return Err(AybError::SnapshotError {
             message: "No snapshot config found".to_string(),
@@ -197,33 +191,20 @@ pub async fn snapshot_database(
                 .list_snapshots(entity_slug, database_slug)
                 .await?;
             let num_existing_snapshots = existing_snapshots.len();
-            println!(
-                "[SNAPSHOT_AUTOMATION] Found {} existing snapshots for {}/{}",
-                num_existing_snapshots, entity_slug, database_slug
-            );
-
             let snapshot_hash = hash_db_directory(&snapshot_directory)?;
-            println!(
-                "[SNAPSHOT_AUTOMATION] Generated hash {} for new snapshot",
-                snapshot_hash
-            );
             let mut should_upload_snapshot = true;
             for snapshot in &existing_snapshots {
                 if snapshot.snapshot_id == snapshot_hash {
                     println!(
-                        "[SNAPSHOT_AUTOMATION] Snapshot with hash {} already exists (idempotent), not uploading again at {}",
-                        snapshot_hash, chrono::Utc::now()
+                        "Snapshot with hash {} already exists, not uploading again.",
+                        snapshot_hash
                     );
                     should_upload_snapshot = false;
                     break;
                 }
             }
             if should_upload_snapshot {
-                println!(
-                    "[SNAPSHOT_AUTOMATION] Uploading new snapshot with hash {} at {}",
-                    snapshot_hash,
-                    chrono::Utc::now()
-                );
+                println!("Uploading new snapshot with hash {}.", snapshot_hash);
                 snapshot_storage
                     .put(
                         entity_slug,
@@ -244,52 +225,21 @@ pub async fn snapshot_database(
                     .unwrap()
                     .max_snapshots
                     .into();
-                // Log pruning decision logic
-                println!("[SNAPSHOT_AUTOMATION] Pruning check: existing_snapshots={}, new_snapshot=1, total={}, max_snapshots={}",
-                    num_existing_snapshots, num_existing_snapshots + 1, max_snapshots);
-
                 let prune_snapshots = (num_existing_snapshots + 1).checked_sub(max_snapshots);
                 if let Some(prune_snapshots) = prune_snapshots {
-                    println!("[SNAPSHOT_AUTOMATION] Need to prune {} oldest snapshots to maintain max_snapshots={}", 
-                        prune_snapshots, max_snapshots);
-
-                    // List all existing snapshots before pruning
-                    println!("[SNAPSHOT_AUTOMATION] Current snapshots before pruning:");
-                    for (i, snap) in existing_snapshots.iter().enumerate() {
-                        println!(
-                            "  [{}] {} (position from end: {})",
-                            i,
-                            snap.snapshot_id,
-                            existing_snapshots.len() - i - 1
-                        );
-                    }
-
+                    println!("Pruning {} oldest snapshots", prune_snapshots);
                     let mut ids_to_prune: Vec<String> = vec![];
                     for snapshot_index in 0..prune_snapshots {
-                        let prune_position = existing_snapshots.len() - snapshot_index - 1;
-                        let snapshot_to_prune = &existing_snapshots[prune_position];
-                        println!(
-                            "[SNAPSHOT_AUTOMATION] Marking for deletion: {} (position {})",
-                            snapshot_to_prune.snapshot_id, prune_position
-                        );
-                        ids_to_prune.push(snapshot_to_prune.snapshot_id.clone());
+                        ids_to_prune.push(
+                            existing_snapshots[existing_snapshots.len() - snapshot_index - 1]
+                                .snapshot_id
+                                .clone(),
+                        )
                     }
 
-                    println!(
-                        "[SNAPSHOT_AUTOMATION] Deleting {} snapshots: {:?}",
-                        ids_to_prune.len(),
-                        ids_to_prune
-                    );
                     snapshot_storage
                         .delete_snapshots(entity_slug, database_slug, &ids_to_prune)
                         .await?;
-                    println!(
-                        "[SNAPSHOT_AUTOMATION] Pruning completed at {}",
-                        chrono::Utc::now()
-                    );
-                } else {
-                    println!("[SNAPSHOT_AUTOMATION] No pruning needed, {} total snapshots <= max_snapshots={}", 
-                        num_existing_snapshots + 1, max_snapshots);
                 }
             }
 
