@@ -6,6 +6,9 @@ echo "Starting MinIO..."
 docker stop minio-test >/dev/null 2>&1 || true
 docker rm minio-test >/dev/null 2>&1 || true
 
+# Give MinIO time to shut down
+sleep 3
+
 # Detect environment and choose networking approach
 if [[ "$CI" == "true" ]] || [[ "$OSTYPE" == "linux-gnu"* ]]; then
   echo "Detected CI/Linux environment - using port mapping"
