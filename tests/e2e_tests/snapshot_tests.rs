@@ -159,13 +159,20 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
+
+    // Restoring a snapshot causes another snapshot to be taken (the
+    // contents of the database are logically equivalent but
+    // physically different). Note that there's a theoretical race
+    // condition here in case a snapshot is taken between the two
+    // restores above. Make tests less brittle if it ever arises.
     thread::sleep(time::Duration::from_secs(4));
 
-    // There are 3 max_snapshots, so let's
-    // force 2 more snapshots to be created (more than 3 snapshots
-    // would exist) and then: 1) Ensure there are still only 3
-    // snapshots remaining due to pruning, 2) Get an error restoring
-    // to the oldest snapshot, which should have been pruned.
+    // There are 4 max_snapshots, so let's force 2 more snapshots to
+    // be created (more than 4 snapshots would exist: the original
+    // two, one after the restore, and two more from the inserts
+    // below) and then: 1) Ensure there are still only 4 snapshots
+    // remaining due to pruning, 2) Get an error restoring to the
+    // oldest snapshot, which should have been pruned.
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
