@@ -27,4 +27,4 @@ force_path_style = true
 
 [snapshots.automation]
 interval = "2s"
-max_snapshots = 4
+max_snapshots = 5

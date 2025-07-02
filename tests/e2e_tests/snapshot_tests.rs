@@ -139,6 +139,12 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
+    // Restoring a snapshot causes another snapshot to be taken (the
+    // contents of the database are logically equivalent but
+    // physically different). The sleep below ensures that snapshot is
+    // taken.
+    thread::sleep(time::Duration::from_secs(4));
+
     // Restore the snapshot before that, ensuring there are only two
     // rows.
     restore_snapshot(
@@ -160,21 +166,13 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
-    // Restoring a snapshot causes another snapshot to be taken (the
-    // contents of the database are logically equivalent but
-    // physically different). The sleep below ensures that snapshot is
-    // taken. Note that there's a theoretical race condition here in
-    // case a snapshot is taken between the two restores above. Make
-    // tests less brittle if it ever arises: either behavior is
-    // acceptable/correct, so we'd have to more carefully accept the
-    // case where two snapshots were created due to restores rather
-    // than the one we see on most/all test runs.
+    // Ensure another snapshot-due-to-restore.
     thread::sleep(time::Duration::from_secs(4));
 
-    // There are 4 max_snapshots, so let's force 2 more snapshots to
-    // be created (more than 4 snapshots would exist: the original
-    // two, one after the restore, and two more from the inserts
-    // below) and then: 1) Ensure there are still only 4 snapshots
+    // There are 5 max_snapshots, so let's force 2 more snapshots to
+    // be created (more than 5 snapshots would exist: the original
+    // two, two from the restores, and two more from the inserts
+    // below) and then: 1) Ensure there are still only 5 snapshots
     // remaining due to pruning, 2) Get an error restoring to the
     // oldest snapshot, which should have been pruned.
     query(
@@ -204,8 +202,8 @@ pub async fn test_snapshots(
     )?;
     assert_eq!(
         snapshots.len(),
-        4,
-        "there are four snapshots after further updating database and pruning old snapshots"
+        5,
+        "there are five snapshots after further updating database and pruning old snapshots"
     );
 
     // Restoring the previous oldest snapshot fails
