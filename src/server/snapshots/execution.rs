@@ -78,6 +78,7 @@ pub async fn schedule_periodic_snapshots(
 #[allow(clippy::borrowed_box)]
 async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result<(), AybError> {
     // Walk the data path for entity slugs, database slugs
+    println!("Creating snapshots...");
     let entity_paths =
         fs::read_dir(database_parent_path(&config.data_path, true).unwrap())?.map(|entry| {
             let entry_path = entry?.path();

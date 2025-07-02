@@ -24,21 +24,18 @@ pub async fn test_snapshots(
     // Remove all snapshots so our tests aren't affected by
     // timing/snapshots from previous tests.
     let storage = snapshot_storage(db_type).await?;
-    let existing_snapshots = storage
-        .list_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
+    storage
+        .delete_snapshots(
+            FIRST_ENTITY_SLUG,
+            FIRST_ENTITY_DB_SLUG,
+            &storage
+                .list_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DB_SLUG)
+                .await?
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.clone())
+                .collect(),
+        )
         .await?;
-    if !existing_snapshots.is_empty() {
-        storage
-            .delete_snapshots(
-                FIRST_ENTITY_SLUG,
-                FIRST_ENTITY_DB_SLUG,
-                &existing_snapshots
-                    .iter()
-                    .map(|snapshot| snapshot.snapshot_id.clone())
-                    .collect(),
-            )
-            .await?;
-    }
 
     // Can list snapshots from the first set of API keys.
     list_snapshots_match_output(
