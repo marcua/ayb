@@ -237,6 +237,7 @@ pub async fn snapshot_database(
                                 .clone(),
                         )
                     }
+
                     snapshot_storage
                         .delete_snapshots(entity_slug, database_slug, &ids_to_prune)
                         .await?;

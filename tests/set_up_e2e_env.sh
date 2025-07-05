@@ -1,13 +1,16 @@
 #!/bin/bash
 
 # Initialize and activate virtual environment
-source tests/test-env/bin/activate || python3 -m venv tests/test-env && source tests/test-env/bin/activate
+if [ ! -d "tests/test-env" ]; then
+    python3 -m venv tests/test-env
+fi
+source tests/test-env/bin/activate
 
 # Install requirements
-pip install aiosmtpd awscli localstack awscli-local
+pip install awscli
 
-# Start LocalStack
-tests/run_localstack.sh
+# Start MinIO
+tests/run_minio.sh
 
 # Build and install nsjail (Linux only)
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then

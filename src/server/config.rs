@@ -31,13 +31,35 @@ pub struct AybConfigAuthentication {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigEmail {
+pub struct AybConfigEmailSmtp {
     pub from: String,
     pub reply_to: String,
     pub smtp_host: String,
     pub smtp_port: u16,
     pub smtp_username: String,
     pub smtp_password: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmailFile {
+    pub path: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigEmailBackends {
+    pub smtp: Option<AybConfigEmailSmtp>,
+    pub file: Option<AybConfigEmailFile>,
+}
+
+impl AybConfigEmailBackends {
+    pub fn validate(&self) -> Result<(), AybError> {
+        if self.smtp.is_none() && self.file.is_none() {
+            return Err(AybError::ConfigurationError {
+                message: "At least one email backend (smtp or file) must be configured. See email configuration documentation at https://github.com/marcua/ayb#email-configuration".to_string(),
+            });
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -81,19 +103,12 @@ pub struct AybConfig {
     pub port: u16,
     pub database_url: String,
     pub data_path: String,
-    pub e2e_testing: Option<bool>,
     pub authentication: AybConfigAuthentication,
-    pub email: AybConfigEmail,
+    pub email: AybConfigEmailBackends,
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
     pub isolation: Option<AybConfigIsolation>,
     pub snapshots: Option<AybConfigSnapshots>,
-}
-
-impl AybConfig {
-    pub fn e2e_testing_on(&self) -> bool {
-        self.e2e_testing.unwrap_or(false)
-    }
 }
 
 pub fn config_to_toml(ayb_config: AybConfig) -> Result<String, AybError> {
@@ -106,18 +121,22 @@ pub fn default_server_config() -> AybConfig {
         port: 5433,
         database_url: "sqlite://ayb_data/ayb.sqlite".to_string(),
         data_path: "./ayb_data".to_string(),
-        e2e_testing: None,
         authentication: AybConfigAuthentication {
             fernet_key: fernet::Fernet::generate_key(),
             token_expiration_seconds: 3600,
         },
-        email: AybConfigEmail {
-            from: "Server Sender <server@example.org>".to_string(),
-            reply_to: "Server Reply <replyto@example.org>".to_string(),
-            smtp_host: "localhost".to_string(),
-            smtp_port: 465,
-            smtp_username: "login@example.org".to_string(),
-            smtp_password: "the_password".to_string(),
+        email: AybConfigEmailBackends {
+            smtp: Some(AybConfigEmailSmtp {
+                from: "Server Sender <server@example.org>".to_string(),
+                reply_to: "Server Reply <replyto@example.org>".to_string(),
+                smtp_host: "localhost".to_string(),
+                smtp_port: 465,
+                smtp_username: "login@example.org".to_string(),
+                smtp_password: "the_password".to_string(),
+            }),
+            file: Some(AybConfigEmailFile {
+                path: "./ayb_data/emails.jsonl".to_string(),
+            }),
         },
         cors: AybConfigCors {
             origin: "*".to_string(),
@@ -135,10 +154,76 @@ pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
     let contents = fs::read_to_string(config_path).map_err(|err| AybError::ConfigurationError {
         message: err.to_string(),
     })?;
-    match toml::from_str(&contents) {
-        Ok(config) => Ok(config),
-        Err(err) => Err(AybError::ConfigurationError {
+    let config: AybConfig =
+        toml::from_str(&contents).map_err(|err| AybError::ConfigurationError {
             message: err.to_string(),
-        }),
+        })?;
+
+    // Validate email configuration
+    config.email.validate()?;
+
+    Ok(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_email_backends_validation_both_configured() {
+        let config = AybConfigEmailBackends {
+            smtp: Some(AybConfigEmailSmtp {
+                from: "test@example.com".to_string(),
+                reply_to: "test@example.com".to_string(),
+                smtp_host: "localhost".to_string(),
+                smtp_port: 587,
+                smtp_username: "test".to_string(),
+                smtp_password: "test".to_string(),
+            }),
+            file: Some(AybConfigEmailFile {
+                path: "/tmp/test.jsonl".to_string(),
+            }),
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_email_backends_validation_smtp_only() {
+        let config = AybConfigEmailBackends {
+            smtp: Some(AybConfigEmailSmtp {
+                from: "test@example.com".to_string(),
+                reply_to: "test@example.com".to_string(),
+                smtp_host: "localhost".to_string(),
+                smtp_port: 587,
+                smtp_username: "test".to_string(),
+                smtp_password: "test".to_string(),
+            }),
+            file: None,
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_email_backends_validation_file_only() {
+        let config = AybConfigEmailBackends {
+            smtp: None,
+            file: Some(AybConfigEmailFile {
+                path: "/tmp/test.jsonl".to_string(),
+            }),
+        };
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_email_backends_validation_none_configured() {
+        let config = AybConfigEmailBackends {
+            smtp: None,
+            file: None,
+        };
+        let result = config.validate();
+        assert!(result.is_err());
+        let error_message = result.unwrap_err().to_string();
+        assert!(error_message.contains("At least one email backend"));
+        assert!(error_message.contains("https://github.com/marcua/ayb#email-configuration"));
     }
 }

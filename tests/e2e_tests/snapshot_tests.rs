@@ -22,7 +22,7 @@ pub async fn test_snapshots(
     )?;
 
     // Remove all snapshots so our tests aren't affected by
-    // timing/snapshots from previous tsts.
+    // timing/snapshots from previous tests.
     let storage = snapshot_storage(db_type).await?;
     storage
         .delete_snapshots(
@@ -45,9 +45,14 @@ pub async fn test_snapshots(
         "csv",
         "No snapshots for E2E-FiRST/test.sqlite",
     )?;
-
     // We'll sleep between various checks in this test to allow the
-    // snapshotting logic, which runs every 2 seconds, to execute.
+    // snapshotting logic, which runs every 2 seconds, to
+    // execute. Each insert, update, and snapshot restore causes
+    // another snapshot to be taken, and if we don't sleep after them,
+    // we can encounter a race condition between the test and the
+    // asynchronous snapshots being taken in parallel. By sleeping, we
+    // ensure predictability of relative snapshot timing and
+    // quanitity.
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
         config_path,
@@ -55,13 +60,13 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "csv",
     )?;
+
     let last_modified_at = snapshots[0].last_modified_at;
     assert_eq!(
         snapshots.len(),
         1,
         "there should be one snapshot after sleeping"
     );
-
     // No change to database, so same number of snapshots after sleep.
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
@@ -79,7 +84,6 @@ pub async fn test_snapshots(
         last_modified_at, snapshots[0].last_modified_at,
         "After sleeping, the snapshot shouldn't have been modified/updated"
     );
-
     // Modify database, wait, and ensure a new snapshot was taken.
     query(
         config_path,
@@ -96,12 +100,12 @@ pub async fn test_snapshots(
         FIRST_ENTITY_DB,
         "csv",
     )?;
+
     assert_eq!(
         snapshots.len(),
         2,
         "there two snapshots after updating database"
     );
-
     // Insert another row and ensure there are four.
     query(
         config_path,
@@ -119,6 +123,7 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
+    thread::sleep(time::Duration::from_secs(4));
 
     // Restore the previous snapshot, ensuring there are only three
     // rows.
@@ -141,6 +146,8 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
+    thread::sleep(time::Duration::from_secs(4));
+
     // Restore the snapshot before that, ensuring there are only two
     // rows.
     restore_snapshot(
@@ -162,11 +169,15 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
-    // There are 3 max_snapshots, so let's
-    // force 2 more snapshots to be created (more than 3 snapshots
-    // would exist) and then: 1) Ensure there are still only 3
-    // snapshots remaining due to pruning, 2) Get an error restoring
-    // to the oldest snapshot, which should have been pruned.
+    // Ensure another snapshot-due-to-restore.
+    thread::sleep(time::Duration::from_secs(4));
+
+    // There are 6 max_snapshots, so let's force 2 more snapshots to
+    // be created (more than 6 snapshots would exist: the original
+    // three, two from the restores, and two more from the inserts
+    // below) and then: 1) Ensure there are still only 6 snapshots
+    // remaining due to pruning, 2) Get an error restoring to the
+    // oldest snapshot, which should have been pruned.
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
@@ -185,8 +196,8 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
 
+    thread::sleep(time::Duration::from_secs(4));
     let old_snapshots = snapshots;
     let snapshots = list_snapshots(
         config_path,
@@ -196,8 +207,8 @@ pub async fn test_snapshots(
     )?;
     assert_eq!(
         snapshots.len(),
-        3,
-        "there three snapshots after further updating database and pruning old snapshots"
+        6,
+        "there are six snapshots after further updating database and pruning old snapshots"
     );
 
     // Restoring the previous oldest snapshot fails
