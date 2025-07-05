@@ -1,0 +1,108 @@
+name: Tests
+
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres_user
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+    - uses: actions/checkout@v4
+    
+    # Cache multiple cargo directories
+    - name: Cargo cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    # Install sccache for faster compilation
+    - name: Install sccache
+      uses: mozilla-actions/sccache-action@v0.0.6
+    
+    # Configure sccache
+    - name: Configure sccache
+      run: |
+        echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+        echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+    
+    # Pre-download dependencies in parallel
+    - name: Download dependencies
+      run: cargo fetch --locked
+    
+    # Build in release mode for better caching
+    - name: Build
+      run: cargo build --verbose --release
+    
+    # Run fmt, clippy, and build checks in parallel
+    - name: Run checks
+      run: |
+        cargo fmt --check &
+        cargo clippy -- -D warnings &
+        wait
+    
+    - name: Install nsjail requirements
+      run: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
+    
+    - name: Set up environment for end-to-end tests
+      run: tests/set_up_e2e_env.sh
+    
+    - name: Run tests
+      run: cargo test --verbose --release
+      env:
+        RUST_BACKTRACE: 1
+
+  # Split lint checks into a separate job that runs in parallel
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Cargo cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+        key: ${{ runner.os }}-cargo-lint-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-lint-
+          ${{ runner.os }}-cargo-
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Check formatting
+      run: cargo fmt --check
+    
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
