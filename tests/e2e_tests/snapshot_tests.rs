@@ -46,7 +46,13 @@ pub async fn test_snapshots(
         "No snapshots for E2E-FiRST/test.sqlite",
     )?;
     // We'll sleep between various checks in this test to allow the
-    // snapshotting logic, which runs every 2 seconds, to execute.
+    // snapshotting logic, which runs every 2 seconds, to
+    // execute. Each insert, update, and snapshot restore causes
+    // another snapshot to be taken, and if we don't sleep after them,
+    // we can encounter a race condition between the test and the
+    // asynchronous snapshots being taken in parallel. By sleeping, we
+    // ensure predictability of relative snapshot timing and
+    // quanitity.
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
         config_path,
@@ -117,6 +123,7 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
+    thread::sleep(time::Duration::from_secs(4));
 
     // Restore the previous snapshot, ensuring there are only three
     // rows.
@@ -139,10 +146,6 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
-    // Restoring a snapshot causes another snapshot to be taken (the
-    // contents of the database are logically equivalent but
-    // physically different). The sleep below ensures that snapshot is
-    // taken.
     thread::sleep(time::Duration::from_secs(4));
 
     // Restore the snapshot before that, ensuring there are only two
@@ -169,10 +172,10 @@ pub async fn test_snapshots(
     // Ensure another snapshot-due-to-restore.
     thread::sleep(time::Duration::from_secs(4));
 
-    // There are 5 max_snapshots, so let's force 2 more snapshots to
-    // be created (more than 5 snapshots would exist: the original
-    // two, two from the restores, and two more from the inserts
-    // below) and then: 1) Ensure there are still only 5 snapshots
+    // There are 6 max_snapshots, so let's force 2 more snapshots to
+    // be created (more than 6 snapshots would exist: the original
+    // three, two from the restores, and two more from the inserts
+    // below) and then: 1) Ensure there are still only 6 snapshots
     // remaining due to pruning, 2) Get an error restoring to the
     // oldest snapshot, which should have been pruned.
     query(
@@ -184,6 +187,7 @@ pub async fn test_snapshots(
         "\nRows: 0",
     )?;
     thread::sleep(time::Duration::from_secs(4));
+
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
@@ -192,6 +196,7 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
+
     thread::sleep(time::Duration::from_secs(4));
     let old_snapshots = snapshots;
     let snapshots = list_snapshots(
@@ -202,8 +207,8 @@ pub async fn test_snapshots(
     )?;
     assert_eq!(
         snapshots.len(),
-        5,
-        "there are five snapshots after further updating database and pruning old snapshots"
+        6,
+        "there are six snapshots after further updating database and pruning old snapshots"
     );
 
     // Restoring the previous oldest snapshot fails
