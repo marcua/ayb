@@ -45,13 +45,16 @@ data_path = "./ayb_data"
 fernet_key = "<UNIQUE_KEY_GENERATED_BY_COMMAND>="
 token_expiration_seconds = 3600
 
-[email]
+[email.smtp]
 from = "Server Sender <server@example.org>"
 reply_to = "Server Reply <replyto@example.org>"
 smtp_host = "localhost"
 smtp_port = 465
 smtp_username = "login@example.org"
 smtp_password = "the_password"
+
+[email.file]
+path = "./ayb_data/emails.jsonl"
 
 [web]
 hosting_method = "Local"
@@ -81,9 +84,9 @@ $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
 
 $ ayb client list marcua
- Database slug | Type 
+ Database slug | Type
 ---------------+--------
- test.sqlite   | sqlite 
+ test.sqlite   | sqlite
 
 $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 
@@ -102,11 +105,11 @@ marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("DuckDB
 
 Rows: 0
 marcua/test.sqlite> SELECT * FROM favorite_databases;
- name       | score 
+ name       | score
 ------------+-------
- PostgreSQL | 10 
- SQLite     | 9 
- DuckDB     | 9 
+ PostgreSQL | 10
+ SQLite     | 9
+ DuckDB     | 9
 
 Rows: 3
 marcua/test.sqlite>
@@ -116,9 +119,9 @@ $ ayb client update_profile marcua --display_name 'Adam Marcus' --links 'http://
 Successfully updated profile
 
 $ ayb client profile marcua
- Display name | Description | Organization | Location | Links 
+ Display name | Description | Organization | Location | Links
 --------------+-------------+--------------+----------+-------------------
- Adam Marcus  |             |              |          | http://marcua.net 
+ Adam Marcus  |             |              |          | http://marcua.net
 ```
 
 Note that the command line also saved a configuration file for your
@@ -178,6 +181,31 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 `ayb` comes with a fully functional web interface. With the server configuration shown above, visit [http://localhost:5433/register](http://localhost:5433/register) to get started. The web interface allows you to register, log in, create databases, and run queries through your browser without needing to use the command line client.
 
 The default configuration (with `web.hosting_method` set to `Local`) enables it automatically, though you can remove the `web` section from your configuration if you only want an API server.
+
+### Email Configuration
+
+`ayb` supports multiple email backends for sending registration and login emails. A standard SMTP configuration can be used in production settings, and a file-based log can also be configured to help with development and testing. At least one of the backends must be configured for `ayb` to start.
+
+#### SMTP email backend
+For production deployments, configure SMTP to send emails through your email provider:
+
+```toml
+[email.smtp]
+from = "Your App <app@example.com>"
+reply_to = "Support <support@example.com>"
+smtp_host = "smtp.example.com"
+smtp_port = 587
+smtp_username = "your_username"
+smtp_password = "your_password"
+```
+
+#### Local file email backend (development/testing)
+For development or testing, you can write emails to a local file instead, where each email is JSON-encoded with one JSON-encoded email per line:
+
+```toml
+[email.file]
+path = "/path/to/emails.jsonl"
+```
 
 ### Snapshots / backups
 
@@ -352,7 +380,7 @@ nsjail_path = "path/to/nsjail"
 
 On every release, a docker image is built and pushed to
 `ghcr.io/marcua/ayb`. For now, docker images are available for
-`linux-amd64`. If you would like a `linux-arm64` image, follow 
+`linux-amd64`. If you would like a `linux-arm64` image, follow
 and comment on
 [this issue](https://github.com/marcua/ayb/issues/523).
 
@@ -366,9 +394,9 @@ You can then create an alias for convenience:
 alias ayb="docker run --network host ghcr.io/marcua/ayb ayb"
 ```
 
-To run the server, you'll need to create an `ayb.toml` configuration 
-file (see [Running a server](#running-a-server)), 
-create a data directory for the databases, and map the configuration and 
+To run the server, you'll need to create an `ayb.toml` configuration
+file (see [Running a server](#running-a-server)),
+create a data directory for the databases, and map the configuration and
 data directory as volumes when running the container. For example:
 ```bash
 docker run -v $(pwd)/ayb.toml:/ayb.toml \
@@ -405,8 +433,7 @@ cargo test --verbose
 
 In order to mimic as close to a realistic environment as possible, the end-to-end tests mock out very little functionality. The `tests/set_up_e2e_env.sh` script, which has been used extensively in Ubuntu, does the following:
 * Sets up a Python virtual environment and installs requirements for various helpers.
-* Installs requirements for a Python-based stub SMTP server to help test email-based registration.
-* Installs the requirements for a [LocalStack](https://docs.localstack.cloud/getting-started/quickstart/) server and then runs that server in the background (requires Docker) in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
+* Installs the requirements for a [MinIO](https://min.io/) server and then runs that server in the background (requires Docker) in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
 * Installs an `nsjail` binary to test `ayb`'s [isolation](#isolation) functionality.
 
 ## FAQ

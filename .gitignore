@@ -22,7 +22,7 @@ tests/ayb_data_sqlite
 tests/smtp_data_10025
 tests/smtp_data_10026
 tests/nsjail
-tests/localstack_init.sh
-tests/localstack_data*
 tests/test-env
 .aider*
+# Local AI plan tracking/context files
+plan.md

@@ -1,5 +1,6 @@
 use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
+use crate::email::create_email_backends;
 use crate::error::AybError;
 use crate::server::config::read_config;
 use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
@@ -54,7 +55,9 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::query_endpoint)
                 .service(ui_endpoints::update_public_sharing_endpoint)
                 .service(ui_endpoints::share_with_entity_endpoint)
-                .service(ui_endpoints::database_permissions_endpoint);
+                .service(ui_endpoints::database_permissions_endpoint)
+                .service(ui_endpoints::database_snapshots_endpoint)
+                .service(ui_endpoints::restore_snapshot_endpoint);
         }
     }
 }
@@ -115,6 +118,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     let web_details = WebFrontendDetails::load(ayb_conf_for_server.clone())
         .await
         .expect("failed to load web frontend details");
+    let email_backends = create_email_backends(&ayb_conf.email);
     schedule_periodic_snapshots(ayb_conf_for_server.clone(), ayb_db.clone())
         .await
         .expect("unable to start periodic snapshot scheduler");
@@ -145,6 +149,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
             .app_data(web::Data::new(web_details.clone()))
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
+            .app_data(web::Data::new(email_backends.clone()))
             .configure(|cfg| config(cfg, &ayb_conf_for_server.clone()))
     })
     .bind((ayb_conf.host, ayb_conf.port))?

@@ -20,6 +20,7 @@ pub enum AybError {
     CantSetOwnerPermissions { message: String },
     ConfigurationError { message: String },
     DurationParseError { message: String },
+    EmailError { message: String },
     NoWriteAccessError { message: String },
     QueryError { message: String },
     RecordNotFound { id: String, record_type: String },
@@ -36,6 +37,7 @@ impl Display for AybError {
             AybError::Other { message } => write!(f, "{}", message),
             AybError::ConfigurationError { message } => write!(f, "{}", message),
             AybError::CantSetOwnerPermissions { message } => write!(f, "{}", message),
+            AybError::EmailError { message } => write!(f, "{}", message),
             AybError::NoWriteAccessError { message } => write!(f, "{}", message),
             _ => write!(f, "{:?}", self),
         }
