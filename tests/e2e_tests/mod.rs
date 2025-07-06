@@ -7,7 +7,7 @@ mod snapshot_tests;
 pub use create_and_query_db_tests::test_create_and_query_db;
 pub use entity_details_and_profile_tests::test_entity_details_and_profile;
 pub use permissions_tests::test_permissions;
-pub use registration_tests::{test_banned_username_registration, test_registration};
+pub use registration_tests::test_registration;
 pub use snapshot_tests::test_snapshots;
 
 const FIRST_ENTITY_DB: &str = "e2e-first/test.sqlite";

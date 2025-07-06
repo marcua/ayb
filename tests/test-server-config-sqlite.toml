@@ -3,6 +3,9 @@ port = 5434
 database_url = "sqlite://tests/ayb_data_sqlite/ayb.sqlite"
 data_path = "./tests/ayb_data_sqlite"
 
+[web]
+hosting_method = "Local"
+
 [email.file]
 path = "tests/ayb_data_sqlite/emails.jsonl"
 

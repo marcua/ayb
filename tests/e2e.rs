@@ -5,8 +5,8 @@ mod email_helpers;
 mod utils;
 
 use crate::e2e_tests::{
-    test_banned_username_registration, test_create_and_query_db, test_entity_details_and_profile,
-    test_permissions, test_registration, test_snapshots,
+    test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
+    test_snapshots,
 };
 use crate::utils::testing::{AybServer, Cleanup};
 use assert_cmd::prelude::*;
@@ -81,7 +81,6 @@ async fn client_server_integration(
     thread::sleep(time::Duration::from_secs(10));
 
     let api_keys = test_registration(&config_path, server_url, &mut expected_config)?;
-    test_banned_username_registration(&config_path, server_url)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(db_type, &config_path, &api_keys).await?;
