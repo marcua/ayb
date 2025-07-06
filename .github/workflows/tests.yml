@@ -56,6 +56,19 @@ jobs:
     - name: Install nsjail requirements
       run: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
 
+    - name: Cache Python environment
+      uses: actions/cache@v4
+      with:
+        path: tests/test-env
+        key: ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}
+
+    - name: Cache nsjail binary
+      id: cache-nsjail
+      uses: actions/cache@v4
+      with:
+        path: tests/nsjail
+        key: ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}
+
     - name: Set up environment for end-to-end tests
       run: tests/set_up_e2e_env.sh
 
