@@ -24,6 +24,7 @@ pub enum AybError {
     NoWriteAccessError { message: String },
     QueryError { message: String },
     RecordNotFound { id: String, record_type: String },
+    RegistrationError { message: String },
     S3ExecutionError { message: String },
     S3ConnectionError { message: String },
     SnapshotError { message: String },
@@ -39,6 +40,7 @@ impl Display for AybError {
             AybError::CantSetOwnerPermissions { message } => write!(f, "{}", message),
             AybError::EmailError { message } => write!(f, "{}", message),
             AybError::NoWriteAccessError { message } => write!(f, "{}", message),
+            AybError::RegistrationError { message } => write!(f, "{}", message),
             _ => write!(f, "{:?}", self),
         }
     }
