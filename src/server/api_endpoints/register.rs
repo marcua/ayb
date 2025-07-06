@@ -7,7 +7,7 @@ use crate::server::config::AybConfig;
 use crate::server::tokens::encrypt_auth_token;
 use crate::server::username_validation::validate_username;
 use crate::server::utils::{get_lowercased_header, get_required_header};
-use crate::server::web_frontend::WebFrontendDetails;
+use crate::server::web_frontend::{local_base_url, WebFrontendDetails};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::str::FromStr;
 
@@ -23,12 +23,10 @@ async fn register(
     let entity_type = get_required_header(&req, "entity-type")?;
 
     // Validate username for route conflicts
-    let base_url = ayb_config
-        .web
-        .as_ref()
-        .and_then(|web| web.base_url.as_ref())
-        .map(|url| url.as_str());
-    validate_username(&entity, base_url).await?;
+    // TODO(marcua): We might want to pass in a publicly facing base
+    // URL in the future so we can validate URLs that might be set at
+    // a load balancer/CDN.
+    validate_username(&entity, Some(&local_base_url(&ayb_config))).await?;
     let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
     // Ensure that there are no authentication methods aside from
     // perhaps the currently requested one.

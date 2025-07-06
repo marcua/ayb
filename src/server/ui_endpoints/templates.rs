@@ -2,10 +2,8 @@ use actix_web::{HttpResponse, Result};
 use std::sync::OnceLock;
 use tera::{Context, Tera};
 
-// TEMPLATES is initialized on first use via the `templates` function.
-static TEMPLATES: OnceLock<Tera> = OnceLock::new();
-
 fn templates() -> &'static Tera {
+    static TEMPLATES: OnceLock<Tera> = OnceLock::new();
     TEMPLATES.get_or_init(|| {
         let mut tera = Tera::default();
 
