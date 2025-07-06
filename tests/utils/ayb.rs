@@ -113,14 +113,19 @@ pub fn list_snapshots(
     let cmd = ayb_assert_cmd!("client", "--config", config, "list_snapshots", database, "--format", format; {
         "AYB_API_TOKEN" => api_key,
     });
-    let mut output_lines = std::str::from_utf8(&cmd.get_output().stdout)?
-        .lines()
-        .collect::<Vec<&str>>();
+    let output = std::str::from_utf8(&cmd.get_output().stdout)?;
+    let mut output_lines = output.lines().collect::<Vec<&str>>();
+
+    if output_lines.is_empty() {
+        return Ok(vec![]);
+    }
+
     assert_eq!(
         output_lines[0], "Name,Last modified",
         "first result line should be a header row"
     );
-    let re = Regex::new(r"([a-f0-9]{64}),(\d{4,5}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00)").unwrap();
+    let re = Regex::new(r"([a-f0-9]{64}),(\d{4,5}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?\+00:00)")
+        .unwrap();
     let mut snapshots = Vec::new();
     for line in &mut output_lines[1..] {
         let capture = re

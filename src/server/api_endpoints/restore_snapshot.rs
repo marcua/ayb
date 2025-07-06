@@ -33,6 +33,7 @@ async fn restore_snapshot(
             // directory, and set it as the current active database.
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
             let db_path = &new_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
+
             snapshot_storage
                 .retrieve_snapshot(entity_slug, database_slug, &snapshot_id, db_path)
                 .await?;

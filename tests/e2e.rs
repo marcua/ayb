@@ -1,13 +1,14 @@
 #![allow(clippy::too_many_arguments)]
 
 mod e2e_tests;
+mod email_helpers;
 mod utils;
 
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
 };
-use crate::utils::testing::{AybServer, Cleanup, SmtpServer};
+use crate::utils::testing::{AybServer, Cleanup};
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
@@ -17,12 +18,12 @@ use std::time;
 
 #[tokio::test]
 async fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
-    client_server_integration("postgres", "http://127.0.0.1:5433", 10025).await
+    client_server_integration("postgres", "http://127.0.0.1:5433").await
 }
 
 #[tokio::test]
 async fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
-    client_server_integration("sqlite", "http://127.0.0.1:5434", 10026).await
+    client_server_integration("sqlite", "http://127.0.0.1:5434").await
 }
 
 #[test]
@@ -37,13 +38,16 @@ data_path = "./ayb_data"
 !!!fernet_line!!!
 token_expiration_seconds = 3600
 
-[email]
+[email.smtp]
 from = "Server Sender <server@example.org>"
 reply_to = "Server Reply <replyto@example.org>"
 smtp_host = "localhost"
 smtp_port = 465
 smtp_username = "login@example.org"
 smtp_password = "the_password"
+
+[email.file]
+path = "./ayb_data/emails.jsonl"
 
 [web]
 hosting_method = "Local"
@@ -61,7 +65,6 @@ origin = "*"
 async fn client_server_integration(
     db_type: &str,
     server_url: &str,
-    smtp_port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config_path = format!("tests/ayb_data_{}/ayb.json", db_type);
     let mut expected_config = ClientConfig::new();
@@ -74,13 +77,10 @@ async fn client_server_integration(
     // Run server
     let _ayb_server = AybServer::run(db_type).expect("failed to start the ayb server");
 
-    // Run stub SMTP server
-    let _smtp_server = SmtpServer::run(smtp_port).expect("failed to start the smtp server");
-
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
 
-    let api_keys = test_registration(&config_path, server_url, smtp_port, &mut expected_config)?;
+    let api_keys = test_registration(&config_path, server_url, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(db_type, &config_path, &api_keys).await?;
