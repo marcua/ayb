@@ -55,6 +55,82 @@ fn get_emails_for_recipient(
     Ok(filtered_emails)
 }
 
+fn test_banned_username_registration(
+    config_path: &str,
+    server_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Test that banned usernames are rejected during registration
+
+    // Test ayb-specific route conflicts
+    let ayb_banned = ["register", "log_in", "log_out", "confirm", "v1"];
+    for banned_username in ayb_banned {
+        register(
+            config_path,
+            server_url,
+            banned_username,
+            "test@example.org",
+            &format!(
+                "Error: Username '{}' is reserved and cannot be used",
+                banned_username
+            ),
+        )?;
+    }
+
+    // Test common reserved names from shouldbee/reserved-usernames
+    let common_banned = [
+        "admin", "root", "www", "api", "support", "help", "blog", "news", "email", "contact",
+        "about", "null",
+    ];
+    for banned_username in common_banned {
+        register(
+            config_path,
+            server_url,
+            banned_username,
+            "test@example.org",
+            &format!(
+                "Error: Username '{}' is reserved and cannot be used",
+                banned_username
+            ),
+        )?;
+    }
+
+    // Test that case doesn't matter - all should be banned
+    let case_banned = ["REGISTER", "Log_In", "API", "ROOT"];
+    for banned_username in case_banned {
+        register(
+            config_path,
+            server_url,
+            banned_username,
+            "test@example.org",
+            &format!(
+                "Error: Username '{}' is reserved and cannot be used",
+                banned_username.to_lowercase()
+            ),
+        )?;
+    }
+
+    // Test that valid usernames still work - using same list from username_validation.rs
+    let valid = [
+        "alice",
+        "bob123",
+        "my-company",
+        "user_2024",
+        "testuser",
+        "ValiDUSer445",
+    ];
+    for username in valid {
+        register(
+            config_path,
+            server_url,
+            username,
+            &format!("{}@example.org", username),
+            &format!("Check your email to finish registering {}", username),
+        )?;
+    }
+
+    Ok(())
+}
+
 pub fn test_registration(
     config_path: &str,
     server_url: &str,
@@ -242,5 +318,6 @@ pub fn test_registration(
     );
     api_keys.insert("second".to_string(), vec![second_api_key0]);
     api_keys.insert("third".to_string(), vec![third_api_key0]);
+    test_banned_username_registration(config_path, server_url)?;
     Ok(api_keys)
 }
