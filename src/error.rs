@@ -29,6 +29,7 @@ pub enum AybError {
     S3ConnectionError { message: String },
     SnapshotError { message: String },
     SnapshotDoesNotExistError,
+    EmptyUpdateError { message: String },
     Other { message: String },
 }
 
@@ -41,6 +42,7 @@ impl Display for AybError {
             AybError::EmailError { message } => write!(f, "{}", message),
             AybError::NoWriteAccessError { message } => write!(f, "{}", message),
             AybError::RegistrationError { message } => write!(f, "{}", message),
+            AybError::EmptyUpdateError { message } => write!(f, "{}", message),
             _ => write!(f, "{:?}", self),
         }
     }
