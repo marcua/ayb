@@ -44,15 +44,6 @@ jobs:
           ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
           ${{ runner.os }}-cargo-build-
 
-    - name: Print tool versions
-      run: |
-        echo "Rust version:"
-        rustc --version
-        echo "Cargo version:"
-        cargo --version
-        echo "Clippy version:"
-        cargo clippy --version
-
     - name: Build
       run: cargo build --verbose
 
