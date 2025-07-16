@@ -56,7 +56,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -184,7 +184,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -296,7 +296,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -410,7 +410,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -568,7 +568,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -651,7 +651,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -701,7 +701,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,

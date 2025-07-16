@@ -21,7 +21,7 @@ pub fn test_entity_details_and_profile(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
 
     // Make some partial profile updates and verify profile details upon retrieval

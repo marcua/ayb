@@ -38,11 +38,11 @@ pub async fn create_database(
     {
         Ok(_) => {
             // Redirect to the new database page
-            let redirect_url = format!("/{}/{}", entity_slug, database_slug);
+            let redirect_url = format!("/{entity_slug}/{database_slug}");
             Ok(HttpResponse::Ok()
                 .append_header(("HX-Redirect", redirect_url))
                 .finish())
         }
-        Err(err) => error_snippet("Error creating database", &format!("{}", err)),
+        Err(err) => error_snippet("Error creating database", &format!("{err}")),
     }
 }

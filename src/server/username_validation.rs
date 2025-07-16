@@ -29,7 +29,7 @@ pub fn validate_username(username: &str) -> Result<(), AybError> {
     // Check banned username list
     if is_username_banned(username) {
         return Err(AybError::RegistrationError {
-            message: format!("Username '{}' is reserved and cannot be used", username),
+            message: format!("Username '{username}' is reserved and cannot be used"),
         });
     }
 

@@ -70,8 +70,7 @@ fn test_banned_username_registration(
             banned_username,
             "test@example.org",
             &format!(
-                "Error: Username '{}' is reserved and cannot be used",
-                banned_username
+                "Error: Username '{banned_username}' is reserved and cannot be used"
             ),
         )?;
     }
@@ -88,8 +87,7 @@ fn test_banned_username_registration(
             banned_username,
             "test@example.org",
             &format!(
-                "Error: Username '{}' is reserved and cannot be used",
-                banned_username
+                "Error: Username '{banned_username}' is reserved and cannot be used"
             ),
         )?;
     }
@@ -123,8 +121,8 @@ fn test_banned_username_registration(
             config_path,
             server_url,
             username,
-            &format!("{}@example.org", username),
-            &format!("Check your email to finish registering {}", username),
+            &format!("{username}@example.org"),
+            &format!("Check your email to finish registering {username}"),
         )?;
     }
 
@@ -201,7 +199,7 @@ pub fn test_registration(
     let second_token0 = extract_token_from_emails(&[another_emails[1].clone()]).unwrap();
 
     // Using a bad token (appending a letter) doesn't work.
-    let cmd = ayb_assert_cmd!("client", "confirm", &format!("{}a", first_token0); {
+    let cmd = ayb_assert_cmd!("client", "confirm", &format!("{first_token0}a"); {
         "AYB_CLIENT_CONFIG_FILE" => config_path,
     });
     cmd.stdout("Error: Invalid or expired token\n");

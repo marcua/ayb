@@ -44,7 +44,7 @@ pub async fn query_and_display(
             println!("\nRows: {}", query_result.rows.len());
         }
         Err(err) => {
-            println!("Error: {}", err);
+            println!("Error: {err}");
         }
     }
     Ok(())
@@ -267,7 +267,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
         if let Some(url) = matches.get_one::<String>("url") {
             config.default_url = Some(url.to_string());
             config.to_file(&config_path)?;
-            println!("Saved {} as new default_url", url);
+            println!("Saved {url} as new default_url");
             return Ok(());
         }
     }
@@ -315,7 +315,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     );
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -327,10 +327,10 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
         ) {
             match client.register(entity, email_address, entity_type).await {
                 Ok(_response) => {
-                    println!("Check your email to finish registering {}", entity);
+                    println!("Check your email to finish registering {entity}");
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -348,7 +348,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     );
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -356,10 +356,10 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
         if let Some(entity) = matches.get_one::<String>("entity") {
             match client.log_in(entity).await {
                 Ok(_response) => {
-                    println!("Check your email to finish logging in {}", entity);
+                    println!("Check your email to finish logging in {entity}");
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -373,7 +373,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     OutputFormat::Table => response.profile.generate_table()?,
                     OutputFormat::Csv => response.profile.generate_csv()?,
                 },
-                Err(err) => println!("Error: {}", err),
+                Err(err) => println!("Error: {err}"),
             }
         }
     } else if let Some(matches) = matches.subcommand_matches("update_profile") {
@@ -413,7 +413,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
 
             match client.update_profile(entity, &profile_update).await {
                 Ok(_) => println!("Successfully updated profile"),
-                Err(err) => println!("Error: {}", err),
+                Err(err) => println!("Error: {err}"),
             }
         }
     } else if let Some(matches) = matches.subcommand_matches("list") {
@@ -424,7 +424,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
             match client.entity_details(entity).await {
                 Ok(response) => {
                     if response.databases.is_empty() {
-                        println!("No queryable databases owned by {}", entity);
+                        println!("No queryable databases owned by {entity}");
                     } else {
                         match format {
                             OutputFormat::Table => response.databases.generate_table()?,
@@ -433,7 +433,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     }
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -467,7 +467,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                             Ok(query) => {
                                 let result = rl.add_history_entry(query.as_str());
                                 if let Err(err) = result {
-                                    println!("Error adding line to history: {}", err);
+                                    println!("Error adding line to history: {err}");
                                 };
                                 query_and_display(
                                     &client,
@@ -480,13 +480,13 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                             }
                             Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
                             Err(err) => {
-                                println!("Error reading next line: {}", err);
+                                println!("Error reading next line: {err}");
                                 break;
                             }
                         }
                     },
                     Err(err) => {
-                        println!("Error starting readline editor: {}", err);
+                        println!("Error starting readline editor: {err}");
                     }
                 }
             }
@@ -514,7 +514,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     }
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -544,7 +544,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     )
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -568,7 +568,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     );
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -594,7 +594,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     );
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -612,17 +612,17 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     println!("Type: {}", details.database_type);
 
                     let access_level = match &details.highest_query_access_level {
-                        Some(mode) => format!("{:?}", mode),
+                        Some(mode) => format!("{mode:?}"),
                         None => "No query access".to_string(),
                     };
-                    println!("Access level: {}", access_level);
+                    println!("Access level: {access_level}");
 
                     if details.can_manage_database {
                         println!("You have management permissions for this database");
                     }
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }
@@ -649,7 +649,7 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     }
                 }
                 Err(err) => {
-                    println!("Error: {}", err);
+                    println!("Error: {err}");
                 }
             }
         }

@@ -23,7 +23,7 @@ impl AybClient {
         if let Some(api_token) = &self.api_token {
             headers.insert(
                 HeaderName::from_static("authorization"),
-                HeaderValue::from_str(format!("Bearer {}", api_token).as_str()).unwrap(),
+                HeaderValue::from_str(format!("Bearer {api_token}").as_str()).unwrap(),
             );
             Ok(())
         } else {
@@ -42,7 +42,7 @@ impl AybClient {
         let status = response.status();
         if status == expected_status {
             response.json::<T>().await.map_err(|err| AybError::Other {
-                message: format!("Unable to parse successful response: {}", err),
+                message: format!("Unable to parse successful response: {err}"),
             })
         } else {
             response
@@ -51,8 +51,7 @@ impl AybClient {
                 .map(|v| Err(v))
                 .map_err(|error| AybError::Other {
                     message: format!(
-                        "Unable to parse error response: {:#?}, response code: {}",
-                        error, status
+                        "Unable to parse error response: {error:#?}, response code: {status}"
                     ),
                 })?
         }
@@ -73,8 +72,7 @@ impl AybClient {
                 .map(Err)
                 .map_err(|error| AybError::Other {
                     message: format!(
-                        "Unable to parse error response: {:#?}, response code: {}",
-                        error, status
+                        "Unable to parse error response: {error:#?}, response code: {status}"
                     ),
                 })?
         }
@@ -116,7 +114,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}/{}/create", entity, database)))
+            .post(self.make_url(format!("{entity}/{database}/create")))
             .headers(headers)
             .send()
             .await?;
@@ -134,7 +132,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .get(self.make_url(format!("{}/{}/list_snapshots", entity, database)))
+            .get(self.make_url(format!("{entity}/{database}/list_snapshots")))
             .headers(headers)
             .send()
             .await?;
@@ -165,7 +163,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .get(self.make_url(format!("entity/{}", entity)))
+            .get(self.make_url(format!("entity/{entity}")))
             .headers(headers)
             .send()
             .await?;
@@ -184,7 +182,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}/{}/query", entity, database)))
+            .post(self.make_url(format!("{entity}/{database}/query")))
             .headers(headers)
             .body(query.to_owned())
             .send()
@@ -234,7 +232,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}/{}/restore_snapshot", entity, database)))
+            .post(self.make_url(format!("{entity}/{database}/restore_snapshot")))
             .headers(headers)
             .body(snapshot_id.to_owned())
             .send()
@@ -260,7 +258,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .patch(self.make_url(format!("entity/{}", entity)))
+            .patch(self.make_url(format!("entity/{entity}")))
             .headers(headers)
             .body(serde_json::to_string(profile_update)?)
             .send()
@@ -279,7 +277,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .get(self.make_url(format!("{}/{}/details", entity, database)))
+            .get(self.make_url(format!("{entity}/{database}/details")))
             .headers(headers)
             .send()
             .await?;
@@ -303,7 +301,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .patch(self.make_url(format!("{}/{}/update", entity, database)))
+            .patch(self.make_url(format!("{entity}/{database}/update")))
             .headers(headers)
             .send()
             .await?;
@@ -333,7 +331,7 @@ impl AybClient {
         );
 
         let response = reqwest::Client::new()
-            .post(self.make_url(format!("{}/{}/share", entity_for_database, database)))
+            .post(self.make_url(format!("{entity_for_database}/{database}/share")))
             .headers(headers)
             .send()
             .await?;
@@ -351,7 +349,7 @@ impl AybClient {
         self.add_bearer_token(&mut headers)?;
 
         let response = reqwest::Client::new()
-            .get(self.make_url(format!("{}/{}/permissions", entity, database)))
+            .get(self.make_url(format!("{entity}/{database}/permissions")))
             .headers(headers)
             .send()
             .await?;
