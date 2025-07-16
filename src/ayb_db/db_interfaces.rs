@@ -625,8 +625,7 @@ pub async fn connect_to_ayb_db(url: String) -> Result<Box<dyn AybDb>, AybError> 
     } else {
         Err(AybError::Other {
             message: format!(
-                "Database type for {} is not supported (currently only SQLite and PostgreSQL)",
-                url
+                "Database type for {url} is not supported (currently only SQLite and PostgreSQL)"
             ),
         })
     }

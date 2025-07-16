@@ -46,7 +46,7 @@ async fn register(
 
     if already_verified {
         return Err(AybError::Other {
-            message: format!("{} has already been registered", entity),
+            message: format!("{entity} has already been registered"),
         });
     }
 

@@ -28,8 +28,8 @@ async fn main() -> std::io::Result<()> {
         }
     } else if let Some(_matches) = matches.subcommand_matches("default_server_config") {
         match config_to_toml(default_server_config()) {
-            Ok(config) => println!("{}", config),
-            Err(err) => println!("Error: {}", err),
+            Ok(config) => println!("{config}"),
+            Err(err) => println!("Error: {err}"),
         }
     } else if let Some(matches) = matches.subcommand_matches("client") {
         execute_client_command(matches).await?;

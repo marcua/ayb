@@ -52,8 +52,7 @@ pub fn new_database_path(
     if let Err(e) = fs::create_dir_all(&path) {
         return Err(AybError::Other {
             message: format!(
-                "Unable to create database path for {}/{}: {}",
-                entity_slug, database_slug, e
+                "Unable to create database path for {entity_slug}/{database_slug}: {e}"
             ),
         });
     }
@@ -121,8 +120,7 @@ pub fn database_snapshot_path(
     if let Err(e) = fs::create_dir_all(&path) {
         return Err(AybError::Other {
             message: format!(
-                "Unable to create snapshot path for {}/{}: {}",
-                entity_slug, database_slug, e
+                "Unable to create snapshot path for {entity_slug}/{database_slug}: {e}"
             ),
         });
     }

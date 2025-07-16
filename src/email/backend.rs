@@ -176,7 +176,7 @@ impl EmailBackends {
                 .send_email(to, subject, body, from, reply_to)
                 .await
             {
-                errors.push(format!("SMTP backend failed: {}", e));
+                errors.push(format!("SMTP backend failed: {e}"));
             }
         }
 
@@ -185,7 +185,7 @@ impl EmailBackends {
                 .send_email(to, subject, body, from, reply_to)
                 .await
             {
-                errors.push(format!("File backend failed: {}", e));
+                errors.push(format!("File backend failed: {e}"));
             }
         }
 

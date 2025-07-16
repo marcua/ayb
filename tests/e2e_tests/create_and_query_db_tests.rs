@@ -127,10 +127,10 @@ pub fn test_create_and_query_db(
     // reset it, the connections work again.
     set_default_url(
         config_path,
-        &format!("{}badport", server_url),
-        &format!("Saved {}badport as new default_url", server_url),
+        &format!("{server_url}badport"),
+        &format!("Saved {server_url}badport as new default_url"),
     )?;
-    expected_config.default_url = Some(format!("{}badport", server_url));
+    expected_config.default_url = Some(format!("{server_url}badport"));
     assert_eq!(
         fs::read_to_string(config_path).unwrap(),
         serde_json::to_string(&expected_config)?
@@ -146,7 +146,7 @@ pub fn test_create_and_query_db(
     set_default_url(
         config_path,
         server_url,
-        &format!("Saved {} as new default_url", server_url),
+        &format!("Saved {server_url} as new default_url"),
     )?;
     expected_config.default_url = Some(server_url.to_string());
     assert_eq!(
