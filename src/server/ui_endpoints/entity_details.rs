@@ -87,6 +87,6 @@ pub async fn update_profile(
     // Update the profile using the API client
     match client.update_profile(entity_slug, &profile_update).await {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
-        Err(err) => error_snippet("Error updating profile", &format!("{}", err)),
+        Err(err) => error_snippet("Error updating profile", &format!("{err}")),
     }
 }
