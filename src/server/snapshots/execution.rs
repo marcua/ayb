@@ -103,9 +103,7 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
                     .await
                     .err()
                 {
-                    eprintln!(
-                        "Unable to snapshot database {entity}/{database}: {err}"
-                    );
+                    eprintln!("Unable to snapshot database {entity}/{database}: {err}");
                 }
             } else {
                 return Err(AybError::SnapshotError {

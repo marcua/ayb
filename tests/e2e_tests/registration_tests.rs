@@ -69,9 +69,7 @@ fn test_banned_username_registration(
             server_url,
             banned_username,
             "test@example.org",
-            &format!(
-                "Error: Username '{banned_username}' is reserved and cannot be used"
-            ),
+            &format!("Error: Username '{banned_username}' is reserved and cannot be used"),
         )?;
     }
 
@@ -86,9 +84,7 @@ fn test_banned_username_registration(
             server_url,
             banned_username,
             "test@example.org",
-            &format!(
-                "Error: Username '{banned_username}' is reserved and cannot be used"
-            ),
+            &format!("Error: Username '{banned_username}' is reserved and cannot be used"),
         )?;
     }
 
