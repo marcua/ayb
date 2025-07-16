@@ -29,7 +29,7 @@ pub fn create_database(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -45,7 +45,7 @@ pub fn query(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -58,7 +58,7 @@ pub fn query_no_api_token(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {});
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -69,7 +69,7 @@ pub fn set_default_url(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "set_default_url", server_url; {});
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -85,7 +85,7 @@ pub fn register(
         "AYB_SERVER_URL" => server_url,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -100,7 +100,7 @@ pub fn list_databases(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -162,7 +162,7 @@ pub fn list_snapshots_match_output(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(predicate::str::is_match(format!("{}\n", result)).unwrap());
+    cmd.stdout(predicate::str::is_match(format!("{result}\n")).unwrap());
     Ok(())
 }
 
@@ -177,7 +177,7 @@ pub fn restore_snapshot(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -192,7 +192,7 @@ pub fn profile(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -231,7 +231,7 @@ pub fn update_profile(
         cmd.arg("--links").arg(links.join(","));
     }
 
-    cmd.assert().success().stdout(format!("{}\n", result));
+    cmd.assert().success().stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -251,7 +251,7 @@ pub fn update_database(
     }
 
     if public_sharing_level.is_some() {
-        cmd.assert().success().stdout(format!("{}\n", result));
+        cmd.assert().success().stdout(format!("{result}\n"));
     } else {
         cmd.assert()
             .failure()
@@ -272,7 +272,7 @@ pub fn share(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }
 
@@ -301,6 +301,6 @@ pub fn list_database_permissions(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{}\n", result));
+    cmd.stdout(format!("{result}\n"));
     Ok(())
 }

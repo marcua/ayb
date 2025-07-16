@@ -110,7 +110,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
     env_logger::init();
 
     let ayb_conf = read_config(config_path)
-        .unwrap_or_else(|e| panic!("unable to read ayb.toml configuration file: {}", e));
+        .unwrap_or_else(|e| panic!("unable to read ayb.toml configuration file: {e}"));
     let mut ayb_conf_for_server = ayb_conf.clone();
     fs::create_dir_all(&ayb_conf.data_path).expect("unable to create data directory");
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
@@ -129,8 +129,7 @@ pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
         println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
     } else if OS != "linux" {
         println!(
-            "Warning: nsjail isolation is only supported on Linux. Running without isolation on {}",
-            OS
+            "Warning: nsjail isolation is only supported on Linux. Running without isolation on {OS}"
         );
         ayb_conf_for_server.isolation = None;
     } else {

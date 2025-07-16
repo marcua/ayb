@@ -29,7 +29,7 @@ pub async fn database_snapshots(
             let html = render("database_snapshots.html", &context);
             Ok(HttpResponse::Ok().content_type("text/html").body(html))
         }
-        Err(err) => error_snippet("Error loading snapshots", &format!("{}", err)),
+        Err(err) => error_snippet("Error loading snapshots", &format!("{err}")),
     }
 }
 
@@ -55,9 +55,8 @@ pub async fn restore_snapshot(
         .await
     {
         Ok(_) => success_snippet(&format!(
-            "Database successfully restored from snapshot '{}'.",
-            snapshot_id
+            "Database successfully restored from snapshot '{snapshot_id}'."
         )),
-        Err(err) => error_snippet("Error restoring snapshot", &format!("{}", err)),
+        Err(err) => error_snippet("Error restoring snapshot", &format!("{err}")),
     }
 }

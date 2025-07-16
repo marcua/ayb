@@ -22,7 +22,7 @@ pub fn get_required_header(req: &HttpRequest, header_name: &str) -> Result<Strin
     match value {
         Some(value) => Ok(value),
         None => Err(AybError::Other {
-            message: format!("Missing required `{}` header", header_name),
+            message: format!("Missing required `{header_name}` header"),
         }),
     }
 }

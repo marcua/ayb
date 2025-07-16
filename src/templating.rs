@@ -12,7 +12,7 @@ impl TemplateString {
         let mut string = self.string.clone();
         values
             .iter()
-            .for_each(|(k, v)| string = string.replace(&format!("{{{}}}", k), v));
+            .for_each(|(k, v)| string = string.replace(&format!("{{{k}}}"), v));
         string
     }
 }

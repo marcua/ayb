@@ -66,11 +66,11 @@ async fn client_server_integration(
     db_type: &str,
     server_url: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let config_path = format!("tests/ayb_data_{}/ayb.json", db_type);
+    let config_path = format!("tests/ayb_data_{db_type}/ayb.json");
     let mut expected_config = ClientConfig::new();
     let _cleanup = Cleanup;
 
-    Command::new(format!("tests/reset_db_{}.sh", db_type))
+    Command::new(format!("tests/reset_db_{db_type}.sh"))
         .assert()
         .success();
 

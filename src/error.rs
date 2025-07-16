@@ -36,14 +36,14 @@ pub enum AybError {
 impl Display for AybError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            AybError::Other { message } => write!(f, "{}", message),
-            AybError::ConfigurationError { message } => write!(f, "{}", message),
-            AybError::CantSetOwnerPermissions { message } => write!(f, "{}", message),
-            AybError::EmailError { message } => write!(f, "{}", message),
-            AybError::NoWriteAccessError { message } => write!(f, "{}", message),
-            AybError::RegistrationError { message } => write!(f, "{}", message),
-            AybError::EmptyUpdateError { message } => write!(f, "{}", message),
-            _ => write!(f, "{:?}", self),
+            AybError::Other { message } => write!(f, "{message}"),
+            AybError::ConfigurationError { message } => write!(f, "{message}"),
+            AybError::CantSetOwnerPermissions { message } => write!(f, "{message}"),
+            AybError::EmailError { message } => write!(f, "{message}"),
+            AybError::NoWriteAccessError { message } => write!(f, "{message}"),
+            AybError::RegistrationError { message } => write!(f, "{message}"),
+            AybError::EmptyUpdateError { message } => write!(f, "{message}"),
+            _ => write!(f, "{self:?}"),
         }
     }
 }
@@ -65,7 +65,7 @@ impl From<fernet::DecryptionError> for AybError {
 impl From<go_parse_duration::Error> for AybError {
     fn from(cause: go_parse_duration::Error) -> Self {
         AybError::DurationParseError {
-            message: format!("Unable to parse duration: {:?}", cause),
+            message: format!("Unable to parse duration: {cause:?}"),
         }
     }
 }
@@ -73,7 +73,7 @@ impl From<go_parse_duration::Error> for AybError {
 impl From<lettre::address::AddressError> for AybError {
     fn from(cause: lettre::address::AddressError) -> Self {
         AybError::Other {
-            message: format!("Invalid email address: {}", cause),
+            message: format!("Invalid email address: {cause}"),
         }
     }
 }
@@ -81,7 +81,7 @@ impl From<lettre::address::AddressError> for AybError {
 impl From<prefixed_api_key::BuilderError> for AybError {
     fn from(cause: prefixed_api_key::BuilderError) -> Self {
         AybError::Other {
-            message: format!("Error in prefixed API key builder: {}", cause),
+            message: format!("Error in prefixed API key builder: {cause}"),
         }
     }
 }
@@ -89,7 +89,7 @@ impl From<prefixed_api_key::BuilderError> for AybError {
 impl From<prefixed_api_key::PrefixedApiKeyError> for AybError {
     fn from(cause: prefixed_api_key::PrefixedApiKeyError) -> Self {
         AybError::Other {
-            message: format!("Error parsing API token: {}", cause),
+            message: format!("Error parsing API token: {cause}"),
         }
     }
 }
@@ -97,7 +97,7 @@ impl From<prefixed_api_key::PrefixedApiKeyError> for AybError {
 impl From<quoted_printable::QuotedPrintableError> for AybError {
     fn from(cause: quoted_printable::QuotedPrintableError) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -105,7 +105,7 @@ impl From<quoted_printable::QuotedPrintableError> for AybError {
 impl From<rusqlite::Error> for AybError {
     fn from(cause: rusqlite::Error) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -113,7 +113,7 @@ impl From<rusqlite::Error> for AybError {
 impl From<rusqlite::types::FromSqlError> for AybError {
     fn from(cause: rusqlite::types::FromSqlError) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -121,7 +121,7 @@ impl From<rusqlite::types::FromSqlError> for AybError {
 impl From<string::FromUtf8Error> for AybError {
     fn from(cause: string::FromUtf8Error) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -129,7 +129,7 @@ impl From<string::FromUtf8Error> for AybError {
 impl From<serde_json::Error> for AybError {
     fn from(cause: serde_json::Error) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -137,7 +137,7 @@ impl From<serde_json::Error> for AybError {
 impl From<std::str::Utf8Error> for AybError {
     fn from(cause: std::str::Utf8Error) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -145,7 +145,7 @@ impl From<std::str::Utf8Error> for AybError {
 impl From<std::io::Error> for AybError {
     fn from(cause: std::io::Error) -> Self {
         AybError::Other {
-            message: format!("IO error: {:?}", cause),
+            message: format!("IO error: {cause:?}"),
         }
     }
 }
@@ -153,7 +153,7 @@ impl From<std::io::Error> for AybError {
 impl From<sqlx::Error> for AybError {
     fn from(cause: sqlx::Error) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -161,7 +161,7 @@ impl From<sqlx::Error> for AybError {
 impl From<reqwest::Error> for AybError {
     fn from(cause: reqwest::Error) -> Self {
         AybError::Other {
-            message: format!("{:?}", cause),
+            message: format!("{cause:?}"),
         }
     }
 }
@@ -169,7 +169,7 @@ impl From<reqwest::Error> for AybError {
 impl From<toml::de::Error> for AybError {
     fn from(cause: toml::de::Error) -> Self {
         AybError::Other {
-            message: format!("Unable to deserialize toml string: {:?}", cause),
+            message: format!("Unable to deserialize toml string: {cause:?}"),
         }
     }
 }
@@ -177,7 +177,7 @@ impl From<toml::de::Error> for AybError {
 impl From<toml::ser::Error> for AybError {
     fn from(cause: toml::ser::Error) -> Self {
         AybError::Other {
-            message: format!("Unable to serialize toml string: {:?}", cause),
+            message: format!("Unable to serialize toml string: {cause:?}"),
         }
     }
 }
@@ -185,7 +185,7 @@ impl From<toml::ser::Error> for AybError {
 impl From<tokio_cron_scheduler::JobSchedulerError> for AybError {
     fn from(cause: tokio_cron_scheduler::JobSchedulerError) -> Self {
         AybError::SnapshotError {
-            message: format!("Unable to schedule snapshots: {:?}", cause),
+            message: format!("Unable to schedule snapshots: {cause:?}"),
         }
     }
 }
@@ -193,7 +193,7 @@ impl From<tokio_cron_scheduler::JobSchedulerError> for AybError {
 impl From<url::ParseError> for AybError {
     fn from(cause: url::ParseError) -> Self {
         AybError::Other {
-            message: format!("Failed to parse URL: {:?}", cause),
+            message: format!("Failed to parse URL: {cause:?}"),
         }
     }
 }

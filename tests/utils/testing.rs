@@ -22,13 +22,13 @@ pub struct Cleanup;
 impl Drop for Cleanup {
     fn drop(&mut self) {
         if let Err(err) = fs::remove_dir_all("/tmp/ayb/e2e") {
-            assert_eq!(format!("{}", err), "No such file or directory (os error 2)")
+            assert_eq!(format!("{err}"), "No such file or directory (os error 2)")
         }
     }
 }
 
 fn server_config_path(db_type: &str) -> String {
-    format!("tests/test-server-config-{}.toml", db_type)
+    format!("tests/test-server-config-{db_type}.toml")
 }
 
 pub struct AybServer(Child);
