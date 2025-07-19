@@ -81,6 +81,14 @@ pub async fn update_profile(
         .map(|v| v.as_ref().map(String::from));
     partial.links = links;
 
+    // Check if there are any fields to update
+    if !partial.has_updates() {
+        return Err(AybError::EmptyUpdateError {
+            message: "No fields provided to update. Please specify at least one field to update."
+                .to_string(),
+        });
+    }
+
     ayb_db
         .update_entity_by_id(authenticated_entity.id, &partial)
         .await?;

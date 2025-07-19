@@ -239,14 +239,21 @@ pub fn update_database(
     config: &str,
     api_key: &str,
     database: &str,
-    public_sharing_level: &str,
+    public_sharing_level: Option<&str>,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "update_database", database, "--public_sharing_level", public_sharing_level; {
-        "AYB_API_TOKEN" => api_key,
-    });
+    let mut cmd = Command::cargo_bin("ayb")?;
+    cmd.args(["client", "--config", config, "update_database", database])
+        .env("AYB_API_TOKEN", api_key);
 
-    cmd.stdout(format!("{result}\n"));
+    if let Some(level) = public_sharing_level {
+        cmd.arg("--public_sharing_level").arg(level);
+        cmd.assert().success().stdout(format!("{result}\n"));
+    } else {
+        cmd.assert()
+            .failure()
+            .stderr(predicates::str::contains(result));
+    }
     Ok(())
 }
 

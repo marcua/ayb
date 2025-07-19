@@ -101,5 +101,18 @@ pub fn test_entity_details_and_profile(
         "Display name,Description,Organization,Location,Links\nEntity 0,Entity 0 NEW description,Entity 0 organization,null,\"http://ayb.host/,http://ayb2.host\""
     )?;
 
+    // Test that update_profile with no arguments returns an error
+    update_profile(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_SLUG,
+        None,
+        None,
+        None,
+        None,
+        None,
+        "Error: No fields provided to update. Please specify at least one field to update.",
+    )?;
+
     Ok(())
 }

@@ -164,9 +164,17 @@ pub struct InstantiatedDatabase {
 }
 
 /// Represents properties of a database that can be updated.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Default)]
 pub struct PartialDatabase {
     pub public_sharing_level: Option<i16>,
+}
+
+impl PartialDatabase {
+    // By default, all fields on PartialDatabase are `None`. If at
+    // least one is `Some`, the database is eligible for an update.
+    pub fn has_updates(&self) -> bool {
+        *self != Self::default()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -184,7 +192,7 @@ pub struct Entity {
 /// * `None` means that nothing should be changed
 /// * `Some(None)` means that the value should be set to `NULL`
 /// * `Some(Some(v))` means that the value should be set to `v`
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PartialEntity {
     pub display_name: Option<Option<String>>,
     pub description: Option<Option<String>>,
@@ -209,9 +217,15 @@ impl PartialEntity {
             links: None,
         }
     }
+
+    pub fn has_updates(&self) -> bool {
+        // By default, all fields on PartialEntity are `None`. If at
+        // least one is `Some`, the entity is eligible for an update.
+        *self != Self::default()
+    }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Link {
     pub url: String,
     pub verified: bool,
