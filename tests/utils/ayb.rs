@@ -248,9 +248,6 @@ pub fn update_database(
 
     if let Some(level) = public_sharing_level {
         cmd.arg("--public_sharing_level").arg(level);
-    }
-
-    if public_sharing_level.is_some() {
         cmd.assert().success().stdout(format!("{result}\n"));
     } else {
         cmd.assert()
