@@ -64,7 +64,7 @@ pub struct UpdateProfileRequest {
 pub async fn update_profile(
     req: HttpRequest,
     path: web::Path<EntityPath>,
-    json: web::Json<UpdateProfileRequest>,
+    form: web::Form<UpdateProfileRequest>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
@@ -78,15 +78,48 @@ pub async fn update_profile(
 
     // Prepare the profile update data
     let mut profile_update = HashMap::new();
-    profile_update.insert("display_name".to_string(), json.display_name.clone());
-    profile_update.insert("description".to_string(), json.description.clone());
-    profile_update.insert("organization".to_string(), json.organization.clone());
-    profile_update.insert("location".to_string(), json.location.clone());
-    profile_update.insert("links".to_string(), Some(json.links.clone()));
+    profile_update.insert("display_name".to_string(), form.display_name.clone());
+    profile_update.insert("description".to_string(), form.description.clone());
+    profile_update.insert("organization".to_string(), form.organization.clone());
+    profile_update.insert("location".to_string(), form.location.clone());
+    profile_update.insert("links".to_string(), Some(form.links.clone()));
 
     // Update the profile using the API client
     match client.update_profile(entity_slug, &profile_update).await {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Ok(_) => {
+            // Fetch the updated entity details
+            let entity_response = match client.entity_details(entity_slug).await {
+                Ok(response) => response,
+                Err(err) => {
+                    return error_snippet("Error fetching updated profile", &format!("{err}"))
+                }
+            };
+
+            let name = entity_response
+                .profile
+                .display_name
+                .as_deref()
+                .unwrap_or(&entity_response.slug);
+
+            // Build context for the profile fragment
+            let mut context = tera::Context::new();
+            context.insert("name", name);
+            context.insert("entity", entity_slug);
+            context.insert(
+                "description",
+                &entity_response.profile.description.unwrap_or_default(),
+            );
+            context.insert("organization", &entity_response.profile.organization);
+            context.insert("location", &entity_response.profile.location);
+            context.insert("links", &entity_response.profile.links);
+            context.insert(
+                "logged_in_entity",
+                &authentication_details(&req).map(|details| details.entity),
+            );
+
+            // Return the rendered profile fragment
+            ok_response("profile_fragment.html", &context)
+        }
         Err(err) => error_snippet("Error updating profile", &format!("{err}")),
     }
 }

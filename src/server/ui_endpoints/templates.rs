@@ -35,6 +35,11 @@ fn templates() -> &'static Tera {
             include_str!("templates/entity_details.html"),
         )
         .unwrap();
+        tera.add_raw_template(
+            "profile_fragment.html",
+            include_str!("templates/profile_fragment.html"),
+        )
+        .unwrap();
         tera.add_raw_template("log_in.html", include_str!("templates/log_in.html"))
             .unwrap();
         tera.add_raw_template(
