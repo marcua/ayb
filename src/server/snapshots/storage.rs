@@ -25,7 +25,7 @@ impl SnapshotStorage {
             None,
         )
         .map_err(|err| AybError::S3ExecutionError {
-            message: format!("Failed to create S3 credentials: {:?}", err),
+            message: format!("Failed to create S3 credentials: {err:?}"),
         })?;
 
         let region_str = config.region.clone().unwrap_or("us-east-1".to_string());
@@ -38,12 +38,12 @@ impl SnapshotStorage {
             region_str
                 .parse()
                 .map_err(|err| AybError::S3ExecutionError {
-                    message: format!("Failed to parse region: {}, {:?}", region_str, err),
+                    message: format!("Failed to parse region: {region_str}, {err:?}"),
                 })?
         };
         let mut bucket = Bucket::new(&config.bucket, region, credentials).map_err(|err| {
             AybError::S3ExecutionError {
-                message: format!("Failed to load bucket: {:?}", err),
+                message: format!("Failed to load bucket: {err:?}"),
             }
         })?;
         let force_path_style = config.force_path_style.unwrap_or(false);
@@ -83,7 +83,7 @@ impl SnapshotStorage {
                 async move {
                     self.bucket.delete_object(&key).await.map_err(|err| {
                         AybError::S3ExecutionError {
-                            message: format!("Failed to delete snapshot {}: {:?}", key, err),
+                            message: format!("Failed to delete snapshot {key}: {err:?}"),
                         }
                     })
                 }
@@ -122,11 +122,11 @@ impl SnapshotStorage {
                         return AybError::SnapshotDoesNotExistError;
                     }
                     AybError::S3ExecutionError {
-                        message: format!("Failed to retrieve snapshot {}: {:?}", s3_path, err),
+                        message: format!("Failed to retrieve snapshot {s3_path}: {err:?}"),
                     }
                 }
                 _ => AybError::S3ExecutionError {
-                    message: format!("Failed to retrieve snapshot {}: {:?}", s3_path, err),
+                    message: format!("Failed to retrieve snapshot {s3_path}: {err:?}"),
                 },
             })?;
 
@@ -151,7 +151,7 @@ impl SnapshotStorage {
                 .list(path, None)
                 .await
                 .map_err(|err| AybError::S3ExecutionError {
-                    message: format!("Failed to list snapshots: {:?}", err),
+                    message: format!("Failed to list snapshots: {err:?}"),
                 })?;
 
         let mut snapshots = Vec::new();
@@ -164,8 +164,7 @@ impl SnapshotStorage {
                         last_modified_at: object.last_modified.parse().map_err(|err| {
                             AybError::S3ExecutionError {
                                 message: format!(
-                                    "Failed to read last modified datetime from object {}: {:?}",
-                                    key, err
+                                    "Failed to read last modified datetime from object {key}: {err:?}"
                                 ),
                             }
                         })?,
@@ -197,7 +196,7 @@ impl SnapshotStorage {
             .put_object(&path, &compressed_data)
             .await
             .map_err(|err| AybError::S3ExecutionError {
-                message: format!("Failed to upload snapshot {}: {:?}", path, err),
+                message: format!("Failed to upload snapshot {path}: {err:?}"),
             })?;
 
         Ok(())

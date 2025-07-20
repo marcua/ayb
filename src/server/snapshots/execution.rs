@@ -29,8 +29,7 @@ pub async fn schedule_periodic_snapshots(
                     .try_into()
                     .map_err(|err| AybError::SnapshotError {
                         message: format!(
-                            "Unable to turn snapshot interval into a duration: {:?}",
-                            err
+                            "Unable to turn snapshot interval into a duration: {err:?}"
                         ),
                     })?,
             );
@@ -57,7 +56,7 @@ pub async fn schedule_periodic_snapshots(
                             .await
                             .err()
                         {
-                            eprintln!("Unable to walk database directory for snapshots: {}", err);
+                            eprintln!("Unable to walk database directory for snapshots: {err}");
                         }
                         *guard = false;
                     })
@@ -104,10 +103,7 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
                     .await
                     .err()
                 {
-                    eprintln!(
-                        "Unable to snapshot database {}/{}: {}",
-                        entity, database, err
-                    );
+                    eprintln!("Unable to snapshot database {entity}/{database}: {err}");
                 }
             } else {
                 return Err(AybError::SnapshotError {
@@ -130,7 +126,7 @@ pub async fn snapshot_database(
     entity_slug: &str,
     database_slug: &str,
 ) -> Result<(), AybError> {
-    println!("Trying to back up {}/{}", entity_slug, database_slug);
+    println!("Trying to back up {entity_slug}/{database_slug}");
     if config.snapshots.is_none() {
         return Err(AybError::SnapshotError {
             message: "No snapshot config found".to_string(),
@@ -169,7 +165,7 @@ pub async fn snapshot_database(
             )?;
             if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
-                    message: format!("Unexpected snapshot result: {:?}", result),
+                    message: format!("Unexpected snapshot result: {result:?}"),
                 });
             }
             let result = query_sqlite(
@@ -183,7 +179,7 @@ pub async fn snapshot_database(
                 || result.rows[0][0] != Some("ok".to_string())
             {
                 return Err(AybError::SnapshotError {
-                    message: format!("Snapshot failed integrity check: {:?}", result),
+                    message: format!("Snapshot failed integrity check: {result:?}"),
                 });
             }
 
@@ -197,15 +193,14 @@ pub async fn snapshot_database(
             for snapshot in &existing_snapshots {
                 if snapshot.snapshot_id == snapshot_hash {
                     println!(
-                        "Snapshot with hash {} already exists, not uploading again.",
-                        snapshot_hash
+                        "Snapshot with hash {snapshot_hash} already exists, not uploading again."
                     );
                     should_upload_snapshot = false;
                     break;
                 }
             }
             if should_upload_snapshot {
-                println!("Uploading new snapshot with hash {}.", snapshot_hash);
+                println!("Uploading new snapshot with hash {snapshot_hash}.");
                 snapshot_storage
                     .put(
                         entity_slug,
@@ -228,7 +223,7 @@ pub async fn snapshot_database(
                     .into();
                 let prune_snapshots = (num_existing_snapshots + 1).checked_sub(max_snapshots);
                 if let Some(prune_snapshots) = prune_snapshots {
-                    println!("Pruning {} oldest snapshots", prune_snapshots);
+                    println!("Pruning {prune_snapshots} oldest snapshots");
                     let mut ids_to_prune: Vec<String> = vec![];
                     for snapshot_index in 0..prune_snapshots {
                         ids_to_prune.push(
@@ -249,7 +244,7 @@ pub async fn snapshot_database(
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {
-                println!("Not a known database {}/{}", entity_slug, database_slug);
+                println!("Not a known database {entity_slug}/{database_slug}");
             }
             _ => {
                 return Err(err);

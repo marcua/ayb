@@ -48,7 +48,7 @@ pub async fn update_public_sharing(
         .await
     {
         Ok(_) => success_snippet("Public sharing level updated successfully."),
-        Err(err) => error_snippet("Error updating sharing level", &format!("{}", err)),
+        Err(err) => error_snippet("Error updating sharing level", &format!("{err}")),
     }
 }
 
@@ -74,7 +74,7 @@ pub async fn database_permissions(
             let html = render("database_permissions.html", &context);
             Ok(HttpResponse::Ok().content_type("text/html").body(html))
         }
-        Err(err) => error_snippet("Error loading permissions", &format!("{}", err)),
+        Err(err) => error_snippet("Error loading permissions", &format!("{err}")),
     }
 }
 
@@ -110,9 +110,8 @@ pub async fn share_with_entity(
         .await
     {
         Ok(_) => success_snippet(&format!(
-            "Database access updated for user '{}'.",
-            target_entity
+            "Database access updated for user '{target_entity}'."
         )),
-        Err(err) => error_snippet("Error updating access", &format!("{}", err)),
+        Err(err) => error_snippet("Error updating access", &format!("{err}")),
     }
 }

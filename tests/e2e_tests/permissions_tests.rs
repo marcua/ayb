@@ -56,7 +56,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -70,14 +70,14 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
-        "fork",
+        Some("fork"),
         "Error: Authenticated entity e2e-second can't update database e2e-first/test.sqlite",
     )?;
     update_database(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "fork",
+        Some("fork"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
 
@@ -114,7 +114,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "read-only",
+        Some("read-only"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     query(
@@ -168,7 +168,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "no-access",
+        Some("no-access"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     query(
@@ -184,7 +184,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -270,7 +270,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
-        "fork",
+        Some("fork"),
         "Error: Authenticated entity e2e-second can't update database e2e-first/test.sqlite",
     )?;
     // Second entity can't share the database with anyone else.
@@ -296,7 +296,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -329,7 +329,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "read-only",
+        Some("read-only"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     query(
@@ -344,7 +344,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "no-access",
+        Some("no-access"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     // Second entity can discover database.
@@ -375,7 +375,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
-        "fork",
+        Some("fork"),
         "Error: Authenticated entity e2e-second can't update database e2e-first/test.sqlite",
     )?;
     // Second entity can't share the database with anyone else.
@@ -410,7 +410,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -511,7 +511,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
-        "read-only",
+        Some("read-only"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     // Third entity can query database.
@@ -551,7 +551,7 @@ pub async fn test_permissions(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
-        "no-access",
+        Some("no-access"),
         "Database e2e-first/test.sqlite updated successfully",
     )?;
     // Third entity is back to having no access.
@@ -568,7 +568,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -651,7 +651,7 @@ pub async fn test_permissions(
         &api_keys.get("third").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -701,7 +701,7 @@ pub async fn test_permissions(
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_SLUG,
         "csv",
-        &format!("No queryable databases owned by {}", FIRST_ENTITY_SLUG),
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
     )?;
     database_details(
         config_path,
@@ -715,6 +715,15 @@ pub async fn test_permissions(
         FIRST_ENTITY_DB,
         "csv",
         "Error: Authenticated entity e2e-second can't list permissions for database e2e-first/test.sqlite",
+    )?;
+
+    // Test that update_database with no arguments returns a CLI error
+    update_database(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        None,
+        "the following required arguments were not provided",
     )?;
 
     Ok(())

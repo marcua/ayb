@@ -29,7 +29,7 @@ pub async fn query(
     let query_result = match client.query(entity_slug, database_slug, query_text).await {
         Ok(result) => result,
         Err(err) => {
-            let error_message = format!("{}", err);
+            let error_message = format!("{err}");
 
             // Return error in the requested format
             return match format {
@@ -57,8 +57,7 @@ pub async fn query(
                 .append_header((
                     "Content-Disposition",
                     format!(
-                        "attachment; filename=\"query-result-{}-{}.json\"",
-                        entity_slug, database_slug
+                        "attachment; filename=\"query-result-{entity_slug}-{database_slug}.json\""
                     ),
                 ))
                 .body(json_content))
@@ -90,8 +89,7 @@ pub async fn query(
                 .append_header((
                     "Content-Disposition",
                     format!(
-                        "attachment; filename=\"query-result-{}-{}.csv\"",
-                        entity_slug, database_slug
+                        "attachment; filename=\"query-result-{entity_slug}-{database_slug}.csv\""
                     ),
                 ))
                 .body(csv_content))
