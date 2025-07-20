@@ -28,6 +28,16 @@ async fn update_database(
             partial_database.public_sharing_level =
                 Some(PublicSharingLevel::from_str(&public_sharing_level.unwrap())? as i16);
         }
+
+        // Check if there are any fields to update
+        if !partial_database.has_updates() {
+            return Err(AybError::EmptyUpdateError {
+                message:
+                    "No fields provided to update. Please specify at least one field to update."
+                        .to_string(),
+            });
+        }
+
         ayb_db
             .update_database_by_id(database.id, &partial_database)
             .await?;
