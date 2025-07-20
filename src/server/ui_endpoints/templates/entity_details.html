@@ -179,12 +179,5 @@ document.body.addEventListener('htmx:configRequest', function(event) {
     }
 });
 
-// Handle successful profile update (if needed for UI state management)
-document.body.addEventListener('htmx:afterSwap', function(event) {
-    if (event.detail.target.id === 'profile-section') {
-        // Profile was successfully updated, no need to do anything
-        // as the HTML has been replaced with the server response
-    }
-});
 </script>
 {% endblock %}

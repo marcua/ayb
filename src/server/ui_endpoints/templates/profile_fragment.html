@@ -10,18 +10,8 @@
 .profile-section.editing .view-mode { display: none !important; }
 
 /* HTMX loading indicator styles */
-.htmx-indicator {
-    opacity: 0;
-    transition: opacity 200ms ease-in;
-    display: inline-block;
-}
-.htmx-request .htmx-indicator {
-    opacity: 1;
-}
-/* Hide the save text when loading */
-#profile-edit-form.htmx-request .save-text {
-    visibility: hidden;
-}
+.htmx-request .htmx-indicator { opacity: 1; }
+#profile-edit-form.htmx-request .save-text { visibility: hidden; }
 </style>
 
 <div class="uk-card profile-section" id="profile-section">
@@ -94,7 +84,7 @@
                 </button>
                 <button type="submit" class="uk-btn uk-btn-primary uk-btn-sm ml-2" style="min-width: 70px; position: relative;">
                     <span class="save-text">Save</span>
-                    <span class="htmx-indicator" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, calc(-50% + 1px));">
+                    <span class="htmx-indicator opacity-0 transition-opacity duration-200 ease-in inline-block absolute left-1/2 top-1/2 transform -translate-x-1/2" style="transform: translate(-50%, calc(-50% + 1px));">
                         <div uk-spinner="ratio: 0.6"></div>
                     </span>
                 </button>
