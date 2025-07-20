@@ -16,7 +16,7 @@
 
 <div class="uk-card profile-section" id="profile-section">
     <form id="profile-edit-form"
-          hx-post="/{{ entity }}/update_profile" 
+          hx-post="/{{ entity }}/update_profile"
           hx-target="#profile-section"
           hx-target-400="#profile-update-error"
           hx-swap="outerHTML">
@@ -94,3 +94,53 @@
         </div>
     </form>
 </div>
+
+<script>
+function enableProfileEdit() {
+    document.getElementById('profile-section').classList.add('editing');
+    // Clear any previous errors
+    document.getElementById('profile-update-error').innerHTML = '';
+}
+
+function cancelProfileEdit() {
+    document.getElementById('profile-section').classList.remove('editing');
+    // Reset form to original values
+    document.getElementById('profile-edit-form').reset();
+}
+
+function addLink() {
+    const container = document.getElementById('profile-links-container');
+    const linkDiv = document.createElement('div');
+    linkDiv.className = 'flex items-start mb-2 link-input-group';
+    linkDiv.innerHTML = `
+        <uk-icon icon="link" class="mr-1 mt-2 flex-shrink-0"></uk-icon>
+        <input type="text" name="links[]" value="" class="p-2 border rounded focus:border-blue-500 w-full link-url" placeholder="Link URL">
+        <button type="button" class="uk-btn uk-btn-danger uk-btn-sm ml-2 flex-shrink-0" onclick="removeLink(this)">
+            <uk-icon icon="trash"></uk-icon>
+        </button>
+    `;
+    container.appendChild(linkDiv);
+}
+
+function removeLink(button) {
+    button.closest('.link-input-group').remove();
+}
+
+// Handle form submission preparation
+document.body.addEventListener('htmx:configRequest', function(event) {
+    if (event.detail.elt.id === 'profile-edit-form') {
+        // Collect links into JSON format
+        const linkInputs = event.detail.elt.querySelectorAll('input[name="links[]"]');
+        const links = Array.from(linkInputs)
+            .map(input => input.value.trim())
+            .filter(url => url.length > 0)
+            .map(url => ({ url: url }));
+
+        // Add links as JSON string to the parameters
+        event.detail.parameters.links = JSON.stringify(links);
+
+        // Remove the individual link inputs from submission
+        delete event.detail.parameters['links[]'];
+    }
+});
+</script>
