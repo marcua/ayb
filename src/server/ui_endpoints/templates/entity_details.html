@@ -22,7 +22,6 @@
             </div>
             <div class="uk-card-body space-y-2 pr-0">
                 <hr class="uk-hr" />
-
                 {% if can_create_database %}
                 <div id="create-database-form" hidden>
                   <div class="block hover:bg-gray-50 uk-card">
@@ -109,7 +108,6 @@
                   </div>
                 </div>
                 {% endif %}
-
                 {% if databases | length == 0 %}
                 <div class="block uk-card">
                     <h3 class="uk-h3 flex space-y-2 uk-card-header font-normal">No databases...yet!</h3>
@@ -129,5 +127,4 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
