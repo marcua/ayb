@@ -100,6 +100,9 @@ pub async fn test_registration_flow(page: &Page) -> Result<(), Box<dyn Error>> {
         .goto()
         .await?;
 
+    // Wait for page to stabilize after navigation
+    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+
     // Step 7: Verify we're now on the authenticated user dashboard
     let expected_title = format!("{} - ayb", username);
     assert_eq!(page.title().await?, expected_title);
