@@ -1,9 +1,11 @@
 #![allow(clippy::too_many_arguments)]
 
+mod browser_e2e_tests;
 mod e2e_tests;
 mod email_helpers;
 mod utils;
 
+use crate::browser_e2e_tests::test_registration_flow;
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
@@ -87,4 +89,27 @@ async fn client_server_integration(
     test_permissions(&config_path, &api_keys).await?;
 
     Ok(())
+}
+
+#[tokio::test]
+async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
+    use crate::utils::browser::BrowserHelpers;
+
+    let _cleanup = Cleanup;
+
+    // Reset database
+    std::process::Command::new("tests/reset_db_sqlite.sh")
+        .output()
+        .expect("Failed to reset database");
+
+    // Start ayb server
+    let _ayb_server = AybServer::run("sqlite").expect("failed to start the ayb server");
+
+    // Give servers time to start
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+
+    // Initialize browser using helper method
+    let (_playwright, page) = BrowserHelpers::setup_browser().await?;
+
+    test_registration_flow(&page).await
 }

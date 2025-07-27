@@ -1,31 +1,11 @@
+use crate::utils::browser::BrowserHelpers;
+use playwright::api::Page;
 use std::error::Error;
 
-mod utils;
-use utils::browser::BrowserHelpers;
-use utils::testing::{AybServer, Cleanup};
-
-#[tokio::test]
-async fn test_registration_flow() -> Result<(), Box<dyn Error>> {
-    let _cleanup = Cleanup;
-
-    // Reset database
-    std::process::Command::new("tests/reset_db_browser_sqlite.sh")
-        .output()
-        .expect("Failed to reset database");
-
-    // Start ayb server
-    let _ayb_server = AybServer::run_browser("sqlite").expect("failed to start the ayb server");
-
-    // Use built-in email file backend (no external SMTP server needed)
-
-    // Give servers time to start
-    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-
-    // Initialize browser using helper method
-    let (_playwright, page) = BrowserHelpers::setup_browser().await?;
+pub async fn test_registration_flow(page: &Page) -> Result<(), Box<dyn Error>> {
 
     // Step 1: Navigate to registration page
-    page.goto_builder("http://localhost:5433/register")
+    page.goto_builder("http://localhost:5434/register")
         .timeout(5000.0)
         .goto()
         .await?;
@@ -99,7 +79,7 @@ async fn test_registration_flow() -> Result<(), Box<dyn Error>> {
     println!("✓ Registration flow completed successfully");
 
     // Step 5: Extract confirmation token from email file
-    let email_file = "tests/ayb_data_browser_sqlite/emails.jsonl";
+    let email_file = "tests/ayb_data_sqlite/emails.jsonl";
 
     // Wait for email to arrive
     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
@@ -110,7 +90,7 @@ async fn test_registration_flow() -> Result<(), Box<dyn Error>> {
 
     let confirmation_token = BrowserHelpers::extract_token_from_emails(&user_emails)
         .expect("Should extract token from email");
-    let confirmation_url = format!("http://localhost:5433/confirm/{}", confirmation_token);
+    let confirmation_url = format!("http://localhost:5434/confirm/{}", confirmation_token);
 
     println!("✓ Extracted confirmation token from email");
 
