@@ -7,13 +7,8 @@ e2e_testing = true
 [web]
 hosting_method = "Local"
 
-[email]
-from = "Server Sender <server@example.org>"
-reply_to = "Server Reply <replyto@example.org>"
-smtp_host = "localhost"
-smtp_port = 10027
-smtp_username = "login@example.org"
-smtp_password = "the_password"
+[email.file]
+path = "tests/ayb_data_browser_sqlite/emails.jsonl"
 
 [authentication]
 fernet_key = "y3UdMqGh6si7pvQb8wsuW3ryiJcacp0H1QoHUPfsjb0="

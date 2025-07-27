@@ -1,3 +1,4 @@
+use ayb::email::backend::EmailEntry as AybEmailEntry;
 use image::GenericImageView;
 use playwright::{api::Page, Playwright};
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,36 @@ pub struct EmailEntry {
 pub struct BrowserHelpers;
 
 impl BrowserHelpers {
+    /// Parse email file (JSONL format)
+    pub fn parse_email_file(
+        file_path: &str,
+    ) -> Result<Vec<AybEmailEntry>, Box<dyn std::error::Error>> {
+        let content = std::fs::read_to_string(file_path)?;
+        let mut emails = Vec::new();
+
+        for line in content.lines() {
+            let line = line.trim();
+            if !line.is_empty() {
+                emails.push(serde_json::from_str(line)?);
+            }
+        }
+
+        Ok(emails)
+    }
+
+    /// Extract token from emails
+    pub fn extract_token_from_emails(emails: &[AybEmailEntry]) -> Option<String> {
+        for email in emails {
+            for line in &email.content {
+                if line.starts_with('\t') {
+                    if let Some(token_part) = line.split("ayb client confirm ").nth(1) {
+                        return Some(token_part.trim().to_string());
+                    }
+                }
+            }
+        }
+        None
+    }
     /// Initialize playwright and return browser page
     pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
         use std::path::Path;
@@ -238,26 +269,26 @@ impl BrowserHelpers {
     pub async fn confirm_registration(
         page: &Page,
         server_url: &str,
-        smtp_port: u16,
         email: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let start_time = std::time::Instant::now();
         println!("    Waiting for confirmation email...");
 
         // Wait for email to be received and try multiple times
-        let smtp_log_path = format!("tests/smtp_data_{}/{}", smtp_port, email);
-        let mut emails = Vec::new();
+        let email_file = "tests/ayb_data_browser_sqlite/emails.jsonl";
+        let mut user_emails = Vec::new();
 
         for attempt in 1..=10 {
             tokio::time::sleep(Duration::from_millis(500)).await;
 
-            match Self::parse_smtp_log(&smtp_log_path) {
-                Ok(parsed_emails) => {
-                    if !parsed_emails.is_empty() {
-                        emails = parsed_emails;
+            match Self::parse_email_file(email_file) {
+                Ok(all_emails) => {
+                    user_emails = all_emails.into_iter().filter(|e| e.to == email).collect();
+                    if !user_emails.is_empty() {
                         println!(
-                            "    ✓ Found {} email(s) after {:.2}s",
-                            emails.len(),
+                            "    ✓ Found {} email(s) for {} after {:.2}s",
+                            user_emails.len(),
+                            email,
                             start_time.elapsed().as_secs_f64()
                         );
                         break;
@@ -267,19 +298,20 @@ impl BrowserHelpers {
                     println!("    Attempt {}: {}", attempt, e);
                     continue;
                 }
-                Err(e) => return Err(e),
+                Err(e) => return Err(e.into()),
             }
         }
 
-        if emails.is_empty() {
+        if user_emails.is_empty() {
             return Err("No confirmation email received after 5 seconds".into());
         }
 
         // Extract token from the latest email
-        let latest_email = emails.last().unwrap();
+        let latest_email = user_emails.last().unwrap();
         println!("    Latest email subject: '{}'", latest_email.subject);
 
-        let token = Self::extract_token(latest_email)?;
+        let token = Self::extract_token_from_emails(&user_emails)
+            .ok_or("Failed to extract token from emails")?;
         println!(
             "    ✓ Extracted confirmation token (length: {})",
             token.len()
