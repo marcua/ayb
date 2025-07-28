@@ -38,7 +38,7 @@ sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-nat
 time = { version = "0.3.41" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
 tera = { version = "1.20.0" }
 toml = { version = "0.9.2" }
-tokio = { version = "1.46.1", features = ["macros", "process", "rt"] }
+tokio = { version = "1.47.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.14.0", features = ["signal"]}
 prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
