@@ -79,7 +79,6 @@ impl BrowserHelpers {
         Ok((playwright, page))
     }
 
-
     /// Take a screenshot and compare it to a stored reference image
     /// Optionally grey out elements that should be ignored in comparison
     ///
@@ -216,4 +215,3 @@ impl BrowserHelpers {
         }
     }
 }
-

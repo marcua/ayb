@@ -65,19 +65,19 @@ origin = "*"
 }
 
 async fn client_server_integration(
-    db_type: &str,
+    test_type: &str,
     server_url: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let config_path = format!("tests/ayb_data_{db_type}/ayb.json");
+    let config_path = format!("tests/ayb_data_{test_type}/ayb.json");
     let mut expected_config = ClientConfig::new();
     let _cleanup = Cleanup;
 
-    Command::new(format!("tests/reset_db_{db_type}.sh"))
+    Command::new(format!("tests/reset_db_{test_type}.sh"))
         .assert()
         .success();
 
     // Run server
-    let _ayb_server = AybServer::run(db_type).expect("failed to start the ayb server");
+    let _ayb_server = AybServer::run(test_type).expect("failed to start the ayb server");
 
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
@@ -85,7 +85,7 @@ async fn client_server_integration(
     let api_keys = test_registration(&config_path, server_url, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
-    test_snapshots(db_type, &config_path, &api_keys).await?;
+    test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
 
     Ok(())
@@ -98,12 +98,12 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     let _cleanup = Cleanup;
 
     // Reset database
-    std::process::Command::new("tests/reset_db_sqlite.sh")
+    std::process::Command::new("tests/reset_db_browser_sqlite.sh")
         .output()
         .expect("Failed to reset database");
 
     // Start ayb server
-    let _ayb_server = AybServer::run("sqlite").expect("failed to start the ayb server");
+    let _ayb_server = AybServer::run("browser_sqlite").expect("failed to start the ayb server");
 
     // Give servers time to start
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
