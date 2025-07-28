@@ -7,7 +7,8 @@ fi
 source tests/test-env/bin/activate
 
 # Install requirements
-pip install awscli
+pip install awscli playwright
+playwright install chromium
 
 # Start MinIO
 tests/run_minio.sh

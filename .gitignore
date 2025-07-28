@@ -17,12 +17,13 @@ e2e.sh
 ayb_data
 reset_db.sh
 smtp_data
-tests/ayb_data_postgres
-tests/ayb_data_sqlite
-tests/smtp_data_10025
-tests/smtp_data_10026
+tests/ayb_data*
+tests/test-server-config-*
+tests/smtp_data*
 tests/nsjail
 tests/test-env
+tests/screenshots/*_current.png
+tests/screenshots/*_diff.png
 .aider*
 # Local AI plan tracking/context files
 plan.md
