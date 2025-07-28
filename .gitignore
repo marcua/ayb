@@ -18,7 +18,7 @@ ayb_data
 reset_db.sh
 smtp_data
 tests/ayb_data*
-tests/ayb_data*
+tests/test-server-config-*
 tests/smtp_data*
 tests/nsjail
 tests/test-env

@@ -10,7 +10,7 @@ use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
 };
-use crate::utils::testing::{AybServer, Cleanup};
+use crate::utils::testing::{ensure_minio_running, reset_test_environment, AybServer, Cleanup};
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
@@ -72,9 +72,10 @@ async fn client_server_integration(
     let mut expected_config = ClientConfig::new();
     let _cleanup = Cleanup;
 
-    Command::new(format!("tests/reset_db_{test_type}.sh"))
-        .assert()
-        .success();
+    // Ensure MinIO is running
+    ensure_minio_running()?;
+
+    reset_test_environment(test_type)?;
 
     // Run server
     let _ayb_server = AybServer::run(test_type).expect("failed to start the ayb server");
@@ -97,10 +98,11 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
 
     let _cleanup = Cleanup;
 
+    // Ensure MinIO is running
+    ensure_minio_running()?;
+
     // Reset database
-    std::process::Command::new("tests/reset_db_browser_sqlite.sh")
-        .output()
-        .expect("Failed to reset database");
+    reset_test_environment("browser_sqlite")?;
 
     // Start ayb server
     let _ayb_server = AybServer::run("browser_sqlite").expect("failed to start the ayb server");

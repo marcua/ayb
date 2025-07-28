@@ -6,6 +6,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::{Child, Command};
+use std::sync::Once;
 
 // ayb_cmd!("value1", value2; {
 //     "ENV_VAR" => env_value
@@ -113,6 +114,82 @@ max_snapshots = {max_snapshots}
     file.write_all(config_content.as_bytes())?;
 
     Ok(config_path)
+}
+
+pub fn reset_test_environment(test_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let data_dir = format!("./tests/ayb_data_{}", test_type);
+
+    match test_type {
+        "postgres" => {
+            // Remove data directory
+            if std::path::Path::new(&data_dir).exists() {
+                std::fs::remove_dir_all(&data_dir)?;
+            }
+
+            // Drop and recreate PostgreSQL database
+            let mut drop_cmd = Command::new("dropdb");
+            drop_cmd
+                .env("PGHOST", "localhost")
+                .env("PGUSER", "postgres_user")
+                .env("PGPASSWORD", "test")
+                .arg("test_db");
+
+            // Ignore error if database doesn't exist
+            let _ = drop_cmd.output();
+
+            let mut create_cmd = Command::new("createdb");
+            create_cmd
+                .env("PGHOST", "localhost")
+                .env("PGUSER", "postgres_user")
+                .env("PGPASSWORD", "test")
+                .arg("test_db");
+
+            let output = create_cmd.output()?;
+            if !output.status.success() {
+                return Err(format!(
+                    "Failed to create PostgreSQL database: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )
+                .into());
+            }
+        }
+        "sqlite" | "browser_sqlite" => {
+            // Remove data directory
+            if std::path::Path::new(&data_dir).exists() {
+                std::fs::remove_dir_all(&data_dir)?;
+            }
+        }
+        _ => return Err(format!("Unknown test_type: {}", test_type).into()),
+    }
+
+    Ok(())
+}
+
+static MINIO_INIT: Once = Once::new();
+
+pub fn ensure_minio_running() -> Result<(), Box<dyn std::error::Error>> {
+    MINIO_INIT.call_once(|| {
+        if let Err(e) = setup_minio() {
+            eprintln!("Failed to setup MinIO: {}", e);
+            std::process::exit(1);
+        }
+    });
+    Ok(())
+}
+
+fn setup_minio() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting MinIO (one-time setup)...");
+
+    let output = Command::new("tests/run_minio.sh").output()?;
+
+    if output.status.success() {
+        print!("{}", String::from_utf8_lossy(&output.stdout));
+        Ok(())
+    } else {
+        eprintln!("MinIO setup failed:");
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+        Err("Failed to run MinIO setup script".into())
+    }
 }
 
 pub struct AybServer(Child);
