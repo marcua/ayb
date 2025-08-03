@@ -40,34 +40,28 @@ pub fn get_test_port(test_type: &str) -> Result<u16, Box<dyn std::error::Error>>
 
 pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::error::Error>> {
     let port = get_test_port(test_type)?;
-    let slug = test_type;
 
-    let config_path = format!("tests/test-server-config-{slug}.toml");
+    let config_path = format!("tests/test-server-config-{test_type}.toml");
 
     // Determine database configuration based on test_type
-    let (database_url, path_prefix) = if test_type == "postgres" {
-        (
-            "postgresql://postgres_user:test@localhost:5432/test_db".to_string(),
-            "postgres".to_string(),
-        )
+    let database_url = if test_type == "postgres" {
+        "postgresql://postgres_user:test@localhost:5432/test_db".to_string()
     } else {
-        (
-            format!("sqlite://tests/ayb_data_{slug}/ayb.sqlite"),
-            "sqlite".to_string(),
-        )
+        format!("sqlite://tests/ayb_data_{test_type}/ayb.sqlite")
     };
+    let path_prefix = test_type;
 
     let config_content = format!(
         r#"host = "0.0.0.0"
 port = {port}
 database_url = "{database_url}"
-data_path = "./tests/ayb_data_{slug}"
+data_path = "./tests/ayb_data_{test_type}"
 
 [web]
 hosting_method = "Local"
 
 [email.file]
-path = "tests/ayb_data_{slug}/emails.jsonl"
+path = "tests/ayb_data_{test_type}/emails.jsonl"
 
 [authentication]
 fernet_key = "y3UdMqGh6si7pvQb8wsuW3ryiJcacp0H1QoHUPfsjb0="
@@ -94,7 +88,7 @@ max_snapshots = 6
 "#,
         port = port,
         database_url = database_url,
-        slug = slug,
+        test_type = test_type,
         path_prefix = path_prefix
     );
 
