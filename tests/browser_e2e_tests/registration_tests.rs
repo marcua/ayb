@@ -66,8 +66,8 @@ pub async fn test_registration_flow(page: &Page, base_url: &str) -> Result<(), B
     let user_emails: Vec<_> = emails.into_iter().filter(|e| e.to == email).collect();
     assert!(!user_emails.is_empty(), "Should receive confirmation email");
 
-    let confirmation_token = extract_token_from_emails(&user_emails)
-        .expect("Should extract token from email");
+    let confirmation_token =
+        extract_token_from_emails(&user_emails).expect("Should extract token from email");
     let confirmation_url = format!("{}/confirm/{}", base_url, confirmation_token);
 
     // Step 6: Navigate to confirmation link
