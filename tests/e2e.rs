@@ -10,6 +10,8 @@ use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
 };
+use crate::email_helpers::clear_email_data;
+use crate::utils::browser::BrowserHelpers;
 use crate::utils::testing::{
     ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup,
 };
@@ -85,7 +87,7 @@ async fn client_server_integration(
     // Give the external processes time to start
     thread::sleep(time::Duration::from_secs(10));
 
-    let api_keys = test_registration(&config_path, server_url, &mut expected_config)?;
+    let api_keys = test_registration(test_type, &config_path, server_url, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(test_type, &config_path, &api_keys).await?;
@@ -96,8 +98,6 @@ async fn client_server_integration(
 
 #[tokio::test]
 async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
-    use crate::utils::browser::BrowserHelpers;
-
     let _cleanup = Cleanup;
 
     // Ensure MinIO is running
@@ -105,6 +105,9 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
 
     // Reset database
     reset_test_environment("browser_sqlite")?;
+
+    // Clear email data for browser test
+    clear_email_data("browser_sqlite")?;
 
     // Start ayb server
     let _ayb_server = AybServer::run("browser_sqlite").expect("failed to start the ayb server");
@@ -119,5 +122,5 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     let port = get_test_port("browser_sqlite")?;
     let base_url = format!("http://127.0.0.1:{}", port);
 
-    test_registration_flow(&page, &base_url).await
+    test_registration_flow(&page, &base_url, "browser_sqlite").await
 }
