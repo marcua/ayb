@@ -81,20 +81,20 @@ impl BrowserHelpers {
 
     /// Take a screenshot and compare it to a stored reference image
     /// Optionally grey out elements that should be ignored in comparison
+    /// Automatically prints comparison results with standardized messages
     ///
     /// # Arguments
     /// * `page` - The Playwright page to screenshot
-    /// * `test_name` - Name for the test (used for file naming)
+    /// * `test_name` - Name for the test (used for file naming and messages)
     /// * `selectors_to_grey` - CSS selectors for elements to grey out before comparison
     ///
     /// # Returns
-    /// * `Ok(true)` - Screenshots match (or reference was created)
-    /// * `Ok(false)` - Screenshots differ significantly
+    /// * `Ok(())` - Screenshot comparison completed (prints result automatically)
     /// * `Err(...)` - Error taking screenshot or processing images
     ///
     /// # Example
     /// ```ignore
-    /// let matches = BrowserHelpers::screenshot_compare(
+    /// BrowserHelpers::screenshot_compare(
     ///     &page,
     ///     "login_page",
     ///     &[".timestamp", ".session-id"]
@@ -104,7 +104,7 @@ impl BrowserHelpers {
         page: &Page,
         test_name: &str,
         selectors_to_grey: &[&str],
-    ) -> Result<bool, Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let screenshots_dir = "tests/screenshots";
         std::fs::create_dir_all(screenshots_dir)?;
 
@@ -142,8 +142,8 @@ impl BrowserHelpers {
         // If no reference exists, save current as reference
         if !Path::new(&reference_path).exists() {
             std::fs::copy(&current_path, &reference_path)?;
-            println!("Created reference screenshot: {}", reference_path);
-            return Ok(true);
+            println!("📸 Created reference screenshot for '{}'", test_name);
+            return Ok(());
         }
 
         // Compare images
@@ -152,11 +152,12 @@ impl BrowserHelpers {
 
         if current_img.dimensions() != reference_img.dimensions() {
             println!(
-                "Screenshot dimensions differ: current {:?} vs reference {:?}",
+                "⚠ Screenshot '{}' dimensions differ: current {:?} vs reference {:?}",
+                test_name,
                 current_img.dimensions(),
                 reference_img.dimensions()
             );
-            return Ok(false);
+            return Ok(());
         }
 
         let current_rgba = current_img.to_rgba8();
@@ -203,15 +204,15 @@ impl BrowserHelpers {
             // Save diff image
             diff_buffer.save(&diff_path)?;
             println!(
-                "Screenshots differ by {:.2}% - diff saved to {}",
-                diff_percentage, diff_path
+                "⚠ Screenshot '{}' differs from reference by {:.2}% - diff saved to {}",
+                test_name, diff_percentage, diff_path
             );
-            Ok(false)
+            Ok(())
         } else {
-            println!("Screenshots match (difference: {:.2}%)", diff_percentage);
+            println!("✓ Screenshot '{}' matches reference (difference: {:.2}%)", test_name, diff_percentage);
             // Clean up current screenshot if it matches
             let _ = std::fs::remove_file(&current_path);
-            Ok(true)
+            Ok(())
         }
     }
 }

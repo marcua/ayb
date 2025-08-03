@@ -10,7 +10,7 @@ use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
 };
-use crate::utils::testing::{ensure_minio_running, reset_test_environment, AybServer, Cleanup};
+use crate::utils::testing::{ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup};
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
@@ -113,5 +113,9 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize browser using helper method
     let (_playwright, page) = BrowserHelpers::setup_browser().await?;
 
-    test_registration_flow(&page).await
+    // Construct base URL using the port from test configuration
+    let port = get_test_port("browser_sqlite")?;
+    let base_url = format!("http://127.0.0.1:{}", port);
+
+    test_registration_flow(&page, &base_url).await
 }

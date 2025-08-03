@@ -29,35 +29,35 @@ impl Drop for Cleanup {
     }
 }
 
+pub fn get_test_port(test_type: &str) -> Result<u16, Box<dyn std::error::Error>> {
+    match test_type {
+        "postgres" => Ok(5433),
+        "sqlite" => Ok(5434),
+        "browser_sqlite" => Ok(5435),
+        _ => Err(format!("Unknown test_type: {}", test_type).into()),
+    }
+}
+
 pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::error::Error>> {
-    // Map test_type to port and slug
-    let (port, slug) = match test_type {
-        "postgres" => (5433, "postgres"),
-        "sqlite" => (5434, "sqlite"),
-        "browser_sqlite" => (5435, "browser_sqlite"),
-        _ => return Err(format!("Unknown test_type: {}", test_type).into()),
-    };
+    let port = get_test_port(test_type)?;
+    let slug = test_type;
 
     let config_path = format!("tests/test-server-config-{slug}.toml");
 
-    // Determine database configuration based on slug
-    let (database_url, is_postgres) = if slug.contains("postgres") {
+    // Determine database configuration based on test_type
+    let (database_url, path_prefix) = if test_type == "postgres" {
         (
             "postgresql://postgres_user:test@localhost:5432/test_db".to_string(),
-            true,
+            "postgres".to_string(),
         )
     } else {
-        (format!("sqlite://tests/ayb_data_{slug}/ayb.sqlite"), false)
+        (
+            format!("sqlite://tests/ayb_data_{slug}/ayb.sqlite"),
+            "sqlite".to_string(),
+        )
     };
 
-    // Set S3 configuration based on slug
-    let (s3_endpoint, s3_access_key, s3_secret_key, max_snapshots) = if slug.contains("browser") {
-        ("http://localhost:4566", "test", "test", 3)
-    } else {
-        ("http://localhost:9000", "minioadmin", "minioadmin", 6)
-    };
-
-    let e2e_testing_line = if slug.contains("browser") {
+    let e2e_testing_line = if test_type == "browser_sqlite" {
         "e2e_testing = true\n"
     } else {
         ""
@@ -87,26 +87,22 @@ nsjail_path = "tests/nsjail"
 
 [snapshots]
 sqlite_method = "Vacuum"
-access_key_id = "{s3_access_key}"
-secret_access_key = "{s3_secret_key}"
+access_key_id = "minioadmin"
+secret_access_key = "minioadmin"
 bucket = "bucket"
 path_prefix = "{path_prefix}"
-endpoint_url = "{s3_endpoint}"
+endpoint_url = "http://localhost:9000"
 force_path_style = true
 
 [snapshots.automation]
 interval = "2s"
-max_snapshots = {max_snapshots}
+max_snapshots = 6
 "#,
         port = port,
         database_url = database_url,
         slug = slug,
         e2e_testing_line = e2e_testing_line,
-        s3_access_key = s3_access_key,
-        s3_secret_key = s3_secret_key,
-        path_prefix = if is_postgres { "postgres" } else { "sqlite" },
-        s3_endpoint = s3_endpoint,
-        max_snapshots = max_snapshots
+        path_prefix = path_prefix
     );
 
     // Write the configuration to file
