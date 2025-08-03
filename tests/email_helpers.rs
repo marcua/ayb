@@ -30,25 +30,19 @@ pub fn extract_token_from_emails(emails: &[EmailEntry]) -> Option<String> {
     None
 }
 
-const SQLITE_EMAIL_FILE: &str = "tests/ayb_data_sqlite/emails.jsonl";
-const POSTGRES_EMAIL_FILE: &str = "tests/ayb_data_postgres/emails.jsonl";
-const BROWSER_SQLITE_EMAIL_FILE: &str = "tests/ayb_data_browser_sqlite/emails.jsonl";
-
-pub fn get_email_file_for_test_type(
-    test_type: &str,
-) -> Result<&'static str, Box<dyn std::error::Error>> {
+pub fn get_email_file_for_test_type(test_type: &str) -> Result<String, Box<dyn std::error::Error>> {
     match test_type {
-        "postgres" => Ok(POSTGRES_EMAIL_FILE),
-        "browser_sqlite" => Ok(BROWSER_SQLITE_EMAIL_FILE),
-        "sqlite" => Ok(SQLITE_EMAIL_FILE),
+        "postgres" | "sqlite" | "browser_sqlite" => {
+            Ok(format!("tests/ayb_data_{}/emails.jsonl", test_type))
+        }
         _ => Err(format!("Unknown test type: {}", test_type).into()),
     }
 }
 
 pub fn clear_email_data(test_type: &str) -> Result<(), Box<dyn std::error::Error>> {
     let email_file = get_email_file_for_test_type(test_type)?;
-    if Path::new(email_file).exists() {
-        std::fs::remove_file(email_file)?;
+    if Path::new(&email_file).exists() {
+        std::fs::remove_file(&email_file)?;
     }
     Ok(())
 }
@@ -58,7 +52,7 @@ pub fn get_emails_for_recipient(
     recipient: &str,
 ) -> Result<Vec<EmailEntry>, Box<dyn std::error::Error>> {
     let email_file = get_email_file_for_test_type(test_type)?;
-    let emails = parse_email_file(email_file)?;
+    let emails = parse_email_file(&email_file)?;
 
     let filtered_emails = emails
         .into_iter()
