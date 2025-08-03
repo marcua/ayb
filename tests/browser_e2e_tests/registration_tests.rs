@@ -14,12 +14,7 @@ pub async fn test_registration_flow(page: &Page, base_url: &str) -> Result<(), B
     assert_eq!(page.title().await?, "Create account - ayb");
 
     // Screenshot comparison of registration page
-    BrowserHelpers::screenshot_compare(
-        &page,
-        "registration_page",
-        &[], // No elements to grey out for this test
-    )
-    .await?;
+    BrowserHelpers::screenshot_compare(&page, "registration_page", &[]).await?;
 
     // Step 2: Fill registration form with unique username
     let timestamp = std::time::SystemTime::now()
@@ -58,9 +53,6 @@ pub async fn test_registration_flow(page: &Page, base_url: &str) -> Result<(), B
 
     // Step 5: Extract confirmation token from email file
     let email_file = "tests/ayb_data_browser_sqlite/emails.jsonl";
-
-    // Wait for email to arrive
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     let emails = parse_email_file(email_file)?;
     let user_emails: Vec<_> = emails.into_iter().filter(|e| e.to == email).collect();

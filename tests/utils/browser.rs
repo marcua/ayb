@@ -7,7 +7,6 @@ pub struct BrowserHelpers;
 impl BrowserHelpers {
     /// Initialize playwright and return browser page
     pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
-        use std::path::Path;
 
         let playwright = Playwright::initialize().await?;
         // Skip playwright.prepare() - don't install browsers, use system ones
@@ -107,13 +106,14 @@ impl BrowserHelpers {
         let reference_img = image::open(&reference_path)?;
 
         if current_img.dimensions() != reference_img.dimensions() {
-            println!(
-                "⚠ Screenshot '{}' dimensions differ: current {:?} vs reference {:?}",
+            let error_msg = format!(
+                "Screenshot '{}' dimensions differ: current {:?} vs reference {:?}",
                 test_name,
                 current_img.dimensions(),
                 reference_img.dimensions()
             );
-            return Ok(());
+            println!("⚠ {}", error_msg);
+            return Err(error_msg.into());
         }
 
         let current_rgba = current_img.to_rgba8();
@@ -159,11 +159,12 @@ impl BrowserHelpers {
 
             // Save diff image
             diff_buffer.save(&diff_path)?;
-            println!(
-                "⚠ Screenshot '{}' differs from reference by {:.2}% - diff saved to {}",
+            let error_msg = format!(
+                "Screenshot '{}' differs from reference by {:.2}% - diff saved to {}",
                 test_name, diff_percentage, diff_path
             );
-            Ok(())
+            println!("⚠ {}", error_msg);
+            Err(error_msg.into())
         } else {
             println!(
                 "✓ Screenshot '{}' matches reference (difference: {:.2}%)",

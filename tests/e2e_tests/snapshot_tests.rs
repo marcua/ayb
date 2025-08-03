@@ -8,7 +8,6 @@ use std::thread;
 use std::time;
 
 pub async fn test_snapshots(
-    test_type: &str,
     config_path: &str,
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -23,7 +22,7 @@ pub async fn test_snapshots(
 
     // Remove all snapshots so our tests aren't affected by
     // timing/snapshots from previous tests.
-    let storage = snapshot_storage(test_type).await?;
+    let storage = snapshot_storage(config_path).await?;
     storage
         .delete_snapshots(
             FIRST_ENTITY_SLUG,

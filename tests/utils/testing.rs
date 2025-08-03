@@ -57,18 +57,13 @@ pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::erro
         )
     };
 
-    let e2e_testing_line = if test_type == "browser_sqlite" {
-        "e2e_testing = true\n"
-    } else {
-        ""
-    };
 
     let config_content = format!(
         r#"host = "0.0.0.0"
 port = {port}
 database_url = "{database_url}"
 data_path = "./tests/ayb_data_{slug}"
-{e2e_testing_line}
+
 [web]
 hosting_method = "Local"
 
@@ -101,7 +96,6 @@ max_snapshots = 6
         port = port,
         database_url = database_url,
         slug = slug,
-        e2e_testing_line = e2e_testing_line,
         path_prefix = path_prefix
     );
 
@@ -115,13 +109,13 @@ max_snapshots = 6
 pub fn reset_test_environment(test_type: &str) -> Result<(), Box<dyn std::error::Error>> {
     let data_dir = format!("./tests/ayb_data_{}", test_type);
 
+    // Remove data directory for all test types
+    if std::path::Path::new(&data_dir).exists() {
+        std::fs::remove_dir_all(&data_dir)?;
+    }
+
     match test_type {
         "postgres" => {
-            // Remove data directory
-            if std::path::Path::new(&data_dir).exists() {
-                std::fs::remove_dir_all(&data_dir)?;
-            }
-
             // Drop and recreate PostgreSQL database
             let mut drop_cmd = Command::new("dropdb");
             drop_cmd
@@ -150,10 +144,7 @@ pub fn reset_test_environment(test_type: &str) -> Result<(), Box<dyn std::error:
             }
         }
         "sqlite" | "browser_sqlite" => {
-            // Remove data directory
-            if std::path::Path::new(&data_dir).exists() {
-                std::fs::remove_dir_all(&data_dir)?;
-            }
+            // No additional setup needed beyond data directory removal
         }
         _ => return Err(format!("Unknown test_type: {}", test_type).into()),
     }
@@ -209,10 +200,7 @@ impl Drop for AybServer {
     }
 }
 
-pub async fn snapshot_storage(test_type: &str) -> Result<SnapshotStorage, AybError> {
-    let config_path = generate_test_config(test_type).map_err(|e| AybError::Other {
-        message: e.to_string(),
-    })?;
+pub async fn snapshot_storage(config_path: &str) -> Result<SnapshotStorage, AybError> {
     let config = read_config(&PathBuf::from(config_path))?;
     SnapshotStorage::new(&config.snapshots.unwrap()).await
 }
