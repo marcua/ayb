@@ -34,7 +34,9 @@ impl BrowserHelpers {
         // Strategy 1: Try Playwright-installed browser first
         match chromium.launcher().headless(headless).launch().await {
             Ok(browser) => return Ok(browser),
-            Err(_) => println!("Playwright installation not possible on this platform, trying fallbacks..."),
+            Err(_) => println!(
+                "Preinstalled Playwright not available on this platform, trying fallbacks..."
+            ),
         }
 
         // Strategy 2: Try platform-specific system browsers
@@ -65,7 +67,7 @@ impl BrowserHelpers {
                     .await
                 {
                     Ok(browser) => return Ok(browser),
-                    Err(_) => {}, // Try next fallback
+                    Err(_) => {} // Try next fallback
                 }
             }
         }

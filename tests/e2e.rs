@@ -88,7 +88,7 @@ async fn client_server_integration(
     let api_keys = test_registration(&config_path, server_url, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
-    test_snapshots(&config_path, &api_keys).await?;
+    test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
 
     Ok(())

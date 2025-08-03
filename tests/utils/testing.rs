@@ -199,7 +199,10 @@ impl Drop for AybServer {
     }
 }
 
-pub async fn snapshot_storage(config_path: &str) -> Result<SnapshotStorage, AybError> {
+pub async fn snapshot_storage(test_type: &str) -> Result<SnapshotStorage, AybError> {
+    let config_path = generate_test_config(test_type).map_err(|e| AybError::Other {
+        message: e.to_string(),
+    })?;
     let config = read_config(&PathBuf::from(config_path))?;
     SnapshotStorage::new(&config.snapshots.unwrap()).await
 }
