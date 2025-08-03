@@ -9,12 +9,6 @@ impl BrowserHelpers {
     pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
         let playwright = Playwright::initialize().await?;
 
-        // Install browsers if needed (required for cross-platform compatibility)
-        if let Err(_) = playwright.prepare() {
-            // If prepare fails, try to continue with system browsers
-            println!("Playwright browsers not available - will use system browsers");
-        }
-
         // Check for BROWSER_VISIBLE environment variable to run in non-headless mode
         let headless = std::env::var("BROWSER_VISIBLE").is_err();
 
@@ -40,56 +34,38 @@ impl BrowserHelpers {
         // Strategy 1: Try Playwright-installed browser first
         match chromium.launcher().headless(headless).launch().await {
             Ok(browser) => return Ok(browser),
-            Err(e) => println!("Playwright browser failed: {}", e),
+            Err(_) => println!("Playwright installation not possible on this platform, trying fallbacks..."),
         }
 
         // Strategy 2: Try platform-specific system browsers
-        #[cfg(target_os = "macos")]
-        {
-            let macos_paths = [
+        let browser_paths = if cfg!(target_os = "macos") {
+            vec![
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
                 "/Applications/Chromium.app/Contents/MacOS/Chromium",
-            ];
-
-            for path in &macos_paths {
-                if std::path::Path::new(path).exists() {
-                    println!("Trying macOS browser at: {}", path);
-                    match chromium
-                        .launcher()
-                        .headless(headless)
-                        .executable(std::path::Path::new(path))
-                        .launch()
-                        .await
-                    {
-                        Ok(browser) => return Ok(browser),
-                        Err(e) => println!("Failed to launch {}: {}", path, e),
-                    }
-                }
-            }
-        }
-
-        #[cfg(target_os = "linux")]
-        {
-            let linux_paths = [
+            ]
+        } else if cfg!(target_os = "linux") {
+            vec![
                 "/usr/bin/google-chrome",
                 "/usr/bin/google-chrome-stable",
                 "/usr/bin/chromium-browser",
                 "/usr/bin/chromium",
-            ];
+            ]
+        } else {
+            vec![]
+        };
 
-            for path in &linux_paths {
-                if std::path::Path::new(path).exists() {
-                    println!("Trying Linux browser at: {}", path);
-                    match chromium
-                        .launcher()
-                        .headless(headless)
-                        .executable(std::path::Path::new(path))
-                        .launch()
-                        .await
-                    {
-                        Ok(browser) => return Ok(browser),
-                        Err(e) => println!("Failed to launch {}: {}", path, e),
-                    }
+        for path in &browser_paths {
+            if std::path::Path::new(path).exists() {
+                println!("Trying system browser at: {}", path);
+                match chromium
+                    .launcher()
+                    .headless(headless)
+                    .executable(std::path::Path::new(path))
+                    .launch()
+                    .await
+                {
+                    Ok(browser) => return Ok(browser),
+                    Err(_) => {}, // Try next fallback
                 }
             }
         }

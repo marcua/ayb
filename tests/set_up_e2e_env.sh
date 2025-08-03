@@ -10,8 +10,11 @@ source tests/test-env/bin/activate
 pip install awscli playwright
 
 # Try to install Playwright browsers, but don't fail if unsupported
-if ! playwright install chromium 2>/dev/null; then
-    echo "Playwright browser install failed - will use system browsers"
+echo "Installing Playwright browsers..."
+if playwright install chromium >/dev/null 2>&1; then
+    echo "Playwright browsers installed successfully"
+else
+    echo "Using system browsers (Playwright browsers not available on this platform)"
 fi
 
 # Start MinIO
