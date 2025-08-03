@@ -1,3 +1,4 @@
+use crate::email_helpers::{extract_token_from_emails, parse_email_file};
 use crate::utils::browser::BrowserHelpers;
 use playwright::api::Page;
 use std::error::Error;
@@ -55,23 +56,19 @@ pub async fn test_registration_flow(page: &Page, base_url: &str) -> Result<(), B
     // Screenshot comparison of check email page
     BrowserHelpers::screenshot_compare(&page, "check_email_page", &[]).await?;
 
-    println!("✓ Registration flow completed successfully");
-
     // Step 5: Extract confirmation token from email file
     let email_file = "tests/ayb_data_browser_sqlite/emails.jsonl";
 
     // Wait for email to arrive
     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
-    let emails = BrowserHelpers::parse_email_file(email_file)?;
+    let emails = parse_email_file(email_file)?;
     let user_emails: Vec<_> = emails.into_iter().filter(|e| e.to == email).collect();
     assert!(!user_emails.is_empty(), "Should receive confirmation email");
 
-    let confirmation_token = BrowserHelpers::extract_token_from_emails(&user_emails)
+    let confirmation_token = extract_token_from_emails(&user_emails)
         .expect("Should extract token from email");
     let confirmation_url = format!("{}/confirm/{}", base_url, confirmation_token);
-
-    println!("✓ Extracted confirmation token from email");
 
     // Step 6: Navigate to confirmation link
     page.goto_builder(&confirmation_url)
@@ -88,8 +85,6 @@ pub async fn test_registration_flow(page: &Page, base_url: &str) -> Result<(), B
 
     // Screenshot comparison of user dashboard
     BrowserHelpers::screenshot_compare(&page, "user_dashboard", &[]).await?;
-
-    println!("✓ User {} authenticated successfully", username);
 
     Ok(())
 }

@@ -10,7 +10,9 @@ use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
 };
-use crate::utils::testing::{ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup};
+use crate::utils::testing::{
+    ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup,
+};
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;

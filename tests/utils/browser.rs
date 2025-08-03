@@ -1,54 +1,10 @@
-use ayb::email::backend::EmailEntry as AybEmailEntry;
 use image::GenericImageView;
 use playwright::{api::Page, Playwright};
-use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-
-#[derive(Serialize, Deserialize)]
-pub struct EmailEntry {
-    pub from: String,
-    pub to: String,
-    pub reply_to: String,
-    pub subject: String,
-    pub content_type: String,
-    pub content_transfer_encoding: String,
-    pub date: String,
-    pub content: Vec<String>,
-}
 
 pub struct BrowserHelpers;
 
 impl BrowserHelpers {
-    /// Parse email file (JSONL format)
-    pub fn parse_email_file(
-        file_path: &str,
-    ) -> Result<Vec<AybEmailEntry>, Box<dyn std::error::Error>> {
-        let content = std::fs::read_to_string(file_path)?;
-        let mut emails = Vec::new();
-
-        for line in content.lines() {
-            let line = line.trim();
-            if !line.is_empty() {
-                emails.push(serde_json::from_str(line)?);
-            }
-        }
-
-        Ok(emails)
-    }
-
-    /// Extract token from emails
-    pub fn extract_token_from_emails(emails: &[AybEmailEntry]) -> Option<String> {
-        for email in emails {
-            for line in &email.content {
-                if line.starts_with('\t') {
-                    if let Some(token_part) = line.split("ayb client confirm ").nth(1) {
-                        return Some(token_part.trim().to_string());
-                    }
-                }
-            }
-        }
-        None
-    }
     /// Initialize playwright and return browser page
     pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
         use std::path::Path;
@@ -209,7 +165,10 @@ impl BrowserHelpers {
             );
             Ok(())
         } else {
-            println!("✓ Screenshot '{}' matches reference (difference: {:.2}%)", test_name, diff_percentage);
+            println!(
+                "✓ Screenshot '{}' matches reference (difference: {:.2}%)",
+                test_name, diff_percentage
+            );
             // Clean up current screenshot if it matches
             let _ = std::fs::remove_file(&current_path);
             Ok(())
