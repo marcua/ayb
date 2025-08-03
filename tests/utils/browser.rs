@@ -7,9 +7,13 @@ pub struct BrowserHelpers;
 impl BrowserHelpers {
     /// Initialize playwright and return browser page
     pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
-
         let playwright = Playwright::initialize().await?;
-        // Skip playwright.prepare() - don't install browsers, use system ones
+
+        // Install browsers if needed (required for cross-platform compatibility)
+        if let Err(_) = playwright.prepare() {
+            // If prepare fails, try to continue with system browsers
+            println!("Playwright browsers not available - will use system browsers");
+        }
 
         // Check for BROWSER_VISIBLE environment variable to run in non-headless mode
         let headless = std::env::var("BROWSER_VISIBLE").is_err();
@@ -18,20 +22,79 @@ impl BrowserHelpers {
             println!("🌐 Running browser in VISIBLE mode for debugging");
         }
 
-        // Use system Chrome - confirmed working on Mac M1 ARM64
         let chromium = playwright.chromium();
-        let browser = chromium
-            .launcher()
-            .headless(headless)
-            .executable(Path::new(
-                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            ))
-            .launch()
-            .await?;
+
+        // Try different browser launch strategies in order of preference
+        let browser = Self::try_launch_browser(&chromium, headless).await?;
+
         let context = browser.context_builder().build().await?;
         let page = context.new_page().await?;
 
         Ok((playwright, page))
+    }
+
+    async fn try_launch_browser(
+        chromium: &playwright::api::BrowserType,
+        headless: bool,
+    ) -> Result<playwright::api::Browser, Box<dyn std::error::Error>> {
+        // Strategy 1: Try Playwright-installed browser first
+        match chromium.launcher().headless(headless).launch().await {
+            Ok(browser) => return Ok(browser),
+            Err(e) => println!("Playwright browser failed: {}", e),
+        }
+
+        // Strategy 2: Try platform-specific system browsers
+        #[cfg(target_os = "macos")]
+        {
+            let macos_paths = [
+                "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+                "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            ];
+
+            for path in &macos_paths {
+                if std::path::Path::new(path).exists() {
+                    println!("Trying macOS browser at: {}", path);
+                    match chromium
+                        .launcher()
+                        .headless(headless)
+                        .executable(std::path::Path::new(path))
+                        .launch()
+                        .await
+                    {
+                        Ok(browser) => return Ok(browser),
+                        Err(e) => println!("Failed to launch {}: {}", path, e),
+                    }
+                }
+            }
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            let linux_paths = [
+                "/usr/bin/google-chrome",
+                "/usr/bin/google-chrome-stable",
+                "/usr/bin/chromium-browser",
+                "/usr/bin/chromium",
+            ];
+
+            for path in &linux_paths {
+                if std::path::Path::new(path).exists() {
+                    println!("Trying Linux browser at: {}", path);
+                    match chromium
+                        .launcher()
+                        .headless(headless)
+                        .executable(std::path::Path::new(path))
+                        .launch()
+                        .await
+                    {
+                        Ok(browser) => return Ok(browser),
+                        Err(e) => println!("Failed to launch {}: {}", path, e),
+                    }
+                }
+            }
+        }
+
+        Err("No working browser found. Tried Playwright-installed and system browsers.".into())
     }
 
     /// Take a screenshot and compare it to a stored reference image

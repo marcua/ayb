@@ -57,7 +57,6 @@ pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::erro
         )
     };
 
-
     let config_content = format!(
         r#"host = "0.0.0.0"
 port = {port}
