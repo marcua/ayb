@@ -1,7 +1,7 @@
 use crate::ayb_assert_cmd;
 use crate::e2e_tests::{FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG};
-use crate::email_helpers::{clear_email_file, extract_token_from_emails, parse_email_file};
 use crate::utils::ayb::register;
+use crate::utils::email::{clear_email_data, extract_token_from_emails, get_emails_for_recipient};
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use ayb::error::AybError;
@@ -21,38 +21,6 @@ fn extract_api_key(output: &Output) -> Result<String, AybError> {
             message: "No API key".to_string(),
         })
     }
-}
-
-const SQLITE_EMAIL_FILE: &str = "tests/ayb_data_sqlite/emails.jsonl";
-const POSTGRES_EMAIL_FILE: &str = "tests/ayb_data_postgres/emails.jsonl";
-
-fn get_email_file_for_test(config_path: &str) -> &'static str {
-    if config_path.contains("sqlite") {
-        SQLITE_EMAIL_FILE
-    } else {
-        POSTGRES_EMAIL_FILE
-    }
-}
-
-pub fn clear_email_data(config_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let email_file = get_email_file_for_test(config_path);
-    clear_email_file(email_file)?;
-    Ok(())
-}
-
-fn get_emails_for_recipient(
-    config_path: &str,
-    recipient: &str,
-) -> Result<Vec<ayb::email::backend::EmailEntry>, Box<dyn std::error::Error>> {
-    let email_file = get_email_file_for_test(config_path);
-    let emails = parse_email_file(email_file)?;
-
-    let filtered_emails = emails
-        .into_iter()
-        .filter(|email| email.to == recipient)
-        .collect();
-
-    Ok(filtered_emails)
 }
 
 fn test_banned_username_registration(
@@ -126,12 +94,13 @@ fn test_banned_username_registration(
 }
 
 pub fn test_registration(
+    test_type: &str,
     config_path: &str,
     server_url: &str,
     expected_config: &mut ClientConfig,
 ) -> Result<HashMap<String, Vec<String>>, Box<dyn std::error::Error>> {
     // Clear any existing email data
-    clear_email_data(config_path)?;
+    clear_email_data(test_type)?;
 
     // Before running commands, we have no configuration file
     assert_eq!(
@@ -184,12 +153,12 @@ pub fn test_registration(
     )?;
 
     // Get emails for each recipient
-    let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
+    let e2e_emails = get_emails_for_recipient(test_type, "e2e@example.org")?;
     assert_eq!(e2e_emails.len(), 2);
     let first_token0 = extract_token_from_emails(&[e2e_emails[0].clone()]).unwrap();
     let first_token1 = extract_token_from_emails(&[e2e_emails[1].clone()]).unwrap();
 
-    let another_emails = get_emails_for_recipient(config_path, "e2e-another@example.org")?;
+    let another_emails = get_emails_for_recipient(test_type, "e2e-another@example.org")?;
     assert_eq!(another_emails.len(), 2);
     let first_token2 = extract_token_from_emails(&[another_emails[0].clone()]).unwrap();
     let second_token0 = extract_token_from_emails(&[another_emails[1].clone()]).unwrap();
@@ -265,7 +234,7 @@ pub fn test_registration(
 
     cmd.stdout("Check your email to finish logging in e2e-first\n");
 
-    let e2e_emails = get_emails_for_recipient(config_path, "e2e@example.org")?;
+    let e2e_emails = get_emails_for_recipient(test_type, "e2e@example.org")?;
     assert_eq!(e2e_emails.len(), 3);
     let login_token = extract_token_from_emails(&[e2e_emails[2].clone()]).unwrap();
 
@@ -290,7 +259,7 @@ pub fn test_registration(
         "Check your email to finish registering e2e-third",
     )?;
 
-    let third_emails = get_emails_for_recipient(config_path, "e2e-a-third@example.org")?;
+    let third_emails = get_emails_for_recipient(test_type, "e2e-a-third@example.org")?;
     assert_eq!(third_emails.len(), 1);
     let third_token0 = extract_token_from_emails(&[third_emails[0].clone()]).unwrap();
 
