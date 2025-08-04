@@ -1,7 +1,7 @@
 use crate::ayb_assert_cmd;
 use crate::e2e_tests::{FIRST_ENTITY_SLUG, SECOND_ENTITY_SLUG, THIRD_ENTITY_SLUG};
-use crate::email_helpers::{clear_email_data, extract_token_from_emails, get_emails_for_recipient};
 use crate::utils::ayb::register;
+use crate::utils::email::{clear_email_data, extract_token_from_emails, get_emails_for_recipient};
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use ayb::error::AybError;

@@ -2,7 +2,6 @@
 
 mod browser_e2e_tests;
 mod e2e_tests;
-mod email_helpers;
 mod utils;
 
 use crate::browser_e2e_tests::test_registration_flow;
@@ -10,8 +9,8 @@ use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
 };
-use crate::email_helpers::clear_email_data;
 use crate::utils::browser::BrowserHelpers;
+use crate::utils::email::clear_email_data;
 use crate::utils::testing::{
     ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup,
 };

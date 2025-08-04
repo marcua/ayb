@@ -1,5 +1,5 @@
-use crate::email_helpers::{extract_token_from_emails, get_emails_for_recipient};
 use crate::utils::browser::BrowserHelpers;
+use crate::utils::email::{extract_token_from_emails, get_emails_for_recipient};
 use playwright::api::Page;
 use std::error::Error;
 
