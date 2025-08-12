@@ -45,12 +45,14 @@ make test TEST=client_server_integration_sqlite
 If tests fail with S3 errors, run `tests/run_minio.sh` and try again.
 
 ### Code Quality
-Before completing any task, run the lint target as indicated below. Your task is not complete if either of these report an error: fix all warnings and errors before reporting back.
+CRITICAL: Run `make lint` any time you edit code. Your task is not complete if either of these report an error: fix all warnings and errors before reporting back.
 
 ```bash
 # Format code and run clippy lints
 make lint
 ```
+
+Also CRITICAL: whenever you modify code, run the most relevant tests (or all tests) using the `make test` and `make test TEST=...` commands above.
 
 ## Architecture
 
