@@ -56,8 +56,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
     user_a
         .page
         .fill_builder("input[name='database_slug']", "shared_test.sqlite")
@@ -75,7 +73,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_database_created", &[]).await?;
 
     // Step 4: Test multi-user isolation - Users B and C should NOT see User A's private database
@@ -87,7 +84,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         .timeout(5000.0)
         .goto()
         .await?;
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     println!("📄 User B checking if they can see User A's private database...");
     let page_content_b = user_b.page.inner_text("body", None).await?;
@@ -108,7 +104,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         .timeout(5000.0)
         .goto()
         .await?;
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     println!("📄 User C checking if they can see User A's private database...");
     let page_content_c = user_c.page.inner_text("body", None).await?;

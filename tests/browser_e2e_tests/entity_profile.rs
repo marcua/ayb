@@ -16,9 +16,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .click()
         .await?;
 
-    // Wait a moment for the edit mode to activate
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
     // Screenshot of edit mode activated
     BrowserHelpers::screenshot_compare(&page, "profile_edit_mode", &[]).await?;
 
@@ -49,9 +46,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .click()
         .await?;
 
-    // Wait for the link input to appear
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-
     // Fill the first link input (should be the only one at this point)
     page.fill_builder("input[name='links[]']", "http://ayb.host/")
         .timeout(1000.0)
@@ -63,9 +57,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .timeout(2000.0)
         .click()
         .await?;
-
-    // Wait for the second link input to appear
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     page.fill_builder(
         "div.link-input-group:nth-child(2) input[name='links[]']",
@@ -84,17 +75,11 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .click()
         .await?;
 
-    // Wait for the form to submit and return to view mode
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
-
     // Screenshot after saving
     BrowserHelpers::screenshot_compare(&page, "profile_saved", &[]).await?;
 
     // Step 5: Reload the page to ensure data persistence
     page.reload_builder().timeout(5000.0).reload().await?;
-
-    // Wait for page to fully load
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     // Screenshot after reload to confirm data persisted
     BrowserHelpers::screenshot_compare(&page, "profile_after_reload", &[]).await?;

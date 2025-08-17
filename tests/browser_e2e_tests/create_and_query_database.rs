@@ -21,9 +21,6 @@ pub async fn test_create_and_query_database_flow(
         .click()
         .await?;
 
-    // Wait for the create database form to appear
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
     // Screenshot of the create database form
     BrowserHelpers::screenshot_compare(&page, "create_database_form", &[]).await?;
 
@@ -42,7 +39,7 @@ pub async fn test_create_and_query_database_flow(
         .click()
         .await?;
 
-    // Wait for database creation and page refresh
+    // Wait for database creation and page to fully render
     tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
 
     // Screenshot after database creation
@@ -74,9 +71,6 @@ pub async fn test_create_and_query_database_flow(
         .click()
         .await?;
 
-    // Wait for query to execute
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-
     // Screenshot after table creation
     BrowserHelpers::screenshot_compare(&page, "table_created", &[]).await?;
 
@@ -100,8 +94,6 @@ pub async fn test_create_and_query_database_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-
     // Insert second row
     let insert_query2 =
         "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");";
@@ -120,8 +112,6 @@ pub async fn test_create_and_query_database_flow(
         .timeout(5000.0)
         .click()
         .await?;
-
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     // Screenshot after data insertion
     BrowserHelpers::screenshot_compare(&page, "data_inserted", &[]).await?;
@@ -146,9 +136,6 @@ pub async fn test_create_and_query_database_flow(
         .timeout(5000.0)
         .click()
         .await?;
-
-    // Wait for results to load
-    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
 
     // Screenshot of query results table
     BrowserHelpers::screenshot_compare(&page, "query_results", &[]).await?;
