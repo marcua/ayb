@@ -5,7 +5,8 @@ mod e2e_tests;
 mod utils;
 
 use crate::browser_e2e_tests::{
-    test_create_and_query_database_flow, test_entity_profile_flow, test_registration_flow,
+    test_create_and_query_database_flow, test_entity_profile_flow, test_permissions_flow,
+    test_registration_flow,
 };
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
@@ -131,6 +132,9 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
 
     // Continue with database creation and query test
     test_create_and_query_database_flow(&page, &username).await?;
+
+    // Test multi-user permissions with separate browser contexts
+    test_permissions_flow(&base_url, "browser_sqlite").await?;
 
     Ok(())
 }

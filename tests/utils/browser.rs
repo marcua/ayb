@@ -1,5 +1,8 @@
 use image::GenericImageView;
-use playwright::{api::Page, Playwright};
+use playwright::{
+    api::{BrowserContext, Page},
+    Playwright,
+};
 use std::path::{Path, PathBuf};
 
 pub struct BrowserHelpers;
@@ -25,6 +28,41 @@ impl BrowserHelpers {
         let page = context.new_page().await?;
 
         Ok((playwright, page))
+    }
+
+    /// Initialize playwright and return multiple browser contexts for multi-user testing
+    pub async fn set_up_multi_user_browsers(
+        user_count: usize,
+    ) -> Result<(Playwright, Vec<(BrowserContext, Page)>), Box<dyn std::error::Error>> {
+        let playwright = Playwright::initialize().await?;
+
+        // Check for BROWSER_VISIBLE environment variable to run in non-headless mode
+        let headless = std::env::var("BROWSER_VISIBLE").is_err();
+
+        if !headless {
+            println!(
+                "🌐 Running browser in VISIBLE mode for debugging with {} users",
+                user_count
+            );
+        }
+
+        let chromium = playwright.chromium();
+        let browser = Self::try_launch_browser(&chromium, headless).await?;
+
+        let mut contexts_and_pages = Vec::new();
+
+        for i in 0..user_count {
+            let context = browser.context_builder().build().await?;
+            let page = context.new_page().await?;
+
+            if !headless {
+                println!("📱 Created browser context for User {}", i + 1);
+            }
+
+            contexts_and_pages.push((context, page));
+        }
+
+        Ok((playwright, contexts_and_pages))
     }
 
     async fn try_launch_browser(

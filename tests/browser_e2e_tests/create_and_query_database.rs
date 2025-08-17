@@ -201,10 +201,20 @@ pub async fn test_create_and_query_database_flow(
     );
 
     // Step 10: Verify CSV download button exists and is clickable
-    assert!(page.inner_text("body", None).await?.contains("Download CSV"), "CSV download button should be visible");
-    
+    assert!(
+        page.inner_text("body", None)
+            .await?
+            .contains("Download CSV"),
+        "CSV download button should be visible"
+    );
+
     // Step 11: Verify JSON download button exists and is clickable
-    assert!(page.inner_text("body", None).await?.contains("Download JSON"), "JSON download button should be visible");
+    assert!(
+        page.inner_text("body", None)
+            .await?
+            .contains("Download JSON"),
+        "JSON download button should be visible"
+    );
 
     // Final verification screenshot
     BrowserHelpers::screenshot_compare(&page, "database_test_complete", &[]).await?;
