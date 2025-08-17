@@ -1,6 +1,8 @@
 use crate::utils::browser::BrowserHelpers;
-use playwright::api::Page;
+use playwright::api::{page, Page};
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 
 pub async fn test_create_and_query_database_flow(
     page: &Page,
@@ -47,7 +49,6 @@ pub async fn test_create_and_query_database_flow(
     BrowserHelpers::screenshot_compare(&page, "database_created", &[]).await?;
 
     // Step 5: Ensure we're on the database page
-    let current_title = page.title().await?;
     let database_page_title = format!("Explore {}/test.sqlite - ayb", username);
 
     // Verify we're on the database page
@@ -152,59 +153,83 @@ pub async fn test_create_and_query_database_flow(
     // Screenshot of query results table
     BrowserHelpers::screenshot_compare(&page, "query_results", &[]).await?;
 
-    // Step 9: Verify the results contain the expected data with strict table content checks
-    let result_table = page.inner_text(".result-table", None).await?;
+    // Step 9: Verify the results contain the expected data with exact string matching
+    let query_results = page.inner_text("#query-results", None).await?;
 
-    // Verify exact table contents
-    let expected_table_content = "fname\tlname\nthe first\tthe last\nthe first2\tthe last2";
+    // Define the expected complete query results content
+    let expected_results = "Download CSV\nDownload JSON\nfname\tlname\nthe first\tthe last\nthe first2\tthe last2\n2 rows";
+
+    // Assert exact match of the query results content
     assert_eq!(
-        result_table
-            .trim()
-            .replace("\n", "\t")
-            .replace("\t\t", "\t"),
-        expected_table_content.replace("\n", "\t"),
-        "Query results table should contain exact expected data"
-    );
-
-    // Verify row count in results metadata
-    let results_info = page.inner_text(".results-info", None).await?;
-    assert!(
-        results_info.contains("2 rows"),
-        "Query results should show '2 rows'"
+        query_results.trim(),
+        expected_results,
+        "Query results should exactly match expected content"
     );
 
     // Step 10: Test CSV download functionality
-    let csv_button = page.locator("button:has-text('Download CSV')");
-    assert!(
-        csv_button.is_visible().await?,
-        "CSV download button should be visible"
+    let (download_event, _) = tokio::join!(
+        page.expect_event(page::EventType::Download),
+        page.click_builder("button:has-text('Download CSV')")
+            .timeout(3000.0)
+            .click()
     );
 
-    // Click CSV download and verify file contents
-    csv_button.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let download = match download_event? {
+        page::Event::Download(d) => d,
+        _ => return Err("Expected download event".into()),
+    };
 
-    // Read the downloaded CSV file (assuming it downloads to a known location)
+    // Save download to local folder and verify contents
+    let download_path = format!("./test_download_{}.csv", std::process::id());
+    download.save_as(&download_path).await?;
+
+    // Read and verify the downloaded CSV file contents
+    let actual_csv_content = fs::read_to_string(&download_path)?;
     let expected_csv_content = "fname,lname\nthe first,the last\nthe first2,the last2\n";
-    // Note: In a real test, you'd need to handle the download path properly
-    // This is a placeholder for the actual file content verification
+    assert_eq!(
+        actual_csv_content.trim(),
+        expected_csv_content.trim(),
+        "Downloaded CSV content should match expected data"
+    );
+
+    // Clean up downloaded file
+    if Path::new(&download_path).exists() {
+        fs::remove_file(&download_path)?;
+    }
 
     // Step 11: Test JSON download functionality
-    let json_button = page.locator("button:has-text('Download JSON')");
-    assert!(
-        json_button.is_visible().await?,
-        "JSON download button should be visible"
+    let (download_event, _) = tokio::join!(
+        page.expect_event(page::EventType::Download),
+        page.click_builder("button:has-text('Download JSON')")
+            .timeout(3000.0)
+            .click()
     );
 
-    // Click JSON download and verify file contents
-    json_button.click().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let download = match download_event? {
+        page::Event::Download(d) => d,
+        _ => return Err("Expected download event".into()),
+    };
 
-    // Verify the downloaded JSON file contents
-    let expected_json_content =
-        r#"[{"fname":"the first","lname":"the last"},{"fname":"the first2","lname":"the last2"}]"#;
-    // Note: In a real test, you'd need to handle the download path properly
-    // This is a placeholder for the actual file content verification
+    // Save download to local folder and verify contents
+    let download_path = format!("./test_download_{}.json", std::process::id());
+    download.save_as(&download_path).await?;
+
+    // Read and verify the downloaded JSON file contents
+    let actual_json_content = fs::read_to_string(&download_path)?;
+    let expected_json_content = r#"{"fields":["fname","lname"],"rows":[["the first","the last"],["the first2","the last2"]]}"#;
+
+    // Parse both JSON strings to compare content (handles formatting differences)
+    let actual_json: serde_json::Value = serde_json::from_str(&actual_json_content)?;
+    let expected_json: serde_json::Value = serde_json::from_str(expected_json_content)?;
+    assert_eq!(
+        actual_json, expected_json,
+        "Downloaded JSON content should match expected data"
+    );
+
+    // Clean up downloaded file
+    if Path::new(&download_path).exists() {
+        fs::remove_file(&download_path)?;
+    }
 
     // Final verification screenshot
     BrowserHelpers::screenshot_compare(&page, "database_test_complete", &[]).await?;

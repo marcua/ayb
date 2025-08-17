@@ -3,12 +3,12 @@ use playwright::api::Page;
 use std::error::Error;
 
 pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(), Box<dyn Error>> {
-    // Step 1: Verify we're on the user dashboard
+    // Step 1: Verify we're on the entity dashboard
     let expected_title = format!("{} - ayb", username);
     assert_eq!(page.title().await?, expected_title);
 
     // Take initial screenshot of the dashboard
-    BrowserHelpers::screenshot_compare(&page, "user_dashboard_reference", &[]).await?;
+    BrowserHelpers::screenshot_compare(&page, "entity_dashboard_reference", &[]).await?;
 
     // Step 2: Enter profile edit mode
     page.click_builder("button:has-text('Edit profile')")
@@ -22,7 +22,7 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
     // Screenshot of edit mode activated
     BrowserHelpers::screenshot_compare(&page, "profile_edit_mode", &[]).await?;
 
-    // Step 3: Fill in profile fields with test data (same as used in other profile e2e tests)
+    // Step 3: Fill in profile fields with test data
     page.fill_builder("input[name='display_name']", "Entity 0")
         .timeout(1000.0)
         .fill()
@@ -67,7 +67,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
     // Wait for the second link input to appear
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    // Simple approach: use CSS selector for second input with a longer wait
     page.fill_builder(
         "div.link-input-group:nth-child(2) input[name='links[]']",
         "http://ayb2.host/",

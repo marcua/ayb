@@ -24,7 +24,11 @@ impl BrowserHelpers {
         // Try different browser launch strategies in order of preference
         let browser = Self::try_launch_browser(&chromium, headless).await?;
 
-        let context = browser.context_builder().build().await?;
+        let context = browser
+            .context_builder()
+            .accept_downloads(true)
+            .build()
+            .await?;
         let page = context.new_page().await?;
 
         Ok((playwright, page))
@@ -52,7 +56,11 @@ impl BrowserHelpers {
         let mut contexts_and_pages = Vec::new();
 
         for i in 0..user_count {
-            let context = browser.context_builder().build().await?;
+            let context = browser
+                .context_builder()
+                .accept_downloads(true)
+                .build()
+                .await?;
             let page = context.new_page().await?;
 
             if !headless {
