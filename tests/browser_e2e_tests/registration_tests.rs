@@ -7,7 +7,7 @@ pub async fn test_registration_flow(
     page: &Page,
     base_url: &str,
     test_type: &str,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<String, Box<dyn Error>> {
     // Step 1: Navigate to registration page
     page.goto_builder(&format!("{}/register", base_url))
         .timeout(5000.0)
@@ -79,5 +79,5 @@ pub async fn test_registration_flow(
     // Screenshot comparison of user dashboard
     BrowserHelpers::screenshot_compare(&page, "user_dashboard", &[]).await?;
 
-    Ok(())
+    Ok(username)
 }

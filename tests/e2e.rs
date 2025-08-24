@@ -4,7 +4,10 @@ mod browser_e2e_tests;
 mod e2e_tests;
 mod utils;
 
-use crate::browser_e2e_tests::test_registration_flow;
+use crate::browser_e2e_tests::{
+    test_create_and_query_database_flow, test_entity_profile_flow, test_permissions_flow,
+    test_registration_flow, test_snapshots_flow,
+};
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_permissions, test_registration,
     test_snapshots,
@@ -121,5 +124,20 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     let port = get_test_port("browser_sqlite")?;
     let base_url = format!("http://127.0.0.1:{}", port);
 
-    test_registration_flow(&page, &base_url, "browser_sqlite").await
+    // Run registration test and get the username
+    let username = test_registration_flow(&page, &base_url, "browser_sqlite").await?;
+
+    // Continue with profile test using the registered user
+    test_entity_profile_flow(&page, &username).await?;
+
+    // Continue with database creation and query test
+    test_create_and_query_database_flow(&page, &username).await?;
+
+    // Test multi-user permissions with separate browser contexts
+    test_permissions_flow(&base_url, "browser_sqlite").await?;
+
+    // Test snapshots functionality
+    test_snapshots_flow(&page, &username, &base_url).await?;
+
+    Ok(())
 }
