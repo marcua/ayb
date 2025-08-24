@@ -4,6 +4,9 @@ use playwright::{
     Playwright,
 };
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static SCREENSHOT_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 pub struct BrowserHelpers;
 
@@ -147,12 +150,15 @@ impl BrowserHelpers {
         test_name: &str,
         selectors_to_grey: &[&str],
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let counter = SCREENSHOT_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+        let prefixed_name = format!("{:03}_{}", counter, test_name);
+
         let screenshots_dir = "tests/screenshots";
         std::fs::create_dir_all(screenshots_dir)?;
 
-        let reference_path = format!("{}/{}_reference.png", screenshots_dir, test_name);
-        let current_path = format!("{}/{}_current.png", screenshots_dir, test_name);
-        let diff_path = format!("{}/{}_diff.png", screenshots_dir, test_name);
+        let reference_path = format!("{}/{}_reference.png", screenshots_dir, prefixed_name);
+        let current_path = format!("{}/{}_current.png", screenshots_dir, prefixed_name);
+        let diff_path = format!("{}/{}_diff.png", screenshots_dir, prefixed_name);
 
         // Grey out specified elements before taking screenshot
         for selector in selectors_to_grey {
@@ -184,7 +190,7 @@ impl BrowserHelpers {
         // If no reference exists, save current as reference
         if !Path::new(&reference_path).exists() {
             std::fs::copy(&current_path, &reference_path)?;
-            println!("📸 Created reference screenshot for '{}'", test_name);
+            println!("📸 Created reference screenshot for '{}'", prefixed_name);
             return Ok(());
         }
 
@@ -195,7 +201,7 @@ impl BrowserHelpers {
         if current_img.dimensions() != reference_img.dimensions() {
             let error_msg = format!(
                 "Screenshot '{}' dimensions differ: current {:?} vs reference {:?}",
-                test_name,
+                prefixed_name,
                 current_img.dimensions(),
                 reference_img.dimensions()
             );
@@ -248,14 +254,14 @@ impl BrowserHelpers {
             diff_buffer.save(&diff_path)?;
             let error_msg = format!(
                 "Screenshot '{}' differs from reference by {:.2}% - diff saved to {}",
-                test_name, diff_percentage, diff_path
+                prefixed_name, diff_percentage, diff_path
             );
             println!("⚠ {}", error_msg);
             Err(error_msg.into())
         } else {
             println!(
                 "✓ Screenshot '{}' matches reference (difference: {:.2}%)",
-                test_name, diff_percentage
+                prefixed_name, diff_percentage
             );
             // Clean up current screenshot if it matches
             let _ = std::fs::remove_file(&current_path);

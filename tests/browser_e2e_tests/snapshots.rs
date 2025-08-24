@@ -16,9 +16,6 @@ pub async fn test_snapshots_flow(
         .goto()
         .await?;
 
-    // Wait for page to load
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-
     // Verify we're on the correct database page
     assert_eq!(page.title().await?, database_page_title);
 
@@ -39,13 +36,11 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    BrowserHelpers::screenshot_compare(&page, "snapshots_initial_count", &[]).await?;
 
     // Verify we have 2 rows initially
-    let page_text = page.inner_text("body", None).await?;
+    let page_text = page.inner_text("#query-results", None).await?;
     assert!(page_text.contains("2"), "Initial count should show 2 rows");
-
-    BrowserHelpers::screenshot_compare(&page, "snapshots_initial_count", &[]).await?;
 
     // Step 3: Wait for automatic snapshot to be created (snapshots are auto-created after DB changes)
     // The system takes snapshots automatically every 2 seconds when database changes
@@ -71,8 +66,6 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-
     BrowserHelpers::screenshot_compare(&page, "snapshots_row_inserted", &[]).await?;
 
     // Step 5: Verify we now have 3 rows
@@ -96,7 +89,7 @@ pub async fn test_snapshots_flow(
         "Count after insert should show 3 rows"
     );
 
-    // Step 6: Sleep to allow automatic snapshot after insert (as requested by user)
+    // Step 6: Sleep to allow automatic snapshot after insert
     tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
 
     // Step 7: Click the Snapshots tab to see available snapshots
@@ -105,9 +98,6 @@ pub async fn test_snapshots_flow(
         .timeout(5000.0)
         .click()
         .await?;
-
-    // Wait for the AJAX loadSnapshots() function to complete
-    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
 
     BrowserHelpers::screenshot_compare(&page, "snapshots_list_page", &[]).await?;
 
@@ -118,9 +108,6 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    // Wait for confirmation modal animation to complete
-    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
-
     BrowserHelpers::screenshot_compare(&page, "snapshots_confirmation_modal", &[]).await?;
 
     // Step 9: Wait for the actual restore button to be clickable and click it
@@ -128,13 +115,11 @@ pub async fn test_snapshots_flow(
         .timeout(15000.0)
         .wait_for_selector()
         .await?;
-    
+
     page.click_builder("#confirm-restore-btn")
         .timeout(15000.0)
         .click()
         .await?;
-
-    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
 
     BrowserHelpers::screenshot_compare(&page, "snapshots_restored", &[]).await?;
 
@@ -144,8 +129,6 @@ pub async fn test_snapshots_flow(
         .timeout(5000.0)
         .goto()
         .await?;
-
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     // Step 11: Verify we're back to 2 rows (one less than the 3 we had)
     page.fill_builder("textarea[name='query']", count_query)
@@ -158,15 +141,13 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    BrowserHelpers::screenshot_compare(&page, "snapshots_final_count", &[]).await?;
 
-    let page_text_after_restore = page.inner_text("body", None).await?;
+    let page_text_after_restore = page.inner_text("#query-results", None).await?;
     assert!(
         page_text_after_restore.contains("2"),
         "Count after snapshot restore should show 2 rows (one less than before)"
     );
-
-    BrowserHelpers::screenshot_compare(&page, "snapshots_final_count", &[]).await?;
 
     // Step 12: Verify the inserted row is gone
     let select_query = "SELECT * FROM test_table;";
@@ -183,7 +164,7 @@ pub async fn test_snapshots_flow(
 
     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
-    let final_page_text = page.inner_text("body", None).await?;
+    let final_page_text = page.inner_text("#query-results", None).await?;
     assert!(
         !final_page_text.contains("snapshot"),
         "The inserted row with 'snapshot' should be gone after restore"
