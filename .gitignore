@@ -27,3 +27,6 @@ tests/screenshots/*_diff.png
 .aider*
 # Local AI plan tracking/context files
 plan.md
+
+# MacOS
+.DS_Store
