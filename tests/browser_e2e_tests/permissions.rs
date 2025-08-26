@@ -73,6 +73,8 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         .click()
         .await?;
 
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_database_created", &[]).await?;
 
     // Step 4: Test multi-user isolation - Users B and C should NOT see User A's private database
