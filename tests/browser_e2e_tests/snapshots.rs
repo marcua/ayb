@@ -66,8 +66,6 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
-
     BrowserHelpers::screenshot_compare(&page, "snapshots_row_inserted", &[]).await?;
 
     // Step 5: Verify we now have 3 rows
@@ -81,7 +79,8 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // Screenshot immediately after query execution (following create_and_query_database pattern)
+    BrowserHelpers::screenshot_compare(&page, "snapshots_count_after_insert", &[]).await?;
 
     // Now read the results from the specific query results element
     let query_results = page.inner_text("#query-results", None).await?;
@@ -89,9 +88,6 @@ pub async fn test_snapshots_flow(
         query_results.contains("3"),
         "Count after insert should show 3 rows"
     );
-
-    // Screenshot immediately after query execution (following create_and_query_database pattern)
-    BrowserHelpers::screenshot_compare(&page, "snapshots_count_after_insert", &[]).await?;
 
     // Step 6: Sleep to allow automatic snapshot after insert
     tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
@@ -112,7 +108,8 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // Extra delay for modal animation to complete
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     BrowserHelpers::screenshot_compare(&page, "snapshots_confirmation_modal", &[]).await?;
 
@@ -126,8 +123,6 @@ pub async fn test_snapshots_flow(
         .timeout(15000.0)
         .click()
         .await?;
-
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
     BrowserHelpers::screenshot_compare(&page, "snapshots_restored", &[]).await?;
 
@@ -149,15 +144,13 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    BrowserHelpers::screenshot_compare(&page, "snapshots_final_count", &[]).await?;
 
     let page_text_after_restore = page.inner_text("#query-results", None).await?;
     assert!(
         page_text_after_restore.contains("2"),
         "Count after snapshot restore should show 2 rows (one less than before)"
     );
-
-    BrowserHelpers::screenshot_compare(&page, "snapshots_final_count", &[]).await?;
 
     // Step 12: Verify the inserted row is gone
     let select_query = "SELECT * FROM test_table;";
@@ -172,15 +165,13 @@ pub async fn test_snapshots_flow(
         .click()
         .await?;
 
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    BrowserHelpers::screenshot_compare(&page, "snapshots_test_complete", &[]).await?;
 
     let final_page_text = page.inner_text("#query-results", None).await?;
     assert!(
         !final_page_text.contains("snapshot"),
         "The inserted row with 'snapshot' should be gone after restore"
     );
-
-    BrowserHelpers::screenshot_compare(&page, "snapshots_test_complete", &[]).await?;
 
     Ok(())
 }

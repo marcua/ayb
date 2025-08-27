@@ -39,9 +39,6 @@ pub async fn test_create_and_query_database_flow(
         .click()
         .await?;
 
-    // Wait for database creation and page to fully render
-    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
-
     // Screenshot after database creation
     BrowserHelpers::screenshot_compare(&page, "database_created", &[]).await?;
 

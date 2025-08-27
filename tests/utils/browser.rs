@@ -180,6 +180,9 @@ impl BrowserHelpers {
             }
         }
 
+        // Allow interface time to respond to previous interactions
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
         // Take current screenshot
         page.screenshot_builder()
             .path(PathBuf::from(&current_path))
