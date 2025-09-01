@@ -4,16 +4,21 @@ use crate::templating::TemplateString;
 pub fn render_confirmation_template(
     web_details: &Option<WebFrontendDetails>,
     token: &str,
+    host: &str,
+    port: u16,
 ) -> String {
-    if let Some(web_details) = web_details {
+    if let Some(_web_details) = web_details {
         let both_confirm_tmpl: TemplateString = "To complete your registration, visit\n\t{url}\n\n\
                                                  Or type\n\tayb client confirm {token}"
             .to_string()
             .into();
-        return both_confirm_tmpl.execute(vec![
-            ("url", &web_details.confirmation(token)),
-            ("token", token),
-        ]);
+        let confirmation_url = format!(
+            "http://{}:{}/confirm/{}",
+            host,
+            port,
+            urlencoding::encode(token)
+        );
+        return both_confirm_tmpl.execute(vec![("url", &confirmation_url), ("token", token)]);
     }
 
     let cli_confirm_tmpl: TemplateString =
@@ -35,7 +40,7 @@ mod tests {
     #[tokio::test]
     async fn test_render_confirmation_without_web() {
         let token = "test_token_123";
-        let result = render_confirmation_template(&None, token);
+        let result = render_confirmation_template(&None, token, "localhost", 5433);
 
         assert_eq!(
             result,
@@ -74,11 +79,11 @@ mod tests {
 
         let web_details = WebFrontendDetails::load(config).await.unwrap();
         let token = "test_token_456";
-        let result = render_confirmation_template(&web_details, token);
+        let result = render_confirmation_template(&web_details, token, "example.com", 5433);
 
         assert_eq!(
             result,
-            "To complete your registration, visit\n\thttp://localhost:5433/confirm/test_token_456\n\n\
+            "To complete your registration, visit\n\thttp://example.com:5433/confirm/test_token_456\n\n\
              Or type\n\tayb client confirm test_token_456"
         );
     }

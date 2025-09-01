@@ -46,6 +46,8 @@ async fn log_in(
                     &method.email_address,
                     &token,
                     web_details.get_ref(),
+                    &ayb_config.host,
+                    ayb_config.port,
                 )
                 .await?;
                 return Ok(HttpResponse::Ok().json(EmptyResponse {}));

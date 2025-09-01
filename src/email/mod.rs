@@ -13,11 +13,13 @@ pub async fn send_registration_email(
     to: &str,
     token: &str,
     web_details: &Option<WebFrontendDetails>,
+    host: &str,
+    port: u16,
 ) -> Result<(), AybError> {
     // Get from/reply_to from SMTP config if available, or use defaults
     let (from, reply_to) = get_email_addresses(email_config);
 
-    let body = render_confirmation_template(web_details, token);
+    let body = render_confirmation_template(web_details, token, host, port);
 
     email_backends
         .send_email(to, "Your login credentials", &body, &from, &reply_to)
