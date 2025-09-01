@@ -129,7 +129,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User A navigates to database and clicks sharing tab
     user_a
         .page
-        .goto_builder(&format!("{}/{}/shared_test.sqlite", base_url, user_a.username))
+        .goto_builder(&format!(
+            "{}/{}/shared_test.sqlite",
+            base_url, user_a.username
+        ))
         .timeout(5000.0)
         .goto()
         .await?;
@@ -163,7 +166,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // Users B and C should now be able to access the database
     user_b
         .page
-        .goto_builder(&format!("{}/{}/shared_test.sqlite", base_url, user_a.username))
+        .goto_builder(&format!(
+            "{}/{}/shared_test.sqlite",
+            base_url, user_a.username
+        ))
         .timeout(5000.0)
         .goto()
         .await?;
@@ -197,7 +203,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User B cannot run insert query (should fail)
     user_b
         .page
-        .fill_builder("textarea[name='query']", "INSERT INTO test_table (fname, lname) VALUES ('unauthorized', 'insert');")
+        .fill_builder(
+            "textarea[name='query']",
+            "INSERT INTO test_table (fname, lname) VALUES ('unauthorized', 'insert');",
+        )
         .timeout(1000.0)
         .fill()
         .await?;
@@ -221,7 +230,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User C should also be able to access the database now
     user_c
         .page
-        .goto_builder(&format!("{}/{}/shared_test.sqlite", base_url, user_a.username))
+        .goto_builder(&format!(
+            "{}/{}/shared_test.sqlite",
+            base_url, user_a.username
+        ))
         .timeout(5000.0)
         .goto()
         .await?;
@@ -234,7 +246,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User A sets database back to private
     user_a
         .page
-        .goto_builder(&format!("{}/{}/shared_test.sqlite", base_url, user_a.username))
+        .goto_builder(&format!(
+            "{}/{}/shared_test.sqlite",
+            base_url, user_a.username
+        ))
         .timeout(5000.0)
         .goto()
         .await?;
@@ -289,7 +304,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User B should now be able to access the database
     user_b
         .page
-        .goto_builder(&format!("{}/{}/shared_test.sqlite", base_url, user_a.username))
+        .goto_builder(&format!(
+            "{}/{}/shared_test.sqlite",
+            base_url, user_a.username
+        ))
         .timeout(5000.0)
         .goto()
         .await?;
@@ -323,13 +341,17 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User C should still not be able to access the database
     user_c
         .page
-        .goto_builder(&format!("{}/{}/shared_test.sqlite", base_url, user_a.username))
+        .goto_builder(&format!(
+            "{}/{}/shared_test.sqlite",
+            base_url, user_a.username
+        ))
         .timeout(5000.0)
         .goto()
         .await?;
 
     let page_content_c_final = user_c.page.inner_text("body", None).await?;
-    let can_see_db_c_final = page_content_c_final.contains("shared_test.sqlite") || page_content_c_final.contains("Query");
+    let can_see_db_c_final = page_content_c_final.contains("shared_test.sqlite")
+        || page_content_c_final.contains("Query");
     assert!(
         !can_see_db_c_final,
         "User C should still not be able to see User A's database after specific sharing with User B"
