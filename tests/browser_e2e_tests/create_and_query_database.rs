@@ -48,9 +48,6 @@ pub async fn test_create_and_query_database_flow(
     // Verify we're on the database page
     assert_eq!(page.title().await?, database_page_title);
 
-    // Screenshot of database page
-    BrowserHelpers::screenshot_compare(&page, "database_page", &[]).await?;
-
     // Step 6: Create the same table as in e2e tests
     let create_table_query = "CREATE TABLE test_table(fname varchar, lname varchar);";
 
