@@ -11,34 +11,8 @@ static SCREENSHOT_COUNTER: AtomicU32 = AtomicU32::new(0);
 pub struct BrowserHelpers;
 
 impl BrowserHelpers {
-    /// Initialize playwright and return browser page
-    pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
-        let playwright = Playwright::initialize().await?;
-
-        // Check for BROWSER_VISIBLE environment variable to run in non-headless mode
-        let headless = std::env::var("BROWSER_VISIBLE").is_err();
-
-        if !headless {
-            println!("🌐 Running browser in VISIBLE mode for debugging");
-        }
-
-        let chromium = playwright.chromium();
-
-        // Try different browser launch strategies in order of preference
-        let browser = Self::try_launch_browser(&chromium, headless).await?;
-
-        let context = browser
-            .context_builder()
-            .accept_downloads(true)
-            .build()
-            .await?;
-        let page = context.new_page().await?;
-
-        Ok((playwright, page))
-    }
-
     /// Initialize playwright and return multiple browser contexts for multi-user testing
-    pub async fn set_up_multi_user_browsers(
+    pub async fn set_up_browser(
         user_count: usize,
     ) -> Result<(Playwright, Vec<(BrowserContext, Page)>), Box<dyn std::error::Error>> {
         let playwright = Playwright::initialize().await?;

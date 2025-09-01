@@ -118,7 +118,8 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
     // Initialize browser using helper method
-    let (_playwright, page) = BrowserHelpers::setup_browser().await?;
+    let (_playwright, contexts_and_pages) = BrowserHelpers::set_up_browser(1).await?;
+    let (_context, page) = &contexts_and_pages[0];
 
     // Construct base URL using the port from test configuration
     let port = get_test_port("browser_sqlite")?;

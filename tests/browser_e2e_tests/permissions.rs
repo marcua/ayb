@@ -29,7 +29,7 @@ pub async fn register_multiple_users(
 
 pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<(), Box<dyn Error>> {
     // Step 1: Set up 3 isolated browser contexts
-    let (_playwright, contexts_and_pages) = BrowserHelpers::set_up_multi_user_browsers(3).await?;
+    let (_playwright, contexts_and_pages) = BrowserHelpers::set_up_browser(3).await?;
 
     // Step 2: Register 3 users in separate contexts
     let mut users = register_multiple_users(contexts_and_pages, base_url, test_type).await?;
