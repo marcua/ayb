@@ -7,7 +7,7 @@ pub async fn test_registration_flow(
     page: &Page,
     base_url: &str,
     test_type: &str,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<String, Box<dyn Error>> {
     // Step 1: Navigate to registration page
     page.goto_builder(&format!("{}/register", base_url))
         .timeout(5000.0)
@@ -46,14 +46,11 @@ pub async fn test_registration_flow(
         .click()
         .await?;
 
-    // Wait a moment for the page to change
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    // Screenshot comparison of check email page
+    BrowserHelpers::screenshot_compare(&page, "check_email_page", &[]).await?;
 
     // Step 4: Verify we're on the check email page
     assert_eq!(page.title().await?, "Check email - ayb");
-
-    // Screenshot comparison of check email page
-    BrowserHelpers::screenshot_compare(&page, "check_email_page", &[]).await?;
 
     // Step 5: Extract confirmation token from email file
     let user_emails = get_emails_for_recipient(test_type, &email)?;
@@ -69,15 +66,12 @@ pub async fn test_registration_flow(
         .goto()
         .await?;
 
-    // Wait for page to stabilize after navigation
-    tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
+    // Screenshot comparison of user dashboard
+    BrowserHelpers::screenshot_compare(&page, "user_dashboard", &[]).await?;
 
     // Step 7: Verify we're now on the authenticated user dashboard
     let expected_title = format!("{} - ayb", username);
     assert_eq!(page.title().await?, expected_title);
 
-    // Screenshot comparison of user dashboard
-    BrowserHelpers::screenshot_compare(&page, "user_dashboard", &[]).await?;
-
-    Ok(())
+    Ok(username)
 }

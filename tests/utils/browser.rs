@@ -1,30 +1,53 @@
 use image::GenericImageView;
-use playwright::{api::Page, Playwright};
+use playwright::{
+    api::{BrowserContext, Page},
+    Playwright,
+};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static SCREENSHOT_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 pub struct BrowserHelpers;
 
 impl BrowserHelpers {
-    /// Initialize playwright and return browser page
-    pub async fn setup_browser() -> Result<(Playwright, Page), Box<dyn std::error::Error>> {
+    /// Initialize playwright and return multiple browser contexts for multi-user testing
+    pub async fn set_up_browser(
+        user_count: usize,
+    ) -> Result<(Playwright, Vec<(BrowserContext, Page)>), Box<dyn std::error::Error>> {
         let playwright = Playwright::initialize().await?;
 
         // Check for BROWSER_VISIBLE environment variable to run in non-headless mode
         let headless = std::env::var("BROWSER_VISIBLE").is_err();
 
         if !headless {
-            println!("🌐 Running browser in VISIBLE mode for debugging");
+            println!(
+                "🌐 Running browser in VISIBLE mode for debugging with {} users",
+                user_count
+            );
         }
 
         let chromium = playwright.chromium();
-
-        // Try different browser launch strategies in order of preference
         let browser = Self::try_launch_browser(&chromium, headless).await?;
 
-        let context = browser.context_builder().build().await?;
-        let page = context.new_page().await?;
+        let mut contexts_and_pages = Vec::new();
 
-        Ok((playwright, page))
+        for i in 0..user_count {
+            let context = browser
+                .context_builder()
+                .accept_downloads(true)
+                .build()
+                .await?;
+            let page = context.new_page().await?;
+
+            if !headless {
+                println!("📱 Created browser context for User {}", i + 1);
+            }
+
+            contexts_and_pages.push((context, page));
+        }
+
+        Ok((playwright, contexts_and_pages))
     }
 
     async fn try_launch_browser(
@@ -101,12 +124,15 @@ impl BrowserHelpers {
         test_name: &str,
         selectors_to_grey: &[&str],
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let counter = SCREENSHOT_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+        let prefixed_name = format!("{:03}_{}", counter, test_name);
+
         let screenshots_dir = "tests/screenshots";
         std::fs::create_dir_all(screenshots_dir)?;
 
-        let reference_path = format!("{}/{}_reference.png", screenshots_dir, test_name);
-        let current_path = format!("{}/{}_current.png", screenshots_dir, test_name);
-        let diff_path = format!("{}/{}_diff.png", screenshots_dir, test_name);
+        let reference_path = format!("{}/{}_reference.png", screenshots_dir, prefixed_name);
+        let current_path = format!("{}/{}_current.png", screenshots_dir, prefixed_name);
+        let diff_path = format!("{}/{}_diff.png", screenshots_dir, prefixed_name);
 
         // Grey out specified elements before taking screenshot
         for selector in selectors_to_grey {
@@ -128,6 +154,9 @@ impl BrowserHelpers {
             }
         }
 
+        // Allow interface time to respond to previous interactions
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
         // Take current screenshot
         page.screenshot_builder()
             .path(PathBuf::from(&current_path))
@@ -138,7 +167,7 @@ impl BrowserHelpers {
         // If no reference exists, save current as reference
         if !Path::new(&reference_path).exists() {
             std::fs::copy(&current_path, &reference_path)?;
-            println!("📸 Created reference screenshot for '{}'", test_name);
+            println!("📸 Created reference screenshot for '{}'", prefixed_name);
             return Ok(());
         }
 
@@ -149,7 +178,7 @@ impl BrowserHelpers {
         if current_img.dimensions() != reference_img.dimensions() {
             let error_msg = format!(
                 "Screenshot '{}' dimensions differ: current {:?} vs reference {:?}",
-                test_name,
+                prefixed_name,
                 current_img.dimensions(),
                 reference_img.dimensions()
             );
@@ -202,14 +231,14 @@ impl BrowserHelpers {
             diff_buffer.save(&diff_path)?;
             let error_msg = format!(
                 "Screenshot '{}' differs from reference by {:.2}% - diff saved to {}",
-                test_name, diff_percentage, diff_path
+                prefixed_name, diff_percentage, diff_path
             );
             println!("⚠ {}", error_msg);
             Err(error_msg.into())
         } else {
             println!(
                 "✓ Screenshot '{}' matches reference (difference: {:.2}%)",
-                test_name, diff_percentage
+                prefixed_name, diff_percentage
             );
             // Clean up current screenshot if it matches
             let _ = std::fs::remove_file(&current_path);
