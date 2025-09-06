@@ -62,7 +62,7 @@ impl WebFrontendDetails {
     pub fn profile(&self, entity: &str) -> String {
         let relative = self.endpoints.profile.execute(vec![("entity", entity)]);
         let absolute = self
-            .base_url
+            .public_base_url
             .join(&relative)
             .expect("invalid profile template string provided by the web frontend");
         absolute.to_string()
