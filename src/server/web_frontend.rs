@@ -17,12 +17,17 @@ pub struct WebFrontendEndpoints {
     confirmation: TemplateString,
 }
 
+#[derive(Deserialize)]
+struct RemoteWebDetails {
+    base_url: Url,
+    endpoints: WebFrontendEndpoints,
+}
+
 pub fn local_base_url(config: &AybConfig) -> String {
     format!("http://localhost:{}", config.port)
 }
 
 pub fn public_base_url(config: &AybConfig) -> String {
-    // Use public_url if configured, otherwise fall back to localhost
     if let Some(ref public_url) = config.public_url {
         public_url.clone()
     } else {
@@ -32,11 +37,6 @@ pub fn public_base_url(config: &AybConfig) -> String {
 
 impl WebFrontendDetails {
     async fn from_url(url: &Url) -> Result<Self, AybError> {
-        #[derive(Deserialize)]
-        struct RemoteWebDetails {
-            base_url: Url,
-            endpoints: WebFrontendEndpoints,
-        }
         let remote: RemoteWebDetails = reqwest::get(url.to_string()).await?.json().await?;
         Ok(WebFrontendDetails {
             base_url: remote.base_url.clone(),

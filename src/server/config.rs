@@ -101,8 +101,6 @@ pub struct AybConfigSnapshots {
 pub struct AybConfig {
     pub host: String,
     pub port: u16,
-    /// Optional public URL for the server (e.g., "https://ayb.example.com")
-    /// Used for generating links in emails when server is behind a proxy/CDN
     pub public_url: Option<String>,
     pub database_url: String,
     pub data_path: String,
