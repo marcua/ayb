@@ -65,8 +65,6 @@ async fn register(
         &email_address,
         &token,
         web_info.get_ref(),
-        &ayb_config.host,
-        ayb_config.port,
     )
     .await?;
     Ok(HttpResponse::Ok().json(EmptyResponse {}))

@@ -35,6 +35,7 @@ $ cat ayb.toml
 
 host = "0.0.0.0"
 port = 5433
+# public_url = "https://ayb.example.com"  # Optional: Set this if server is behind a proxy/CDN
 database_url = "sqlite://ayb_data/ayb.sqlite"
 # Or, for Postgres:
 # database_url = "postgresql://postgres_user:test@localhost:5432/test_db"
