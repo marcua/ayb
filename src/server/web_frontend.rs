@@ -4,9 +4,10 @@ use crate::templating::TemplateString;
 use serde::Deserialize;
 use url::Url;
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone)]
 pub struct WebFrontendDetails {
     base_url: Url,
+    public_base_url: Url,
     endpoints: WebFrontendEndpoints,
 }
 
@@ -17,22 +18,37 @@ pub struct WebFrontendEndpoints {
 }
 
 pub fn local_base_url(config: &AybConfig) -> String {
+    format!("http://localhost:{}", config.port)
+}
+
+pub fn public_base_url(config: &AybConfig) -> String {
     // Use public_url if configured, otherwise fall back to localhost
     if let Some(ref public_url) = config.public_url {
         public_url.clone()
     } else {
-        format!("http://localhost:{}", config.port)
+        local_base_url(config)
     }
 }
 
 impl WebFrontendDetails {
     async fn from_url(url: &Url) -> Result<Self, AybError> {
-        Ok(reqwest::get(url.to_string()).await?.json().await?)
+        #[derive(Deserialize)]
+        struct RemoteWebDetails {
+            base_url: Url,
+            endpoints: WebFrontendEndpoints,
+        }
+        let remote: RemoteWebDetails = reqwest::get(url.to_string()).await?.json().await?;
+        Ok(WebFrontendDetails {
+            base_url: remote.base_url.clone(),
+            public_base_url: remote.base_url,
+            endpoints: remote.endpoints,
+        })
     }
 
     fn from_local(config: &AybConfig) -> Self {
         WebFrontendDetails {
             base_url: Url::parse(&local_base_url(config)).unwrap(),
+            public_base_url: Url::parse(&public_base_url(config)).unwrap(),
             endpoints: WebFrontendEndpoints {
                 profile: TemplateString {
                     string: "{entity}".into(),
@@ -58,7 +74,7 @@ impl WebFrontendDetails {
             .confirmation
             .execute(vec![("token", &urlencoding::encode(token))]);
         let absolute = self
-            .base_url
+            .public_base_url
             .join(&relative)
             .expect("invalid confirmation template string provided by the web frontend");
         absolute.to_string()
