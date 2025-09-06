@@ -299,6 +299,9 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         .click()
         .await?;
 
+    // Sleep a little bit so new sharing table can be retrieved/rendered.
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_shared_with_userB", &[]).await?;
 
     // User B should now be able to access the database
