@@ -17,7 +17,12 @@ pub struct WebFrontendEndpoints {
 }
 
 pub fn local_base_url(config: &AybConfig) -> String {
-    format!("http://localhost:{}", config.port)
+    // Use public_url if configured, otherwise fall back to localhost
+    if let Some(ref public_url) = config.public_url {
+        public_url.clone()
+    } else {
+        format!("http://localhost:{}", config.port)
+    }
 }
 
 impl WebFrontendDetails {
