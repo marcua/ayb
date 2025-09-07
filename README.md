@@ -465,7 +465,7 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [ ] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command. This effort is dependent on the DuckDB project. First, the DuckDB file format is rapidly changing ahead of the project's 1.0 release. Additionally, I don't know of an equivalent streaming replication project to LiteFS for DuckDB that handles *persistence beyond the node*.
   * [ ] PostgreSQL wire protocol. While an HTTP API makes it easy to build new web apps, exposing `ayb` over the PostgreSQL wire protocol will allow existing tools and libraries to connect to and query an `ayb` database.
 * Increase discoverability with a web frontend
-  * [ ] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
+  * [x] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
   * [ ] Explore people's public datasets. Beyond simplifying the command line, platforms like GitHub also make it easier to find a user's publicly shared repositories, follow along in their work, and fork a copy for your own exploration. That same experience should be possible for `ayb`-hosted databases.
 
 ## Contributing
