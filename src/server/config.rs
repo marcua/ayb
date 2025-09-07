@@ -101,6 +101,7 @@ pub struct AybConfigSnapshots {
 pub struct AybConfig {
     pub host: String,
     pub port: u16,
+    pub public_url: Option<String>,
     pub database_url: String,
     pub data_path: String,
     pub authentication: AybConfigAuthentication,
@@ -119,6 +120,7 @@ pub fn default_server_config() -> AybConfig {
     AybConfig {
         host: "0.0.0.0".to_string(),
         port: 5433,
+        public_url: None,
         database_url: "sqlite://ayb_data/ayb.sqlite".to_string(),
         data_path: "./ayb_data".to_string(),
         authentication: AybConfigAuthentication {

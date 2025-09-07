@@ -35,6 +35,8 @@ $ cat ayb.toml
 
 host = "0.0.0.0"
 port = 5433
+# If hosting publicly, this URL prefix will be used to create public URLs for your instance:
+# public_url = "https://ayb.example.com"
 database_url = "sqlite://ayb_data/ayb.sqlite"
 # Or, for Postgres:
 # database_url = "postgresql://postgres_user:test@localhost:5432/test_db"

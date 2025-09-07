@@ -20,6 +20,14 @@ pub fn local_base_url(config: &AybConfig) -> String {
     format!("http://localhost:{}", config.port)
 }
 
+pub fn public_base_url(config: &AybConfig) -> String {
+    if let Some(ref public_url) = config.public_url {
+        public_url.clone()
+    } else {
+        local_base_url(config)
+    }
+}
+
 impl WebFrontendDetails {
     async fn from_url(url: &Url) -> Result<Self, AybError> {
         Ok(reqwest::get(url.to_string()).await?.json().await?)
@@ -27,7 +35,7 @@ impl WebFrontendDetails {
 
     fn from_local(config: &AybConfig) -> Self {
         WebFrontendDetails {
-            base_url: Url::parse(&local_base_url(config)).unwrap(),
+            base_url: Url::parse(&public_base_url(config)).unwrap(),
             endpoints: WebFrontendEndpoints {
                 profile: TemplateString {
                     string: "{entity}".into(),
