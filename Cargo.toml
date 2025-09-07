@@ -35,7 +35,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.143", features = ["raw_value"] }
 serde_repr = { version = "0.1.20" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
-time = { version = "0.3.42" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
+time = { version = "0.3.43" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
 tera = { version = "1.20.0" }
 toml = { version = "0.9.5" }
 tokio = { version = "1.47.1", features = ["macros", "process", "rt"] }
