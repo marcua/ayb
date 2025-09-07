@@ -4,10 +4,9 @@ use crate::templating::TemplateString;
 use serde::Deserialize;
 use url::Url;
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize)]
 pub struct WebFrontendDetails {
     base_url: Url,
-    public_base_url: Url,
     endpoints: WebFrontendEndpoints,
 }
 
@@ -15,12 +14,6 @@ pub struct WebFrontendDetails {
 pub struct WebFrontendEndpoints {
     profile: TemplateString,
     confirmation: TemplateString,
-}
-
-#[derive(Deserialize)]
-struct RemoteWebDetails {
-    base_url: Url,
-    endpoints: WebFrontendEndpoints,
 }
 
 pub fn local_base_url(config: &AybConfig) -> String {
@@ -37,18 +30,12 @@ pub fn public_base_url(config: &AybConfig) -> String {
 
 impl WebFrontendDetails {
     async fn from_url(url: &Url) -> Result<Self, AybError> {
-        let remote: RemoteWebDetails = reqwest::get(url.to_string()).await?.json().await?;
-        Ok(WebFrontendDetails {
-            base_url: remote.base_url.clone(),
-            public_base_url: remote.base_url,
-            endpoints: remote.endpoints,
-        })
+        Ok(reqwest::get(url.to_string()).await?.json().await?)
     }
 
     fn from_local(config: &AybConfig) -> Self {
         WebFrontendDetails {
-            base_url: Url::parse(&local_base_url(config)).unwrap(),
-            public_base_url: Url::parse(&public_base_url(config)).unwrap(),
+            base_url: Url::parse(&public_base_url(config)).unwrap(),
             endpoints: WebFrontendEndpoints {
                 profile: TemplateString {
                     string: "{entity}".into(),
@@ -62,7 +49,7 @@ impl WebFrontendDetails {
     pub fn profile(&self, entity: &str) -> String {
         let relative = self.endpoints.profile.execute(vec![("entity", entity)]);
         let absolute = self
-            .public_base_url
+            .base_url
             .join(&relative)
             .expect("invalid profile template string provided by the web frontend");
         absolute.to_string()
@@ -74,7 +61,7 @@ impl WebFrontendDetails {
             .confirmation
             .execute(vec![("token", &urlencoding::encode(token))]);
         let absolute = self
-            .public_base_url
+            .base_url
             .join(&relative)
             .expect("invalid confirmation template string provided by the web frontend");
         absolute.to_string()
