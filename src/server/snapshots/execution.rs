@@ -10,6 +10,7 @@ use crate::server::config::{AybConfig, SqliteSnapshotMethod};
 use crate::server::snapshots::hashes::hash_db_directory;
 use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
+use crate::server::utils::{extract_sqlite_file_path, is_sqlite_database_url};
 use go_parse_duration::parse_duration;
 use std::fs;
 use std::sync::Arc;
@@ -113,6 +114,13 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
                     ),
                 });
             }
+        }
+    }
+
+    // Snapshot the system database if it's SQLite
+    if is_sqlite_database_url(&config.database_url) {
+        if let Some(err) = snapshot_system_database(config).await.err() {
+            eprintln!("Unable to snapshot system database: {err}");
         }
     }
 
@@ -251,5 +259,148 @@ pub async fn snapshot_database(
             }
         },
     }
+    Ok(())
+}
+
+/// Snapshot the ayb system database if it's SQLite
+async fn snapshot_system_database(config: &AybConfig) -> Result<(), AybError> {
+    println!("Trying to back up system database");
+    if config.snapshots.is_none() {
+        return Err(AybError::SnapshotError {
+            message: "No snapshot config found".to_string(),
+        });
+    }
+    let snapshot_config = config.snapshots.as_ref().unwrap();
+
+    // Extract the SQLite file path from the database URL
+    let system_db_path = extract_sqlite_file_path(&config.database_url)?;
+
+    // Verify the system database file exists
+    if !system_db_path.exists() {
+        return Err(AybError::SnapshotError {
+            message: format!(
+                "System database file does not exist: {}",
+                system_db_path.display()
+            ),
+        });
+    }
+
+    // Use reserved entity/database identifiers for system snapshots
+    let entity_slug = "__system__";
+    let database_slug = "ayb.sqlite";
+
+    // Create a temporary snapshot directory
+    let mut snapshot_path = database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
+    let snapshot_directory = snapshot_path.clone();
+    snapshot_path.push(database_slug);
+
+    // Try to remove the file if it already exists, but don't fail if it doesn't
+    fs::remove_file(&snapshot_path).ok();
+
+    // Create snapshot using VACUUM INTO
+    let backup_query = match snapshot_config.sqlite_method {
+        SqliteSnapshotMethod::Backup => {
+            return Err(AybError::SnapshotError {
+                message: "Backup requires dot commands, which are not yet supported".to_string(),
+            })
+        }
+        SqliteSnapshotMethod::Vacuum => {
+            format!("VACUUM INTO \"{}\"", snapshot_path.display())
+        }
+    };
+
+    let result = query_sqlite(
+        &system_db_path,
+        &backup_query,
+        // Run in unsafe mode to allow backup process to attach to destination database
+        true,
+        QueryMode::ReadOnly,
+    )?;
+
+    if !result.rows.is_empty() {
+        return Err(AybError::SnapshotError {
+            message: format!("Unexpected system snapshot result: {result:?}"),
+        });
+    }
+
+    // Verify snapshot integrity
+    let result = query_sqlite(
+        &snapshot_path,
+        "PRAGMA integrity_check;",
+        false,
+        QueryMode::ReadOnly,
+    )?;
+
+    if result.fields.len() != 1
+        || result.rows.len() != 1
+        || result.rows[0][0] != Some("ok".to_string())
+    {
+        return Err(AybError::SnapshotError {
+            message: format!("System snapshot failed integrity check: {result:?}"),
+        });
+    }
+
+    // Upload to S3 storage
+    let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
+    let existing_snapshots = snapshot_storage
+        .list_snapshots(entity_slug, database_slug)
+        .await?;
+    let num_existing_snapshots = existing_snapshots.len();
+    let snapshot_hash = hash_db_directory(&snapshot_directory)?;
+    let mut should_upload_snapshot = true;
+
+    // Check for duplicates
+    for snapshot in &existing_snapshots {
+        if snapshot.snapshot_id == snapshot_hash {
+            println!(
+                "System snapshot with hash {snapshot_hash} already exists, not uploading again."
+            );
+            should_upload_snapshot = false;
+            break;
+        }
+    }
+
+    if should_upload_snapshot {
+        println!("Uploading new system snapshot with hash {snapshot_hash}.");
+        snapshot_storage
+            .put(
+                entity_slug,
+                database_slug,
+                &Snapshot {
+                    snapshot_id: snapshot_hash,
+                    snapshot_type: SnapshotType::Automatic as i16,
+                },
+                &snapshot_path,
+            )
+            .await?;
+
+        // Prune old snapshots if over the limit
+        let max_snapshots: usize = snapshot_config
+            .automation
+            .as_ref()
+            .unwrap()
+            .max_snapshots
+            .into();
+        let prune_snapshots = (num_existing_snapshots + 1).checked_sub(max_snapshots);
+        if let Some(prune_snapshots) = prune_snapshots {
+            println!("Pruning {prune_snapshots} oldest system snapshots");
+            let mut ids_to_prune: Vec<String> = vec![];
+            for snapshot_index in 0..prune_snapshots {
+                ids_to_prune.push(
+                    existing_snapshots[existing_snapshots.len() - snapshot_index - 1]
+                        .snapshot_id
+                        .clone(),
+                )
+            }
+
+            snapshot_storage
+                .delete_snapshots(entity_slug, database_slug, &ids_to_prune)
+                .await?;
+        }
+    }
+
+    // Clean up after uploading snapshot
+    fs::remove_dir_all(pathbuf_to_parent(&snapshot_path)?)?;
+
     Ok(())
 }

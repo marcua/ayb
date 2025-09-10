@@ -1,3 +1,4 @@
+use ayb::client::admin::{admin_commands, execute_admin_command};
 use ayb::client::cli::{client_commands, execute_client_command};
 use ayb::server::config::{config_to_toml, default_server_config};
 use ayb::server::server_runner::run_server;
@@ -19,6 +20,7 @@ async fn main() -> std::io::Result<()> {
             Command::new("default_server_config")
                 .about("Print a default configuration file for a server"),
         )
+        .subcommand(admin_commands())
         .subcommand(client_commands())
         .get_matches();
 
@@ -31,6 +33,10 @@ async fn main() -> std::io::Result<()> {
             Ok(config) => println!("{config}"),
             Err(err) => println!("Error: {err}"),
         }
+    } else if let Some(matches) = matches.subcommand_matches("admin") {
+        execute_admin_command(matches)
+            .await
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
     } else if let Some(matches) = matches.subcommand_matches("client") {
         execute_client_command(matches).await?;
     }
