@@ -42,12 +42,62 @@
                                 </button>
                                 <script>
                                     // Form is submittable once a query exists.
+                                    // Track query changes to show stale overlay.
+                                    let lastExecutedQuery = '';
+
+                                    function showStaleOverlay() {
+                                        // Show overlay for both results and errors
+                                        const overlays = document.querySelectorAll('#query-results .stale-overlay');
+                                        overlays.forEach(overlay => {
+                                            overlay.style.display = 'block';
+                                        });
+                                    }
+
+                                    function hideStaleOverlay() {
+                                        // Hide overlay for both results and errors
+                                        const overlays = document.querySelectorAll('#query-results .stale-overlay');
+                                        overlays.forEach(overlay => {
+                                            overlay.style.display = 'none';
+                                        });
+                                    }
+
+                                    function hasQueryResults() {
+                                        // Check for either results or error display
+                                        const resultsContainer = document.querySelector('#query-results .query-results-wrapper');
+                                        const errorContainer = document.querySelector('#query-results .query-error-wrapper');
+                                        return resultsContainer !== null || errorContainer !== null;
+                                    }
+
                                     document.addEventListener('DOMContentLoaded', function() {
                                         const queryTextarea = document.getElementById('query');
                                         const runButton = document.getElementById('run-query-btn');
+                                        const queryForm = document.getElementById('query-form');
+
                                         runButton.disabled = queryTextarea.value.trim() === '';
+
                                         queryTextarea.addEventListener('input', function() {
-                                            runButton.disabled = this.value.trim() === '';
+                                            const currentQuery = this.value.trim();
+                                            runButton.disabled = currentQuery === '';
+
+                                            // Show stale overlay if query changed after execution
+                                            if (hasQueryResults() && currentQuery !== lastExecutedQuery && lastExecutedQuery !== '') {
+                                                showStaleOverlay();
+                                            }
+                                        });
+
+                                        // Listen for HTMX events
+                                        document.body.addEventListener('htmx:beforeRequest', function(event) {
+                                            // Hide overlay when submitting query form
+                                            if (event.target === queryForm) {
+                                                hideStaleOverlay();
+                                            }
+                                        });
+
+                                        document.body.addEventListener('htmx:afterRequest', function(event) {
+                                            // Update last executed query after successful submission
+                                            if (event.target === queryForm && event.detail.xhr.status === 200) {
+                                                lastExecutedQuery = queryTextarea.value.trim();
+                                            }
                                         });
                                     });
                                 </script>
