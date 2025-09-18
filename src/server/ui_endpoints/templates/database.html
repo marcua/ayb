@@ -94,8 +94,8 @@
                                         });
 
                                         document.body.addEventListener('htmx:afterRequest', function(event) {
-                                            // Update last executed query after successful submission
-                                            if (event.target === queryForm && event.detail.xhr.status === 200) {
+                                            // Update last executed query after any query submission (success or error)
+                                            if (event.target === queryForm && (event.detail.xhr.status === 200 || event.detail.xhr.status === 400)) {
                                                 lastExecutedQuery = queryTextarea.value.trim();
                                             }
                                         });
