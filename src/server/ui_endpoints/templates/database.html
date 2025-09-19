@@ -49,7 +49,7 @@
                                         // Show overlay for both results and errors
                                         const overlays = document.querySelectorAll('#query-results .stale-overlay');
                                         overlays.forEach(overlay => {
-                                            overlay.style.display = 'block';
+                                            overlay.classList.remove('hidden');
                                         });
                                     }
 
@@ -57,7 +57,7 @@
                                         // Hide overlay for both results and errors
                                         const overlays = document.querySelectorAll('#query-results .stale-overlay');
                                         overlays.forEach(overlay => {
-                                            overlay.style.display = 'none';
+                                            overlay.classList.add('hidden');
                                         });
                                     }
 
