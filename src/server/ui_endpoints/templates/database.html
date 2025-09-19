@@ -62,10 +62,7 @@
                                     }
 
                                     function hasQueryResults() {
-                                        // Check for either results or error display
-                                        const resultsContainer = document.querySelector('#query-results .query-results-wrapper');
-                                        const errorContainer = document.querySelector('#query-results .query-error-wrapper');
-                                        return resultsContainer !== null || errorContainer !== null;
+                                        return document.querySelector('#query-results .query-results-wrapper, #query-results .query-error-wrapper') !== null;
                                     }
 
                                     document.addEventListener('DOMContentLoaded', function() {
@@ -76,8 +73,8 @@
                                         runButton.disabled = queryTextarea.value.trim() === '';
 
                                         queryTextarea.addEventListener('input', function() {
-                                            const currentQuery = this.value.trim();
-                                            runButton.disabled = currentQuery === '';
+                                            const currentQuery = this.value;
+                                            runButton.disabled = currentQuery.trim() === '';
 
                                             // Show stale overlay if query changed after execution
                                             if (hasQueryResults() && currentQuery !== lastExecutedQuery && lastExecutedQuery !== '') {
@@ -94,9 +91,9 @@
                                         });
 
                                         document.body.addEventListener('htmx:afterRequest', function(event) {
-                                            // Update last executed query after any query submission (success or error)
-                                            if (event.target === queryForm && (event.detail.xhr.status === 200 || event.detail.xhr.status === 400)) {
-                                                lastExecutedQuery = queryTextarea.value.trim();
+                                            // Update last executed query after any query submission
+                                            if (event.target === queryForm) {
+                                                lastExecutedQuery = queryTextarea.value;
                                             }
                                         });
                                     });
