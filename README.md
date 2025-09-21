@@ -1,10 +1,13 @@
 # `ayb`
-`ayb` makes it easy to create databases, share them with collaborators, and query them from a web application or the command line.
+`ayb` makes it easy to create databases, share them with collaborators, and query them from anywhere.
 
 With `ayb`, all your (data)base can finally belong to you. Move SQL for great justice.
 
-[![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
+Here's a video of the web-based user interface that comes packaged with `ayb`
 
+https://github.com/user-attachments/assets/2147dde7-21c5-4aa1-8733-a0f8d3ba0642
+
+[![Build status](https://github.com/marcua/ayb/actions/workflows/tests.yml/badge.svg)](https://github.com/marcua/ayb/actions/workflows/tests.yml)
 
 ## Introduction
 
