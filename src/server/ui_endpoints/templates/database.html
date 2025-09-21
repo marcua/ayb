@@ -46,7 +46,6 @@
                                     let lastExecutedQuery = '';
 
                                     function showStaleOverlay() {
-                                        // Show overlay for both results and errors
                                         const overlays = document.querySelectorAll('#query-results .stale-overlay');
                                         overlays.forEach(overlay => {
                                             overlay.classList.remove('hidden');
@@ -54,7 +53,6 @@
                                     }
 
                                     function hideStaleOverlay() {
-                                        // Hide overlay for both results and errors
                                         const overlays = document.querySelectorAll('#query-results .stale-overlay');
                                         overlays.forEach(overlay => {
                                             overlay.classList.add('hidden');
@@ -82,7 +80,6 @@
                                             }
                                         });
 
-                                        // Listen for HTMX events
                                         document.body.addEventListener('htmx:beforeRequest', function(event) {
                                             // Hide overlay when submitting query form
                                             if (event.target === queryForm) {
