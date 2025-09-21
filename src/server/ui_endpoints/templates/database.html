@@ -42,12 +42,56 @@
                                 </button>
                                 <script>
                                     // Form is submittable once a query exists.
+                                    // Track query changes to show stale overlay.
+                                    let lastExecutedQuery = '';
+
+                                    function showStaleOverlay() {
+                                        const overlays = document.querySelectorAll('#query-results .stale-overlay');
+                                        overlays.forEach(overlay => {
+                                            overlay.classList.remove('hidden');
+                                        });
+                                    }
+
+                                    function hideStaleOverlay() {
+                                        const overlays = document.querySelectorAll('#query-results .stale-overlay');
+                                        overlays.forEach(overlay => {
+                                            overlay.classList.add('hidden');
+                                        });
+                                    }
+
+                                    function hasQueryResults() {
+                                        return document.querySelector('#query-results .query-results-wrapper, #query-results .query-error-wrapper') !== null;
+                                    }
+
                                     document.addEventListener('DOMContentLoaded', function() {
                                         const queryTextarea = document.getElementById('query');
                                         const runButton = document.getElementById('run-query-btn');
+                                        const queryForm = document.getElementById('query-form');
+
                                         runButton.disabled = queryTextarea.value.trim() === '';
+
                                         queryTextarea.addEventListener('input', function() {
-                                            runButton.disabled = this.value.trim() === '';
+                                            const currentQuery = this.value;
+                                            runButton.disabled = currentQuery.trim() === '';
+
+                                            // Show stale overlay if query changed after execution
+                                            if (hasQueryResults() && currentQuery !== lastExecutedQuery && lastExecutedQuery !== '') {
+                                                showStaleOverlay();
+                                            }
+                                        });
+
+                                        document.body.addEventListener('htmx:beforeRequest', function(event) {
+                                            // Hide overlay when submitting query form
+                                            if (event.target === queryForm) {
+                                                hideStaleOverlay();
+                                            }
+                                        });
+
+                                        document.body.addEventListener('htmx:afterRequest', function(event) {
+                                            // Update last executed query after any query submission
+                                            if (event.target === queryForm) {
+                                                lastExecutedQuery = queryTextarea.value;
+                                            }
                                         });
                                     });
                                 </script>
