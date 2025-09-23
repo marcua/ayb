@@ -301,3 +301,63 @@ pub fn list_database_permissions(
     cmd.stdout(format!("{result}\n"));
     Ok(())
 }
+
+pub fn list_system_snapshots(
+    config: &str,
+) -> Result<Vec<ListSnapshotResult>, Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("admin", "--config", config, "list_system_snapshots"; {});
+    let output = std::str::from_utf8(&cmd.get_output().stdout)?;
+    let output_lines = output.lines().collect::<Vec<&str>>();
+
+    if output_lines.is_empty()
+        || output_lines
+            .iter()
+            .any(|line| line.contains("No system snapshots found"))
+    {
+        return Ok(vec![]);
+    }
+
+    // Find the header line
+    let header_index = output_lines
+        .iter()
+        .position(|line| line.contains("Name,Last modified"))
+        .unwrap_or_else(|| panic!("Could not find snapshot header in output: {}", output));
+
+    let re = Regex::new(r"([a-f0-9]{64}),(\d{4,5}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?\+00:00)")
+        .unwrap();
+    let mut snapshots = Vec::new();
+
+    for line in &output_lines[header_index + 1..] {
+        if let Some(capture) = re.captures(line) {
+            snapshots.push(ListSnapshotResult {
+                snapshot_id: capture
+                    .get(1)
+                    .expect("snapshot line should have a hash/id")
+                    .as_str()
+                    .to_string(),
+                last_modified_at: DateTime::parse_from_rfc3339(
+                    capture
+                        .get(2)
+                        .expect("snapshot line should have a datetime")
+                        .into(),
+                )
+                .expect("datetime should be in ISO format")
+                .into(),
+            })
+        }
+    }
+
+    Ok(snapshots)
+}
+
+pub fn restore_system_snapshot(
+    config: &str,
+    snapshot_id: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd =
+        ayb_assert_cmd!("admin", "--config", config, "restore_system_snapshot", snapshot_id; {});
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
