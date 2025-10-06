@@ -1,8 +1,7 @@
+use config::{Config, Environment, File};
 use fernet;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::PathBuf;
-use toml;
 use url::Url;
 
 use crate::error::AybError;
@@ -153,18 +152,40 @@ pub fn default_server_config() -> AybConfig {
 }
 
 pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
-    let contents = fs::read_to_string(config_path).map_err(|err| AybError::ConfigurationError {
+    // Build layered configuration:
+    // 1. Start with TOML file (optional - won't error if missing)
+    // 2. Overlay environment variables with AYB_ prefix
+    let builder = Config::builder()
+        .add_source(File::from(config_path.clone()).required(false))
+        .add_source(
+            Environment::with_prefix("AYB")
+                .separator("__")
+                .try_parsing(true),
+        );
+
+    let config = builder.build().map_err(|err| AybError::ConfigurationError {
         message: err.to_string(),
     })?;
-    let config: AybConfig =
-        toml::from_str(&contents).map_err(|err| AybError::ConfigurationError {
-            message: err.to_string(),
-        })?;
+
+    // Deserialize to AybConfig - this will fail with clear error if required fields are missing
+    let ayb_config: AybConfig = config.try_deserialize().map_err(|err| {
+        AybError::ConfigurationError {
+            message: format!(
+                "Missing or invalid configuration. Error: {}\n\
+                 Configuration can be provided via:\n\
+                 1. TOML file at: {}\n\
+                 2. Environment variables with AYB_ prefix (use __ for nested fields)\n\
+                 Examples: AYB_HOST, AYB_PORT, AYB_AUTHENTICATION__FERNET_KEY, AYB_EMAIL__SMTP__HOST",
+                err,
+                config_path.display()
+            ),
+        }
+    })?;
 
     // Validate email configuration
-    config.email.validate()?;
+    ayb_config.email.validate()?;
 
-    Ok(config)
+    Ok(ayb_config)
 }
 
 #[cfg(test)]
