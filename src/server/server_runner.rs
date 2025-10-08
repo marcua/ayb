@@ -16,7 +16,7 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
 use std::env::consts::OS;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     // Unauthenticated API endpoints
