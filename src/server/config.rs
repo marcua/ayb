@@ -1,7 +1,7 @@
 use config::{Config, Environment, File};
 use fernet;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 use url::Url;
 
 use crate::error::AybError;
@@ -151,21 +151,23 @@ pub fn default_server_config() -> AybConfig {
     }
 }
 
-pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
+pub fn read_config(config_path: &Path) -> Result<AybConfig, AybError> {
     // Build layered configuration:
     // 1. Start with TOML file (optional - won't error if missing)
-    // 2. Overlay environment variables with AYB_ prefix
+    // 2. Overlay environment variables with AYB__ prefix
     let builder = Config::builder()
-        .add_source(File::from(config_path.clone()).required(false))
+        .add_source(File::from(config_path.to_path_buf()).required(false))
         .add_source(
             Environment::with_prefix("AYB")
                 .separator("__")
                 .try_parsing(true),
         );
 
-    let config = builder.build().map_err(|err| AybError::ConfigurationError {
-        message: err.to_string(),
-    })?;
+    let config = builder
+        .build()
+        .map_err(|err| AybError::ConfigurationError {
+            message: err.to_string(),
+        })?;
 
     // Deserialize to AybConfig - this will fail with clear error if required fields are missing
     let ayb_config: AybConfig = config.try_deserialize().map_err(|err| {
@@ -174,8 +176,8 @@ pub fn read_config(config_path: &PathBuf) -> Result<AybConfig, AybError> {
                 "Missing or invalid configuration. Error: {}\n\
                  Configuration can be provided via:\n\
                  1. TOML file at: {}\n\
-                 2. Environment variables with AYB_ prefix (use __ for nested fields)\n\
-                 Examples: AYB_HOST, AYB_PORT, AYB_AUTHENTICATION__FERNET_KEY, AYB_EMAIL__SMTP__HOST",
+                 2. Environment variables with AYB__ prefix (use __ for all separators)\n\
+                 Examples: AYB__HOST, AYB__PORT, AYB__AUTHENTICATION__FERNET_KEY, AYB__EMAIL__SMTP__HOST",
                 err,
                 config_path.display()
             ),
@@ -248,5 +250,70 @@ mod tests {
         let error_message = result.unwrap_err().to_string();
         assert!(error_message.contains("At least one email backend"));
         assert!(error_message.contains("https://github.com/marcua/ayb#email-configuration"));
+    }
+
+    #[test]
+    fn test_env_var_override_public_url() {
+        use std::env;
+        use std::io::Write;
+        use tempfile::Builder;
+
+        // Create a temporary config file with .toml extension and public_url set to example.org
+        let mut temp_file = Builder::new().suffix(".toml").tempfile().unwrap();
+        let config_content = r#"host = "localhost"
+port = 5433
+public_url = "https://example.org"
+database_url = "sqlite://test.db"
+data_path = "./test_data"
+
+[authentication]
+fernet_key = "6YZ30vB7NenAVb9v1A070jKOroSYFENOUPMpDl79ul0="
+token_expiration_seconds = 3600
+
+[email.file]
+path = "./test.jsonl"
+
+[cors]
+origin = "*"
+"#;
+        write!(temp_file, "{}", config_content).unwrap();
+        temp_file.flush().unwrap();
+
+        // Read config from file
+        let config_path = temp_file.path().to_path_buf();
+
+        // First test: Read config without environment variable to verify file works
+        let config_without_env = read_config(&config_path).unwrap();
+        assert_eq!(
+            config_without_env.public_url,
+            Some("https://example.org".to_string())
+        );
+        assert_eq!(
+            config_without_env.authentication.token_expiration_seconds,
+            3600
+        );
+
+        // Set environment variables to override both a top-level field and a nested field
+        env::set_var("AYB__PUBLIC_URL", "https://example.net");
+        env::set_var("AYB__AUTHENTICATION__TOKEN_EXPIRATION_SECONDS", "7200");
+
+        // Read the config again with environment variables set
+        let config = read_config(&config_path).unwrap();
+
+        // Clean up environment variables
+        env::remove_var("AYB__PUBLIC_URL");
+        env::remove_var("AYB__AUTHENTICATION__TOKEN_EXPIRATION_SECONDS");
+
+        // Verify that the environment variables overrode the TOML values
+        assert_eq!(
+            config.public_url,
+            Some("https://example.net".to_string()),
+            "Environment variable AYB__PUBLIC_URL should override TOML file value"
+        );
+        assert_eq!(
+            config.authentication.token_expiration_seconds,
+            7200,
+            "Environment variable AYB__AUTHENTICATION__TOKEN_EXPIRATION_SECONDS should override TOML file value"
+        );
     }
 }

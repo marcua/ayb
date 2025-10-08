@@ -54,6 +54,7 @@ assert-json-diff = "2.0.2"
 predicates = "3.1.3"
 playwright = "0.0.20"
 image = "0.25"
+tempfile = "3.23"
 
 [[bin]]
 name = "ayb"

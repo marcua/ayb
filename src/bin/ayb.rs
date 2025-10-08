@@ -12,8 +12,8 @@ async fn main() -> std::io::Result<()> {
                 .about("Run an HTTP server")
                 .long_about("Run an HTTP server. Configuration can be provided via:\n\
                     1. TOML file (--config flag, optional if all config in env vars)\n\
-                    2. Environment variables with AYB_ prefix (use __ for nested fields)\n\
-                    Examples: AYB_HOST, AYB_PORT, AYB_AUTHENTICATION__FERNET_KEY")
+                    2. Environment variables with AYB__ prefix (use __ for all separators)\n\
+                    Examples: AYB__HOST, AYB__PORT, AYB__AUTHENTICATION__FERNET_KEY")
                 .arg(
                     arg!(--config <FILE> "Path to the server's configuration file (optional if using env vars)")
                         .value_parser(value_parser!(PathBuf))

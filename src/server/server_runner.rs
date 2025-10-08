@@ -106,7 +106,7 @@ fn build_cors(ayb_cors: AybConfigCors) -> Cors {
     cors
 }
 
-pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
+pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
     env_logger::init();
 
     let ayb_conf = read_config(config_path)
