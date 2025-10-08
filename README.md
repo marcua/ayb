@@ -68,7 +68,7 @@ hosting_method = "Local"
 origin = "*"
 ```
 
-Any setting in `ayb.toml` can be overridden using environment variables with the `AYB__` prefix. Use `__` (double underscore) to separate all fields (e.g., `AYB__PORT=8080`, `AYB__AUTHENTICATION__FERNET_KEY=...`, `AYB__EMAIL__SMTP__HOST=...`).
+Any setting in `ayb.toml` can be overridden (or solely defined) using environment variables with the `AYB__` prefix. Use `__` (double underscore) to separate all fields (e.g., `AYB__PORT=8080`, `AYB__AUTHENTICATION__FERNET_KEY=...`, `AYB__EMAIL__SMTP__HOST=...`).
 
 Running the server then requires one command
 ```bash
