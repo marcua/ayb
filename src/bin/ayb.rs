@@ -8,12 +8,18 @@ use std::path::PathBuf;
 async fn main() -> std::io::Result<()> {
     let matches = command!()
         .subcommand(
-            Command::new("server").about("Run an HTTP server").arg(
-                arg!(--config <FILE> "Path to the server's configuration file")
-                    .value_parser(value_parser!(PathBuf))
-                    .env("AYB_SERVER_CONFIG_FILE")
-                    .default_value("./ayb.toml"),
-            ),
+            Command::new("server")
+                .about("Run an HTTP server")
+                .long_about("Run an HTTP server. Configuration can be provided via:\n\
+                    1. TOML file (--config flag, optional if all config in env vars)\n\
+                    2. Environment variables with AYB__ prefix (use __ for all separators)\n\
+                    Examples: AYB__HOST, AYB__PORT, AYB__AUTHENTICATION__FERNET_KEY")
+                .arg(
+                    arg!(--config <FILE> "Path to the server's configuration file (optional if using env vars)")
+                        .value_parser(value_parser!(PathBuf))
+                        .env("AYB_SERVER_CONFIG_FILE")
+                        .default_value("./ayb.toml"),
+                ),
         )
         .subcommand(
             Command::new("default_server_config")

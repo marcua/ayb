@@ -16,7 +16,7 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
 use std::env::consts::OS;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     // Unauthenticated API endpoints
@@ -106,7 +106,7 @@ fn build_cors(ayb_cors: AybConfigCors) -> Cors {
     cors
 }
 
-pub async fn run_server(config_path: &PathBuf) -> std::io::Result<()> {
+pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
     env_logger::init();
 
     let ayb_conf = read_config(config_path)
