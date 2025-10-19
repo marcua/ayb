@@ -48,6 +48,32 @@ pub struct RunResult {
     pub stderr: String,
 }
 
+/// Helper function to execute a command and capture its output.
+async fn execute_command(mut cmd: tokio::process::Command) -> Result<RunResult, AybError> {
+    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+
+    let mut stdout_reader = BufReader::new(child.stdout.take().unwrap());
+    let mut stderr_reader = BufReader::new(child.stderr.take().unwrap());
+
+    let output = child.wait_with_output().await?;
+
+    // read stdout and stderr from process
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    stdout_reader.read_to_end(&mut stdout).await?;
+    stderr_reader.read_to_end(&mut stderr).await?;
+    let stdout = String::from_utf8_lossy(&stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&stderr).into_owned();
+
+    Ok(RunResult {
+        status: output.status.code().ok_or(AybError::Other {
+            message: "Process exited with signal".to_string(),
+        })?,
+        stdout,
+        stderr,
+    })
+}
+
 pub async fn run_in_sandbox(
     nsjail: &Path,
     db_path: &PathBuf,
@@ -100,26 +126,24 @@ pub async fn run_in_sandbox(
         .arg((query_mode as i16).to_string())
         .arg(query);
 
-    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+    execute_command(cmd).await
+}
 
-    let mut stdout_reader = BufReader::new(child.stdout.take().unwrap());
-    let mut stderr_reader = BufReader::new(child.stderr.take().unwrap());
+pub async fn run_without_sandbox(
+    db_path: &PathBuf,
+    query: &str,
+    query_mode: QueryMode,
+) -> Result<RunResult, AybError> {
+    // Get the path to ayb_isolated_runner binary
+    // We assume `ayb` and `ayb_isolated_runner` will always be in the same directory
+    let ayb_path = current_exe()?;
+    let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
 
-    let output = child.wait_with_output().await?;
+    let mut cmd = tokio::process::Command::new(&isolated_runner_path);
 
-    // read stdout and stderr from process
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    stdout_reader.read_to_end(&mut stdout).await?;
-    stderr_reader.read_to_end(&mut stderr).await?;
-    let stdout = String::from_utf8_lossy(&stdout).into_owned();
-    let stderr = String::from_utf8_lossy(&stderr).into_owned();
+    cmd.arg(db_path)
+        .arg((query_mode as i16).to_string())
+        .arg(query);
 
-    Ok(RunResult {
-        status: output.status.code().ok_or(AybError::Other {
-            message: "Process exited with signal".to_string(),
-        })?,
-        stdout,
-        stderr,
-    })
+    execute_command(cmd).await
 }

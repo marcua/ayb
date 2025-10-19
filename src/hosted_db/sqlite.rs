@@ -1,5 +1,8 @@
 use crate::error::AybError;
-use crate::hosted_db::{sandbox::run_in_sandbox, QueryMode, QueryResult};
+use crate::hosted_db::{
+    sandbox::{run_in_sandbox, run_without_sandbox},
+    QueryMode, QueryResult,
+};
 use crate::server::config::AybConfigIsolation;
 use rusqlite;
 use rusqlite::config::DbConfig;
@@ -78,48 +81,42 @@ pub fn query_sqlite(
     })
 }
 
-/// If isolation is configured, run `query` against the database at
-/// `path` using the `isolation` settings.
+/// Run `query` against the database at `path`, either with or without isolation.
 pub async fn potentially_isolated_sqlite_query(
     path: &PathBuf,
     query: &str,
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    if let Some(isolation) = isolation {
-        let result =
-            run_in_sandbox(Path::new(&isolation.nsjail_path), path, query, query_mode).await?;
-        if !result.stderr.is_empty() {
-            let error: Result<AybError, _> = serde_json::from_str(&result.stderr);
-            // If the error could be deserialized into an AybError,
-            // return that. Otherwise, create a more generic AybError
-            // to at least surface an issue.
-            return match error {
-                Ok(error) => Err(error),
-                Err(_error) => Err(AybError::QueryError {
-                    message: format!(
-                        "Error message from sandboxed query runner: {}",
-                        result.stderr
-                    ),
-                }),
-            };
-        } else if result.status != 0 {
-            return Err(AybError::QueryError {
-                message: format!(
-                    "Error status from sandboxed query runner: {}",
-                    result.status
-                ),
-            });
-        } else if !result.stdout.is_empty() {
-            let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
-            return Ok(query_result);
-        } else {
-            return Err(AybError::QueryError {
-                message: "No results from sandboxed query runner".to_string(),
-            });
-        }
-    }
+    // Get the result from either isolated or non-isolated subprocess
+    let result = if let Some(isolation) = isolation {
+        run_in_sandbox(Path::new(&isolation.nsjail_path), path, query, query_mode).await?
+    } else {
+        run_without_sandbox(path, query, query_mode).await?
+    };
 
-    // No isolation configuration, so run the query without a sandbox.
-    query_sqlite(path, query, false, query_mode)
+    // Parse the result (same logic for both paths)
+    if !result.stderr.is_empty() {
+        let error: Result<AybError, _> = serde_json::from_str(&result.stderr);
+        // If the error could be deserialized into an AybError,
+        // return that. Otherwise, create a more generic AybError
+        // to at least surface an issue.
+        match error {
+            Ok(error) => Err(error),
+            Err(_error) => Err(AybError::QueryError {
+                message: format!("Error message from query runner: {}", result.stderr),
+            }),
+        }
+    } else if result.status != 0 {
+        Err(AybError::QueryError {
+            message: format!("Error status from query runner: {}", result.status),
+        })
+    } else if !result.stdout.is_empty() {
+        let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
+        Ok(query_result)
+    } else {
+        Err(AybError::QueryError {
+            message: "No results from query runner".to_string(),
+        })
+    }
 }
