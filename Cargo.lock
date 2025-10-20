@@ -183,7 +183,7 @@ dependencies = [
  "serde_urlencoded",
  "smallvec",
  "socket2 0.5.10",
- "time 0.3.43",
+ "time 0.3.44",
  "tracing",
  "url",
 ]
@@ -507,7 +507,7 @@ dependencies = [
  "rust-ini",
  "serde",
  "thiserror 2.0.12",
- "time 0.3.43",
+ "time 0.3.44",
  "url",
 ]
 
@@ -560,7 +560,7 @@ dependencies = [
  "sqlx",
  "tempfile",
  "tera",
- "time 0.3.43",
+ "time 0.3.44",
  "tokio",
  "tokio-cron-scheduler",
  "toml 0.9.7",
@@ -986,7 +986,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e859cd57d0710d9e06c381b550c06e76992472a8c6d527aecd2fc673dcc231fb"
 dependencies = [
  "percent-encoding",
- "time 0.3.43",
+ "time 0.3.44",
  "version_check",
 ]
 
@@ -3916,7 +3916,7 @@ dependencies = [
  "sha2",
  "sysinfo",
  "thiserror 2.0.12",
- "time 0.3.43",
+ "time 0.3.44",
  "tokio",
  "tokio-stream",
  "url",
@@ -4799,11 +4799,12 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.43"
+version = "0.3.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83bde6f1ec10e72d583d91623c939f623002284ef622b87de38cfd546cbf2031"
+checksum = "91e7d9e3bb61134e77bde20dd4825b97c010155709965fedf0f49bb138e52a9d"
 dependencies = [
  "deranged",
+ "itoa",
  "num-conv",
  "powerfmt",
  "serde",
