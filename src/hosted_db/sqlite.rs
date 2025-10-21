@@ -1,6 +1,7 @@
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::{
-    sandbox::{run_in_sandbox, run_without_sandbox},
+    sandbox::{run_daemon_query_in_sandbox, run_daemon_query_without_sandbox},
     QueryMode, QueryResult,
 };
 use crate::server::config::AybConfigIsolation;
@@ -82,41 +83,25 @@ pub fn query_sqlite(
 }
 
 /// Run `query` against the database at `path`, either with or without isolation.
+/// Uses persistent daemon processes for query execution.
 pub async fn potentially_isolated_sqlite_query(
+    daemon_registry: &DaemonRegistry,
     path: &PathBuf,
     query: &str,
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    // Get the result from either isolated or non-isolated subprocess
-    let result = if let Some(isolation) = isolation {
-        run_in_sandbox(Path::new(&isolation.nsjail_path), path, query, query_mode).await?
+    // Execute via daemon (either isolated or non-isolated)
+    if let Some(isolation) = isolation {
+        run_daemon_query_in_sandbox(
+            daemon_registry,
+            Path::new(&isolation.nsjail_path),
+            path,
+            query,
+            query_mode,
+        )
+        .await
     } else {
-        run_without_sandbox(path, query, query_mode).await?
-    };
-
-    // Parse the result (same logic for both paths)
-    if !result.stderr.is_empty() {
-        let error: Result<AybError, _> = serde_json::from_str(&result.stderr);
-        // If the error could be deserialized into an AybError,
-        // return that. Otherwise, create a more generic AybError
-        // to at least surface an issue.
-        match error {
-            Ok(error) => Err(error),
-            Err(_error) => Err(AybError::QueryError {
-                message: format!("Error message from query runner: {}", result.stderr),
-            }),
-        }
-    } else if result.status != 0 {
-        Err(AybError::QueryError {
-            message: format!("Error status from query runner: {}", result.status),
-        })
-    } else if !result.stdout.is_empty() {
-        let query_result: QueryResult = serde_json::from_str(&result.stdout)?;
-        Ok(query_result)
-    } else {
-        Err(AybError::QueryError {
-            message: "No results from query runner".to_string(),
-        })
+        run_daemon_query_without_sandbox(daemon_registry, path, query, query_mode).await
     }
 }

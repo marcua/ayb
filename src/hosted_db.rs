@@ -1,3 +1,4 @@
+pub mod daemon_registry;
 pub mod paths;
 mod sandbox;
 pub mod sqlite;
@@ -57,6 +58,7 @@ impl TabularFormatter for QueryResult {
 }
 
 pub async fn run_query(
+    daemon_registry: &daemon_registry::DaemonRegistry,
     path: &PathBuf,
     query: &str,
     db_type: &DBType,
@@ -64,9 +66,14 @@ pub async fn run_query(
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     match db_type {
-        DBType::Sqlite => {
-            Ok(potentially_isolated_sqlite_query(path, query, isolation, query_mode).await?)
-        }
+        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(
+            daemon_registry,
+            path,
+            query,
+            isolation,
+            query_mode,
+        )
+        .await?),
         _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),

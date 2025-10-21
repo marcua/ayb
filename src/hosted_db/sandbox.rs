@@ -27,8 +27,9 @@ SOFTWARE.
 */
 
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
-use crate::hosted_db::QueryMode;
+use crate::hosted_db::{QueryMode, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::env::current_exe;
 use std::fs::canonicalize;
@@ -146,4 +147,61 @@ pub async fn run_without_sandbox(
         .arg(query);
 
     execute_command(cmd).await
+}
+
+/// Execute a query using a persistent daemon process with nsjail isolation
+pub async fn run_daemon_query_in_sandbox(
+    daemon_registry: &DaemonRegistry,
+    nsjail: &Path,
+    db_path: &PathBuf,
+    query: &str,
+    query_mode: QueryMode,
+) -> Result<QueryResult, AybError> {
+    // Get or create the daemon for this database
+    let daemon_arc = daemon_registry
+        .get_or_create_daemon(db_path, Some(nsjail))
+        .await?;
+
+    // Execute the query through the daemon
+    let mut daemon = daemon_arc.lock().unwrap();
+    let response = daemon.execute_query(query, query_mode).await?;
+
+    // Parse the response
+    parse_daemon_response(&response)
+}
+
+/// Execute a query using a persistent daemon process without isolation
+pub async fn run_daemon_query_without_sandbox(
+    daemon_registry: &DaemonRegistry,
+    db_path: &PathBuf,
+    query: &str,
+    query_mode: QueryMode,
+) -> Result<QueryResult, AybError> {
+    // Get or create the daemon for this database
+    let daemon_arc = daemon_registry.get_or_create_daemon(db_path, None).await?;
+
+    // Execute the query through the daemon
+    let mut daemon = daemon_arc.lock().unwrap();
+    let response = daemon.execute_query(query, query_mode).await?;
+
+    // Parse the response
+    parse_daemon_response(&response)
+}
+
+/// Parse a JSON response from the daemon
+fn parse_daemon_response(response: &str) -> Result<QueryResult, AybError> {
+    // Try to parse as QueryResult first
+    if let Ok(result) = serde_json::from_str::<QueryResult>(response) {
+        return Ok(result);
+    }
+
+    // Try to parse as AybError
+    if let Ok(error) = serde_json::from_str::<AybError>(response) {
+        return Err(error);
+    }
+
+    // If neither worked, return a generic error
+    Err(AybError::QueryError {
+        message: format!("Invalid response from daemon: {}", response),
+    })
 }
