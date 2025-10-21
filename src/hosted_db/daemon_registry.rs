@@ -7,9 +7,10 @@ use std::env::current_exe;
 use std::fs::canonicalize;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::io::BufReader;
 use tokio::process::{Child, ChildStdin};
+use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct QueryRequest {
@@ -19,8 +20,8 @@ struct QueryRequest {
 
 /// Handle to a running daemon process for a specific database
 pub struct DaemonHandle {
-    _child: Child,
-    stdin: ChildStdin,
+    child: Child,
+    stdin: Option<ChildStdin>,
     stdout: BufReader<tokio::process::ChildStdout>,
 }
 
@@ -31,6 +32,10 @@ impl DaemonHandle {
         query: &str,
         query_mode: QueryMode,
     ) -> Result<String, AybError> {
+        let stdin = self.stdin.as_mut().ok_or(AybError::Other {
+            message: "Daemon stdin has been closed".to_string(),
+        })?;
+
         // Serialize and send the request
         let request = QueryRequest {
             query: query.to_string(),
@@ -40,9 +45,9 @@ impl DaemonHandle {
 
         // Write to daemon's stdin
         use tokio::io::AsyncWriteExt;
-        self.stdin.write_all(request_json.as_bytes()).await?;
-        self.stdin.write_all(b"\n").await?;
-        self.stdin.flush().await?;
+        stdin.write_all(request_json.as_bytes()).await?;
+        stdin.write_all(b"\n").await?;
+        stdin.flush().await?;
 
         // Read response from daemon's stdout
         use tokio::io::AsyncBufReadExt;
@@ -50,6 +55,14 @@ impl DaemonHandle {
         self.stdout.read_line(&mut response_line).await?;
 
         Ok(response_line)
+    }
+
+    /// Shutdown the daemon by closing stdin and killing the process
+    pub async fn shutdown(&mut self) {
+        // Close stdin to signal daemon to exit gracefully
+        self.stdin.take();
+        // Kill the process if still running
+        let _ = self.child.kill().await;
     }
 }
 
@@ -78,7 +91,7 @@ impl DaemonRegistry {
 
         // First, try to get an existing daemon
         {
-            let daemons = self.daemons.lock().unwrap();
+            let daemons = self.daemons.lock().await;
             if let Some(daemon) = daemons.get(&canonical_path) {
                 return Ok(daemon.clone());
             }
@@ -90,7 +103,7 @@ impl DaemonRegistry {
         let daemon_arc = Arc::new(Mutex::new(daemon_handle));
 
         // Insert into registry (check again in case another thread created it)
-        let mut daemons = self.daemons.lock().unwrap();
+        let mut daemons = self.daemons.lock().await;
         if let Some(existing) = daemons.get(&canonical_path) {
             // Another thread beat us to it, use theirs
             Ok(existing.clone())
@@ -131,8 +144,8 @@ impl DaemonRegistry {
         })?;
 
         Ok(DaemonHandle {
-            _child: child,
-            stdin,
+            child,
+            stdin: Some(stdin),
             stdout: BufReader::new(stdout),
         })
     }
@@ -202,13 +215,11 @@ impl DaemonRegistry {
 
     /// Shutdown all running daemons
     pub async fn shutdown_all(&self) {
-        let mut daemons = self.daemons.lock().unwrap();
+        let mut daemons = self.daemons.lock().await;
         for (_path, daemon_arc) in daemons.drain() {
             // Try to get exclusive access to kill the daemon
             if let Ok(mut daemon) = daemon_arc.try_lock() {
-                // Closing stdin will cause the daemon to exit gracefully
-                drop(daemon.stdin);
-                // The child process will be killed when DaemonHandle is dropped
+                daemon.shutdown().await;
             }
         }
     }

@@ -163,7 +163,7 @@ pub async fn run_daemon_query_in_sandbox(
         .await?;
 
     // Execute the query through the daemon
-    let mut daemon = daemon_arc.lock().unwrap();
+    let mut daemon = daemon_arc.lock().await;
     let response = daemon.execute_query(query, query_mode).await?;
 
     // Parse the response
@@ -181,7 +181,7 @@ pub async fn run_daemon_query_without_sandbox(
     let daemon_arc = daemon_registry.get_or_create_daemon(db_path, None).await?;
 
     // Execute the query through the daemon
-    let mut daemon = daemon_arc.lock().unwrap();
+    let mut daemon = daemon_arc.lock().await;
     let response = daemon.execute_query(query, query_mode).await?;
 
     // Parse the response
