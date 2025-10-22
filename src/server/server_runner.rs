@@ -127,6 +127,8 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
 
     // Create the daemon registry for managing persistent query runner processes
     let daemon_registry = DaemonRegistry::new();
+    // Clone for cleanup handler before moving into closure
+    let cleanup_daemon_registry = daemon_registry.clone();
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     if ayb_conf.isolation.is_none() {
@@ -164,7 +166,6 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
     let server_handle = server.handle();
 
     // Spawn a task to handle shutdown and cleanup daemons
-    let cleanup_daemon_registry = daemon_registry.clone();
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.ok();
         println!("Shutting down server and cleaning up daemons...");

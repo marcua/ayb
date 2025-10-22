@@ -9,7 +9,6 @@ use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use serde_json;
 use std::path::{Path, PathBuf};
 
 /// `allow_unsafe` disables features that prevent abuse but also
