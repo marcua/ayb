@@ -219,6 +219,20 @@ impl DaemonRegistry {
         Ok(cmd)
     }
 
+    /// Shutdown a daemon for a specific database path
+    pub async fn shutdown_daemon(&self, db_path: &PathBuf) -> Result<(), AybError> {
+        let canonical_path = canonicalize(db_path)?;
+
+        let mut daemons = self.daemons.lock().await;
+        if let Some(daemon_arc) = daemons.remove(&canonical_path) {
+            // Try to get exclusive access to shutdown the daemon
+            if let Ok(mut daemon) = daemon_arc.try_lock() {
+                daemon.shutdown().await;
+            }
+        }
+        Ok(())
+    }
+
     /// Shutdown all running daemons
     pub async fn shutdown_all(&self) {
         let mut daemons = self.daemons.lock().await;

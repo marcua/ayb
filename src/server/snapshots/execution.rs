@@ -1,5 +1,6 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::paths::{
     current_database_path, database_parent_path, database_snapshot_path, pathbuf_to_file_name,
     pathbuf_to_parent,
@@ -20,6 +21,7 @@ use tokio_cron_scheduler::{Job, JobScheduler};
 pub async fn schedule_periodic_snapshots(
     config: AybConfig,
     ayb_db: Box<dyn AybDb>,
+    daemon_registry: DaemonRegistry,
 ) -> Result<(), AybError> {
     if let Some(ref snapshot_config) = config.snapshots {
         if let Some(ref automation_config) = snapshot_config.automation {
@@ -44,6 +46,7 @@ pub async fn schedule_periodic_snapshots(
                     let is_running = Arc::clone(&is_running);
                     let config = config.clone();
                     let ayb_db = ayb_db.clone();
+                    let daemon_registry = daemon_registry.clone();
                     Box::pin(async move {
                         let mut guard = is_running.lock().await;
                         if *guard {
@@ -52,7 +55,7 @@ pub async fn schedule_periodic_snapshots(
                         }
                         // Mark the job as running
                         *guard = true;
-                        if let Some(err) = create_snapshots(&config.clone(), &ayb_db.clone())
+                        if let Some(err) = create_snapshots(&config.clone(), &ayb_db.clone(), &daemon_registry)
                             .await
                             .err()
                         {
@@ -75,7 +78,11 @@ pub async fn schedule_periodic_snapshots(
 // unimplemented trait compiler error, but if I keep it, I get a
 // Clippy warning.
 #[allow(clippy::borrowed_box)]
-async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result<(), AybError> {
+async fn create_snapshots(
+    config: &AybConfig,
+    ayb_db: &Box<dyn AybDb>,
+    daemon_registry: &DaemonRegistry,
+) -> Result<(), AybError> {
     // Walk the data path for entity slugs, database slugs
     println!("Creating snapshots...");
     let entity_paths =
@@ -99,9 +106,10 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
             let entry_path = entry?.path();
             let database = pathbuf_to_file_name(&entry_path)?;
             if entry_path.is_dir() {
-                if let Some(err) = snapshot_database(config, ayb_db, &entity, &database)
-                    .await
-                    .err()
+                if let Some(err) =
+                    snapshot_database(config, ayb_db, daemon_registry, &entity, &database)
+                        .await
+                        .err()
                 {
                     eprintln!("Unable to snapshot database {entity}/{database}: {err}");
                 }
@@ -123,6 +131,7 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
 pub async fn snapshot_database(
     config: &AybConfig,
     ayb_db: &Box<dyn AybDb>,
+    daemon_registry: &DaemonRegistry,
     entity_slug: &str,
     database_slug: &str,
 ) -> Result<(), AybError> {
@@ -137,6 +146,10 @@ pub async fn snapshot_database(
     match ayb_db.get_database(entity_slug, database_slug).await {
         Ok(_db) => {
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
+
+            // Shutdown the daemon for this database to ensure it's fully closed before snapshot
+            daemon_registry.shutdown_daemon(&db_path).await?;
+
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();

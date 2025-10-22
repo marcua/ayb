@@ -121,14 +121,19 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         .await
         .expect("failed to load web frontend details");
     let email_backends = create_email_backends(&ayb_conf.email);
-    schedule_periodic_snapshots(ayb_conf_for_server.clone(), ayb_db.clone())
-        .await
-        .expect("unable to start periodic snapshot scheduler");
 
     // Create the daemon registry for managing persistent query runner processes
     let daemon_registry = DaemonRegistry::new();
     // Clone for cleanup handler before moving into closure
     let cleanup_daemon_registry = daemon_registry.clone();
+
+    schedule_periodic_snapshots(
+        ayb_conf_for_server.clone(),
+        ayb_db.clone(),
+        daemon_registry.clone(),
+    )
+    .await
+    .expect("unable to start periodic snapshot scheduler");
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     if ayb_conf.isolation.is_none() {
