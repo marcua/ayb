@@ -71,6 +71,12 @@ pub struct DaemonRegistry {
     daemons: Arc<Mutex<HashMap<PathBuf, Arc<Mutex<DaemonHandle>>>>>,
 }
 
+impl Default for DaemonRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DaemonRegistry {
     /// Create a new empty registry
     pub fn new() -> Self {
