@@ -55,9 +55,10 @@ pub async fn schedule_periodic_snapshots(
                         }
                         // Mark the job as running
                         *guard = true;
-                        if let Some(err) = create_snapshots(&config.clone(), &ayb_db.clone(), &daemon_registry)
-                            .await
-                            .err()
+                        if let Some(err) =
+                            create_snapshots(&config.clone(), &ayb_db.clone(), &daemon_registry)
+                                .await
+                                .err()
                         {
                             eprintln!("Unable to walk database directory for snapshots: {err}");
                         }
