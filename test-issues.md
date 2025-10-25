@@ -48,9 +48,9 @@ Docker: Not available
 
 ### 1. Playwright Driver Download (CRITICAL BLOCKER)
 **Status**: BLOCKS ALL TESTS
-**Description**: The `playwright` Rust crate (v0.0.20) tries to download its driver binary from `playwright.azureedge.net` during compilation, which fails with network tunnel error.
+**Description**: The `playwright` Rust crate (v0.0.20) tries to download its driver binary from `playwright.azureedge.net` during compilation, which fails because the proxy explicitly blocks this domain.
 
-**Error**:
+**Cargo build error**:
 ```
 thread 'main' panicked at playwright-0.0.20/src/build.rs:50:48:
 called `Result::unwrap()` on an `Err` value: reqwest::Error {
@@ -60,13 +60,22 @@ called `Result::unwrap()` on an `Err` value: reqwest::Error {
 }
 ```
 
+**Proxy error (verified with curl)**:
+```
+HTTP/1.1 403 Forbidden
+x-deny-reason: host_not_allowed
+```
+
 **Impact**: Cannot compile tests at all - this is a complete blocker
 **Affected**: All tests (since tests depend on the playwright crate)
-**Root cause**: Network restriction blocking playwright.azureedge.net
+**Root cause**: The environment uses an HTTP proxy with JWT authentication. The proxy's `allowed_hosts` list does not include `playwright.azureedge.net` or `*.azureedge.net`. The proxy explicitly rejects connections to this domain.
+
+**What needs to be done**: Add `playwright.azureedge.net` (or `*.azureedge.net`) to the proxy's allowed hosts list in the JWT token configuration.
+
 **Possible solutions**:
-1. Pre-download the playwright driver and cache it (needs environment support)
-2. Allow playwright.azureedge.net through network restrictions
-3. Mock/stub the playwright dependency for non-browser tests (requires code changes)
+1. **Recommended**: Add `playwright.azureedge.net` or `*.azureedge.net` to the proxy's allowed hosts
+2. Pre-download the playwright driver and cache it in the environment
+3. Mock/stub the playwright dependency for non-browser tests (requires code changes to test suite)
 
 ### 2. Docker Not Available
 **Status**: BLOCKS S3/SNAPSHOT TESTS
