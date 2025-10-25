@@ -16,6 +16,7 @@ use tokio::sync::Mutex;
 struct QueryRequest {
     query: String,
     query_mode: i16,
+    allow_unsafe: bool,
 }
 
 /// Handle to a running daemon process for a specific database
@@ -31,6 +32,7 @@ impl DaemonHandle {
         &mut self,
         query: &str,
         query_mode: QueryMode,
+        allow_unsafe: bool,
     ) -> Result<String, AybError> {
         let stdin = self.stdin.as_mut().ok_or(AybError::Other {
             message: "Daemon stdin has been closed".to_string(),
@@ -40,6 +42,7 @@ impl DaemonHandle {
         let request = QueryRequest {
             query: query.to_string(),
             query_mode: query_mode as i16,
+            allow_unsafe,
         };
         let request_json = serde_json::to_string(&request)?;
 
@@ -57,8 +60,8 @@ impl DaemonHandle {
         Ok(response_line)
     }
 
-    /// Shutdown the daemon by closing stdin and killing the process
-    pub async fn shutdown(&mut self) {
+    /// Shut down the daemon by closing stdin and killing the process
+    pub async fn shut_down(&mut self) {
         // Close stdin to signal daemon to exit gracefully
         self.stdin.take();
         // Kill the process if still running
@@ -200,10 +203,7 @@ impl DaemonRegistry {
         ]);
 
         // Run the daemon
-        cmd.arg("--")
-            .arg("/tmp/ayb_isolated_runner")
-            .arg("--daemon")
-            .arg(tmp_db_path);
+        cmd.arg("--").arg("/tmp/ayb_isolated_runner").arg(tmp_db_path);
 
         Ok(cmd)
     }
@@ -214,32 +214,32 @@ impl DaemonRegistry {
         let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
 
         let mut cmd = tokio::process::Command::new(&isolated_runner_path);
-        cmd.arg("--daemon").arg(db_path);
+        cmd.arg(db_path);
 
         Ok(cmd)
     }
 
-    /// Shutdown a daemon for a specific database path
-    pub async fn shutdown_daemon(&self, db_path: &PathBuf) -> Result<(), AybError> {
+    /// Shut down a daemon for a specific database path
+    pub async fn shut_down_daemon(&self, db_path: &PathBuf) -> Result<(), AybError> {
         let canonical_path = canonicalize(db_path)?;
 
         let mut daemons = self.daemons.lock().await;
         if let Some(daemon_arc) = daemons.remove(&canonical_path) {
-            // Try to get exclusive access to shutdown the daemon
+            // Try to get exclusive access to shut down the daemon
             if let Ok(mut daemon) = daemon_arc.try_lock() {
-                daemon.shutdown().await;
+                daemon.shut_down().await;
             }
         }
         Ok(())
     }
 
-    /// Shutdown all running daemons
-    pub async fn shutdown_all(&self) {
+    /// Shut down all running daemons
+    pub async fn shut_down_all(&self) {
         let mut daemons = self.daemons.lock().await;
         for (_path, daemon_arc) in daemons.drain() {
-            // Try to get exclusive access to kill the daemon
+            // Try to get exclusive access to shut down the daemon
             if let Ok(mut daemon) = daemon_arc.try_lock() {
-                daemon.shutdown().await;
+                daemon.shut_down().await;
             }
         }
     }

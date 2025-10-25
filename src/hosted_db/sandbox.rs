@@ -31,47 +31,49 @@ use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::{QueryMode, QueryResult};
 use std::path::{Path, PathBuf};
 
-/// Execute a query using a persistent daemon process with nsjail isolation
-pub async fn run_daemon_query_in_sandbox(
+/// Execute a query with nsjail isolation
+pub async fn run_query_in_sandbox(
     daemon_registry: &DaemonRegistry,
     nsjail: &Path,
     db_path: &PathBuf,
     query: &str,
     query_mode: QueryMode,
+    allow_unsafe: bool,
 ) -> Result<QueryResult, AybError> {
     // Get or create the daemon for this database
     let daemon_arc = daemon_registry
         .get_or_create_daemon(db_path, Some(nsjail))
         .await?;
 
-    // Execute the query through the daemon
+    // Execute the query
     let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode).await?;
+    let response = daemon.execute_query(query, query_mode, allow_unsafe).await?;
 
     // Parse the response
-    parse_daemon_response(&response)
+    parse_response(&response)
 }
 
-/// Execute a query using a persistent daemon process without isolation
-pub async fn run_daemon_query_without_sandbox(
+/// Execute a query without isolation
+pub async fn run_query_without_sandbox(
     daemon_registry: &DaemonRegistry,
     db_path: &PathBuf,
     query: &str,
     query_mode: QueryMode,
+    allow_unsafe: bool,
 ) -> Result<QueryResult, AybError> {
     // Get or create the daemon for this database
     let daemon_arc = daemon_registry.get_or_create_daemon(db_path, None).await?;
 
-    // Execute the query through the daemon
+    // Execute the query
     let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode).await?;
+    let response = daemon.execute_query(query, query_mode, allow_unsafe).await?;
 
     // Parse the response
-    parse_daemon_response(&response)
+    parse_response(&response)
 }
 
-/// Parse a JSON response from the daemon
-fn parse_daemon_response(response: &str) -> Result<QueryResult, AybError> {
+/// Parse a JSON response
+fn parse_response(response: &str) -> Result<QueryResult, AybError> {
     // Try to parse as QueryResult first
     if let Ok(result) = serde_json::from_str::<QueryResult>(response) {
         return Ok(result);
@@ -84,6 +86,6 @@ fn parse_daemon_response(response: &str) -> Result<QueryResult, AybError> {
 
     // If neither worked, return a generic error
     Err(AybError::QueryError {
-        message: format!("Invalid response from daemon: {}", response),
+        message: format!("Invalid response: {}", response),
     })
 }

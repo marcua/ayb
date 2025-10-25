@@ -170,11 +170,11 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
 
     let server_handle = server.handle();
 
-    // Spawn a task to handle shutdown and cleanup daemons
+    // Spawn a task to handle shutdown and clean up daemons
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.ok();
         println!("Shutting down server and cleaning up daemons...");
-        cleanup_daemon_registry.shutdown_all().await;
+        cleanup_daemon_registry.shut_down_all().await;
         server_handle.stop(true).await;
     });
 

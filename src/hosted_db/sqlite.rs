@@ -1,7 +1,7 @@
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::{
-    sandbox::{run_daemon_query_in_sandbox, run_daemon_query_without_sandbox},
+    sandbox::{run_query_in_sandbox, run_query_without_sandbox},
     QueryMode, QueryResult,
 };
 use crate::server::config::AybConfigIsolation;
@@ -82,7 +82,6 @@ pub fn query_sqlite(
 }
 
 /// Run `query` against the database at `path`, either with or without isolation.
-/// Uses persistent daemon processes for query execution.
 pub async fn potentially_isolated_sqlite_query(
     daemon_registry: &DaemonRegistry,
     path: &PathBuf,
@@ -90,17 +89,38 @@ pub async fn potentially_isolated_sqlite_query(
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
+    potentially_isolated_sqlite_query_with_unsafe(
+        daemon_registry,
+        path,
+        query,
+        isolation,
+        query_mode,
+        false,
+    )
+    .await
+}
+
+/// Run `query` against the database at `path`, with control over allow_unsafe.
+pub async fn potentially_isolated_sqlite_query_with_unsafe(
+    daemon_registry: &DaemonRegistry,
+    path: &PathBuf,
+    query: &str,
+    isolation: &Option<AybConfigIsolation>,
+    query_mode: QueryMode,
+    allow_unsafe: bool,
+) -> Result<QueryResult, AybError> {
     // Execute via daemon (either isolated or non-isolated)
     if let Some(isolation) = isolation {
-        run_daemon_query_in_sandbox(
+        run_query_in_sandbox(
             daemon_registry,
             Path::new(&isolation.nsjail_path),
             path,
             query,
             query_mode,
+            allow_unsafe,
         )
         .await
     } else {
-        run_daemon_query_without_sandbox(daemon_registry, path, query, query_mode).await
+        run_query_without_sandbox(daemon_registry, path, query, query_mode, allow_unsafe).await
     }
 }

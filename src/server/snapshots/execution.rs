@@ -5,7 +5,7 @@ use crate::hosted_db::paths::{
     current_database_path, database_parent_path, database_snapshot_path, pathbuf_to_file_name,
     pathbuf_to_parent,
 };
-use crate::hosted_db::sqlite::query_sqlite;
+use crate::hosted_db::sqlite::potentially_isolated_sqlite_query_with_unsafe;
 use crate::hosted_db::QueryMode;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
 use crate::server::snapshots::hashes::hash_db_directory;
@@ -148,9 +148,6 @@ pub async fn snapshot_database(
         Ok(_db) => {
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
 
-            // Shutdown the daemon for this database to ensure it's fully closed before snapshot
-            daemon_registry.shutdown_daemon(&db_path).await?;
-
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();
@@ -169,25 +166,30 @@ pub async fn snapshot_database(
                     format!("VACUUM INTO \"{}\"", snapshot_path.display())
                 }
             };
-            let result = query_sqlite(
+            let result = potentially_isolated_sqlite_query_with_unsafe(
+                daemon_registry,
                 &db_path,
                 &backup_query,
-                // Run in unsafe mode to allow backup process to
-                // attach to destination database.
-                true,
+                &config.isolation,
                 QueryMode::ReadOnly,
-            )?;
+                // Run in unsafe mode to allow backup process to attach to destination database
+                true,
+            )
+            .await?;
             if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
                     message: format!("Unexpected snapshot result: {result:?}"),
                 });
             }
-            let result = query_sqlite(
+            let result = potentially_isolated_sqlite_query_with_unsafe(
+                daemon_registry,
                 &snapshot_path,
                 "PRAGMA integrity_check;",
-                false,
+                &config.isolation,
                 QueryMode::ReadOnly,
-            )?;
+                false,
+            )
+            .await?;
             if result.fields.len() != 1
                 || result.rows.len() != 1
                 || result.rows[0][0] != Some("ok".to_string())

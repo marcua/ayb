@@ -9,50 +9,35 @@ use std::path::PathBuf;
 struct QueryRequest {
     query: String,
     query_mode: i16,
+    allow_unsafe: bool,
 }
 
-/// This binary runs queries against a database and returns the
-/// result in QueryResults format.
+/// This binary runs as a persistent daemon that executes queries
+/// against a database and returns results in QueryResult format.
 ///
-/// One-shot mode:
-/// $ ayb_isolated_runner database.sqlite [0=read-only|1=read-write] SELECT xyz FROM ...
+/// Usage:
+/// $ ayb_isolated_runner database.sqlite
 ///
-/// Daemon mode:
-/// $ ayb_isolated_runner --daemon database.sqlite
-/// Then send line-delimited JSON requests via stdin:
-/// {"query":"SELECT * FROM x","query_mode":0}
+/// The daemon reads line-delimited JSON requests from stdin:
+/// {"query":"SELECT * FROM x","query_mode":0,"allow_unsafe":false}
+///
+/// And writes line-delimited JSON responses to stdout.
 ///
 /// This command is meant to be run inside a sandbox that isolates
-/// parallel invocations of the command from accessing each
-/// others' data, memory, and resources. That sandbox can be found
-/// in src/hosted_db/sandbox.rs.
+/// parallel invocations from accessing each other's data, memory,
+/// and resources. That sandbox can be found in src/hosted_db/sandbox.rs.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-
-    if args.len() > 1 && args[1] == "--daemon" {
-        // Daemon mode: read queries from stdin
-        let db_file = PathBuf::from(&args[2]);
-        run_daemon_mode(db_file)?;
-    } else {
-        // One-shot mode: execute single query from args
-        let db_file = &args[1];
-        let query_mode = QueryMode::try_from(
-            args[2]
-                .parse::<i16>()
-                .expect("query mode should be an integer"),
-        )
-        .expect("query mode should be 0 or 1");
-        let query = (args[3..]).to_vec();
-        let result = query_sqlite(&PathBuf::from(db_file), &query.join(" "), false, query_mode);
-        match result {
-            Ok(result) => println!("{}", serde_json::to_string(&result)?),
-            Err(error) => eprintln!("{}", serde_json::to_string(&error)?),
-        }
+    if args.len() < 2 {
+        eprintln!("Usage: ayb_isolated_runner <database.sqlite>");
+        std::process::exit(1);
     }
-    Ok(())
+
+    let db_file = PathBuf::from(&args[1]);
+    run(db_file)
 }
 
-fn run_daemon_mode(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -83,7 +68,7 @@ fn run_daemon_mode(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         };
 
         // Execute the query
-        let result = query_sqlite(&db_file, &request.query, false, query_mode);
+        let result = query_sqlite(&db_file, &request.query, request.allow_unsafe, query_mode);
 
         // Send response
         match result {
