@@ -95,29 +95,22 @@ impl DaemonRegistry {
         // Canonicalize the path to ensure consistency
         let canonical_path = canonicalize(db_path)?;
 
-        // First, try to get an existing daemon
-        {
-            let daemons = self.daemons.lock().await;
-            if let Some(daemon) = daemons.get(&canonical_path) {
-                return Ok(daemon.clone());
-            }
+        // Lock for the entire check-and-create operation to avoid race condition
+        // where multiple threads spawn daemon processes for the same database
+        let mut daemons = self.daemons.lock().await;
+
+        // Check if daemon already exists
+        if let Some(daemon) = daemons.get(&canonical_path) {
+            return Ok(daemon.clone());
         }
 
-        // No existing daemon, need to create one
-        // Spawn the daemon process
+        // Spawn the daemon process while holding the lock
         let daemon_handle = self.spawn_daemon(&canonical_path, nsjail_path).await?;
         let daemon_arc = Arc::new(Mutex::new(daemon_handle));
 
-        // Insert into registry (check again in case another thread created it)
-        let mut daemons = self.daemons.lock().await;
-        if let Some(existing) = daemons.get(&canonical_path) {
-            // Another thread beat us to it, use theirs
-            Ok(existing.clone())
-        } else {
-            // We're first, insert ours
-            daemons.insert(canonical_path, daemon_arc.clone());
-            Ok(daemon_arc)
-        }
+        // Insert into registry
+        daemons.insert(canonical_path, daemon_arc.clone());
+        Ok(daemon_arc)
     }
 
     /// Spawn a new daemon process for the given database
