@@ -47,7 +47,9 @@ pub async fn run_query_in_sandbox(
 
     // Execute the query
     let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode, allow_unsafe).await?;
+    let response = daemon
+        .execute_query(query, query_mode, allow_unsafe)
+        .await?;
 
     // Parse the response
     parse_response(&response)
@@ -66,7 +68,9 @@ pub async fn run_query_without_sandbox(
 
     // Execute the query
     let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode, allow_unsafe).await?;
+    let response = daemon
+        .execute_query(query, query_mode, allow_unsafe)
+        .await?;
 
     // Parse the response
     parse_response(&response)

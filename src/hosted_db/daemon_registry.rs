@@ -203,7 +203,9 @@ impl DaemonRegistry {
         ]);
 
         // Run the daemon
-        cmd.arg("--").arg("/tmp/ayb_isolated_runner").arg(tmp_db_path);
+        cmd.arg("--")
+            .arg("/tmp/ayb_isolated_runner")
+            .arg(tmp_db_path);
 
         Ok(cmd)
     }
