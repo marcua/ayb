@@ -5,7 +5,7 @@ use crate::hosted_db::paths::{
     current_database_path, database_parent_path, database_snapshot_path, pathbuf_to_file_name,
     pathbuf_to_parent,
 };
-use crate::hosted_db::sqlite::potentially_isolated_sqlite_query_with_unsafe;
+use crate::hosted_db::sqlite::{potentially_isolated_sqlite_query_with_unsafe, query_sqlite};
 use crate::hosted_db::QueryMode;
 use crate::server::config::{AybConfig, SqliteSnapshotMethod};
 use crate::server::snapshots::hashes::hash_db_directory;
@@ -181,15 +181,10 @@ pub async fn snapshot_database(
                     message: format!("Unexpected snapshot result: {result:?}"),
                 });
             }
-            let result = potentially_isolated_sqlite_query_with_unsafe(
-                daemon_registry,
-                &snapshot_path,
-                "PRAGMA integrity_check;",
-                &config.isolation,
-                QueryMode::ReadOnly,
-                false,
-            )
-            .await?;
+            // Integrity check uses direct query_sqlite (not through daemon)
+            // because the snapshot file is local, just created, and not in
+            // the bind-mounted location accessible to isolated daemons.
+            let result = query_sqlite(&snapshot_path, "PRAGMA integrity_check;", false, QueryMode::ReadOnly)?;
             if result.fields.len() != 1
                 || result.rows.len() != 1
                 || result.rows[0][0] != Some("ok".to_string())
