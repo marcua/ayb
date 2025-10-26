@@ -5,6 +5,16 @@ set +e
 echo "=== Quick Win Minimal Setup for Claude Code Environment ==="
 echo ""
 
+# CRITICAL FIX: Set HTTP_PROXY from HTTPS_PROXY for apt-get to work
+# The environment has HTTPS_PROXY set with proxy config, but HTTP_PROXY is empty
+# apt-get uses HTTP protocol and needs HTTP_PROXY to bypass DNS resolution
+if [ -n "$HTTPS_PROXY" ] && [ -z "$HTTP_PROXY" ]; then
+    echo "Fixing proxy configuration for apt-get..."
+    export HTTP_PROXY="$HTTPS_PROXY"
+    echo "✓ Set HTTP_PROXY from HTTPS_PROXY"
+fi
+echo ""
+
 # Function to check if command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -61,7 +71,7 @@ if command_exists docker; then
 else
     echo "✗ Docker not found"
     echo "Attempting to install docker.io..."
-    if sudo apt-get update 2>&1 | grep -q "Failed to fetch"; then
+    if sudo -E apt-get update 2>&1 | grep -q "Failed to fetch"; then
         echo "✗ Failed to update package lists (network blocked)"
         echo ""
         echo "REQUIRED: Add these domains to allowlist:"
@@ -69,7 +79,7 @@ else
         echo "  - security.ubuntu.com"
         DOCKER_OK=false
     else
-        if sudo apt-get install -y docker.io 2>&1; then
+        if sudo -E apt-get install -y docker.io 2>&1; then
             echo "✓ Docker installed successfully"
             # Try to start docker
             if command_exists systemctl; then
@@ -105,7 +115,7 @@ done
 
 echo ""
 echo "Attempting to install missing packages..."
-if sudo apt-get install -y $PACKAGES 2>&1 | grep -q "Unable to locate"; then
+if sudo -E apt-get install -y $PACKAGES 2>&1 | grep -q "Unable to locate"; then
     echo "✗ Failed to install packages (network blocked)"
 else
     echo "✓ Packages installed (or already present)"
