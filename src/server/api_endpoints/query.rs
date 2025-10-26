@@ -2,6 +2,7 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{DBType, InstantiatedEntity};
 
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::paths::current_database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::EntityDatabasePath;
@@ -16,6 +17,7 @@ async fn query(
     query: String,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
+    daemon_registry: web::Data<DaemonRegistry>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<web::Json<QueryResult>, AybError> {
     let entity_slug = &path.entity.to_lowercase();
@@ -30,6 +32,7 @@ async fn query(
             let db_type = DBType::try_from(database.db_type)?;
             let db_path = current_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
             let result = run_query(
+                &daemon_registry,
                 &db_path,
                 &query,
                 &db_type,

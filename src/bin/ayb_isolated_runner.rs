@@ -1,30 +1,89 @@
 use ayb::hosted_db::sqlite::query_sqlite;
 use ayb::hosted_db::QueryMode;
+use serde::{Deserialize, Serialize};
 use std::env;
+use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
-/// This binary runs a query against a database and returns the
-/// result in QueryResults format. To run it, you would type:
-/// $ ayb_isolated_runner database.sqlite [0=read-only|1=read-write] SELECT xyz FROM ...
+#[derive(Serialize, Deserialize, Debug)]
+struct QueryRequest {
+    query: String,
+    query_mode: i16,
+}
+
+/// This binary runs as a persistent daemon that executes queries
+/// against a database and returns results in QueryResult format.
+///
+/// Usage:
+/// $ ayb_isolated_runner database.sqlite
+///
+/// The daemon reads line-delimited JSON requests from stdin:
+/// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
+///
+/// And writes line-delimited JSON responses to stdout.
 ///
 /// This command is meant to be run inside a sandbox that isolates
-/// parallel invocations of the command from accessing each
-/// others' data, memory, and resources. That sandbox can be found
-/// in src/hosted_db/sandbox.rs.
-fn main() -> Result<(), serde_json::Error> {
+/// parallel invocations from accessing each other's data, memory,
+/// and resources. That sandbox can be found in src/hosted_db/sandbox.rs.
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let db_file = &args[1];
-    let query_mode = QueryMode::try_from(
-        args[2]
-            .parse::<i16>()
-            .expect("query mode should be an integer"),
-    )
-    .expect("query mode should be 0 or 1");
-    let query = (args[3..]).to_vec();
-    let result = query_sqlite(&PathBuf::from(db_file), &query.join(" "), false, query_mode);
-    match result {
-        Ok(result) => println!("{}", serde_json::to_string(&result)?),
-        Err(error) => eprintln!("{}", serde_json::to_string(&error)?),
+    if args.len() < 2 {
+        eprintln!("Usage: ayb_isolated_runner <database.sqlite>");
+        std::process::exit(1);
     }
+
+    let db_file = PathBuf::from(&args[1]);
+    run(db_file)
+}
+
+fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    for line in stdin.lock().lines() {
+        let line = line?;
+
+        // Parse the query request
+        let request: QueryRequest = match serde_json::from_str(&line) {
+            Ok(req) => req,
+            Err(e) => {
+                // Send error response and continue
+                let error_response = serde_json::json!({
+                    "error": format!("Failed to parse request: {}", e)
+                });
+                writeln!(stdout, "{}", error_response)?;
+                stdout.flush()?;
+                continue;
+            }
+        };
+
+        // Convert query_mode to enum
+        let query_mode = match QueryMode::try_from(request.query_mode) {
+            Ok(mode) => mode,
+            Err(_) => {
+                let error_response = serde_json::json!({
+                    "error": "Invalid query_mode, must be 0 or 1"
+                });
+                writeln!(stdout, "{}", error_response)?;
+                stdout.flush()?;
+                continue;
+            }
+        };
+
+        // Execute the query
+        let result = query_sqlite(&db_file, &request.query, false, query_mode);
+
+        // Send response
+        match result {
+            Ok(result) => {
+                writeln!(stdout, "{}", serde_json::to_string(&result)?)?;
+            }
+            Err(error) => {
+                writeln!(stdout, "{}", serde_json::to_string(&error)?)?;
+            }
+        }
+        stdout.flush()?;
+    }
+
     Ok(())
 }

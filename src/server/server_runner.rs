@@ -2,6 +2,7 @@ use crate::ayb_db::db_interfaces::connect_to_ayb_db;
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::email::create_email_backends;
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::server::config::read_config;
 use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
@@ -120,6 +121,12 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         .await
         .expect("failed to load web frontend details");
     let email_backends = create_email_backends(&ayb_conf.email);
+
+    // Create the daemon registry for managing persistent query runner processes
+    let daemon_registry = DaemonRegistry::new();
+    // Clone for cleanup handler before moving into closure
+    let cleanup_daemon_registry = daemon_registry.clone();
+
     schedule_periodic_snapshots(ayb_conf_for_server.clone(), ayb_db.clone())
         .await
         .expect("unable to start periodic snapshot scheduler");
@@ -139,7 +146,8 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
             panic!("nsjail path {} does not exist", nsjail_path.display());
         }
     }
-    HttpServer::new(move || {
+
+    let server = HttpServer::new(move || {
         let cors = build_cors(ayb_conf.cors.clone());
 
         App::new()
@@ -150,9 +158,21 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
             .app_data(web::Data::new(email_backends.clone()))
+            .app_data(web::Data::new(daemon_registry.clone()))
             .configure(|cfg| config(cfg, &ayb_conf_for_server.clone()))
     })
     .bind((ayb_conf.host, ayb_conf.port))?
-    .run()
-    .await
+    .run();
+
+    let server_handle = server.handle();
+
+    // Spawn a task to handle shutdown and clean up daemons
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.ok();
+        println!("Shutting down server and cleaning up daemons...");
+        cleanup_daemon_registry.shut_down_all().await;
+        server_handle.stop(true).await;
+    });
+
+    server.await
 }

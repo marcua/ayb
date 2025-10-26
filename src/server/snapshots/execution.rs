@@ -137,6 +137,7 @@ pub async fn snapshot_database(
     match ayb_db.get_database(entity_slug, database_slug).await {
         Ok(_db) => {
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
+
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();
@@ -155,19 +156,18 @@ pub async fn snapshot_database(
                     format!("VACUUM INTO \"{}\"", snapshot_path.display())
                 }
             };
-            let result = query_sqlite(
-                &db_path,
-                &backup_query,
-                // Run in unsafe mode to allow backup process to
-                // attach to destination database.
-                true,
-                QueryMode::ReadOnly,
-            )?;
+            // Snapshot operations use direct query_sqlite (not through daemon) because
+            // the snapshot files are stored in locations that aren't bind-mounted to
+            // isolated daemon processes.
+            let result = query_sqlite(&db_path, &backup_query, true, QueryMode::ReadOnly)?;
             if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
                     message: format!("Unexpected snapshot result: {result:?}"),
                 });
             }
+            // Integrity check uses direct query_sqlite (not through daemon)
+            // because the snapshot file is local, just created, and not in
+            // the bind-mounted location accessible to isolated daemons.
             let result = query_sqlite(
                 &snapshot_path,
                 "PRAGMA integrity_check;",
