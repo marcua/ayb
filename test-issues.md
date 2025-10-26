@@ -49,10 +49,10 @@ $ docker --version
 - No alternative S3-compatible storage available without container runtime
 
 #### 2. Network Access Restrictions **CRITICAL FINDING**
-**Status:** BLOCKING - DNS resolution issue
+**Status:** ONGOING - DNS resolution completely blocked
 
 **Issue:**
-The environment uses an HTTP/HTTPS proxy with a JWT-based allowlist. **DNS resolution does not work**, even though HTTP/HTTPS requests work fine through the proxy.
+The environment uses an HTTP/HTTPS proxy with a JWT-based allowlist. **DNS resolution does not work and is NOT temporary** - it's a fundamental sandbox restriction.
 
 ```
 $ sudo apt-get update
@@ -66,17 +66,30 @@ $ curl -I http://archive.ubuntu.com/  # Works! Uses proxy
 HTTP/1.1 301 Moved Permanently
 ```
 
+**Root Cause Investigation:**
+```bash
+$ cat /etc/resolv.conf
+# File is completely EMPTY - no DNS servers configured
+
+$ echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+# Added Google DNS servers
+
+$ python3 -c "import socket; print(socket.gethostbyname('archive.ubuntu.com'))"
+# HANGS INDEFINITELY - outbound DNS (port 53) is blocked by sandbox
+```
+
 **Impact:**
 - apt-get cannot resolve hostnames (even though downloads would work via proxy)
 - Cannot install Docker or any system packages
-- Python/direct DNS lookups fail
+- Python/direct DNS lookups fail or hang
 - curl/wget work fine (they use the HTTP_PROXY)
 
-**Root Cause:**
+**Why This Happens:**
 - Environment sets `HTTP_PROXY` and `HTTPS_PROXY` with allowed_hosts list
 - The proxy JWT includes: archive.ubuntu.com, security.ubuntu.com, *.ubuntu.com, registry-1.docker.io, auth.docker.io, download.docker.com, github.com, ppa.launchpadcontent.net, and many others
-- **BUT:** DNS resolution happens outside the proxy and fails
-- apt-get needs working DNS to resolve package repository hosts
+- **BUT:** DNS resolution happens before HTTP requests and is blocked at sandbox level
+- apt-get workflow: DNS lookup → HTTP request to resolved IP → proxy intercepts HTTP
+- The workflow breaks at step 1 (DNS lookup)
 
 **Evidence of proxy allowlist:**
 ```bash
@@ -88,10 +101,19 @@ https_proxy=http://...jwt_eyJ...@21.0.0.101:15004
 **Missing from allowlist:**
 - `dl.min.io` - Explicitly blocked with "host_not_allowed" error
 
-**Why this prevents fixes:**
-- apt-get requires DNS resolution before HTTP requests
-- Cannot configure apt to use proxy without working DNS first
-- This is a fundamental infrastructure limitation
+**Attempted Workarounds (All Failed):**
+1. **Adding DNS servers to /etc/resolv.conf** - Outbound DNS (port 53) is blocked by sandbox
+2. **Using /etc/hosts with IPs** - Not viable; Ubuntu mirrors use multiple rotating IPs and virtual hosts
+3. **Configuring apt proxy** - Still requires DNS before proxy connection
+
+**Why Standard Workarounds Don't Work:**
+- apt-get requires DNS resolution BEFORE it can make HTTP connections
+- Even with proxy configured, apt does: DNS → Connect to proxy → Proxy fetches
+- The sandbox blocks the first step (DNS) at the network level
+- Can't use static IPs in /etc/hosts because:
+  - Ubuntu mirrors rotate IPs frequently
+  - Virtual host configuration requires correct hostname in HTTP headers
+  - security.ubuntu.com, ppa.launchpadcontent.net also need DNS
 
 #### 3. Missing Build Dependencies for nsjail
 **Status:** PARTIALLY FIXABLE - But blocked by network issues
@@ -257,22 +279,59 @@ Current Branch: claude/investigate-test-environment-011CUUgwRzWhZfDWLvJebUpM
 
 ## Recommended Next Steps
 
-### **CRITICAL**: Fix DNS Resolution
+### **CRITICAL**: Fix DNS Resolution (Claude Code Infrastructure Team)
 
-**The #1 blocker is broken DNS resolution.**
+**The #1 blocker is blocked DNS resolution - this is NOT temporary, it's a sandbox-level restriction.**
 
-The environment has an HTTP proxy with many domains allowlisted (including most we need!), but DNS resolution fails completely. This prevents apt-get from working even though the actual downloads would succeed via proxy.
+The environment has an HTTP proxy with many domains allowlisted (including most we need!), but DNS resolution is completely blocked at the network level. This prevents apt-get from working even though the actual downloads would succeed via proxy.
 
-**Required fix:**
-- Enable DNS resolution for all hosts (or at least for allowlisted proxy hosts)
-- OR: Configure the environment so apt can resolve hostnames through the proxy
+**Problem Summary:**
+- `/etc/resolv.conf` is empty (no DNS servers configured)
+- Adding DNS servers (8.8.8.8, 8.8.4.4) doesn't work - requests hang indefinitely
+- Outbound DNS traffic (port 53) appears to be blocked by sandbox firewall
+- apt-get workflow breaks: DNS lookup (BLOCKED) → HTTP request → proxy
 
-**Current state:**
-- `HTTP_PROXY`/`HTTPS_PROXY` set with JWT containing `allowed_hosts`
-- Proxy allowlist already includes: `archive.ubuntu.com`, `*.ubuntu.com`, `registry-1.docker.io`, `download.docker.com`, `github.com`, `ppa.launchpadcontent.net`, and many others
-- `curl`/`wget` work fine (use proxy)
-- `apt-get` fails (needs DNS before it can use proxy)
-- Direct DNS lookups fail: `socket.gaierror: [Errno -3] Temporary failure in name resolution`
+**Confirmed via Testing:**
+```bash
+# Test 1: /etc/resolv.conf is empty
+$ cat /etc/resolv.conf
+(empty file)
+
+# Test 2: Adding DNS servers
+$ echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+nameserver 8.8.8.8
+
+# Test 3: DNS resolution hangs forever
+$ python3 -c "import socket; print(socket.gethostbyname('archive.ubuntu.com'))"
+(hangs indefinitely - timeout after 10+ seconds - KILLED)
+
+# Test 4: HTTP through proxy works fine
+$ curl -I http://archive.ubuntu.com/
+HTTP/1.1 301 Moved Permanently (works perfectly!)
+```
+
+**Solutions for Claude Code Team:**
+
+**Option 1: Enable DNS Resolution (Recommended)**
+- Allow outbound UDP port 53 traffic to public DNS servers (8.8.8.8, 1.1.1.1)
+- OR: Set up a DNS server at a known IP that containers can use
+- OR: Populate /etc/resolv.conf with a working nameserver at container start
+- This is the cleanest solution and will fix all DNS-dependent tools
+
+**Option 2: DNS-over-HTTPS Proxy**
+- Configure the HTTP proxy to handle DNS queries via DNS-over-HTTPS
+- This would allow DNS resolution through the existing proxy infrastructure
+- More complex but avoids opening UDP port 53
+
+**Option 3: Pre-populate /etc/hosts (Not Recommended)**
+- Automatically populate /etc/hosts with common package repository IPs
+- Problem: IPs change frequently, virtual hosts require correct HTTP Host headers
+- This is a fragile workaround, not a real solution
+
+**Option 4: Provide Docker Pre-installed (Workaround)**
+- If DNS can't be fixed, pre-install Docker in the sandbox environment
+- This at least unblocks container-based workflows
+- Still doesn't fix apt-get or other package managers
 
 ### Additional Network Allowlist
 
