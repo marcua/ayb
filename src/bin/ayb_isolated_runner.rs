@@ -19,7 +19,7 @@ struct QueryRequest {
 /// $ ayb_isolated_runner database.sqlite
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
-/// {"query":"SELECT * FROM x","query_mode":0,"allow_unsafe":false}
+/// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write],"allow_unsafe":false}
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
