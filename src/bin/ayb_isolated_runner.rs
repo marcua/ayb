@@ -9,7 +9,6 @@ use std::path::PathBuf;
 struct QueryRequest {
     query: String,
     query_mode: i16,
-    allow_unsafe: bool,
 }
 
 /// This binary runs as a persistent daemon that executes queries
@@ -19,7 +18,7 @@ struct QueryRequest {
 /// $ ayb_isolated_runner database.sqlite
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
-/// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write],"allow_unsafe":false}
+/// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
@@ -72,7 +71,7 @@ fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         };
 
         // Execute the query
-        let result = query_sqlite(&db_file, &request.query, request.allow_unsafe, query_mode);
+        let result = query_sqlite(&db_file, &request.query, false, query_mode);
 
         // Send response
         match result {

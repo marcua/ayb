@@ -38,7 +38,6 @@ pub async fn run_query_in_sandbox(
     db_path: &PathBuf,
     query: &str,
     query_mode: QueryMode,
-    allow_unsafe: bool,
 ) -> Result<QueryResult, AybError> {
     // Get or create the daemon for this database
     let daemon_arc = daemon_registry
@@ -47,9 +46,7 @@ pub async fn run_query_in_sandbox(
 
     // Execute the query
     let mut daemon = daemon_arc.lock().await;
-    let response = daemon
-        .execute_query(query, query_mode, allow_unsafe)
-        .await?;
+    let response = daemon.execute_query(query, query_mode).await?;
 
     // Parse the response
     parse_response(&response)
@@ -61,16 +58,13 @@ pub async fn run_query_without_sandbox(
     db_path: &PathBuf,
     query: &str,
     query_mode: QueryMode,
-    allow_unsafe: bool,
 ) -> Result<QueryResult, AybError> {
     // Get or create the daemon for this database
     let daemon_arc = daemon_registry.get_or_create_daemon(db_path, None).await?;
 
     // Execute the query
     let mut daemon = daemon_arc.lock().await;
-    let response = daemon
-        .execute_query(query, query_mode, allow_unsafe)
-        .await?;
+    let response = daemon.execute_query(query, query_mode).await?;
 
     // Parse the response
     parse_response(&response)

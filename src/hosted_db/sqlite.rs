@@ -89,26 +89,6 @@ pub async fn potentially_isolated_sqlite_query(
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    potentially_isolated_sqlite_query_with_unsafe(
-        daemon_registry,
-        path,
-        query,
-        isolation,
-        query_mode,
-        false,
-    )
-    .await
-}
-
-/// Run `query` against the database at `path`, with control over allow_unsafe.
-pub async fn potentially_isolated_sqlite_query_with_unsafe(
-    daemon_registry: &DaemonRegistry,
-    path: &PathBuf,
-    query: &str,
-    isolation: &Option<AybConfigIsolation>,
-    query_mode: QueryMode,
-    allow_unsafe: bool,
-) -> Result<QueryResult, AybError> {
     // Execute via daemon (either isolated or non-isolated)
     if let Some(isolation) = isolation {
         run_query_in_sandbox(
@@ -117,10 +97,9 @@ pub async fn potentially_isolated_sqlite_query_with_unsafe(
             path,
             query,
             query_mode,
-            allow_unsafe,
         )
         .await
     } else {
-        run_query_without_sandbox(daemon_registry, path, query, query_mode, allow_unsafe).await
+        run_query_without_sandbox(daemon_registry, path, query, query_mode).await
     }
 }

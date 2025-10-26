@@ -16,7 +16,6 @@ use tokio::sync::Mutex;
 struct QueryRequest {
     query: String,
     query_mode: i16,
-    allow_unsafe: bool,
 }
 
 /// Handle to a running daemon process for a specific database
@@ -32,7 +31,6 @@ impl DaemonHandle {
         &mut self,
         query: &str,
         query_mode: QueryMode,
-        allow_unsafe: bool,
     ) -> Result<String, AybError> {
         let stdin = self.stdin.as_mut().ok_or(AybError::Other {
             message: "Daemon stdin has been closed".to_string(),
@@ -42,7 +40,6 @@ impl DaemonHandle {
         let request = QueryRequest {
             query: query.to_string(),
             query_mode: query_mode as i16,
-            allow_unsafe,
         };
         let request_json = serde_json::to_string(&request)?;
 
