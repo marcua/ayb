@@ -48,35 +48,50 @@ $ docker --version
 - There is no environment variable or feature flag to skip MinIO setup
 - No alternative S3-compatible storage available without container runtime
 
-#### 2. Network Access Restrictions
-**Status:** BLOCKING - Environment limitation
+#### 2. Network Access Restrictions **CRITICAL FINDING**
+**Status:** BLOCKING - DNS resolution issue
 
 **Issue:**
+The environment uses an HTTP/HTTPS proxy with a JWT-based allowlist. **DNS resolution does not work**, even though HTTP/HTTPS requests work fine through the proxy.
+
 ```
-curl: (56) CONNECT tunnel failed, response 403
-HTTP/1.1 403 Forbidden
-```
-
-**Impact:**
-- Cannot install system packages via apt-get (package sources unreachable)
-- Cannot download external resources
-- Playwright browser installation fails (gracefully handled)
-- Blocks any test that might need external API calls
-
-**Evidence:**
-```bash
-$ curl -I https://google.com
-HTTP/1.1 403 Forbidden
-
 $ sudo apt-get update
 Err:1 http://security.ubuntu.com/ubuntu noble-security InRelease
   Temporary failure resolving 'security.ubuntu.com'
+
+$ python3 -c "import socket; print(socket.gethostbyname('archive.ubuntu.com'))"
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+$ curl -I http://archive.ubuntu.com/  # Works! Uses proxy
+HTTP/1.1 301 Moved Permanently
 ```
 
+**Impact:**
+- apt-get cannot resolve hostnames (even though downloads would work via proxy)
+- Cannot install Docker or any system packages
+- Python/direct DNS lookups fail
+- curl/wget work fine (they use the HTTP_PROXY)
+
+**Root Cause:**
+- Environment sets `HTTP_PROXY` and `HTTPS_PROXY` with allowed_hosts list
+- The proxy JWT includes: archive.ubuntu.com, security.ubuntu.com, *.ubuntu.com, registry-1.docker.io, auth.docker.io, download.docker.com, github.com, ppa.launchpadcontent.net, and many others
+- **BUT:** DNS resolution happens outside the proxy and fails
+- apt-get needs working DNS to resolve package repository hosts
+
+**Evidence of proxy allowlist:**
+```bash
+$ env | grep -i proxy
+https_proxy=http://...jwt_eyJ...@21.0.0.101:15004
+# JWT payload includes allowed_hosts with archive.ubuntu.com, *.ubuntu.com, etc.
+```
+
+**Missing from allowlist:**
+- `dl.min.io` - Explicitly blocked with "host_not_allowed" error
+
 **Why this prevents fixes:**
-- Cannot install missing packages (flex, protobuf, libnl) via apt-get
-- Cannot download pre-built binaries from external sources
-- Network isolation is at a fundamental level (HTTPS blocked with 403)
+- apt-get requires DNS resolution before HTTP requests
+- Cannot configure apt to use proxy without working DNS first
+- This is a fundamental infrastructure limitation
 
 #### 3. Missing Build Dependencies for nsjail
 **Status:** PARTIALLY FIXABLE - But blocked by network issues
@@ -242,29 +257,48 @@ Current Branch: claude/investigate-test-environment-011CUUgwRzWhZfDWLvJebUpM
 
 ## Recommended Next Steps
 
-### Network Allowlist
+### **CRITICAL**: Fix DNS Resolution
 
-Add these domains to the Claude Code sandbox allowlist to enable test dependencies:
+**The #1 blocker is broken DNS resolution.**
 
-**Critical (Required for tests):**
-- `registry-1.docker.io` - Docker Hub registry (for MinIO/PostgreSQL images)
-- `docker.io` - Docker Hub
-- `production.cloudflare.docker.com` - Docker CDN
-- `auth.docker.io` - Docker authentication
+The environment has an HTTP proxy with many domains allowlisted (including most we need!), but DNS resolution fails completely. This prevents apt-get from working even though the actual downloads would succeed via proxy.
 
-**Important (For package installation):**
-- `security.ubuntu.com` - Ubuntu security updates
-- `archive.ubuntu.com` - Ubuntu package repository
-- `ppa.launchpadcontent.net` - Ubuntu PPAs
+**Required fix:**
+- Enable DNS resolution for all hosts (or at least for allowlisted proxy hosts)
+- OR: Configure the environment so apt can resolve hostnames through the proxy
 
-**Optional but helpful:**
-- `github.com` - For git submodules (nsjail builds kafel from GitHub)
-- `raw.githubusercontent.com` - GitHub raw content
+**Current state:**
+- `HTTP_PROXY`/`HTTPS_PROXY` set with JWT containing `allowed_hosts`
+- Proxy allowlist already includes: `archive.ubuntu.com`, `*.ubuntu.com`, `registry-1.docker.io`, `download.docker.com`, `github.com`, `ppa.launchpadcontent.net`, and many others
+- `curl`/`wget` work fine (use proxy)
+- `apt-get` fails (needs DNS before it can use proxy)
+- Direct DNS lookups fail: `socket.gaierror: [Errno -3] Temporary failure in name resolution`
+
+### Additional Network Allowlist
+
+**Missing domains that need to be added to the proxy allowlist:**
+
+**Critical:**
+- `dl.min.io` - MinIO binary downloads (currently blocked with `x-deny-reason: host_not_allowed`)
+
+**Already in proxy allowlist (confirmed working via HTTP):**
+- ✓ `archive.ubuntu.com`
+- ✓ `security.ubuntu.com`
+- ✓ `*.ubuntu.com`
+- ✓ `registry-1.docker.io`
+- ✓ `auth.docker.io`
+- ✓ `download.docker.com`
+- ✓ `hub.docker.com`
+- ✓ `production.cloudflare.docker.com`
+- ✓ `github.com`
+- ✓ `raw.githubusercontent.com`
+- ✓ `ppa.launchpadcontent.net`
+- ✓ `static.crates.io`
+- ✓ `index.crates.io`
+- ✓ `crates.io`
+
+**Nice to have:**
 - `playwright.azureedge.net` - Playwright browser downloads
-- `cdn.playwright.dev` - Alternative Playwright CDN
-- `crates.io` - Rust crate registry (if not already cached)
-- `static.crates.io` - Crate downloads
-- `index.crates.io` - Crate index
 
 ### Docker Solution
 
