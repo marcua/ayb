@@ -242,12 +242,103 @@ Current Branch: claude/investigate-test-environment-011CUUgwRzWhZfDWLvJebUpM
 
 ## Recommended Next Steps
 
-To run the full test suite in the Claude Code environment, the following infrastructure changes would be needed:
+### Network Allowlist
 
-1. **Enable Docker or alternative container runtime** - Required for MinIO (S3 testing)
-2. **Relax network restrictions** - Allow HTTPS to trusted domains (package repos, CDNs)
-3. **Install system packages** - flex, libprotobuf-dev, protobuf-compiler, libnl-route-3-dev
-4. **Provide PostgreSQL service** - For postgres integration tests
-5. **Consider kernel upgrade** - Modern kernel with AppArmor support (for nsjail)
+Add these domains to the Claude Code sandbox allowlist to enable test dependencies:
+
+**Critical (Required for tests):**
+- `registry-1.docker.io` - Docker Hub registry (for MinIO/PostgreSQL images)
+- `docker.io` - Docker Hub
+- `production.cloudflare.docker.com` - Docker CDN
+- `auth.docker.io` - Docker authentication
+
+**Important (For package installation):**
+- `security.ubuntu.com` - Ubuntu security updates
+- `archive.ubuntu.com` - Ubuntu package repository
+- `ppa.launchpadcontent.net` - Ubuntu PPAs
+
+**Optional but helpful:**
+- `github.com` - For git submodules (nsjail builds kafel from GitHub)
+- `raw.githubusercontent.com` - GitHub raw content
+- `playwright.azureedge.net` - Playwright browser downloads
+- `cdn.playwright.dev` - Alternative Playwright CDN
+- `crates.io` - Rust crate registry (if not already cached)
+- `static.crates.io` - Crate downloads
+- `index.crates.io` - Crate index
+
+### Docker Solution
+
+**Option 1: Install Docker (Recommended)**
+```bash
+# Install Docker in the sandbox
+apt-get update
+apt-get install -y docker.io
+systemctl start docker  # or dockerd if systemd not available
+```
+
+**Option 2: Install Podman (Docker alternative)**
+```bash
+apt-get update
+apt-get install -y podman
+# Alias podman as docker: ln -s /usr/bin/podman /usr/bin/docker
+```
+
+**Option 3: Native MinIO binary (No containers)**
+```bash
+# Download MinIO standalone binary
+wget https://dl.min.io/server/minio/release/linux-amd64/minio
+chmod +x minio
+# Start MinIO: MINIO_ROOT_USER=minioadmin MINIO_ROOT_PASSWORD=minioadmin ./minio server /tmp/minio-data
+```
+*Note: Would require modifying `tests/run_minio.sh` to use native binary instead of Docker*
+
+### PostgreSQL Solution
+
+**Option 1: Install PostgreSQL server (Recommended)**
+```bash
+apt-get update
+apt-get install -y postgresql postgresql-client
+# Configure to listen on localhost:5432
+# Create user: sudo -u postgres createuser -s postgres_user
+# Set password: sudo -u postgres psql -c "ALTER USER postgres_user PASSWORD 'test';"
+```
+
+**Option 2: PostgreSQL in Docker (requires Docker from above)**
+```bash
+docker run -d --name postgres-test \
+  -e POSTGRES_USER=postgres_user \
+  -e POSTGRES_PASSWORD=test \
+  -e POSTGRES_DB=test_db \
+  -p 5432:5432 \
+  postgres:latest
+```
+
+**Option 3: Skip postgres tests (easiest)**
+- Only run `cargo test client_server_integration_sqlite`
+- Skip `cargo test client_server_integration_postgres`
+- This still provides good coverage (postgres test is a variant, not unique functionality)
+
+### System Packages
+
+Once network is unblocked, install nsjail dependencies:
+```bash
+sudo apt-get update
+sudo apt-get install -y flex bison libprotobuf-dev protobuf-compiler libnl-route-3-dev
+```
+
+### Minimal Setup for Core Tests
+
+If you want to get **something** working quickly:
+
+1. **Network allowlist** → Unblock Ubuntu repos + Docker Hub
+2. **Install Docker** → Option 1 or 2 above
+3. **Install system packages** → flex, protobuf, libnl packages
+4. **Skip PostgreSQL** → Just run SQLite tests
+
+This would enable:
+- ✓ Unit tests (already working)
+- ✓ SQLite e2e tests (with MinIO via Docker)
+- ✓ Browser e2e tests (with MinIO via Docker)
+- ✗ PostgreSQL e2e tests (optional, can skip)
 
 **Note:** The user explicitly stated not to modify the code, as tests pass locally and on GitHub Actions. These are purely environmental limitations of the Claude Code sandbox.
