@@ -22,7 +22,8 @@ tests/run_minio.sh
 
 # Build and install nsjail (Linux only)
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    # On Ubuntu, assumes these requirements: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
+    # Requires system packages: libprotobuf-dev protobuf-compiler libnl-route-3-dev flex bison
+    # Run tests/claude_code_setup.sh first if you haven't installed these packages
     if [ ! -f "tests/nsjail" ] || [ "$FORCE_NSJAIL" = "1" ]; then
         echo "Building nsjail..."
         scripts/build_nsjail.sh
