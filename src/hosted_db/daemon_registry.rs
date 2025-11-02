@@ -86,7 +86,7 @@ impl DaemonRegistry {
 
     /// Get or create a daemon for the given database path
     /// Returns an Arc<Mutex<DaemonHandle>> that can be used across threads
-    pub async fn get_or_create_daemon(
+    async fn get_or_create_daemon(
         &self,
         db_path: &PathBuf,
         nsjail_path: Option<&Path>,
