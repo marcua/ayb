@@ -66,21 +66,16 @@ pub fn build_nsjail_command(
     let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
     cmd.args(["--bindmount", &db_file_mapping]);
 
-    // Map the isolated_runner binary
+    // Map the query_daemon binary
     let ayb_path = current_exe()?;
-    let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
+    let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
     cmd.args([
         "--bindmount_ro",
-        &format!(
-            "{}:/tmp/ayb_isolated_runner",
-            isolated_runner_path.display()
-        ),
+        &format!("{}:/tmp/ayb_query_daemon", query_daemon_path.display()),
     ]);
 
     // Run the daemon
-    cmd.arg("--")
-        .arg("/tmp/ayb_isolated_runner")
-        .arg(tmp_db_path);
+    cmd.arg("--").arg("/tmp/ayb_query_daemon").arg(tmp_db_path);
 
     Ok(cmd)
 }
@@ -88,9 +83,9 @@ pub fn build_nsjail_command(
 /// Build command for running daemon without isolation
 pub fn build_direct_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
-    let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
+    let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
-    let mut cmd = tokio::process::Command::new(&isolated_runner_path);
+    let mut cmd = tokio::process::Command::new(&query_daemon_path);
     cmd.arg(db_path);
 
     Ok(cmd)

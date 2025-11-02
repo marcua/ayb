@@ -15,20 +15,20 @@ struct QueryRequest {
 /// against a database and returns results in QueryResult format.
 ///
 /// Usage:
-/// $ ayb_isolated_runner database.sqlite
+/// $ ayb_query_daemon database.sqlite
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
 /// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
-/// This command is meant to be run inside a sandbox that isolates
+/// This command can be run inside a sandbox that isolates
 /// parallel invocations from accessing each other's data, memory,
 /// and resources. That sandbox can be found in src/hosted_db/sandbox.rs.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("Usage: ayb_isolated_runner <database.sqlite>");
+        eprintln!("Usage: ayb_query_daemon <database.sqlite>");
         std::process::exit(1);
     }
 
