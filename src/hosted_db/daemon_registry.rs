@@ -1,6 +1,6 @@
 use crate::error::AybError;
 use crate::hosted_db::sandbox::{build_direct_command, build_nsjail_command};
-use crate::hosted_db::QueryMode;
+use crate::hosted_db::{QueryMode, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::canonicalize;
@@ -119,10 +119,11 @@ impl DaemonRegistry {
         nsjail_path: Option<&Path>,
         query: &str,
         query_mode: QueryMode,
-    ) -> Result<String, AybError> {
+    ) -> Result<QueryResult, AybError> {
         let daemon_arc = self.get_or_create_daemon(db_path, nsjail_path).await?;
         let mut daemon = daemon_arc.lock().await;
-        daemon.execute_query(query, query_mode).await
+        let response = daemon.execute_query(query, query_mode).await?;
+        parse_response(&response)
     }
 
     /// Spawn a new daemon process for the given database
@@ -185,6 +186,24 @@ impl DaemonRegistry {
             }
         }
     }
+}
+
+/// Parse a JSON response from daemon into QueryResult or AybError
+fn parse_response(response: &str) -> Result<QueryResult, AybError> {
+    // Try to parse as QueryResult first
+    if let Ok(result) = serde_json::from_str::<QueryResult>(response) {
+        return Ok(result);
+    }
+
+    // Try to parse as AybError
+    if let Ok(error) = serde_json::from_str::<AybError>(response) {
+        return Err(error);
+    }
+
+    // If neither worked, return a generic error
+    Err(AybError::QueryError {
+        message: format!("Invalid response: {}", response),
+    })
 }
 
 impl Clone for DaemonRegistry {

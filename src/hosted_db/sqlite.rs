@@ -1,6 +1,5 @@
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::sandbox::parse_response;
 use crate::hosted_db::{QueryMode, QueryResult};
 use crate::server::config::AybConfigIsolation;
 use rusqlite;
@@ -88,8 +87,7 @@ pub async fn potentially_isolated_sqlite_query(
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     let nsjail_path = isolation.as_ref().map(|i| Path::new(&i.nsjail_path));
-    let response = daemon_registry
+    daemon_registry
         .execute_query(path, nsjail_path, query, query_mode)
-        .await?;
-    parse_response(&response)
+        .await
 }

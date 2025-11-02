@@ -28,7 +28,6 @@ SOFTWARE.
 
 use crate::error::AybError;
 use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
-use crate::hosted_db::QueryResult;
 use std::env::current_exe;
 use std::fs::canonicalize;
 use std::path::{Path, PathBuf};
@@ -89,22 +88,4 @@ pub fn build_direct_command(db_path: &PathBuf) -> Result<tokio::process::Command
     cmd.arg(db_path);
 
     Ok(cmd)
-}
-
-/// Parse a JSON response from daemon into QueryResult or AybError
-pub fn parse_response(response: &str) -> Result<QueryResult, AybError> {
-    // Try to parse as QueryResult first
-    if let Ok(result) = serde_json::from_str::<QueryResult>(response) {
-        return Ok(result);
-    }
-
-    // Try to parse as AybError
-    if let Ok(error) = serde_json::from_str::<AybError>(response) {
-        return Err(error);
-    }
-
-    // If neither worked, return a generic error
-    Err(AybError::QueryError {
-        message: format!("Invalid response: {}", response),
-    })
 }
