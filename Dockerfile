@@ -37,7 +37,7 @@ RUN apt update
 RUN apt-get install -y libssl-dev
 
 COPY --from=builder /ayb/target/release/ayb /bin
-COPY --from=builder /ayb/target/release/ayb_isolated_runner /bin
+COPY --from=builder /ayb/target/release/ayb_query_daemon /bin
 COPY --from=builder /nsjail /bin
 
 EXPOSE 5433

@@ -61,8 +61,8 @@ name = "ayb"
 path = "src/bin/ayb.rs"
 
 [[bin]]
-name = "ayb_isolated_runner"
-path = "src/bin/ayb_isolated_runner.rs"
+name = "ayb_query_daemon"
+path = "src/bin/ayb_query_daemon.rs"
 
 [profile.dev]
 # debug = 2 takes ~50% longer to build for tests on marcua's tiny dev

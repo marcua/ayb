@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use crate::error::AybError;
 
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::paths::{
     instantiated_new_database_path, pathbuf_to_parent, set_current_database_and_clean_up,
 };
@@ -19,6 +20,7 @@ async fn create_database(
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
+    daemon_registry: web::Data<DaemonRegistry>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
@@ -37,7 +39,7 @@ async fn create_database(
         // Create the database file at the appropriate path
         let db_path =
             instantiated_new_database_path(entity_slug, &path.database, &ayb_config.data_path)?;
-        set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?)?;
+        set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?, &daemon_registry).await?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
     } else {
         Err(AybError::Other {

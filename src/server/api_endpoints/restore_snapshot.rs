@@ -1,6 +1,7 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::InstantiatedEntity;
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::paths::{new_database_path, set_current_database_and_clean_up};
 use crate::http::structs::{EmptyResponse, EntityDatabasePath};
 use crate::server::config::AybConfig;
@@ -15,6 +16,7 @@ async fn restore_snapshot(
     snapshot_id: String,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
+    daemon_registry: web::Data<DaemonRegistry>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity.to_lowercase();
@@ -37,7 +39,7 @@ async fn restore_snapshot(
             snapshot_storage
                 .retrieve_snapshot(entity_slug, database_slug, &snapshot_id, db_path)
                 .await?;
-            set_current_database_and_clean_up(db_path)?;
+            set_current_database_and_clean_up(db_path, &daemon_registry).await?;
         }
         Ok(HttpResponse::Ok().json(EmptyResponse {}))
     } else {

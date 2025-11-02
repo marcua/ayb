@@ -1,4 +1,5 @@
 use crate::error::AybError;
+use crate::hosted_db::daemon_registry::DaemonRegistry;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::symlink;
@@ -165,12 +166,19 @@ fn symlink_directory(original: &Path, link: &Path) -> Result<(), AybError> {
 /// Declares `new_path` as the new current path (by symlinking the
 /// current path to it) and, if a previous database existed as the
 /// current database, delete it.
-pub fn set_current_database_and_clean_up(new_path: &Path) -> Result<(), AybError> {
+pub async fn set_current_database_and_clean_up(
+    new_path: &Path,
+    daemon_registry: &DaemonRegistry,
+) -> Result<(), AybError> {
     let mut current_db_path = pathbuf_to_parent(new_path)?;
     let mut current_tmp_db_path = current_db_path.clone();
     current_db_path.push(CURRENT);
     current_tmp_db_path.push(CURRENT_TMP);
-    let previous_database_path = fs::canonicalize(current_db_path.clone());
+    let previous_database_dir = fs::canonicalize(current_db_path.clone());
+
+    // Extract database slug from the directory structure for later use
+    let database_slug_dir = pathbuf_to_parent(new_path)?;
+    let database_slug = pathbuf_to_file_name(&database_slug_dir)?;
 
     symlink_directory(&fs::canonicalize(new_path)?, &current_tmp_db_path.clone())?;
     // Why create a temporary current symlink and then rename it? This
@@ -178,9 +186,17 @@ pub fn set_current_database_and_clean_up(new_path: &Path) -> Result<(), AybError
     // https://stackoverflow.com/questions/37345844/how-to-overwrite-a-symlink-in-go.
     fs::rename(current_tmp_db_path, current_db_path)?;
 
-    // Remove previous path if it existed.
-    if let Ok(previous_database_path) = previous_database_path {
-        fs::remove_dir_all(previous_database_path)?;
+    // Shut down daemon and remove previous path if it existed.
+    if let Ok(previous_database_dir) = previous_database_dir {
+        // Daemons are registered with the full file path, not just the directory
+        let mut previous_database_file_path = previous_database_dir.clone();
+        previous_database_file_path.push(&database_slug);
+
+        // Shut down the daemon for the old database path before deleting the directory
+        daemon_registry
+            .shut_down_daemon(&previous_database_file_path)
+            .await?;
+        fs::remove_dir_all(previous_database_dir)?;
     }
 
     Ok(())
