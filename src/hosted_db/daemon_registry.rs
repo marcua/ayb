@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 use tokio::io::BufReader;
-use tokio::process::{Child, ChildStdin};
+use tokio::process::{Child, ChildStdin, ChildStdout};
 use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,7 +21,7 @@ struct QueryRequest {
 pub struct DaemonHandle {
     child: Child,
     stdin: Option<ChildStdin>,
-    stdout: BufReader<tokio::process::ChildStdout>,
+    stdout: BufReader<ChildStdout>,
 }
 
 impl DaemonHandle {
