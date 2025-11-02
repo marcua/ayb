@@ -1,9 +1,7 @@
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::{
-    sandbox::{run_query_in_sandbox, run_query_without_sandbox},
-    QueryMode, QueryResult,
-};
+use crate::hosted_db::sandbox::parse_response;
+use crate::hosted_db::{QueryMode, QueryResult};
 use crate::server::config::AybConfigIsolation;
 use rusqlite;
 use rusqlite::config::DbConfig;
@@ -89,17 +87,16 @@ pub async fn potentially_isolated_sqlite_query(
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    // Execute via daemon (either isolated or non-isolated)
-    if let Some(isolation) = isolation {
-        run_query_in_sandbox(
-            daemon_registry,
-            Path::new(&isolation.nsjail_path),
-            path,
-            query,
-            query_mode,
-        )
-        .await
-    } else {
-        run_query_without_sandbox(daemon_registry, path, query, query_mode).await
-    }
+    // Get or create daemon with optional nsjail path for isolation
+    let nsjail_path = isolation.as_ref().map(|i| Path::new(&i.nsjail_path));
+    let daemon_arc = daemon_registry
+        .get_or_create_daemon(path, nsjail_path)
+        .await?;
+
+    // Execute the query
+    let mut daemon = daemon_arc.lock().await;
+    let response = daemon.execute_query(query, query_mode).await?;
+
+    // Parse the response
+    parse_response(&response)
 }

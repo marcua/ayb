@@ -27,51 +27,75 @@ SOFTWARE.
 */
 
 use crate::error::AybError;
-use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::{QueryMode, QueryResult};
+use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
+use crate::hosted_db::QueryResult;
+use std::env::current_exe;
+use std::fs::canonicalize;
 use std::path::{Path, PathBuf};
 
-/// Execute a query with nsjail isolation
-pub async fn run_query_in_sandbox(
-    daemon_registry: &DaemonRegistry,
+/// Build command for running daemon with nsjail isolation
+pub fn build_nsjail_command(
     nsjail: &Path,
     db_path: &PathBuf,
-    query: &str,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    // Get or create the daemon for this database
-    let daemon_arc = daemon_registry
-        .get_or_create_daemon(db_path, Some(nsjail))
-        .await?;
+) -> Result<tokio::process::Command, AybError> {
+    let mut cmd = tokio::process::Command::new(nsjail);
 
-    // Execute the query
-    let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode).await?;
+    cmd.arg("--really_quiet") // log fatal messages only
+        .arg("--iface_no_lo")
+        .args(["--mode", "o"]) // run once
+        .args(["--hostname", "ayb"])
+        .args(["--bindmount_ro", "/lib:/lib"])
+        .args(["--bindmount_ro", "/lib64:/lib64"])
+        .args(["--bindmount_ro", "/usr:/usr"]);
 
-    // Parse the response
-    parse_response(&response)
+    // Set resource limits
+    cmd.args(["--mount", "none:/tmp:tmpfs:size=100000000"]) // ~95 MB tmpfs
+        .args(["--max_cpus", "1"])
+        .args(["--rlimit_as", "64"]) // 64 MB memory limit
+        .args(["--time_limit", "0"]) // No time limit for daemon
+        .args(["--rlimit_fsize", "75"])
+        .args(["--rlimit_nofile", "10"])
+        .args(["--rlimit_nproc", "2"]);
+
+    // Map the database file
+    let absolute_db_path = canonicalize(db_path)?;
+    let db_file_name = pathbuf_to_file_name(&absolute_db_path)?;
+    let tmp_db_path = Path::new("/tmp").join(db_file_name);
+    let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
+    cmd.args(["--bindmount", &db_file_mapping]);
+
+    // Map the isolated_runner binary
+    let ayb_path = current_exe()?;
+    let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
+    cmd.args([
+        "--bindmount_ro",
+        &format!(
+            "{}:/tmp/ayb_isolated_runner",
+            isolated_runner_path.display()
+        ),
+    ]);
+
+    // Run the daemon
+    cmd.arg("--")
+        .arg("/tmp/ayb_isolated_runner")
+        .arg(tmp_db_path);
+
+    Ok(cmd)
 }
 
-/// Execute a query without isolation
-pub async fn run_query_without_sandbox(
-    daemon_registry: &DaemonRegistry,
-    db_path: &PathBuf,
-    query: &str,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    // Get or create the daemon for this database
-    let daemon_arc = daemon_registry.get_or_create_daemon(db_path, None).await?;
+/// Build command for running daemon without isolation
+pub fn build_direct_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
+    let ayb_path = current_exe()?;
+    let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
 
-    // Execute the query
-    let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode).await?;
+    let mut cmd = tokio::process::Command::new(&isolated_runner_path);
+    cmd.arg(db_path);
 
-    // Parse the response
-    parse_response(&response)
+    Ok(cmd)
 }
 
-/// Parse a JSON response
-fn parse_response(response: &str) -> Result<QueryResult, AybError> {
+/// Parse a JSON response from daemon into QueryResult or AybError
+pub fn parse_response(response: &str) -> Result<QueryResult, AybError> {
     // Try to parse as QueryResult first
     if let Ok(result) = serde_json::from_str::<QueryResult>(response) {
         return Ok(result);

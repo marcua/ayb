@@ -1,9 +1,8 @@
 use crate::error::AybError;
-use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
+use crate::hosted_db::sandbox::{build_direct_command, build_nsjail_command};
 use crate::hosted_db::QueryMode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::env::current_exe;
 use std::fs::canonicalize;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -121,10 +120,10 @@ impl DaemonRegistry {
     ) -> Result<DaemonHandle, AybError> {
         let mut cmd = if let Some(nsjail) = nsjail_path {
             // Spawn with nsjail isolation
-            self.build_nsjail_command(nsjail, db_path)?
+            build_nsjail_command(nsjail, db_path)?
         } else {
             // Spawn without isolation
-            self.build_direct_command(db_path)?
+            build_direct_command(db_path)?
         };
 
         // Spawn the process with piped stdin/stdout
@@ -147,68 +146,6 @@ impl DaemonRegistry {
             stdin: Some(stdin),
             stdout: BufReader::new(stdout),
         })
-    }
-
-    /// Build command for running daemon with nsjail isolation
-    fn build_nsjail_command(
-        &self,
-        nsjail: &Path,
-        db_path: &PathBuf,
-    ) -> Result<tokio::process::Command, AybError> {
-        let mut cmd = tokio::process::Command::new(nsjail);
-
-        cmd.arg("--really_quiet") // log fatal messages only
-            .arg("--iface_no_lo")
-            .args(["--mode", "o"]) // run once
-            .args(["--hostname", "ayb"])
-            .args(["--bindmount_ro", "/lib:/lib"])
-            .args(["--bindmount_ro", "/lib64:/lib64"])
-            .args(["--bindmount_ro", "/usr:/usr"]);
-
-        // Set resource limits
-        cmd.args(["--mount", "none:/tmp:tmpfs:size=100000000"]) // ~95 MB tmpfs
-            .args(["--max_cpus", "1"])
-            .args(["--rlimit_as", "64"]) // 64 MB memory limit
-            .args(["--time_limit", "0"]) // No time limit for daemon
-            .args(["--rlimit_fsize", "75"])
-            .args(["--rlimit_nofile", "10"])
-            .args(["--rlimit_nproc", "2"]);
-
-        // Map the database file
-        let absolute_db_path = canonicalize(db_path)?;
-        let db_file_name = pathbuf_to_file_name(&absolute_db_path)?;
-        let tmp_db_path = Path::new("/tmp").join(db_file_name);
-        let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
-        cmd.args(["--bindmount", &db_file_mapping]);
-
-        // Map the isolated_runner binary
-        let ayb_path = current_exe()?;
-        let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
-        cmd.args([
-            "--bindmount_ro",
-            &format!(
-                "{}:/tmp/ayb_isolated_runner",
-                isolated_runner_path.display()
-            ),
-        ]);
-
-        // Run the daemon
-        cmd.arg("--")
-            .arg("/tmp/ayb_isolated_runner")
-            .arg(tmp_db_path);
-
-        Ok(cmd)
-    }
-
-    /// Build command for running daemon without isolation
-    fn build_direct_command(&self, db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
-        let ayb_path = current_exe()?;
-        let isolated_runner_path = pathbuf_to_parent(&ayb_path)?.join("ayb_isolated_runner");
-
-        let mut cmd = tokio::process::Command::new(&isolated_runner_path);
-        cmd.arg(db_path);
-
-        Ok(cmd)
     }
 
     /// Shut down a daemon for a specific database path

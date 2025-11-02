@@ -156,18 +156,19 @@ pub async fn snapshot_database(
                     format!("VACUUM INTO \"{}\"", snapshot_path.display())
                 }
             };
-            // Snapshot operations use direct query_sqlite (not through daemon) because
-            // the snapshot files are stored in locations that aren't bind-mounted to
-            // isolated daemon processes.
-            let result = query_sqlite(&db_path, &backup_query, true, QueryMode::ReadOnly)?;
+            let result = query_sqlite(
+                &db_path,
+                &backup_query,
+                // Run in unsafe mode to allow backup process to
+                // attach to destination database.
+                true,
+                QueryMode::ReadOnly,
+            )?;
             if !result.rows.is_empty() {
                 return Err(AybError::SnapshotError {
                     message: format!("Unexpected snapshot result: {result:?}"),
                 });
             }
-            // Integrity check uses direct query_sqlite (not through daemon)
-            // because the snapshot file is local, just created, and not in
-            // the bind-mounted location accessible to isolated daemons.
             let result = query_sqlite(
                 &snapshot_path,
                 "PRAGMA integrity_check;",
