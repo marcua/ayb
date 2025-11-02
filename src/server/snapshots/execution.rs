@@ -137,7 +137,6 @@ pub async fn snapshot_database(
     match ayb_db.get_database(entity_slug, database_slug).await {
         Ok(_db) => {
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
-
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();
