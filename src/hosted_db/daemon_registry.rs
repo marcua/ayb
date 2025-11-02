@@ -202,7 +202,7 @@ fn parse_response(response: &str) -> Result<QueryResult, AybError> {
 
     // If neither worked, return a generic error
     Err(AybError::QueryError {
-        message: format!("Invalid response: {}", response),
+        message: format!("Invalid response: {response}"),
     })
 }
 

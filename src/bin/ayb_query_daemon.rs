@@ -51,7 +51,7 @@ fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
                 let error_response = serde_json::json!({
                     "error": format!("Failed to parse request: {}", e)
                 });
-                writeln!(stdout, "{}", error_response)?;
+                writeln!(stdout, "{error_response}")?;
                 stdout.flush()?;
                 continue;
             }
@@ -64,7 +64,7 @@ fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
                 let error_response = serde_json::json!({
                     "error": "Invalid query_mode, must be 0 or 1"
                 });
-                writeln!(stdout, "{}", error_response)?;
+                writeln!(stdout, "{error_response}")?;
                 stdout.flush()?;
                 continue;
             }
