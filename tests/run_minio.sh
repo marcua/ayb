@@ -138,14 +138,8 @@ export AWS_ACCESS_KEY_ID=minioadmin
 export AWS_SECRET_ACCESS_KEY=minioadmin
 export AWS_DEFAULT_REGION=us-east-1
 
-# Find aws command - check virtual environment first, then system
-AWS_CMD="aws"
-if [ -f "$SCRIPT_DIR/test-env/bin/aws" ]; then
-  AWS_CMD="$SCRIPT_DIR/test-env/bin/aws"
-elif ! command -v aws &> /dev/null; then
-  echo "Error: aws CLI not found. Please run tests/set_up_e2e_env.sh first"
-  exit 1
-fi
+# Use aws from virtual environment (works whether venv is activated or not)
+AWS_CMD="$SCRIPT_DIR/test-env/bin/aws"
 
 # Create bucket (ignore error if already exists)
 echo -n "Creating test bucket..."
