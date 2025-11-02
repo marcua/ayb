@@ -48,14 +48,16 @@ pub fn build_nsjail_command(
         .args(["--bindmount_ro", "/lib64:/lib64"])
         .args(["--bindmount_ro", "/usr:/usr"]);
 
-    // Set resource limits
+    // Set resource limits for the process. In the future, we will
+    // allow entities to control the resources they dedicate to
+    // different databases/queries.
     cmd.args(["--mount", "none:/tmp:tmpfs:size=100000000"]) // ~95 MB tmpfs
-        .args(["--max_cpus", "1"])
+        .args(["--max_cpus", "1"]) // One CPU
         .args(["--rlimit_as", "64"]) // 64 MB memory limit
         .args(["--time_limit", "0"]) // No time limit for daemon
-        .args(["--rlimit_fsize", "75"])
-        .args(["--rlimit_nofile", "10"])
-        .args(["--rlimit_nproc", "2"]);
+        .args(["--rlimit_fsize", "75"]) // 75 MB file size limit
+        .args(["--rlimit_nofile", "10"]) // 10 files maximum
+        .args(["--rlimit_nproc", "2"]); // 2 processes maximum
 
     // Map the database file
     let absolute_db_path = canonicalize(db_path)?;
