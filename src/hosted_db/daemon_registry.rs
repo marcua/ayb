@@ -113,7 +113,6 @@ impl DaemonRegistry {
     }
 
     /// Execute a query by getting/creating daemon, locking, and executing
-    /// This encapsulates the locking details from callers
     pub async fn execute_query(
         &self,
         db_path: &PathBuf,
