@@ -112,6 +112,20 @@ impl DaemonRegistry {
         Ok(daemon_arc)
     }
 
+    /// Execute a query by getting/creating daemon, locking, and executing
+    /// This encapsulates the locking details from callers
+    pub async fn execute_query(
+        &self,
+        db_path: &PathBuf,
+        nsjail_path: Option<&Path>,
+        query: &str,
+        query_mode: QueryMode,
+    ) -> Result<String, AybError> {
+        let daemon_arc = self.get_or_create_daemon(db_path, nsjail_path).await?;
+        let mut daemon = daemon_arc.lock().await;
+        daemon.execute_query(query, query_mode).await
+    }
+
     /// Spawn a new daemon process for the given database
     async fn spawn_daemon(
         &self,

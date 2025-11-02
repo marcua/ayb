@@ -87,16 +87,9 @@ pub async fn potentially_isolated_sqlite_query(
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    // Get or create daemon with optional nsjail path for isolation
     let nsjail_path = isolation.as_ref().map(|i| Path::new(&i.nsjail_path));
-    let daemon_arc = daemon_registry
-        .get_or_create_daemon(path, nsjail_path)
+    let response = daemon_registry
+        .execute_query(path, nsjail_path, query, query_mode)
         .await?;
-
-    // Execute the query
-    let mut daemon = daemon_arc.lock().await;
-    let response = daemon.execute_query(query, query_mode).await?;
-
-    // Parse the response
     parse_response(&response)
 }
