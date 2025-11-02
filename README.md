@@ -361,11 +361,11 @@ to `0` in order to prevent users from corrupting the database or
 attaching to other databases on the filesystem.
 
 For further isolation, `ayb` can use [nsjail](https://nsjail.dev/)
-(only when running on Linux) to isolate each query's filesystem access
+(only when running on Linux) to isolate each database's filesystem access
 and resources. When this form of isolation is enabled, `ayb` starts a
-new `nsjail`-managed process to execute the query against the
-database. We have not yet benchmarked the performance overhead of this
-approach.
+persistent `nsjail`-managed daemon process for each database to execute
+queries in an isolated environment. We have not yet benchmarked the performance
+overhead of this approach.
 
 To enable this deeper form of isolation on Linux, you must first build
 `nsjail`, which you can do through
