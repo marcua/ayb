@@ -26,6 +26,19 @@ ayb client --url http://127.0.0.1:5433 <command>
 See README.md for the full set of documented commands/use cases.
 
 ### Testing
+
+**For Claude Code for Web / Constrained Environments:**
+```bash
+# First-time setup: Install system dependencies (requires sudo)
+# Only needed in constrained environments (gVisor, containers, etc.)
+# Skip this on local machines where packages are already installed
+tests/claude_code_setup.sh
+
+# Then run the standard test setup
+tests/set_up_e2e_env.sh
+```
+
+**For Local Development:**
 ```bash
 # Set up test environment (required before first test run)
 tests/set_up_e2e_env.sh
@@ -38,8 +51,8 @@ make test TEST=client_server_integration_sqlite
 
 # The test setup script installs:
 # - Python virtual environment with awscli
-# - MinIO for S3-compatible storage testing
-# - nsjail binary for isolation testing
+# - MinIO for S3-compatible storage testing (native binary, no Docker required)
+# - nsjail binary for isolation testing (skipped if kernel doesn't support it)
 ```
 
 If tests fail with S3 errors, run `tests/run_minio.sh` and try again.
