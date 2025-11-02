@@ -130,7 +130,7 @@ impl DaemonRegistry {
         let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null()) // We don't use stderr in daemon mode
+            .stderr(Stdio::null())
             .spawn()?;
 
         let stdin = child.stdin.take().ok_or(AybError::Other {
