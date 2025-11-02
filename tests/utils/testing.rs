@@ -38,45 +38,6 @@ pub fn get_test_port(test_type: &str) -> Result<u16, Box<dyn std::error::Error>>
     }
 }
 
-/// Check if nsjail is available and can actually run
-/// Returns false if nsjail doesn't exist or can't execute due to kernel limitations
-fn can_use_nsjail() -> bool {
-    let nsjail_path = "tests/nsjail";
-
-    // Check if nsjail binary exists
-    if !std::path::Path::new(nsjail_path).exists() {
-        eprintln!("nsjail not found at {}, running without isolation", nsjail_path);
-        return false;
-    }
-
-    // Try to run a simple command with nsjail to see if it works
-    let output = Command::new(nsjail_path)
-        .args(["-Mo", "--chroot", "/", "--", "/bin/echo", "test"])
-        .output();
-
-    match output {
-        Ok(result) => {
-            if result.status.success() {
-                eprintln!("nsjail is functional, enabling isolation");
-                true
-            } else {
-                // Check if it's the kernel limitation error
-                let stderr = String::from_utf8_lossy(&result.stderr);
-                if stderr.contains("clone") && stderr.contains("Invalid argument") {
-                    eprintln!("nsjail cannot run due to kernel limitations (likely gVisor), running without isolation");
-                } else {
-                    eprintln!("nsjail test failed: {}", stderr);
-                }
-                false
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to test nsjail: {}, running without isolation", e);
-            false
-        }
-    }
-}
-
 pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::error::Error>> {
     let port = get_test_port(test_type)?;
 
@@ -89,18 +50,6 @@ pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::erro
         format!("sqlite://tests/ayb_data_{test_type}/ayb.sqlite")
     };
     let path_prefix = test_type;
-
-    // Check if nsjail is available and functional
-    let nsjail_available = can_use_nsjail();
-
-    let isolation_section = if nsjail_available {
-        r#"
-[isolation]
-nsjail_path = "tests/nsjail"
-"#
-    } else {
-        ""
-    };
 
     let config_content = format!(
         r#"host = "0.0.0.0"
@@ -120,7 +69,10 @@ token_expiration_seconds = 3600
 
 [cors]
 origin = "*"
-{isolation}
+
+[isolation]
+nsjail_path = "tests/nsjail"
+
 [snapshots]
 sqlite_method = "Vacuum"
 access_key_id = "minioadmin"
@@ -137,8 +89,7 @@ max_snapshots = 6
         port = port,
         database_url = database_url,
         test_type = test_type,
-        path_prefix = path_prefix,
-        isolation = isolation_section
+        path_prefix = path_prefix
     );
 
     // Write the configuration to file
