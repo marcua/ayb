@@ -51,8 +51,8 @@ make test TEST=client_server_integration_sqlite
 
 # The test setup script installs:
 # - Python virtual environment with awscli
-# - MinIO for S3-compatible storage testing (native binary, no Docker required)
-# - nsjail binary for isolation testing (skipped if kernel doesn't support it)
+# - MinIO for S3-compatible storage testing
+# - nsjail binary for isolation testing
 ```
 
 If tests fail with S3 errors, run `tests/run_minio.sh` and try again.
