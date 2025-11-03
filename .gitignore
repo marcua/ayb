@@ -21,6 +21,7 @@ tests/ayb_data*
 tests/test-server-config-*
 tests/smtp_data*
 tests/nsjail
+tests/minio
 tests/test-env
 tests/screenshots/*_current.png
 tests/screenshots/*_diff.png

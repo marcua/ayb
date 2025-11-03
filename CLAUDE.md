@@ -26,6 +26,19 @@ ayb client --url http://127.0.0.1:5433 <command>
 See README.md for the full set of documented commands/use cases.
 
 ### Testing
+
+**For Claude Code for Web / Constrained Environments:**
+```bash
+# First-time setup: Install system dependencies (requires sudo)
+# Only needed in constrained environments (gVisor, containers, etc.)
+# Skip this on local machines where packages are already installed
+tests/claude_code_setup.sh
+
+# Then run the standard test setup
+tests/set_up_e2e_env.sh
+```
+
+**For Local Development:**
 ```bash
 # Set up test environment (required before first test run)
 tests/set_up_e2e_env.sh
