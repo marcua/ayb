@@ -36,7 +36,8 @@ pub fn query_sqlite(
     // The journal_mode setting persists in the database file, so this will
     // convert existing databases to WAL mode on first write access
     if matches!(query_mode, QueryMode::ReadWrite) {
-        conn.execute("PRAGMA journal_mode=WAL", [])?;
+        // PRAGMA statements return results, so we use query_row instead of execute
+        let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
     }
 
     if !allow_unsafe {
