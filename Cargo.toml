@@ -25,6 +25,7 @@ fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
 lettre = { version = "0.11.18", features = ["tokio1-native-tls"] }
+pgwire = { version = "0.28" }
 quoted_printable = { version = "0.5.1" }
 regex = { version = "1.11.2"}
 reqwest = { version = "0.12.23", features = ["json"] }

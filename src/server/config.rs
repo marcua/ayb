@@ -97,6 +97,13 @@ pub struct AybConfigSnapshots {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct AybConfigPgWire {
+    pub enabled: bool,
+    pub host: String,
+    pub port: u16,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfig {
     pub host: String,
     pub port: u16,
@@ -109,6 +116,7 @@ pub struct AybConfig {
     pub cors: AybConfigCors,
     pub isolation: Option<AybConfigIsolation>,
     pub snapshots: Option<AybConfigSnapshots>,
+    pub pgwire: Option<AybConfigPgWire>,
 }
 
 pub fn config_to_toml(ayb_config: AybConfig) -> Result<String, AybError> {
@@ -148,6 +156,7 @@ pub fn default_server_config() -> AybConfig {
         }),
         isolation: None,
         snapshots: None,
+        pgwire: None,
     }
 }
 

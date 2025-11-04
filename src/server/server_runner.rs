@@ -5,6 +5,7 @@ use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::server::config::read_config;
 use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
+use crate::server::pgwire_server::start_pgwire_server;
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
@@ -18,6 +19,7 @@ use dyn_clone::clone_box;
 use std::env::consts::OS;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 
 pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     // Unauthenticated API endpoints
@@ -130,6 +132,31 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
     schedule_periodic_snapshots(ayb_conf_for_server.clone(), ayb_db.clone())
         .await
         .expect("unable to start periodic snapshot scheduler");
+
+    // Start PostgreSQL wire protocol server if enabled
+    if let Some(pgwire_config) = &ayb_conf.pgwire {
+        if pgwire_config.enabled {
+            let pgwire_ayb_db = Arc::new(clone_box(&*ayb_db));
+            let pgwire_config_clone = Arc::new(ayb_conf_for_server.clone());
+            let pgwire_daemon_registry = Arc::new(daemon_registry.clone());
+            let pgwire_host = pgwire_config.host.clone();
+            let pgwire_port = pgwire_config.port;
+
+            tokio::spawn(async move {
+                if let Err(e) = start_pgwire_server(
+                    pgwire_ayb_db,
+                    pgwire_config_clone,
+                    pgwire_daemon_registry,
+                    &pgwire_host,
+                    pgwire_port,
+                )
+                .await
+                {
+                    eprintln!("PostgreSQL wire protocol server error: {}", e);
+                }
+            });
+        }
+    }
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     if ayb_conf.isolation.is_none() {
