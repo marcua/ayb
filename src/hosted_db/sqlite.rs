@@ -30,13 +30,8 @@ pub fn query_sqlite(
     let conn = rusqlite::Connection::open_with_flags(path, open_flags)?;
 
     // Enable WAL (Write-Ahead Logging) mode for better concurrency and performance
-    // WAL mode allows readers and writers to work concurrently without blocking each other
-    // https://www.sqlite.org/wal.html
-    // Note: This is idempotent - if already in WAL mode, it's a no-op
-    // The journal_mode setting persists in the database file, so this will
-    // convert existing databases to WAL mode on first write access
+    // This operation is both idempotent and will convert non-WAL DBs to WAL ones.
     if matches!(query_mode, QueryMode::ReadWrite) {
-        // PRAGMA statements return results, so we use query_row instead of execute
         let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
     }
 
