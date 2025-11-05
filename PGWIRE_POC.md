@@ -39,10 +39,12 @@ SQLite database
 
 ### Authentication Flow
 
-1. User connects with username (entity slug) and any password
-2. pgwire server accepts connection (POC: no password validation)
-3. Database name parsed as "entity/database" format
-4. Queries authenticated using ayb's existing permissions system
+1. User connects with username (entity slug) and ayb API token as password
+2. pgwire server requests cleartext password
+3. Server validates token using `retrieve_and_validate_api_token()`
+4. Server verifies token belongs to the connecting username
+5. Database name parsed as "entity/database" format
+6. Queries authenticated using ayb's existing permissions system
 
 ### Query Flow
 
@@ -90,9 +92,13 @@ ayb client create_database testuser/test.sqlite
 ayb client query testuser/test.sqlite "CREATE TABLE users(id INTEGER, name TEXT)"
 ayb client query testuser/test.sqlite "INSERT INTO users VALUES (1, 'Alice'), (2, 'Bob')"
 
+# Get your API token from login
+ayb client --url http://127.0.0.1:5433 login testuser
+# Copy the token from the response (starts with ayb_...)
+
 # Now connect via PostgreSQL protocol!
 psql -h localhost -p 5432 -d "testuser/test.sqlite" -U testuser
-# Password: (enter anything, it will be accepted in POC)
+# Password: <paste your ayb API token here>
 
 # Run queries
 testuser/test.sqlite=> SELECT * FROM users;
@@ -109,12 +115,13 @@ testuser/test.sqlite=> SELECT * FROM users;
 import psycopg2
 
 # Connect via PostgreSQL wire protocol
+# Password is your ayb API token
 conn = psycopg2.connect(
     host="localhost",
     port=5432,
     database="testuser/test.sqlite",
     user="testuser",
-    password="anything"  # POC accepts any password
+    password="ayb_your_token_here"  # Use your actual ayb API token
 )
 
 cursor = conn.cursor()
@@ -132,28 +139,24 @@ conn.close()
 3. Port: 5432
 4. Database: testuser/test.sqlite
 5. Username: testuser
-6. Password: anything
+6. Password: <your ayb API token>
 7. Test Connection → Success!
 
-## Current Limitations (POC)
+## Current Limitations
 
-1. **Authentication**: Accepts any password
-   - TODO: Validate ayb API tokens as passwords
-   - TODO: Map PostgreSQL auth to ayb's token system
-
-2. **Type System**: All data returned as TEXT
+1. **Type System**: All data returned as TEXT
    - TODO: Infer proper PostgreSQL types from SQLite types
    - TODO: Support INTEGER, FLOAT, BOOLEAN, etc.
 
-3. **Query Support**: Only simple queries
+2. **Query Support**: Only simple queries
    - TODO: Implement ExtendedQueryHandler for prepared statements
    - TODO: Support parameter binding
 
-4. **Query Mode Detection**: Basic SQL parsing
+3. **Query Mode Detection**: Basic SQL parsing
    - TODO: Better detection of read vs write operations
    - TODO: Handle transactions properly
 
-5. **Error Handling**: Basic error conversion
+4. **Error Handling**: Basic error conversion
    - TODO: Map SQLite errors to PostgreSQL error codes more precisely
 
 ## What This Enables
@@ -189,7 +192,10 @@ With PostgreSQL wire protocol support, ayb becomes compatible with:
 
 ## Next Steps
 
-1. **Security**: Implement proper API token validation
+1. ✅ **Security**: ~~Implement proper API token validation~~ **DONE!**
+   - Validates ayb API tokens as passwords
+   - Uses cleartext password authentication
+   - Reuses existing `retrieve_and_validate_api_token()`
 2. **Type System**: Add proper type inference and conversion
 3. **Extended Queries**: Support prepared statements
 4. **Testing**: Add integration tests for pgwire functionality
