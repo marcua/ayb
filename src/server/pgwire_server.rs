@@ -6,40 +6,149 @@ use crate::hosted_db::paths::current_database_path;
 use crate::hosted_db::{run_query, QueryMode, QueryResult};
 use crate::server::config::AybConfig;
 use crate::server::permissions::highest_query_access_level;
+use crate::server::tokens::retrieve_and_validate_api_token;
 
 use actix_web::web;
 use async_trait::async_trait;
 use dyn_clone::clone_box;
+use futures_util::sink::{Sink, SinkExt};
 use futures_util::stream;
-use pgwire::api::auth::md5pass::{hash_md5_password, Md5PasswordAuthStartupHandler};
-use pgwire::api::auth::{AuthSource, DefaultServerParameterProvider, LoginInfo, Password};
+use pgwire::api::auth::{
+    finish_authentication, save_startup_parameters_to_metadata, DefaultServerParameterProvider,
+    LoginInfo, StartupHandler,
+};
 use pgwire::api::copy::NoopCopyHandler;
 use pgwire::api::query::{PlaceholderExtendedQueryHandler, SimpleQueryHandler};
 use pgwire::api::results::{DataRowEncoder, FieldFormat, FieldInfo, QueryResponse, Response};
 use pgwire::api::{
-    ClientInfo, NoopErrorHandler, PgWireServerHandlers, Type, METADATA_DATABASE, METADATA_USER,
+    ClientInfo, NoopErrorHandler, PgWireConnectionState, PgWireServerHandlers, Type,
+    METADATA_DATABASE, METADATA_USER,
 };
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
+use pgwire::messages::response::ErrorResponse;
+use pgwire::messages::startup::Authentication;
+use pgwire::messages::{PgWireBackendMessage, PgWireFrontendMessage};
 use pgwire::tokio::process_socket;
 
+use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
-/// Auth source that always accepts connections (for POC)
-/// In production, this should validate ayb API tokens
-pub struct AybAuthSource;
+/// Custom startup handler that validates ayb API tokens as passwords
+pub struct AybTokenAuthStartupHandler {
+    ayb_db: Arc<Box<dyn AybDb>>,
+    parameter_provider: Arc<DefaultServerParameterProvider>,
+}
+
+impl AybTokenAuthStartupHandler {
+    pub fn new(
+        ayb_db: Arc<Box<dyn AybDb>>,
+        parameter_provider: Arc<DefaultServerParameterProvider>,
+    ) -> Self {
+        Self {
+            ayb_db,
+            parameter_provider,
+        }
+    }
+}
 
 #[async_trait]
-impl AuthSource for AybAuthSource {
-    async fn get_password(&self, login_info: &LoginInfo) -> PgWireResult<Password> {
-        // For POC, accept any username with dummy password
-        // TODO: Validate ayb API tokens here
-        let salt = vec![0, 0, 0, 0];
-        let password = "dummy"; // Any password works
+impl StartupHandler for AybTokenAuthStartupHandler {
+    async fn on_startup<C>(
+        &self,
+        client: &mut C,
+        message: PgWireFrontendMessage,
+    ) -> PgWireResult<()>
+    where
+        C: ClientInfo + Sink<PgWireBackendMessage> + Unpin + Send,
+        C::Error: Debug,
+        PgWireError: From<<C as Sink<PgWireBackendMessage>>::Error>,
+    {
+        match message {
+            PgWireFrontendMessage::Startup(ref startup) => {
+                save_startup_parameters_to_metadata(client, startup);
+                client.set_state(PgWireConnectionState::AuthenticationInProgress);
 
-        let hash_password =
-            hash_md5_password(login_info.user().as_ref().unwrap(), password, salt.as_ref());
-        Ok(Password::new(Some(salt), hash_password.as_bytes().to_vec()))
+                // Request cleartext password (which will be the ayb API token)
+                client
+                    .send(PgWireBackendMessage::Authentication(
+                        Authentication::CleartextPassword,
+                    ))
+                    .await?;
+            }
+            PgWireFrontendMessage::PasswordMessageFamily(pwd) => {
+                let pwd = pwd.into_password()?;
+                let login_info = LoginInfo::from_client_info(client);
+                let username = login_info.user().ok_or_else(|| {
+                    PgWireError::UserError(Box::new(ErrorInfo::new(
+                        "FATAL".to_owned(),
+                        "28000".to_owned(),
+                        "No username provided".to_owned(),
+                    )))
+                })?;
+
+                // The password should be an ayb API token
+                let token = pwd.password;
+
+                // Validate token using ayb's existing auth system
+                let ayb_db_data = web::Data::new(clone_box(&**self.ayb_db));
+                match retrieve_and_validate_api_token(&token, &ayb_db_data).await {
+                    Ok(api_token) => {
+                        // Get the entity that owns this token
+                        match (**self.ayb_db).get_entity_by_id(api_token.entity_id).await {
+                            Ok(entity) => {
+                                // Verify the username matches the entity slug
+                                if entity.slug.to_lowercase() == username.to_lowercase() {
+                                    // Authentication successful!
+                                    finish_authentication(client, self.parameter_provider.as_ref())
+                                        .await?;
+                                } else {
+                                    let error_info = ErrorInfo::new(
+                                        "FATAL".to_owned(),
+                                        "28P01".to_owned(),
+                                        format!(
+                                            "Token belongs to entity '{}', but connected as '{}'",
+                                            entity.slug, username
+                                        ),
+                                    );
+                                    let error = ErrorResponse::from(error_info);
+                                    client
+                                        .feed(PgWireBackendMessage::ErrorResponse(error))
+                                        .await?;
+                                    client.close().await?;
+                                }
+                            }
+                            Err(_) => {
+                                let error_info = ErrorInfo::new(
+                                    "FATAL".to_owned(),
+                                    "28P01".to_owned(),
+                                    "Invalid API token: entity not found".to_owned(),
+                                );
+                                let error = ErrorResponse::from(error_info);
+                                client
+                                    .feed(PgWireBackendMessage::ErrorResponse(error))
+                                    .await?;
+                                client.close().await?;
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        let error_info = ErrorInfo::new(
+                            "FATAL".to_owned(),
+                            "28P01".to_owned(),
+                            "Invalid API token".to_owned(),
+                        );
+                        let error = ErrorResponse::from(error_info);
+                        client
+                            .feed(PgWireBackendMessage::ErrorResponse(error))
+                            .await?;
+                        client.close().await?;
+                    }
+                }
+            }
+            _ => {}
+        }
+        Ok(())
     }
 }
 
@@ -281,8 +390,7 @@ impl AybPgWireBackendFactory {
 }
 
 impl PgWireServerHandlers for AybPgWireBackendFactory {
-    type StartupHandler =
-        Md5PasswordAuthStartupHandler<AybAuthSource, DefaultServerParameterProvider>;
+    type StartupHandler = AybTokenAuthStartupHandler;
     type SimpleQueryHandler = AybPgWireBackend;
     type ExtendedQueryHandler = PlaceholderExtendedQueryHandler;
     type CopyHandler = NoopCopyHandler;
@@ -302,8 +410,8 @@ impl PgWireServerHandlers for AybPgWireBackendFactory {
 
     fn startup_handler(&self) -> Arc<Self::StartupHandler> {
         let parameters = DefaultServerParameterProvider::default();
-        Arc::new(Md5PasswordAuthStartupHandler::new(
-            Arc::new(AybAuthSource),
+        Arc::new(AybTokenAuthStartupHandler::new(
+            Arc::clone(&self.ayb_db),
             Arc::new(parameters),
         ))
     }
@@ -333,6 +441,7 @@ pub async fn start_pgwire_server(
         "Connect with: psql -h {} -p {} -d entity/database -U username",
         host, port
     );
+    println!("Use your ayb API token as the password");
 
     let factory = Arc::new(AybPgWireBackendFactory::new(
         ayb_db,
