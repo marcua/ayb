@@ -29,10 +29,21 @@ pub fn query_sqlite(
     };
     let conn = rusqlite::Connection::open_with_flags(path, open_flags)?;
 
-    // Enable WAL (Write-Ahead Logging) mode for better concurrency and performance
-    // This operation is both idempotent and will convert non-WAL DBs to WAL ones.
+    // Configure SQLite for optimal ayb usage
     if matches!(query_mode, QueryMode::ReadWrite) {
+        // Enable WAL (Write-Ahead Logging) mode for better concurrency and performance
+        // This operation is both idempotent and will convert non-WAL DBs to WAL ones.
         let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
+
+        // Set busy timeout to 5 seconds to handle concurrent access
+        conn.execute("PRAGMA busy_timeout=5000", [])?;
+
+        // Set synchronous mode (FULL is safest, can be configured to NORMAL for better performance)
+        // TODO: Make this configurable via AybConfig
+        conn.execute("PRAGMA synchronous=FULL", [])?;
+
+        // Enable foreign key constraints
+        conn.execute("PRAGMA foreign_keys=ON", [])?;
     }
 
     if !allow_unsafe {
