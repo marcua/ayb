@@ -143,6 +143,7 @@ pub async fn snapshot_database(
             snapshot_path.push(database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
             fs::remove_file(&snapshot_path).ok();
+
             let backup_query = match snapshot_config.sqlite_method {
                 // TODO(marcua): Figure out dot commands to make .backup work
                 SqliteSnapshotMethod::Backup => {

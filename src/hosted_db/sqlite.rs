@@ -36,14 +36,13 @@ pub fn query_sqlite(
         let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
 
         // Set busy timeout to 5 seconds to handle concurrent access
-        conn.execute("PRAGMA busy_timeout=5000", [])?;
+        conn.pragma_update(None, "busy_timeout", 5000)?;
 
-        // Set synchronous mode (FULL is safest, can be configured to NORMAL for better performance)
-        // TODO: Make this configurable via AybConfig
-        conn.execute("PRAGMA synchronous=FULL", [])?;
+        // Set synchronous mode to FULL for maximum durability
+        conn.pragma_update(None, "synchronous", "FULL")?;
 
         // Enable foreign key constraints
-        conn.execute("PRAGMA foreign_keys=ON", [])?;
+        conn.pragma_update(None, "foreign_keys", true)?;
     }
 
     if !allow_unsafe {

@@ -66,17 +66,6 @@ pub struct AybConfigIsolation {
     pub nsjail_path: String,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-pub enum SqliteSynchronous {
-    Normal,
-    Full,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigSqlite {
-    pub synchronous: SqliteSynchronous,
-}
-
 #[derive(Clone, Serialize, Deserialize)]
 pub enum SqliteSnapshotMethod {
     Backup,
@@ -120,7 +109,6 @@ pub struct AybConfig {
     pub cors: AybConfigCors,
     pub isolation: Option<AybConfigIsolation>,
     pub snapshots: Option<AybConfigSnapshots>,
-    pub sqlite: Option<AybConfigSqlite>,
 }
 
 pub fn config_to_toml(ayb_config: AybConfig) -> Result<String, AybError> {
@@ -160,7 +148,6 @@ pub fn default_server_config() -> AybConfig {
         }),
         isolation: None,
         snapshots: None,
-        sqlite: None,
     }
 }
 
