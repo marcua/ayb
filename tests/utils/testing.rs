@@ -70,9 +70,8 @@ token_expiration_seconds = 3600
 [cors]
 origin = "*"
 
-# Isolation disabled for tests (nsjail not available in all environments)
-# [isolation]
-# nsjail_path = "tests/nsjail"
+[isolation]
+nsjail_path = "tests/nsjail"
 
 [snapshots]
 sqlite_method = "Vacuum"
