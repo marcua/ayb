@@ -15,7 +15,7 @@ struct QueryRequest {
 /// against a database and returns results in QueryResult format.
 ///
 /// Usage:
-/// $ ayb_query_daemon database.sqlite [ignored_arg]
+/// $ ayb_query_daemon database.sqlite
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
 /// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}

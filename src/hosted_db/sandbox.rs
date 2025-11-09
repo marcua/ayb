@@ -73,11 +73,8 @@ pub fn build_nsjail_command(
         &format!("{}:/tmp/ayb_query_daemon", query_daemon_path.display()),
     ]);
 
-    // Run the daemon with synchronous mode set to FULL
-    cmd.arg("--")
-        .arg("/tmp/ayb_query_daemon")
-        .arg(tmp_db_path)
-        .arg("full");
+    // Run the daemon
+    cmd.arg("--").arg("/tmp/ayb_query_daemon").arg(tmp_db_path);
 
     Ok(cmd)
 }
@@ -88,7 +85,7 @@ pub fn build_direct_command(db_path: &PathBuf) -> Result<tokio::process::Command
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
-    cmd.arg(db_path).arg("full");
+    cmd.arg(db_path);
 
     Ok(cmd)
 }
