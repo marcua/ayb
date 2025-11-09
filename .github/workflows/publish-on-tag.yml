@@ -24,8 +24,8 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}
         tags: |
-          type=match,pattern=v(\d+\.\d+\.\d+),group=1
-          type=raw,value=latest
+          type=semver,pattern={{version}}
+          type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
           type=sha,prefix=,format=short
 
     - name: Set up QEMU
