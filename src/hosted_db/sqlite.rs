@@ -34,7 +34,7 @@ pub fn query_sqlite(
 
     // Configure SQLite for optimal ayb usage
     if matches!(query_mode, QueryMode::ReadWrite) {
-        // Enable WAL (Write-Ahead Logging) mode for better concurrency and performance
+        // Enable WAL (Write-Ahead Logging) mode for better concurrency and performance.
         // This operation is idempotent and will convert non-WAL DBs to WAL ones.
         let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
 
