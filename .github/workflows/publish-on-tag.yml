@@ -24,7 +24,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}
         tags: |
-          type=match,pattern=v(\d+\.\d+\.\d+),group=1
+          type=semver,pattern={{version}}
           type=raw,value=latest
           type=sha,prefix=,format=short
 
