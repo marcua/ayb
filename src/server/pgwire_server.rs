@@ -1,11 +1,9 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::paths::current_database_path;
-use crate::hosted_db::{run_query, QueryMode, QueryResult};
+use crate::hosted_db::QueryResult;
 use crate::server::config::AybConfig;
-use crate::server::permissions::highest_query_access_level;
+use crate::server::query_execution::execute_authenticated_query;
 use crate::server::tokens::retrieve_and_validate_api_token;
 
 use actix_web::web;
@@ -199,19 +197,6 @@ impl AybPgWireBackend {
         // Parse entity/database from connection
         let (entity_slug, database_slug) = Self::parse_database_path(db_name)?;
 
-        // Get database
-        let database = self
-            .ayb_db
-            .get_database(&entity_slug, &database_slug)
-            .await
-            .map_err(|e| {
-                PgWireError::UserError(Box::new(ErrorInfo::new(
-                    "ERROR".to_owned(),
-                    "42P01".to_owned(), // undefined_table
-                    format!("Database not found: {}", e),
-                )))
-            })?;
-
         // Get authenticated user
         let authenticated_entity =
             (**self.ayb_db)
@@ -225,76 +210,28 @@ impl AybPgWireBackend {
                     )))
                 })?;
 
-        // Check permissions
-        // Wrap ayb_db in web::Data for permissions check
+        // Wrap ayb_db in web::Data for shared query execution logic
         let ayb_db_data = web::Data::new(clone_box(&**self.ayb_db));
-        let access_level =
-            highest_query_access_level(&authenticated_entity, &database, &ayb_db_data)
-                .await
-                .map_err(|e| {
-                    PgWireError::UserError(Box::new(ErrorInfo::new(
-                        "ERROR".to_owned(),
-                        "42501".to_owned(), // insufficient_privilege
-                        format!("Permission denied: {}", e),
-                    )))
-                })?;
 
-        let access_level = access_level.ok_or_else(|| {
-            PgWireError::UserError(Box::new(ErrorInfo::new(
-                "ERROR".to_owned(),
-                "42501".to_owned(),
-                "You don't have access to this database".to_owned(),
-            )))
-        })?;
-
-        // Determine query mode from SQL
-        // Note: query_mode is determined from access_level and SQL type
-        let _query_mode = if sql.trim().to_uppercase().starts_with("SELECT")
-            || sql.trim().to_uppercase().starts_with("WITH")
-            || sql.trim().to_uppercase().starts_with("EXPLAIN")
-        {
-            QueryMode::ReadOnly
-        } else {
-            QueryMode::ReadWrite
-        };
-
-        // Execute query
-        let db_type = DBType::try_from(database.db_type).map_err(|e| {
-            PgWireError::UserError(Box::new(ErrorInfo::new(
-                "ERROR".to_owned(),
-                "XX000".to_owned(),
-                format!("Invalid database type: {}", e),
-            )))
-        })?;
-
-        let db_path =
-            current_database_path(&entity_slug, &database_slug, &self.ayb_config.data_path)
-                .map_err(|e| {
-                    PgWireError::UserError(Box::new(ErrorInfo::new(
-                        "ERROR".to_owned(),
-                        "XX000".to_owned(),
-                        format!("Database path error: {}", e),
-                    )))
-                })?;
-
-        let result = run_query(
-            &self.daemon_registry,
-            &db_path,
+        // Execute query using shared logic
+        execute_authenticated_query(
+            &authenticated_entity,
+            &entity_slug,
+            &database_slug,
             sql,
-            &db_type,
-            &self.ayb_config.isolation,
-            access_level,
+            &ayb_db_data,
+            &self.ayb_config,
+            &self.daemon_registry,
         )
         .await
         .map_err(|e| {
+            // Map AybError to PgWireError with appropriate error codes
             PgWireError::UserError(Box::new(ErrorInfo::new(
                 "ERROR".to_owned(),
-                "42601".to_owned(), // syntax_error (or appropriate code)
-                format!("Query error: {}", e),
+                "42601".to_owned(),
+                format!("{}", e),
             )))
-        })?;
-
-        Ok(result)
+        })
     }
 
     /// Convert ayb QueryResult to PostgreSQL wire format

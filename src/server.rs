@@ -2,6 +2,7 @@ pub mod api_endpoints;
 pub mod config;
 pub mod permissions;
 pub mod pgwire_server;
+pub mod query_execution;
 pub mod server_runner;
 pub mod snapshots;
 pub mod tokens;
