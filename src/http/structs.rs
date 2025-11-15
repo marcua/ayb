@@ -178,6 +178,11 @@ pub struct APIToken {
 pub struct EmptyResponse {}
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct HealthResponse {
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SnapshotList {
     pub snapshots: Vec<ListSnapshotResult>,
 }
