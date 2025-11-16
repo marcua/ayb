@@ -12,6 +12,7 @@ use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -116,6 +117,158 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
         }
     }
 
+    // If ayb_db is SQLite, snapshot it as well
+    if config.database_url.starts_with("sqlite") {
+        println!("Trying to back up __ayb__/ayb (ayb_db itself)");
+        // Extract the file path from the sqlite:// URL
+        let db_file_path =
+            config
+                .database_url
+                .strip_prefix("sqlite://")
+                .ok_or(AybError::SnapshotError {
+                    message: format!(
+                        "Unable to parse SQLite path from database_url: {}",
+                        config.database_url
+                    ),
+                })?;
+        let ayb_db_path = PathBuf::from(db_file_path);
+
+        // Canonicalize the path to get the absolute path
+        let ayb_db_path =
+            fs::canonicalize(&ayb_db_path).map_err(|err| AybError::SnapshotError {
+                message: format!(
+                    "Unable to canonicalize ayb_db path {}: {}",
+                    ayb_db_path.display(),
+                    err
+                ),
+            })?;
+
+        if let Some(err) = perform_snapshot(config, "__ayb__", "ayb", &ayb_db_path)
+            .await
+            .err()
+        {
+            eprintln!("Unable to snapshot ayb_db: {err}");
+        }
+    }
+
+    Ok(())
+}
+
+/// Core snapshotting logic that performs the actual snapshot, integrity check, and upload.
+/// This is called both for regular hosted databases and for the ayb_db itself.
+async fn perform_snapshot(
+    config: &AybConfig,
+    entity_slug: &str,
+    database_slug: &str,
+    db_path: &PathBuf,
+) -> Result<(), AybError> {
+    if config.snapshots.is_none() {
+        return Err(AybError::SnapshotError {
+            message: "No snapshot config found".to_string(),
+        });
+    }
+    let snapshot_config = config.snapshots.as_ref().unwrap();
+
+    let mut snapshot_path = database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
+    let snapshot_directory = snapshot_path.clone();
+    snapshot_path.push(database_slug);
+    // Try to remove the file if it already exists, but don't fail if it doesn't.
+    fs::remove_file(&snapshot_path).ok();
+    let backup_query = match snapshot_config.sqlite_method {
+        // TODO(marcua): Figure out dot commands to make .backup work
+        SqliteSnapshotMethod::Backup => {
+            return Err(AybError::SnapshotError {
+                message: "Backup requires dot commands, which are not yet supported".to_string(),
+            })
+        }
+        SqliteSnapshotMethod::Vacuum => {
+            format!("VACUUM INTO \"{}\"", snapshot_path.display())
+        }
+    };
+    let result = query_sqlite(
+        db_path,
+        &backup_query,
+        // Run in unsafe mode to allow backup process to
+        // attach to destination database.
+        true,
+        QueryMode::ReadOnly,
+    )?;
+    if !result.rows.is_empty() {
+        return Err(AybError::SnapshotError {
+            message: format!("Unexpected snapshot result: {result:?}"),
+        });
+    }
+    let result = query_sqlite(
+        &snapshot_path,
+        "PRAGMA integrity_check;",
+        false,
+        QueryMode::ReadOnly,
+    )?;
+    if result.fields.len() != 1
+        || result.rows.len() != 1
+        || result.rows[0][0] != Some("ok".to_string())
+    {
+        return Err(AybError::SnapshotError {
+            message: format!("Snapshot failed integrity check: {result:?}"),
+        });
+    }
+
+    let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
+    let existing_snapshots = snapshot_storage
+        .list_snapshots(entity_slug, database_slug)
+        .await?;
+    let num_existing_snapshots = existing_snapshots.len();
+    let snapshot_hash = hash_db_directory(&snapshot_directory)?;
+    let mut should_upload_snapshot = true;
+    for snapshot in &existing_snapshots {
+        if snapshot.snapshot_id == snapshot_hash {
+            println!("Snapshot with hash {snapshot_hash} already exists, not uploading again.");
+            should_upload_snapshot = false;
+            break;
+        }
+    }
+    if should_upload_snapshot {
+        println!("Uploading new snapshot with hash {snapshot_hash}.");
+        snapshot_storage
+            .put(
+                entity_slug,
+                database_slug,
+                &Snapshot {
+                    snapshot_id: snapshot_hash,
+                    snapshot_type: SnapshotType::Automatic as i16,
+                },
+                &snapshot_path,
+            )
+            .await?;
+
+        // If adding this snapshot resulted in more than the
+        // maximum snapshots we are allowed, prune old ones.
+        let max_snapshots: usize = snapshot_config
+            .automation
+            .as_ref()
+            .unwrap()
+            .max_snapshots
+            .into();
+        let prune_snapshots = (num_existing_snapshots + 1).checked_sub(max_snapshots);
+        if let Some(prune_snapshots) = prune_snapshots {
+            println!("Pruning {prune_snapshots} oldest snapshots");
+            let mut ids_to_prune: Vec<String> = vec![];
+            for snapshot_index in 0..prune_snapshots {
+                ids_to_prune.push(
+                    existing_snapshots[existing_snapshots.len() - snapshot_index - 1]
+                        .snapshot_id
+                        .clone(),
+                )
+            }
+
+            snapshot_storage
+                .delete_snapshots(entity_slug, database_slug, &ids_to_prune)
+                .await?;
+        }
+    }
+
+    // Clean up after uploading snapshot.
+    fs::remove_dir_all(pathbuf_to_parent(&snapshot_path)?)?;
     Ok(())
 }
 
@@ -127,120 +280,10 @@ pub async fn snapshot_database(
     database_slug: &str,
 ) -> Result<(), AybError> {
     println!("Trying to back up {entity_slug}/{database_slug}");
-    if config.snapshots.is_none() {
-        return Err(AybError::SnapshotError {
-            message: "No snapshot config found".to_string(),
-        });
-    }
-    let snapshot_config = config.snapshots.as_ref().unwrap();
-
     match ayb_db.get_database(entity_slug, database_slug).await {
         Ok(_db) => {
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
-            let mut snapshot_path =
-                database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
-            let snapshot_directory = snapshot_path.clone();
-            snapshot_path.push(database_slug);
-            // Try to remove the file if it already exists, but don't fail if it doesn't.
-            fs::remove_file(&snapshot_path).ok();
-            let backup_query = match snapshot_config.sqlite_method {
-                // TODO(marcua): Figure out dot commands to make .backup work
-                SqliteSnapshotMethod::Backup => {
-                    return Err(AybError::SnapshotError {
-                        message: "Backup requires dot commands, which are not yet supported"
-                            .to_string(),
-                    })
-                }
-                SqliteSnapshotMethod::Vacuum => {
-                    format!("VACUUM INTO \"{}\"", snapshot_path.display())
-                }
-            };
-            let result = query_sqlite(
-                &db_path,
-                &backup_query,
-                // Run in unsafe mode to allow backup process to
-                // attach to destination database.
-                true,
-                QueryMode::ReadOnly,
-            )?;
-            if !result.rows.is_empty() {
-                return Err(AybError::SnapshotError {
-                    message: format!("Unexpected snapshot result: {result:?}"),
-                });
-            }
-            let result = query_sqlite(
-                &snapshot_path,
-                "PRAGMA integrity_check;",
-                false,
-                QueryMode::ReadOnly,
-            )?;
-            if result.fields.len() != 1
-                || result.rows.len() != 1
-                || result.rows[0][0] != Some("ok".to_string())
-            {
-                return Err(AybError::SnapshotError {
-                    message: format!("Snapshot failed integrity check: {result:?}"),
-                });
-            }
-
-            let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
-            let existing_snapshots = snapshot_storage
-                .list_snapshots(entity_slug, database_slug)
-                .await?;
-            let num_existing_snapshots = existing_snapshots.len();
-            let snapshot_hash = hash_db_directory(&snapshot_directory)?;
-            let mut should_upload_snapshot = true;
-            for snapshot in &existing_snapshots {
-                if snapshot.snapshot_id == snapshot_hash {
-                    println!(
-                        "Snapshot with hash {snapshot_hash} already exists, not uploading again."
-                    );
-                    should_upload_snapshot = false;
-                    break;
-                }
-            }
-            if should_upload_snapshot {
-                println!("Uploading new snapshot with hash {snapshot_hash}.");
-                snapshot_storage
-                    .put(
-                        entity_slug,
-                        database_slug,
-                        &Snapshot {
-                            snapshot_id: snapshot_hash,
-                            snapshot_type: SnapshotType::Automatic as i16,
-                        },
-                        &snapshot_path,
-                    )
-                    .await?;
-
-                // If adding this snapshot resulted in more than the
-                // maximum snapshots we are allowed, prune old ones.
-                let max_snapshots: usize = snapshot_config
-                    .automation
-                    .as_ref()
-                    .unwrap()
-                    .max_snapshots
-                    .into();
-                let prune_snapshots = (num_existing_snapshots + 1).checked_sub(max_snapshots);
-                if let Some(prune_snapshots) = prune_snapshots {
-                    println!("Pruning {prune_snapshots} oldest snapshots");
-                    let mut ids_to_prune: Vec<String> = vec![];
-                    for snapshot_index in 0..prune_snapshots {
-                        ids_to_prune.push(
-                            existing_snapshots[existing_snapshots.len() - snapshot_index - 1]
-                                .snapshot_id
-                                .clone(),
-                        )
-                    }
-
-                    snapshot_storage
-                        .delete_snapshots(entity_slug, database_slug, &ids_to_prune)
-                        .await?;
-                }
-            }
-
-            // Clean up after uploading snapshot.
-            fs::remove_dir_all(pathbuf_to_parent(&snapshot_path)?)?;
+            perform_snapshot(config, entity_slug, database_slug, &db_path).await?;
         }
         Err(err) => match err {
             AybError::RecordNotFound { record_type, .. } if record_type == "database" => {
