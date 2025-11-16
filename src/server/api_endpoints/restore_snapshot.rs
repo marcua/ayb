@@ -21,6 +21,60 @@ async fn restore_snapshot(
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database;
+
+    // Special handling for ayb_db metadata database restore
+    if entity_slug == "__ayb__" && database_slug == "ayb" {
+        // TODO(marcua): Implement proper authentication for ayb_db restore.
+        // For now, restoring the ayb_db is disabled via the API for security reasons.
+        // To restore ayb_db:
+        // 1. Download the snapshot manually from S3
+        // 2. Stop the server
+        // 3. Replace the ayb_db file at the database_url path
+        // 4. Restart the server
+        return Err(AybError::Other {
+            message: "Restoring the ayb metadata database via the API is not currently supported for security reasons. Please restore manually.".to_string(),
+        });
+
+        // The code below shows how ayb_db restoration would work once authentication is implemented:
+        //
+        // use crate::ayb_db::db_interfaces::{detect_ayb_db_type, AybDbType};
+        // use std::fs;
+        // use std::path::PathBuf;
+        //
+        // if detect_ayb_db_type(&ayb_config.database_url)? == AybDbType::Sqlite {
+        //     if let Some(ref snapshot_config) = ayb_config.snapshots {
+        //         // Extract the file path from the database_url
+        //         let db_file_path = ayb_config
+        //             .database_url
+        //             .strip_prefix("sqlite://")
+        //             .ok_or(AybError::SnapshotError {
+        //                 message: "Unable to parse SQLite path from database_url".to_string(),
+        //             })?;
+        //         let ayb_db_path = PathBuf::from(db_file_path);
+        //
+        //         // Create a temporary directory for the snapshot
+        //         let temp_dir = tempfile::TempDir::new()?;
+        //         let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
+        //
+        //         // Retrieve the snapshot to the temp directory
+        //         snapshot_storage
+        //             .retrieve_snapshot(entity_slug, database_slug, &snapshot_id, temp_dir.path())
+        //             .await?;
+        //
+        //         // Move the snapshot to replace the current ayb_db
+        //         let mut snapshot_path = temp_dir.path().to_path_buf();
+        //         snapshot_path.push(database_slug);
+        //         fs::rename(snapshot_path, &ayb_db_path)?;
+        //     }
+        //     return Ok(HttpResponse::Ok().json(EmptyResponse {}));
+        // } else {
+        //     return Err(AybError::Other {
+        //         message: "Only SQLite ayb_db can be restored via snapshots".to_string(),
+        //     });
+        // }
+    }
+
+    // Normal database restore logic
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 

@@ -1,4 +1,4 @@
-use crate::ayb_db::db_interfaces::AybDb;
+use crate::ayb_db::db_interfaces::{detect_ayb_db_type, AybDb, AybDbType};
 use crate::error::AybError;
 use crate::hosted_db::paths::{
     current_database_path, database_parent_path, database_snapshot_path, pathbuf_to_file_name,
@@ -118,7 +118,7 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
     }
 
     // If ayb_db is SQLite, snapshot it as well
-    if config.database_url.starts_with("sqlite") {
+    if detect_ayb_db_type(&config.database_url)? == AybDbType::Sqlite {
         println!("Trying to back up __ayb__/ayb (ayb_db itself)");
         // Extract the file path from the sqlite:// URL
         let db_file_path =
