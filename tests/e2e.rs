@@ -90,7 +90,7 @@ async fn client_server_integration(
     thread::sleep(time::Duration::from_secs(10));
 
     // Test health endpoint first (doesn't require authentication)
-    test_health_check(test_type).await?;
+    test_health_check(server_url).await?;
 
     let api_keys = test_registration(test_type, &config_path, server_url, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;

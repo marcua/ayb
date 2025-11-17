@@ -1,8 +1,5 @@
-use crate::utils::testing::get_test_port;
-
-pub async fn test_health_check(test_type: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let port = get_test_port(test_type)?;
-    let url = format!("http://127.0.0.1:{}/health", port);
+pub async fn test_health_check(server_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let url = format!("{}/health", server_url);
 
     // Make a request to the health endpoint
     let response = reqwest::get(&url).await?;
