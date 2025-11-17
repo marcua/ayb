@@ -1,6 +1,6 @@
 [package]
 name = "ayb"
-version = "0.1.12-rc.1"
+version = "0.1.12-rc.2"
 edition = "2021"
 description = "ayb makes it easy to create, host, and share embedded databases like SQLite and DuckDB"
 homepage = "https://github.com/marcua/ayb"
