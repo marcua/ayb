@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Cleanup old caches
+    - name: Clean up old caches
       run: |
         # Delete caches older than 7 days to prevent storage bloat
         gh cache list --limit 100 --json id,key,createdAt | \
@@ -34,11 +34,11 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       continue-on-error: true
 
-    - name: Setup Rust cache
+    - name: Set up Rust cache
       uses: Swatinem/rust-cache@v2
       with:
-        # Cache is automatically cleaned up after 7 days of inactivity
-        # Prevents cache bloat while maintaining performance
+        # GitHub automatically evicts caches after 7 days of inactivity
+        # rust-cache also cleans build artifacts older than 1 week
         shared-key: "ayb-tests"
 
     - name: Build
@@ -57,20 +57,14 @@ jobs:
       uses: actions/cache@v4
       with:
         path: tests/test-env
-        # Include week number to rotate cache weekly and prevent buildup
-        key: ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}-week-${{ github.run_number / 50 }}
-        restore-keys: |
-          ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}-
+        key: ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}
 
     - name: Cache nsjail binary
       id: cache-nsjail
       uses: actions/cache@v4
       with:
         path: tests/nsjail
-        # Include week number to rotate cache weekly and prevent buildup
-        key: ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}-week-${{ github.run_number / 50 }}
-        restore-keys: |
-          ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}-
+        key: ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}
 
     - name: Set up environment for end-to-end tests
       run: tests/set_up_e2e_env.sh
