@@ -434,8 +434,8 @@ Any setting in `ayb.toml` can be overridden (or solely defined) using environmen
 This is particularly useful for production deployments where you want to keep secrets out of configuration files. Here are some examples:
 
 ```bash
-AYB__PORT=8080 ayb server
-AYB__AUTHENTICATION__FERNET_KEY=your-secret-key ayb server
+AYB__PORT=8080
+AYB__AUTHENTICATION__FERNET_KEY=your-secret-key
 AYB__EMAIL__SMTP__SMTP_PASSWORD=secret
 ```
 
