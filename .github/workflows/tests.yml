@@ -24,25 +24,22 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-registry-
+    - name: Clean up old caches
+      run: |
+        # Delete caches older than 7 days to prevent storage bloat
+        gh cache list --limit 100 --json id,key,createdAt | \
+        jq -r '.[] | select(.createdAt < (now - 7*24*60*60 | strftime("%Y-%m-%dT%H:%M:%SZ"))) | .id' | \
+        xargs -I{} gh cache delete {} || true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
+    - name: Set up Rust cache
+      uses: Swatinem/rust-cache@v2
       with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
-          ${{ runner.os }}-cargo-build-
+        # GitHub automatically evicts caches after 7 days of inactivity
+        # rust-cache also cleans build artifacts older than 1 week
+        shared-key: "ayb-tests"
 
     - name: Build
       run: cargo build --verbose
