@@ -1,4 +1,4 @@
-.PHONY: lint server test copyconfig
+.PHONY: lint server test copyconfig docker-build
 
 lint:
 	cargo fmt
@@ -16,3 +16,8 @@ endif
 
 copyconfig:
 	cp ../main-checkout/ayb.toml .
+
+docker-build:
+	docker build -t ayb:latest .
+	@echo "Docker image size:"
+	@docker images ayb:latest --format "{{.Repository}}:{{.Tag}} - {{.Size}}"
