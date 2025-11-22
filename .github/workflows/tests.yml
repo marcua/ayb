@@ -24,25 +24,22 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-registry-
+    - name: Cleanup old caches
+      run: |
+        # Delete caches older than 7 days to prevent storage bloat
+        gh cache list --limit 100 --json id,key,createdAt | \
+        jq -r '.[] | select(.createdAt < (now - 7*24*60*60 | strftime("%Y-%m-%dT%H:%M:%SZ"))) | .id' | \
+        xargs -I{} gh cache delete {} || true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      continue-on-error: true
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
       with:
-        path: target
-        key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/*.rs') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}-
-          ${{ runner.os }}-cargo-build-
+        # Cache is automatically cleaned up after 7 days of inactivity
+        # Prevents cache bloat while maintaining performance
+        shared-key: "ayb-tests"
 
     - name: Build
       run: cargo build --verbose
@@ -60,14 +57,20 @@ jobs:
       uses: actions/cache@v4
       with:
         path: tests/test-env
-        key: ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}
+        # Include week number to rotate cache weekly and prevent buildup
+        key: ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}-week-${{ github.run_number / 50 }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}-
 
     - name: Cache nsjail binary
       id: cache-nsjail
       uses: actions/cache@v4
       with:
         path: tests/nsjail
-        key: ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}
+        # Include week number to rotate cache weekly and prevent buildup
+        key: ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}-week-${{ github.run_number / 50 }}
+        restore-keys: |
+          ${{ runner.os }}-nsjail-${{ hashFiles('scripts/build_nsjail.sh') }}-
 
     - name: Set up environment for end-to-end tests
       run: tests/set_up_e2e_env.sh
