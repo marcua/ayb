@@ -53,4 +53,4 @@ jobs:
     - name: Display Docker image size
       run: |
         echo "Docker image size:"
-        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.REPO_NAME }}:${{ github.ref_name }} | grep -E 'Digest|Size'
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.REPO_NAME }}:${{ steps.meta.outputs.version }} | grep -E 'Digest|Size'
