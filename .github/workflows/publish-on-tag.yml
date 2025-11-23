@@ -49,3 +49,8 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         tags: ${{ steps.meta.outputs.tags }}
         push: true
+
+    - name: Display Docker image size
+      run: |
+        echo "Docker image size:"
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.REPO_NAME }}:${{ github.ref_name }} | grep -E 'Digest|Size'
