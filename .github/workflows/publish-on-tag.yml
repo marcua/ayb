@@ -42,7 +42,6 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
-      id: docker_build
       uses: docker/build-push-action@v6
       with:
         # TODO(marcua): List more platforms here to get `linux-arm64` built: https://github.com/marcua/ayb/issues/523
