@@ -53,5 +53,4 @@ jobs:
 
     - name: Display Docker image size
       run: |
-        echo "Docker image size:"
         docker images --filter=reference="${{ env.REGISTRY }}/${{ env.REPO_NAME }}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
