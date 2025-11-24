@@ -221,6 +221,7 @@ groups
 guest
 guests
 help
+health
 home
 homepage
 host

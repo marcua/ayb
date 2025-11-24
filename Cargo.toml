@@ -1,6 +1,6 @@
 [package]
 name = "ayb"
-version = "0.1.11"
+version = "0.1.12-rc.4"
 edition = "2021"
 description = "ayb makes it easy to create, host, and share embedded databases like SQLite and DuckDB"
 homepage = "https://github.com/marcua/ayb"
@@ -14,9 +14,9 @@ actix-web = { version = "4.11.0" }
 actix-web-httpauth = { version = "0.8.2" }
 async-trait = { version = "0.1.89" }
 blake3 = { version = "1.8.2" }
-chrono = { version = "0.4.41", features = [ "serde" ] }
-clap = { version = "4.5.47", features = ["cargo", "derive", "env"] }
-config = { version = "0.15.18" }
+chrono = { version = "0.4.42", features = [ "serde" ] }
+clap = { version = "4.5.52", features = ["cargo", "derive", "env"] }
+config = { version = "0.15.19" }
 derive_more = { version = "2.0.1", features = ["error"] }
 directories = { version = "6.0" }
 dyn-clone = { version = "1.0.20" }
@@ -24,13 +24,13 @@ env_logger = { version = "0.11.6" }
 fernet = { version = "0.2.2" }
 futures-util = { version = "0.3.31" }
 go-parse-duration = { version = "0.1.1" }
-lettre = { version = "0.11.18", features = ["tokio1-native-tls"] }
+lettre = { version = "0.11.19", features = ["tokio1-native-tls"] }
 pgwire = { version = "0.28" }
 quoted_printable = { version = "0.5.1" }
-regex = { version = "1.11.2"}
-reqwest = { version = "0.12.23", features = ["json"] }
+regex = { version = "1.12.2"}
+reqwest = { version = "0.12.24", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
-rustyline = { version = "17.0.1" }
+rustyline = { version = "17.0.2" }
 rust-s3 = { version = "0.37.0" }
 scraper = { version = "0.24.0" }
 serde = { version = "1.0", features = ["derive"] }
@@ -38,10 +38,10 @@ serde_json = { version = "1.0.143", features = ["raw_value"] }
 serde_repr = { version = "0.1.20" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 time = { version = "0.3.44" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
-tera = { version = "1.20.0" }
+tera = { version = "1.20.1" }
 toml = { version = "0.9.8" }
-tokio = { version = "1.47.1", features = ["macros", "process", "rt"] }
-tokio-cron-scheduler = { version = "0.14.0", features = ["signal"]}
+tokio = { version = "1.48.0", features = ["macros", "process", "rt"] }
+tokio-cron-scheduler = { version = "0.15.1", features = ["signal"]}
 prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.7", features = ["serde"] }
@@ -50,7 +50,7 @@ uuid = { version = "1.18.1", features = ["v7"] }
 zstd = { version = "0.13.3" }
 
 [dev-dependencies]
-assert_cmd = "2.0"
+assert_cmd = "2.1"
 assert-json-diff = "2.0.2"
 predicates = "3.1.3"
 playwright = "0.0.20"

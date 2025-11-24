@@ -23,7 +23,8 @@ use std::sync::Arc;
 
 pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     // Unauthenticated API endpoints
-    cfg.service(api_endpoints::confirm_endpoint)
+    cfg.service(api_endpoints::health_endpoint)
+        .service(api_endpoints::confirm_endpoint)
         .service(api_endpoints::log_in_endpoint)
         .service(api_endpoints::register_endpoint);
 

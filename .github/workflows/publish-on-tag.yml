@@ -16,7 +16,7 @@ jobs:
       platform: "linux/amd64"
     steps:
     - name: Check out code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Docker meta
       id: meta
@@ -24,8 +24,8 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}
         tags: |
-          type=match,pattern=v(\d+\.\d+\.\d+),group=1
-          type=raw,value=latest
+          type=semver,pattern={{version}}
+          type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
           type=sha,prefix=,format=short
 
     - name: Set up QEMU
@@ -49,3 +49,8 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         tags: ${{ steps.meta.outputs.tags }}
         push: true
+
+    - name: Display Docker image size
+      run: |
+        echo "Docker image size:"
+        docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.REPO_NAME }}:${{ steps.meta.outputs.version }} | grep -E 'Digest|Size'
