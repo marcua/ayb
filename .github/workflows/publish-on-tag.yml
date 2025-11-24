@@ -53,23 +53,6 @@ jobs:
     - name: Display Docker image size
       run: |
         IMAGE_TAG="${{ env.REGISTRY }}/${{ env.REPO_NAME }}:${{ steps.meta.outputs.version }}"
-        echo "Fetching size for: $IMAGE_TAG"
-
-        # Get the manifest and calculate total size
-        MANIFEST=$(docker manifest inspect "$IMAGE_TAG")
-
-        # Extract size from config and layers, then sum them up
-        TOTAL_SIZE=$(echo "$MANIFEST" | jq '[.config.size, (.layers[].size)] | add')
-
-        # Convert to human-readable format
-        if [ "$TOTAL_SIZE" -ge 1073741824 ]; then
-          SIZE_GB=$(echo "scale=2; $TOTAL_SIZE / 1073741824" | bc)
-          echo "Docker image size: ${SIZE_GB} GB"
-        else
-          SIZE_MB=$(echo "scale=2; $TOTAL_SIZE / 1048576" | bc)
-          echo "Docker image size: ${SIZE_MB} MB"
-        fi
-
-        echo ""
-        echo "Digest:"
-        docker buildx imagetools inspect "$IMAGE_TAG" | grep "Digest:"
+        echo "Docker image size for $IMAGE_TAG:"
+        docker pull "$IMAGE_TAG"
+        docker images --filter=reference="${{ env.REGISTRY }}/${{ env.REPO_NAME }}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
