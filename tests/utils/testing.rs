@@ -34,7 +34,15 @@ pub fn get_test_port(test_type: &str) -> Result<u16, Box<dyn std::error::Error>>
         "postgres" => Ok(5433),
         "sqlite" => Ok(5434),
         "browser_sqlite" => Ok(5435),
+        "pgwire_sqlite" => Ok(5436),
         _ => Err(format!("Unknown test_type: {}", test_type).into()),
+    }
+}
+
+pub fn get_pgwire_port(test_type: &str) -> Result<u16, Box<dyn std::error::Error>> {
+    match test_type {
+        "pgwire_sqlite" => Ok(15432),
+        _ => Err(format!("pgwire not configured for test_type: {}", test_type).into()),
     }
 }
 
@@ -50,6 +58,22 @@ pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::erro
         format!("sqlite://tests/ayb_data_{test_type}/ayb.sqlite")
     };
     let path_prefix = test_type;
+
+    // Add pgwire configuration for pgwire tests
+    let pgwire_config = if test_type == "pgwire_sqlite" {
+        let pgwire_port = get_pgwire_port(test_type)?;
+        format!(
+            r#"
+[pgwire]
+enabled = true
+host = "127.0.0.1"
+port = {pgwire_port}
+"#,
+            pgwire_port = pgwire_port
+        )
+    } else {
+        String::new()
+    };
 
     let config_content = format!(
         r#"host = "0.0.0.0"
@@ -85,11 +109,12 @@ force_path_style = true
 [snapshots.automation]
 interval = "2s"
 max_snapshots = 6
-"#,
+{pgwire_config}"#,
         port = port,
         database_url = database_url,
         test_type = test_type,
-        path_prefix = path_prefix
+        path_prefix = path_prefix,
+        pgwire_config = pgwire_config
     );
 
     // Write the configuration to file
@@ -136,7 +161,7 @@ pub fn reset_test_environment(test_type: &str) -> Result<(), Box<dyn std::error:
                 .into());
             }
         }
-        "sqlite" | "browser_sqlite" => {
+        "sqlite" | "browser_sqlite" | "pgwire_sqlite" => {
             // No additional setup needed beyond data directory removal
         }
         _ => return Err(format!("Unknown test_type: {}", test_type).into()),

@@ -10,7 +10,7 @@ use crate::browser_e2e_tests::{
 };
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_health_check, test_permissions,
-    test_registration, test_snapshots,
+    test_pgwire_queries, test_registration, test_snapshots,
 };
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
@@ -32,6 +32,11 @@ async fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::
 #[tokio::test]
 async fn client_server_integration_sqlite() -> Result<(), Box<dyn std::error::Error>> {
     client_server_integration("sqlite", "http://127.0.0.1:5434").await
+}
+
+#[tokio::test]
+async fn pgwire_integration() -> Result<(), Box<dyn std::error::Error>> {
+    pgwire_server_integration("pgwire_sqlite", "http://127.0.0.1:5436").await
 }
 
 #[test]
@@ -97,6 +102,38 @@ async fn client_server_integration(
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
+
+    Ok(())
+}
+
+async fn pgwire_server_integration(
+    test_type: &str,
+    server_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = format!("tests/ayb_data_{test_type}/ayb.json");
+    let mut expected_config = ClientConfig::new();
+    let _cleanup = Cleanup;
+
+    // Ensure MinIO is running
+    ensure_minio_running()?;
+
+    reset_test_environment(test_type)?;
+
+    // Run server (with pgwire enabled)
+    let _ayb_server = AybServer::run(test_type).expect("failed to start the ayb server");
+
+    // Give the server time to start (pgwire needs a bit more time)
+    thread::sleep(time::Duration::from_secs(12));
+
+    // Test health endpoint first
+    test_health_check(server_url).await?;
+
+    // Register users and set up database (reuse existing tests)
+    let api_keys = test_registration(test_type, &config_path, server_url, &mut expected_config)?;
+    test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
+
+    // Now test pgwire queries
+    test_pgwire_queries(test_type, &api_keys).await?;
 
     Ok(())
 }
