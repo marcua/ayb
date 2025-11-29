@@ -68,7 +68,7 @@ hosting_method = "Local"
 origin = "*"
 ```
 
-Any setting in `ayb.toml` can be overridden (or solely defined) using environment variables with the `AYB__` prefix. Use `__` (double underscore) to separate all fields (e.g., `AYB__PORT=8080`, `AYB__AUTHENTICATION__FERNET_KEY=...`, `AYB__EMAIL__SMTP__HOST=...`).
+You can also [set environment variables](#environment-variables) for any `ayb.toml` setting.
 
 Running the server then requires one command
 ```bash
@@ -416,6 +416,27 @@ docker run -v $(pwd)/ayb.toml:/ayb.toml \
 Then use the client as normal:
 ```bash
 ayb client --url http://127.0.0.1:5433 register marcua you@example.com
+```
+
+## Production deployment
+
+### Health checks
+The server exposes a `/health` endpoint that returns `{"status": "ok"}` with HTTP 200 when ready to accept requests. This unauthenticated endpoint is useful for load balancer health checks, container orchestration readiness probes, and uptime monitoring.
+
+```bash
+$ curl http://127.0.0.1:5433/health
+{"status":"ok"}
+```
+
+### Environment variables
+Any setting in `ayb.toml` can be overridden (or solely defined) using environment variables with the `AYB__` prefix. Use `__` (double underscore) to separate all fields (e.g., `AYB__PORT=8080`, `AYB__AUTHENTICATION__FERNET_KEY=...`, `AYB__EMAIL__SMTP__HOST=...`).
+
+This is particularly useful for production deployments where you want to keep secrets out of configuration files. Here are some examples:
+
+```bash
+AYB__PORT=8080
+AYB__AUTHENTICATION__FERNET_KEY=your-secret-key
+AYB__EMAIL__SMTP__SMTP_PASSWORD=secret
 ```
 
 ## Testing

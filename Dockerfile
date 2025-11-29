@@ -34,7 +34,7 @@ RUN cd ayb && cargo build --release
 FROM debian:bookworm-slim
 
 RUN apt update
-RUN apt-get install -y libssl-dev
+RUN apt-get install -y libssl-dev ca-certificates
 
 COPY --from=builder /ayb/target/release/ayb /bin
 COPY --from=builder /ayb/target/release/ayb_query_daemon /bin

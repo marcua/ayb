@@ -30,7 +30,7 @@ fn test_banned_username_registration(
     // Test that banned usernames are rejected during registration
 
     // Test ayb-specific route conflicts
-    let ayb_banned = ["register", "log_in", "log_out", "confirm", "v1"];
+    let ayb_banned = ["register", "log_in", "log_out", "confirm", "v1", "health"];
     for banned_username in ayb_banned {
         register(
             config_path,

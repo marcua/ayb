@@ -16,7 +16,7 @@ jobs:
       platform: "linux/amd64"
     steps:
     - name: Check out code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Docker meta
       id: meta
@@ -49,3 +49,8 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         tags: ${{ steps.meta.outputs.tags }}
         push: true
+        load: true
+
+    - name: Display Docker image size
+      run: |
+        docker images --filter=reference="${{ env.REGISTRY }}/${{ env.REPO_NAME }}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}"
