@@ -235,7 +235,7 @@ pub struct ResourceLimits {
     /// Maximum number of processes (default: 2)
     pub max_processes: u64,
     /// CPU quota as percentage of one core (default: 50%)
-    /// 100 = 100% of one core, 50 = 50% of one core
+    /// Examples: 50 = half a core, 100 = one core, 200 = two cores
     pub cpu_percent: u32,
 }
 
