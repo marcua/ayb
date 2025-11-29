@@ -262,6 +262,15 @@ pub async fn test_ayb_db_snapshot_restore(
     config_path: &str,
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // ayb_db snapshots are only supported when ayb_db itself is SQLite
+    // For PostgreSQL ayb_db, snapshots are only for hosted databases
+    if db_type == "postgres" {
+        println!(
+            "Skipping ayb_db snapshot test for PostgreSQL (only SQLite ayb_db is snapshotted)"
+        );
+        return Ok(());
+    }
+
     // Remove all ayb_db snapshots so our tests aren't affected by
     // timing/snapshots from previous tests.
     let storage = snapshot_storage(db_type).await?;
