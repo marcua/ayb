@@ -69,6 +69,7 @@ mod tests {
             },
             snapshots: None,
             isolation: None,
+            pgwire: None,
         };
 
         let web_details = WebFrontendDetails::load(config).await.unwrap();
@@ -110,6 +111,7 @@ mod tests {
             },
             snapshots: None,
             isolation: None,
+            pgwire: None,
         };
 
         let web_details = WebFrontendDetails::load(config).await.unwrap();
