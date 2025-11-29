@@ -28,7 +28,7 @@ lettre = { version = "0.11.19", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.1" }
 regex = { version = "1.12.2"}
 reqwest = { version = "0.12.24", features = ["json"] }
-rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
+rusqlite = { version = "0.27.0", features = ["bundled", "limits", "hooks"] }
 rustyline = { version = "17.0.2" }
 rust-s3 = { version = "0.37.0" }
 scraper = { version = "0.24.0" }
@@ -47,6 +47,18 @@ url = { version = "2.5.7", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
 uuid = { version = "1.18.1", features = ["v7"] }
 zstd = { version = "0.13.3" }
+
+# Sandbox/isolation dependencies (Linux-only features)
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = { version = "0.4" }
+seccompiler = { version = "0.4" }
+caps = { version = "0.5" }
+libc = { version = "0.2" }
+
+# Unix-specific dependencies for rlimit
+[target.'cfg(unix)'.dependencies]
+rlimit = { version = "0.10" }
+nix = { version = "0.29", features = ["sched", "resource"] }
 
 [dev-dependencies]
 assert_cmd = "2.1"

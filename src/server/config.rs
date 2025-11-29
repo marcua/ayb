@@ -63,7 +63,10 @@ impl AybConfigEmailBackends {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigIsolation {
-    pub nsjail_path: String,
+    /// Enable multi-tenant database isolation.
+    /// On Linux, this uses Landlock, seccomp, and rlimits.
+    /// On other platforms, only partial protection is available.
+    pub enabled: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

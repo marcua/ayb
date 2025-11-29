@@ -1,6 +1,8 @@
 pub mod daemon_registry;
+pub mod isolation;
 pub mod paths;
 mod sandbox;
+pub mod sandbox_capabilities;
 pub mod sqlite;
 
 use crate::ayb_db::models::DBType;

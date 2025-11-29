@@ -6,7 +6,7 @@ use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// `allow_unsafe` disables features that prevent abuse but also
 /// prevent backups/snapshots. The only known use case in the codebase
@@ -52,6 +52,71 @@ pub fn query_sqlite(
         // Prevent queries from deliberately corrupting the database
         // https://www.sqlite.org/c3ref/c_dbconfig_defensive.html
         conn.db_config(DbConfig::SQLITE_DBCONFIG_DEFENSIVE)?;
+
+        // Apply SQLite authorizer as defense-in-depth
+        // This blocks dangerous operations even if other protections fail
+        // Note: rusqlite 0.27 uses AuthContext with action() method
+        use rusqlite::hooks::{AuthAction, Authorization};
+        conn.authorizer(Some(|ctx: rusqlite::hooks::AuthContext| -> Authorization {
+            match ctx.action {
+                // Block ATTACH DATABASE - critical for multi-tenant isolation
+                // This is redundant with SQLITE_LIMIT_ATTACHED=0 but provides defense-in-depth
+                AuthAction::Attach { .. } => Authorization::Deny,
+
+                // Block DETACH DATABASE
+                AuthAction::Detach { .. } => Authorization::Deny,
+
+                // Block function calls that could be dangerous
+                AuthAction::Function { function_name } => {
+                    // Block load_extension
+                    if function_name.eq_ignore_ascii_case("load_extension") {
+                        Authorization::Deny
+                    } else {
+                        // Allow all other functions
+                        Authorization::Allow
+                    }
+                }
+
+                // Block PRAGMA commands except safe ones
+                AuthAction::Pragma {
+                    pragma_name,
+                    pragma_value: _,
+                } => {
+                    match pragma_name.to_lowercase().as_str() {
+                        // Safe read-only PRAGMAs
+                        "table_info" | "table_xinfo" | "table_list" | "index_info"
+                        | "index_list" | "index_xinfo" | "database_list" | "foreign_key_list"
+                        | "foreign_key_check" | "quick_check" | "integrity_check" | "encoding"
+                        | "page_count" | "page_size" | "max_page_count" | "freelist_count"
+                        | "schema_version" | "user_version" | "application_id" | "data_version"
+                        | "compile_options" | "collation_list" | "module_list"
+                        | "function_list" => Authorization::Allow,
+                        // Safe runtime PRAGMAs
+                        "busy_timeout"
+                        | "cache_size"
+                        | "case_sensitive_like"
+                        | "count_changes"
+                        | "foreign_keys"
+                        | "ignore_check_constraints"
+                        | "recursive_triggers"
+                        | "reverse_unordered_selects"
+                        | "query_only"
+                        | "read_uncommitted"
+                        | "synchronous"
+                        | "temp_store" => Authorization::Allow,
+                        // Journal mode is needed for WAL
+                        "journal_mode" | "wal_checkpoint" | "wal_autocheckpoint" => {
+                            Authorization::Allow
+                        }
+                        // Block dangerous PRAGMAs
+                        _ => Authorization::Deny,
+                    }
+                }
+
+                // Allow all other actions (SELECT, INSERT, UPDATE, DELETE, etc.)
+                _ => Authorization::Allow,
+            }
+        }));
     }
 
     let mut prepared = conn.prepare(query)?;
@@ -102,8 +167,8 @@ pub async fn potentially_isolated_sqlite_query(
     isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    let nsjail_path = isolation.as_ref().map(|i| Path::new(&i.nsjail_path));
+    let enable_isolation = isolation.as_ref().map(|i| i.enabled).unwrap_or(false);
     daemon_registry
-        .execute_query(path, nsjail_path, query, query_mode)
+        .execute_query(path, enable_isolation, query, query_mode)
         .await
 }

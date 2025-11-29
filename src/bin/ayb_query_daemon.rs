@@ -1,3 +1,5 @@
+use ayb::hosted_db::isolation::apply_isolation;
+use ayb::hosted_db::sandbox_capabilities::ResourceLimits;
 use ayb::hosted_db::sqlite::query_sqlite;
 use ayb::hosted_db::QueryMode;
 use serde::{Deserialize, Serialize};
@@ -15,24 +17,34 @@ struct QueryRequest {
 /// against a database and returns results in QueryResult format.
 ///
 /// Usage:
-/// $ ayb_query_daemon database.sqlite
+/// $ ayb_query_daemon database.sqlite [--isolate]
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
 /// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
-/// This command can be run inside a sandbox that isolates
-/// parallel invocations from accessing each other's data, memory,
-/// and resources. That sandbox can be found in src/hosted_db/sandbox.rs.
+/// When run with --isolate, the daemon applies native Linux isolation
+/// using Landlock, seccomp, and rlimits instead of nsjail.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!("Usage: ayb_query_daemon <database.sqlite>");
+        eprintln!("Usage: ayb_query_daemon <database.sqlite> [--isolate]");
         std::process::exit(1);
     }
 
     let db_file = PathBuf::from(&args[1]);
+    let should_isolate = args.get(2).map(|s| s == "--isolate").unwrap_or(false);
+
+    // Apply isolation before handling any queries
+    if should_isolate {
+        let limits = ResourceLimits::default();
+        if let Err(e) = apply_isolation(&db_file, &limits) {
+            eprintln!("Warning: Failed to apply isolation: {}", e);
+            // Continue without isolation - let the caller decide if this is acceptable
+        }
+    }
+
     run(db_file)
 }
 
