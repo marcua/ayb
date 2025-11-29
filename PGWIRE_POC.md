@@ -233,7 +233,7 @@ With PostgreSQL wire protocol support, ayb becomes compatible with:
 - Handles all wire protocol complexity
 - Has working SQLite example to learn from
 - Active development and good documentation
-- Version 0.28.0 used (stable)
+- Version 0.36.2 used
 
 ### Design Decisions
 

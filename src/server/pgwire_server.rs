@@ -15,12 +15,10 @@ use pgwire::api::auth::{
     finish_authentication, save_startup_parameters_to_metadata, DefaultServerParameterProvider,
     LoginInfo, StartupHandler,
 };
-use pgwire::api::copy::NoopCopyHandler;
-use pgwire::api::query::{PlaceholderExtendedQueryHandler, SimpleQueryHandler};
+use pgwire::api::query::SimpleQueryHandler;
 use pgwire::api::results::{DataRowEncoder, FieldFormat, FieldInfo, QueryResponse, Response};
 use pgwire::api::{
-    ClientInfo, NoopErrorHandler, PgWireConnectionState, PgWireServerHandlers, Type,
-    METADATA_DATABASE, METADATA_USER,
+    ClientInfo, PgWireConnectionState, PgWireServerHandlers, Type, METADATA_DATABASE, METADATA_USER,
 };
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::response::ErrorResponse;
@@ -259,7 +257,7 @@ impl AybPgWireBackend {
     }
 
     /// Convert ayb QueryResult to PostgreSQL wire format
-    fn encode_query_result(result: QueryResult) -> PgWireResult<Vec<Response<'static>>> {
+    fn encode_query_result(result: QueryResult) -> PgWireResult<Vec<Response>> {
         // Build field info from column names
         let fields: Vec<FieldInfo> = result
             .fields
@@ -296,11 +294,7 @@ impl AybPgWireBackend {
 /// Implement SimpleQueryHandler for basic SQL queries
 #[async_trait]
 impl SimpleQueryHandler for AybPgWireBackend {
-    async fn do_query<'a, C>(
-        &self,
-        client: &mut C,
-        query: &'a str,
-    ) -> PgWireResult<Vec<Response<'a>>>
+    async fn do_query<C>(&self, client: &mut C, query: &str) -> PgWireResult<Vec<Response>>
     where
         C: ClientInfo + Unpin + Send + Sync,
     {
@@ -351,13 +345,7 @@ impl AybPgWireBackendFactory {
 }
 
 impl PgWireServerHandlers for AybPgWireBackendFactory {
-    type StartupHandler = AybTokenAuthStartupHandler;
-    type SimpleQueryHandler = AybPgWireBackend;
-    type ExtendedQueryHandler = PlaceholderExtendedQueryHandler;
-    type CopyHandler = NoopCopyHandler;
-    type ErrorHandler = NoopErrorHandler;
-
-    fn simple_query_handler(&self) -> Arc<Self::SimpleQueryHandler> {
+    fn simple_query_handler(&self) -> Arc<impl SimpleQueryHandler> {
         Arc::new(AybPgWireBackend::new(
             Arc::clone(&self.ayb_db),
             Arc::clone(&self.ayb_config),
@@ -365,24 +353,12 @@ impl PgWireServerHandlers for AybPgWireBackendFactory {
         ))
     }
 
-    fn extended_query_handler(&self) -> Arc<Self::ExtendedQueryHandler> {
-        Arc::new(PlaceholderExtendedQueryHandler)
-    }
-
-    fn startup_handler(&self) -> Arc<Self::StartupHandler> {
+    fn startup_handler(&self) -> Arc<impl StartupHandler> {
         let parameters = DefaultServerParameterProvider::default();
         Arc::new(AybTokenAuthStartupHandler::new(
             Arc::clone(&self.ayb_db),
             Arc::new(parameters),
         ))
-    }
-
-    fn copy_handler(&self) -> Arc<Self::CopyHandler> {
-        Arc::new(NoopCopyHandler)
-    }
-
-    fn error_handler(&self) -> Arc<Self::ErrorHandler> {
-        Arc::new(NoopErrorHandler)
     }
 }
 
