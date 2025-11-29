@@ -52,7 +52,7 @@ make test TEST=client_server_integration_sqlite
 # The test setup script installs:
 # - Python virtual environment with awscli
 # - MinIO for S3-compatible storage testing
-# - nsjail binary for isolation testing
+# - Native isolation (Landlock, cgroups, rlimit)
 ```
 
 If tests fail with S3 errors, run `tests/run_minio.sh` and try again.
@@ -97,7 +97,7 @@ src/
 
 **Hosted Database (`src/hosted_db/`)**
 - SQLite query execution with safety constraints
-- nsjail sandboxing for multi-tenant isolation (Linux only)
+- Native Linux isolation (Landlock, cgroups, rlimit) for multi-tenant security
 - Database file organization and path management
 
 **Client (`src/client/`)**
@@ -113,7 +113,7 @@ src/
 - **CLI**: clap for argument parsing
 - **Async**: tokio runtime
 - **Backup**: S3-compatible storage with zstd compression
-- **Isolation**: nsjail for sandboxed query execution
+- **Isolation**: Native Linux primitives (Landlock, cgroups, rlimit)
 
 ## Configuration
 
@@ -122,7 +122,6 @@ Server configuration uses TOML format (`ayb.toml`) with sections for:
 - Authentication (fernet key, token expiration)
 - Email (SMTP configuration)
 - Snapshots (S3 configuration and scheduling)
-- Isolation (nsjail path)
 - CORS settings
 
 ## Key Development Patterns
@@ -130,7 +129,7 @@ Server configuration uses TOML format (`ayb.toml`) with sections for:
 ### Multi-Tenancy
 - Entities represent users and organizations
 - Permissions are granular: no-access, read-only, read-write, manager
-- Database isolation via nsjail sandboxing and SQLite safety constraints
+- Database isolation via native Linux sandboxing and SQLite safety constraints
 
 ### Error Handling
 - Uses Tera templates for consistent error snippet formatting

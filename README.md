@@ -360,27 +360,20 @@ flag and sets
 to `0` in order to prevent users from corrupting the database or
 attaching to other databases on the filesystem.
 
-For further isolation, `ayb` can use [nsjail](https://nsjail.dev/)
-(only when running on Linux) to isolate each database's filesystem access
-and resources. When this form of isolation is enabled, `ayb` starts a
-persistent `nsjail`-managed daemon process for each database to execute
-queries in an isolated environment. We have not yet benchmarked the performance
-overhead of this approach.
+For further isolation on Linux, `ayb` automatically applies multiple
+layers of native isolation to each query daemon process:
 
-To enable this deeper form of isolation on Linux, you must first build
-`nsjail`, which you can do through
-[scripts/build_nsjail.sh](scripts/build_nsjail.sh). Note that `nsjail`
-depends on a few other packages. If you run into issues building it,
-it might be helpful to see its
-[Dockerfile](https://github.com/google/nsjail/blob/master/Dockerfile)
-to get a sense of those requirements.
+- **Landlock** (Linux 5.13+): Filesystem isolation restricting access to only the database directory
+- **cgroups v2**: CPU rate limiting to prevent one tenant from monopolizing resources
+- **rlimit**: Memory, file size, and process limits
 
-Once you have a path to the
-`nsjail` binary, add the following to your `ayb.toml`:
+When running in Docker, you'll need cgroup access for CPU limits. Use one of:
+```bash
+# Option A: Share host's cgroup namespace
+docker run --cgroupns=host ...
 
-```toml
-[isolation]
-nsjail_path = "path/to/nsjail"
+# Option B: Enable cgroup delegation (systemd)
+systemctl set-property docker.service Delegate=yes
 ```
 
 ## Docker
@@ -462,7 +455,7 @@ cargo test --verbose
 In order to mimic as close to a realistic environment as possible, the end-to-end tests mock out very little functionality. The `tests/set_up_e2e_env.sh` script, which has been used extensively in Ubuntu, does the following:
 * Sets up a Python virtual environment and installs requirements for various helpers.
 * Installs the requirements for a [MinIO](https://min.io/) server and then runs that server in the background (requires Docker) in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
-* Installs an `nsjail` binary to test `ayb`'s [isolation](#isolation) functionality.
+* Sets up native isolation testing (Landlock, cgroups, rlimit) for `ayb`'s [isolation](#isolation) functionality.
 
 ## FAQ
 
