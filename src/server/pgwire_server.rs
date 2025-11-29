@@ -32,6 +32,52 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 
+/// PostgreSQL error severity levels
+const SEVERITY_ERROR: &str = "ERROR";
+const SEVERITY_FATAL: &str = "FATAL";
+
+/// PostgreSQL error codes used in this module
+mod error_codes {
+    /// Authentication failure
+    pub const INVALID_AUTH: &str = "28P01";
+    /// Invalid authorization specification
+    pub const INVALID_AUTH_SPEC: &str = "28000";
+    /// Protocol violation
+    pub const PROTOCOL_VIOLATION: &str = "08P01";
+    /// Syntax error (generic SQL error)
+    pub const SYNTAX_ERROR: &str = "42601";
+    /// Custom error code for invalid database path format
+    pub const INVALID_DB_PATH: &str = "XXAAA";
+}
+
+/// Create a PgWireError with the given severity, code, and message
+fn pgwire_error(severity: &str, code: &str, message: impl Into<String>) -> PgWireError {
+    PgWireError::UserError(Box::new(ErrorInfo::new(
+        severity.to_owned(),
+        code.to_owned(),
+        message.into(),
+    )))
+}
+
+/// Send a fatal error to the client and close the connection
+async fn send_fatal_error_and_close<C>(
+    client: &mut C,
+    code: &str,
+    message: impl Into<String>,
+) -> PgWireResult<()>
+where
+    C: Sink<PgWireBackendMessage> + Unpin + Send,
+    PgWireError: From<<C as Sink<PgWireBackendMessage>>::Error>,
+{
+    let error_info = ErrorInfo::new(SEVERITY_FATAL.to_owned(), code.to_owned(), message.into());
+    let error = ErrorResponse::from(error_info);
+    client
+        .feed(PgWireBackendMessage::ErrorResponse(error))
+        .await?;
+    client.close().await?;
+    Ok(())
+}
+
 /// Custom startup handler that validates ayb API tokens as passwords
 pub struct AybTokenAuthStartupHandler {
     ayb_db: Arc<Box<dyn AybDb>>,
@@ -47,6 +93,34 @@ impl AybTokenAuthStartupHandler {
             ayb_db,
             parameter_provider,
         }
+    }
+
+    /// Validate an API token and verify it belongs to the given username.
+    /// Returns Ok(()) on success, or Err(message) with an error message on failure.
+    async fn validate_token_and_authenticate(
+        &self,
+        token: &str,
+        username: &str,
+    ) -> Result<(), String> {
+        let ayb_db_data = web::Data::new(clone_box(&**self.ayb_db));
+
+        let api_token = retrieve_and_validate_api_token(token, &ayb_db_data)
+            .await
+            .map_err(|_| "Invalid API token".to_string())?;
+
+        let entity = (**self.ayb_db)
+            .get_entity_by_id(api_token.entity_id)
+            .await
+            .map_err(|_| "Invalid API token: entity not found".to_string())?;
+
+        if entity.slug.to_lowercase() != username.to_lowercase() {
+            return Err(format!(
+                "Token belongs to entity '{}', but connected as '{}'",
+                entity.slug, username
+            ));
+        }
+
+        Ok(())
     }
 }
 
@@ -78,69 +152,26 @@ impl StartupHandler for AybTokenAuthStartupHandler {
                 let pwd = pwd.into_password()?;
                 let login_info = LoginInfo::from_client_info(client);
                 let username = login_info.user().ok_or_else(|| {
-                    PgWireError::UserError(Box::new(ErrorInfo::new(
-                        "FATAL".to_owned(),
-                        "28000".to_owned(),
-                        "No username provided".to_owned(),
-                    )))
+                    pgwire_error(
+                        SEVERITY_FATAL,
+                        error_codes::INVALID_AUTH_SPEC,
+                        "No username provided",
+                    )
                 })?;
 
                 // The password should be an ayb API token
                 let token = pwd.password;
 
-                // Validate token using ayb's existing auth system
-                let ayb_db_data = web::Data::new(clone_box(&**self.ayb_db));
-                match retrieve_and_validate_api_token(&token, &ayb_db_data).await {
-                    Ok(api_token) => {
-                        // Get the entity that owns this token
-                        match (**self.ayb_db).get_entity_by_id(api_token.entity_id).await {
-                            Ok(entity) => {
-                                // Verify the username matches the entity slug
-                                if entity.slug.to_lowercase() == username.to_lowercase() {
-                                    // Authentication successful!
-                                    finish_authentication(client, self.parameter_provider.as_ref())
-                                        .await?;
-                                } else {
-                                    let error_info = ErrorInfo::new(
-                                        "FATAL".to_owned(),
-                                        "28P01".to_owned(),
-                                        format!(
-                                            "Token belongs to entity '{}', but connected as '{}'",
-                                            entity.slug, username
-                                        ),
-                                    );
-                                    let error = ErrorResponse::from(error_info);
-                                    client
-                                        .feed(PgWireBackendMessage::ErrorResponse(error))
-                                        .await?;
-                                    client.close().await?;
-                                }
-                            }
-                            Err(_) => {
-                                let error_info = ErrorInfo::new(
-                                    "FATAL".to_owned(),
-                                    "28P01".to_owned(),
-                                    "Invalid API token: entity not found".to_owned(),
-                                );
-                                let error = ErrorResponse::from(error_info);
-                                client
-                                    .feed(PgWireBackendMessage::ErrorResponse(error))
-                                    .await?;
-                                client.close().await?;
-                            }
-                        }
+                // Validate token and authenticate
+                let auth_result = self.validate_token_and_authenticate(&token, username).await;
+
+                match auth_result {
+                    Ok(()) => {
+                        finish_authentication(client, self.parameter_provider.as_ref()).await?;
                     }
-                    Err(_) => {
-                        let error_info = ErrorInfo::new(
-                            "FATAL".to_owned(),
-                            "28P01".to_owned(),
-                            "Invalid API token".to_owned(),
-                        );
-                        let error = ErrorResponse::from(error_info);
-                        client
-                            .feed(PgWireBackendMessage::ErrorResponse(error))
+                    Err(message) => {
+                        send_fatal_error_and_close(client, error_codes::INVALID_AUTH, message)
                             .await?;
-                        client.close().await?;
                     }
                 }
             }
@@ -175,14 +206,14 @@ impl AybPgWireBackend {
     fn parse_database_path(db_name: &str) -> Result<(String, String), PgWireError> {
         let parts: Vec<&str> = db_name.split('/').collect();
         if parts.len() != 2 {
-            return Err(PgWireError::UserError(Box::new(ErrorInfo::new(
-                "ERROR".to_owned(),
-                "XXAAA".to_owned(),
+            return Err(pgwire_error(
+                SEVERITY_ERROR,
+                error_codes::INVALID_DB_PATH,
                 format!(
                     "Invalid database name: {}. Use format: entity/database",
                     db_name
                 ),
-            ))));
+            ));
         }
         Ok((parts[0].to_string(), parts[1].to_string()))
     }
@@ -203,11 +234,11 @@ impl AybPgWireBackend {
                 .get_entity_by_slug(username)
                 .await
                 .map_err(|e| {
-                    PgWireError::UserError(Box::new(ErrorInfo::new(
-                        "ERROR".to_owned(),
-                        "28000".to_owned(),
+                    pgwire_error(
+                        SEVERITY_ERROR,
+                        error_codes::INVALID_AUTH_SPEC,
                         format!("Not authenticated: {}", e),
-                    )))
+                    )
                 })?;
 
         // Wrap ayb_db in web::Data for shared query execution logic
@@ -224,14 +255,7 @@ impl AybPgWireBackend {
             &self.daemon_registry,
         )
         .await
-        .map_err(|e| {
-            // Map AybError to PgWireError with appropriate error codes
-            PgWireError::UserError(Box::new(ErrorInfo::new(
-                "ERROR".to_owned(),
-                "42601".to_owned(),
-                format!("{}", e),
-            )))
-        })
+        .map_err(|e| pgwire_error(SEVERITY_ERROR, error_codes::SYNTAX_ERROR, e.to_string()))
     }
 
     /// Convert ayb QueryResult to PostgreSQL wire format
@@ -282,19 +306,19 @@ impl SimpleQueryHandler for AybPgWireBackend {
     {
         // Get database name and username from client connection
         let db_name = client.metadata().get(METADATA_DATABASE).ok_or_else(|| {
-            PgWireError::UserError(Box::new(ErrorInfo::new(
-                "ERROR".to_owned(),
-                "08P01".to_owned(),
-                "No database specified in connection".to_owned(),
-            )))
+            pgwire_error(
+                SEVERITY_ERROR,
+                error_codes::PROTOCOL_VIOLATION,
+                "No database specified in connection",
+            )
         })?;
 
         let username = client.metadata().get(METADATA_USER).ok_or_else(|| {
-            PgWireError::UserError(Box::new(ErrorInfo::new(
-                "ERROR".to_owned(),
-                "28000".to_owned(),
-                "No username in connection".to_owned(),
-            )))
+            pgwire_error(
+                SEVERITY_ERROR,
+                error_codes::INVALID_AUTH_SPEC,
+                "No username in connection",
+            )
         })?;
 
         // Execute query
