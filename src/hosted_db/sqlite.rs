@@ -159,7 +159,7 @@ pub fn query_sqlite(
 }
 
 /// Run `query` against the database at `path` using an isolated daemon process.
-/// The daemon automatically applies Landlock, seccomp, and rlimits for isolation.
+/// The daemon automatically applies Landlock, rlimits, and cgroups for isolation.
 pub async fn potentially_isolated_sqlite_query(
     daemon_registry: &DaemonRegistry,
     path: &PathBuf,

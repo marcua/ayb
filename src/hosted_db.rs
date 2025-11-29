@@ -5,6 +5,9 @@ mod sandbox;
 pub mod sandbox_capabilities;
 pub mod sqlite;
 
+// Re-export cleanup_cgroup for daemon_registry to use
+pub use isolation::cleanup_cgroup;
+
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;

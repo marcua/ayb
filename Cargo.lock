@@ -553,7 +553,6 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "blake3",
- "caps",
  "chrono",
  "clap",
  "config",
@@ -567,7 +566,6 @@ dependencies = [
  "image",
  "landlock",
  "lettre",
- "libc",
  "nix 0.29.0",
  "playwright",
  "predicates",
@@ -581,7 +579,6 @@ dependencies = [
  "rust-s3",
  "rustyline",
  "scraper",
- "seccompiler",
  "serde",
  "serde_json",
  "serde_repr",
@@ -769,15 +766,6 @@ checksum = "225bff33b2141874fe80d71e07d6eec4f85c5c216453dd96388240f96e1acc14"
 dependencies = [
  "cc",
  "pkg-config",
-]
-
-[[package]]
-name = "caps"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd1ddba47aba30b6a889298ad0109c3b8dcb0e8fc993b459daa7067d46f865e0"
-dependencies = [
- "libc",
 ]
 
 [[package]]
@@ -4214,15 +4202,6 @@ dependencies = [
  "precomputed-hash",
  "selectors",
  "tendril",
-]
-
-[[package]]
-name = "seccompiler"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "345a3e4dddf721a478089d4697b83c6c0a8f5bf16086f6c13397e4534eb6e2e5"
-dependencies = [
- "libc",
 ]
 
 [[package]]

@@ -51,9 +51,6 @@ zstd = { version = "0.13.3" }
 # Sandbox/isolation dependencies (Linux-only features)
 [target.'cfg(target_os = "linux")'.dependencies]
 landlock = { version = "0.4" }
-seccompiler = { version = "0.4" }
-caps = { version = "0.5" }
-libc = { version = "0.2" }
 
 # Unix-specific dependencies for rlimit
 [target.'cfg(unix)'.dependencies]

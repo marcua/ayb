@@ -7,8 +7,10 @@
 //! 1. SQLite Authorizer - Blocks ATTACH DATABASE and dangerous PRAGMAs
 //! 2. rlimit - Memory, file size, file descriptor, and process limits
 //! 3. Landlock - Filesystem isolation (Linux 5.13+)
-//! 4. seccomp - Syscall filtering
-//! 5. cgroups v2 - CPU limits (optional)
+//! 4. cgroups v2 - CPU rate limits (REQUIRED for multi-tenant)
+//!
+//! Note: seccomp syscall filtering should be handled at the container level
+//! (e.g., Docker's default seccomp profile or --security-opt seccomp=...)
 
 use std::fmt;
 
@@ -17,12 +19,10 @@ use std::fmt;
 pub struct SandboxCapabilities {
     /// Landlock ABI version if available (Linux 5.13+)
     pub landlock_abi: Option<u8>,
-    /// Whether cgroups v2 is available and writable
+    /// Whether cgroups v2 is available and writable for CPU limits
     pub cgroups_v2: bool,
     /// Whether rlimit is available (always true on Unix)
     pub rlimit: bool,
-    /// Whether seccomp is available
-    pub seccomp: bool,
     /// The current platform
     pub platform: Platform,
 }
@@ -63,13 +63,11 @@ impl SandboxCapabilities {
         let landlock_abi = Self::detect_landlock();
         let cgroups_v2 = Self::detect_cgroups_v2();
         let rlimit = cfg!(unix);
-        let seccomp = cfg!(target_os = "linux");
 
         SandboxCapabilities {
             landlock_abi,
             cgroups_v2,
             rlimit,
-            seccomp,
             platform,
         }
     }
@@ -97,7 +95,8 @@ impl SandboxCapabilities {
         None
     }
 
-    /// Check if cgroups v2 is available and writable
+    /// Check if cgroups v2 is available and we have write access
+    /// Returns true only if we can actually create cgroups and set CPU limits
     #[cfg(target_os = "linux")]
     fn detect_cgroups_v2() -> bool {
         use std::fs;
@@ -115,8 +114,35 @@ impl SandboxCapabilities {
             return false;
         }
 
-        // Check if we can read the controllers (indicates access)
-        fs::read_to_string(&controllers_path).is_ok()
+        // Read available controllers and check cpu is enabled
+        let controllers = match fs::read_to_string(&controllers_path) {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+
+        if !controllers.contains("cpu") {
+            return false;
+        }
+
+        // Try to create the ayb cgroup directory to verify write access
+        let ayb_cgroup = cgroup_path.join("ayb");
+        if !ayb_cgroup.exists() {
+            // Try to create it
+            if fs::create_dir(&ayb_cgroup).is_err() {
+                return false;
+            }
+            // Clean up the test directory
+            let _ = fs::remove_dir(&ayb_cgroup);
+        } else {
+            // Directory exists, check if we can write to it
+            let test_cgroup = ayb_cgroup.join("_test_write_access");
+            if fs::create_dir(&test_cgroup).is_err() {
+                return false;
+            }
+            let _ = fs::remove_dir(&test_cgroup);
+        }
+
+        true
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -126,7 +152,7 @@ impl SandboxCapabilities {
 
     /// Check if full isolation is available
     pub fn has_full_isolation(&self) -> bool {
-        self.platform == Platform::Linux && self.landlock_abi.is_some() && self.seccomp
+        self.platform == Platform::Linux && self.landlock_abi.is_some() && self.cgroups_v2
     }
 
     /// Print sandbox status at server startup
@@ -143,40 +169,39 @@ impl SandboxCapabilities {
 
                 if !self.cgroups_v2 {
                     eprintln!(
-                        "Warning: cgroups v2 not available or not writable. \
-                         CPU limits will NOT be enforced. \
-                         For Docker: run with --cgroupns=host or enable cgroup delegation."
+                        "ERROR: cgroups v2 not available or not writable. \
+                         CPU rate limits will NOT be enforced."
                     );
-                }
-
-                if !self.seccomp {
                     eprintln!(
-                        "Warning: seccomp not available. Syscall filtering will be disabled."
+                        "       This is REQUIRED for multi-tenant hosting to prevent \
+                         one tenant from monopolizing CPU."
                     );
+                    eprintln!(
+                        "       For Docker: run with --cgroupns=host OR enable cgroup delegation."
+                    );
+                    eprintln!("       See documentation for setup instructions.");
                 }
 
-                // Success message if all available
-                if self.landlock_abi.is_some() && self.seccomp {
+                // Success message if all features are available
+                if self.landlock_abi.is_some() && self.cgroups_v2 {
                     println!("Multi-tenant isolation enabled:");
                     if let Some(abi) = self.landlock_abi {
                         println!("  - Landlock ABI v{} (filesystem isolation)", abi);
                     }
-                    if self.cgroups_v2 {
-                        println!("  - cgroups v2 (CPU limits)");
-                    }
+                    println!("  - cgroups v2 (CPU rate limits)");
                     println!("  - rlimit (memory/file/process limits)");
-                    println!("  - seccomp (syscall filtering)");
                     println!("  - SQLite authorizer (ATTACH blocking)");
+                    println!(
+                        "  - Note: seccomp syscall filtering should be applied at container level"
+                    );
                 }
             }
 
             Platform::MacOS => {
                 eprintln!("Warning: Running on macOS with limited sandboxing:");
                 eprintln!("  - rlimit: Available (memory/file/process limits)");
-                eprintln!("  - Landlock: Linux-only");
-                eprintln!("  - cgroups: Linux-only");
-                eprintln!("  - seccomp: Linux-only");
                 eprintln!("  - SQLite authorizer: Available (ATTACH blocking)");
+                eprintln!("  - Landlock, cgroups: Linux-only");
                 eprintln!();
                 eprintln!("NOT RECOMMENDED for multi-tenant production use.");
                 eprintln!("Use Linux for proper database isolation.");
@@ -209,6 +234,9 @@ pub struct ResourceLimits {
     pub max_file_descriptors: u64,
     /// Maximum number of processes (default: 2)
     pub max_processes: u64,
+    /// CPU quota as percentage of one core (default: 50%)
+    /// 100 = 100% of one core, 50 = 50% of one core
+    pub cpu_percent: u32,
 }
 
 impl Default for ResourceLimits {
@@ -218,6 +246,7 @@ impl Default for ResourceLimits {
             max_file_size_bytes: 75 * 1024 * 1024, // 75 MB
             max_file_descriptors: 10,
             max_processes: 2,
+            cpu_percent: 50, // 50% of one core
         }
     }
 }

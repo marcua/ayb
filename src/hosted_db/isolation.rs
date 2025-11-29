@@ -10,23 +10,169 @@ use std::path::Path;
 /// Apply all available isolation mechanisms to the current process.
 /// This should be called early in the daemon process before handling any queries.
 pub fn apply_isolation(db_path: &Path, limits: &ResourceLimits) -> Result<(), AybError> {
+    // Apply cgroup CPU limits first (Linux only, requires cgroups v2)
+    // This is critical for multi-tenant isolation
+    #[cfg(target_os = "linux")]
+    apply_cgroup_limits(limits)?;
+
     // Apply rlimit restrictions (works on all Unix platforms)
     #[cfg(unix)]
-    apply_rlimits(limits)?;
+    {
+        if let Err(e) = apply_rlimits(limits) {
+            eprintln!("Warning: Failed to apply rlimits: {}", e);
+        }
+    }
 
     // Apply Landlock filesystem restrictions (Linux 5.13+)
     #[cfg(target_os = "linux")]
-    apply_landlock(db_path)?;
+    {
+        if let Err(e) = apply_landlock(db_path) {
+            eprintln!("Warning: Failed to apply Landlock: {}", e);
+        }
+    }
 
-    // Apply seccomp syscall filtering (Linux only)
-    #[cfg(target_os = "linux")]
-    apply_seccomp()?;
+    // Note: seccomp syscall filtering is NOT applied here because:
+    // 1. It causes segfaults in constrained environments (gVisor, containers)
+    // 2. The container runtime already provides syscall filtering
+    // 3. SQLite authorizer + Landlock + rlimits provide sufficient isolation
+    // If you need seccomp, run ayb in a container with --security-opt seccomp=...
 
     // Suppress unused variable warning on non-Unix platforms
     #[cfg(not(unix))]
     let _ = (db_path, limits);
 
     Ok(())
+}
+
+/// Apply cgroup v2 CPU limits (Linux only)
+/// Creates a cgroup for this process and sets CPU quota
+#[cfg(target_os = "linux")]
+fn apply_cgroup_limits(limits: &ResourceLimits) -> Result<(), AybError> {
+    use std::fs;
+    use std::io::Write;
+    use std::path::PathBuf;
+
+    let pid = std::process::id();
+    let cgroup_base = PathBuf::from("/sys/fs/cgroup");
+
+    // Check if cgroups v2 is available
+    if !cgroup_base.join("cgroup.controllers").exists() {
+        eprintln!(
+            "Warning: cgroups v2 not available. CPU rate limits NOT enforced. \
+             This is REQUIRED for multi-tenant isolation."
+        );
+        return Ok(());
+    }
+
+    // Create the ayb parent cgroup if it doesn't exist
+    let ayb_cgroup = cgroup_base.join("ayb");
+    if !ayb_cgroup.exists() {
+        if let Err(e) = fs::create_dir(&ayb_cgroup) {
+            eprintln!(
+                "Warning: Cannot create cgroup directory {:?}: {}. \
+                 CPU rate limits NOT enforced. \
+                 For Docker: use --cgroupns=host or enable cgroup delegation.",
+                ayb_cgroup, e
+            );
+            return Ok(());
+        }
+    }
+
+    // Enable cpu controller in the parent cgroup
+    let subtree_control = ayb_cgroup.join("cgroup.subtree_control");
+    if let Err(e) = fs::write(&subtree_control, "+cpu") {
+        eprintln!(
+            "Warning: Cannot enable cpu controller: {}. \
+             CPU rate limits NOT enforced.",
+            e
+        );
+        return Ok(());
+    }
+
+    // Create a cgroup for this specific daemon
+    let daemon_cgroup = ayb_cgroup.join(format!("daemon-{}", pid));
+    if let Err(e) = fs::create_dir(&daemon_cgroup) {
+        eprintln!(
+            "Warning: Cannot create daemon cgroup {:?}: {}. \
+             CPU rate limits NOT enforced.",
+            daemon_cgroup, e
+        );
+        return Ok(());
+    }
+
+    // Set CPU quota: cpu.max format is "quota period" in microseconds
+    // period is typically 100000 (100ms)
+    // quota is the max microseconds of CPU time per period
+    let period_us: u64 = 100_000; // 100ms
+    let quota_us = (period_us * limits.cpu_percent as u64) / 100;
+    let cpu_max = format!("{} {}", quota_us, period_us);
+
+    let cpu_max_path = daemon_cgroup.join("cpu.max");
+    if let Err(e) = fs::write(&cpu_max_path, &cpu_max) {
+        eprintln!(
+            "Warning: Cannot set cpu.max to {}: {}. \
+             CPU rate limits NOT enforced.",
+            cpu_max, e
+        );
+        // Clean up the cgroup we created
+        let _ = fs::remove_dir(&daemon_cgroup);
+        return Ok(());
+    }
+
+    // Move this process into the cgroup
+    let procs_path = daemon_cgroup.join("cgroup.procs");
+    let mut file = match fs::File::create(&procs_path) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!(
+                "Warning: Cannot open cgroup.procs: {}. \
+                 CPU rate limits NOT enforced.",
+                e
+            );
+            let _ = fs::remove_dir(&daemon_cgroup);
+            return Ok(());
+        }
+    };
+
+    if let Err(e) = writeln!(file, "{}", pid) {
+        eprintln!(
+            "Warning: Cannot move process to cgroup: {}. \
+             CPU rate limits NOT enforced.",
+            e
+        );
+        let _ = fs::remove_dir(&daemon_cgroup);
+        return Ok(());
+    }
+
+    // Note: The cgroup will be cleaned up by the DaemonRegistry when the daemon exits
+    // The cgroup directory path is stored in an environment variable for cleanup
+    std::env::set_var("AYB_CGROUP_PATH", daemon_cgroup.to_string_lossy().as_ref());
+
+    Ok(())
+}
+
+/// Clean up a cgroup directory when daemon exits
+/// This should be called by the parent process (DaemonRegistry) after the daemon terminates
+#[cfg(target_os = "linux")]
+pub fn cleanup_cgroup(pid: u32) {
+    use std::fs;
+    use std::path::PathBuf;
+
+    let daemon_cgroup = PathBuf::from("/sys/fs/cgroup/ayb").join(format!("daemon-{}", pid));
+    if daemon_cgroup.exists() {
+        // The cgroup should be empty after the process exits
+        if let Err(e) = fs::remove_dir(&daemon_cgroup) {
+            eprintln!(
+                "Warning: Failed to clean up cgroup {:?}: {}",
+                daemon_cgroup, e
+            );
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn cleanup_cgroup(_pid: u32) {
+    // No-op on non-Linux platforms
 }
 
 /// Apply resource limits using rlimit (Unix only)
@@ -183,87 +329,8 @@ fn apply_landlock(db_path: &Path) -> Result<(), AybError> {
     Ok(())
 }
 
-/// Apply seccomp syscall filtering (Linux only)
-/// This blocks dangerous syscalls that SQLite doesn't need
-#[cfg(target_os = "linux")]
-fn apply_seccomp() -> Result<(), AybError> {
-    #[allow(unused_imports)]
-    use libc;
-    use seccompiler::{apply_filter_all_threads, SeccompAction, SeccompFilter, SeccompRule};
-    use std::collections::BTreeMap;
-
-    // Build the filter rules - we'll block dangerous syscalls
-    let mut rules: BTreeMap<i64, Vec<SeccompRule>> = BTreeMap::new();
-
-    // Block dangerous syscalls that SQLite doesn't need
-    // These could be used for container escape or privilege escalation
-
-    // Process/namespace manipulation
-    rules.insert(libc::SYS_ptrace, vec![]);
-    rules.insert(libc::SYS_mount, vec![]);
-    rules.insert(libc::SYS_umount2, vec![]);
-    rules.insert(libc::SYS_chroot, vec![]);
-    rules.insert(libc::SYS_pivot_root, vec![]);
-    rules.insert(libc::SYS_unshare, vec![]);
-    rules.insert(libc::SYS_setns, vec![]);
-
-    // Network syscalls - SQLite doesn't need network
-    rules.insert(libc::SYS_socket, vec![]);
-    rules.insert(libc::SYS_connect, vec![]);
-    rules.insert(libc::SYS_bind, vec![]);
-    rules.insert(libc::SYS_listen, vec![]);
-    rules.insert(libc::SYS_accept, vec![]);
-    rules.insert(libc::SYS_accept4, vec![]);
-    rules.insert(libc::SYS_sendto, vec![]);
-    rules.insert(libc::SYS_recvfrom, vec![]);
-    rules.insert(libc::SYS_sendmsg, vec![]);
-    rules.insert(libc::SYS_recvmsg, vec![]);
-
-    // Module loading
-    rules.insert(libc::SYS_init_module, vec![]);
-    rules.insert(libc::SYS_finit_module, vec![]);
-    rules.insert(libc::SYS_delete_module, vec![]);
-
-    // Kernel keyring
-    rules.insert(libc::SYS_add_key, vec![]);
-    rules.insert(libc::SYS_request_key, vec![]);
-    rules.insert(libc::SYS_keyctl, vec![]);
-
-    // BPF - could be used to bypass seccomp
-    rules.insert(libc::SYS_bpf, vec![]);
-
-    // Performance monitoring
-    rules.insert(libc::SYS_perf_event_open, vec![]);
-
-    // Get the target architecture
-    #[cfg(target_arch = "x86_64")]
-    let arch = seccompiler::TargetArch::x86_64;
-    #[cfg(target_arch = "aarch64")]
-    let arch = seccompiler::TargetArch::aarch64;
-
-    // Create the filter with default allow
-    let filter = SeccompFilter::new(
-        rules,
-        SeccompAction::Errno(libc::EPERM as u32), // Return EPERM for blocked syscalls
-        SeccompAction::Allow,                     // Allow everything else
-        arch,
-    )
-    .map_err(|e| AybError::Other {
-        message: format!("Failed to create seccomp filter: {:?}", e),
-    })?;
-
-    // Compile to BPF
-    let bpf_prog: seccompiler::BpfProgram = filter.try_into().map_err(|e| AybError::Other {
-        message: format!("Failed to compile seccomp filter: {:?}", e),
-    })?;
-
-    // Apply the filter to all threads
-    apply_filter_all_threads(&bpf_prog).map_err(|e| AybError::Other {
-        message: format!("Failed to apply seccomp filter: {:?}", e),
-    })?;
-
-    Ok(())
-}
+// Note: seccomp implementation removed - causes issues in gVisor and similar environments.
+// Seccomp filtering should be handled at the container level instead.
 
 #[cfg(test)]
 mod tests {

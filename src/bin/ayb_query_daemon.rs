@@ -25,7 +25,7 @@ struct QueryRequest {
 /// And writes line-delimited JSON responses to stdout.
 ///
 /// When run with --isolate, the daemon applies native Linux isolation
-/// using Landlock, seccomp, and rlimits instead of nsjail.
+/// using Landlock, rlimits, and cgroups instead of nsjail.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {

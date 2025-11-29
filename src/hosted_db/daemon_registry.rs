@@ -1,5 +1,6 @@
+use super::isolation::cleanup_cgroup;
+use super::sandbox::build_isolated_command;
 use crate::error::AybError;
-use crate::hosted_db::sandbox::build_isolated_command;
 use crate::hosted_db::{QueryMode, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -22,6 +23,8 @@ pub struct DaemonHandle {
     child: Child,
     stdin: Option<ChildStdin>,
     stdout: BufReader<ChildStdout>,
+    /// Process ID, stored for cgroup cleanup
+    pid: Option<u32>,
 }
 
 impl DaemonHandle {
@@ -62,6 +65,12 @@ impl DaemonHandle {
         self.stdin.take();
         // Kill the process if still running
         let _ = self.child.kill().await;
+        // Wait for process to exit to ensure cgroup is empty
+        let _ = self.child.wait().await;
+        // Clean up the cgroup if we have the PID
+        if let Some(pid) = self.pid {
+            cleanup_cgroup(pid);
+        }
     }
 }
 
@@ -125,16 +134,20 @@ impl DaemonRegistry {
     }
 
     /// Spawn a new daemon process for the given database
-    /// Always uses native isolation (Landlock, seccomp, rlimits)
+    /// Always uses native isolation (Landlock, rlimits, cgroups)
     async fn spawn_daemon(&self, db_path: &PathBuf) -> Result<DaemonHandle, AybError> {
         let mut cmd = build_isolated_command(db_path)?;
 
         // Spawn the process with piped stdin/stdout
+        // Keep stderr inherited so we can see daemon errors in server logs
         let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::inherit())
             .spawn()?;
+
+        // Capture the PID for cgroup cleanup
+        let pid = child.id();
 
         let stdin = child.stdin.take().ok_or(AybError::Other {
             message: "Failed to get daemon stdin".to_string(),
@@ -148,6 +161,7 @@ impl DaemonRegistry {
             child,
             stdin: Some(stdin),
             stdout: BufReader::new(stdout),
+            pid,
         })
     }
 

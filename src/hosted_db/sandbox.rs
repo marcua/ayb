@@ -1,14 +1,14 @@
 //! Sandbox command builders for database isolation.
 //!
 //! This module provides command builders for running the query daemon
-//! with native isolation (Landlock, seccomp, rlimits).
+//! with native isolation (Landlock, rlimits, cgroups).
 
 use crate::error::AybError;
 use crate::hosted_db::paths::pathbuf_to_parent;
 use std::env::current_exe;
 use std::path::PathBuf;
 
-/// Build command for running daemon with native isolation (Landlock, seccomp, rlimits).
+/// Build command for running daemon with native isolation (Landlock, rlimits, cgroups).
 /// This is the only method available - isolation is always enabled.
 pub fn build_isolated_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
