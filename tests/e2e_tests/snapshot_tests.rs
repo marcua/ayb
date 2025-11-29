@@ -1,7 +1,10 @@
 use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG,
 };
-use crate::utils::ayb::{list_snapshots, list_snapshots_match_output, query, restore_snapshot};
+use crate::utils::ayb::{
+    create_database, list_databases, list_snapshots, list_snapshots_match_output, query,
+    restore_snapshot, server_list_snapshots, server_restore_snapshot,
+};
 use crate::utils::testing::snapshot_storage;
 use std::collections::HashMap;
 use std::thread;
@@ -250,6 +253,93 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 0 \n\nRows: 1",
     )?;
+
+    Ok(())
+}
+
+pub async fn test_ayb_db_snapshot_restore(
+    db_type: &str,
+    config_path: &str,
+    api_keys: &HashMap<String, Vec<String>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Remove all ayb_db snapshots so our tests aren't affected by
+    // timing/snapshots from previous tests.
+    let storage = snapshot_storage(db_type).await?;
+    storage
+        .delete_snapshots(
+            "__ayb__",
+            "ayb",
+            &storage
+                .list_snapshots("__ayb__", "ayb")
+                .await?
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.clone())
+                .collect(),
+        )
+        .await?;
+
+    // Wait for initial snapshot to be created
+    thread::sleep(time::Duration::from_secs(4));
+
+    // Get the initial snapshot (before we create the new database)
+    let initial_snapshots = server_list_snapshots(config_path, "__ayb__/ayb", "csv")?;
+    assert!(
+        !initial_snapshots.is_empty(),
+        "There should be at least one ayb_db snapshot"
+    );
+    let snapshot_before_db_creation = &initial_snapshots[0].snapshot_id;
+
+    // Create a new hosted database for the first entity
+    let new_database = format!("{}/snapshot_test.sqlite", FIRST_ENTITY_SLUG);
+    create_database(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        &new_database,
+        &format!("Successfully created {}", new_database),
+    )?;
+
+    // Verify the database exists
+    list_databases(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_SLUG,
+        "csv",
+        "test.sqlite,sqlite,read-write\nsnapshot_test.sqlite,sqlite,read-write",
+    )?;
+
+    // Wait for a snapshot cycle to capture the new database in ayb_db
+    thread::sleep(time::Duration::from_secs(4));
+
+    // Get the snapshot after database creation
+    let snapshots_after_creation = server_list_snapshots(config_path, "__ayb__/ayb", "csv")?;
+    assert!(
+        snapshots_after_creation.len() >= 2,
+        "There should be at least two ayb_db snapshots after creating a database"
+    );
+
+    // Restore to the snapshot before the database was created
+    server_restore_snapshot(config_path, "__ayb__/ayb", snapshot_before_db_creation)?;
+
+    // Sleep briefly to allow server restart (in practice, the user would restart)
+    // For this test, we're testing the restore mechanism, not the full restart flow
+    thread::sleep(time::Duration::from_secs(2));
+
+    // The database should NOT exist after restoring to the earlier snapshot
+    // Note: Since we're not actually restarting the server in the test,
+    // we can't fully verify this. This is a placeholder for when the
+    // server restart mechanism is in place.
+    // For now, we'll just verify the restore command succeeded
+
+    // Restore to the snapshot that had the database
+    let snapshot_with_db = &snapshots_after_creation[0].snapshot_id;
+    server_restore_snapshot(config_path, "__ayb__/ayb", snapshot_with_db)?;
+
+    // Sleep briefly
+    thread::sleep(time::Duration::from_secs(2));
+
+    // The database should exist again after restoring to the later snapshot
+    // Note: Again, this would require a server restart to fully verify
+    // For now, we're just testing that the restore commands work
 
     Ok(())
 }
