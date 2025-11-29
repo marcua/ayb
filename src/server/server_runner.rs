@@ -134,18 +134,9 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
 
-    // Detect and report sandbox capabilities
+    // Detect and report sandbox capabilities - isolation is always enabled
     let sandbox_caps = SandboxCapabilities::detect();
-
-    if let Some(ref isolation) = ayb_conf.isolation {
-        if isolation.enabled {
-            sandbox_caps.print_startup_status();
-        } else {
-            println!("Note: Isolation is explicitly disabled in configuration.");
-        }
-    } else {
-        println!("Note: Server is running without isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
-    }
+    sandbox_caps.print_startup_status();
 
     let server = HttpServer::new(move || {
         let cors = build_cors(ayb_conf.cors.clone());

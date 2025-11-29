@@ -62,14 +62,6 @@ impl AybConfigEmailBackends {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigIsolation {
-    /// Enable multi-tenant database isolation.
-    /// On Linux, this uses Landlock, seccomp, and rlimits.
-    /// On other platforms, only partial protection is available.
-    pub enabled: bool,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub enum SqliteSnapshotMethod {
     Backup,
     Vacuum,
@@ -110,7 +102,6 @@ pub struct AybConfig {
     pub email: AybConfigEmailBackends,
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
-    pub isolation: Option<AybConfigIsolation>,
     pub snapshots: Option<AybConfigSnapshots>,
 }
 
@@ -149,7 +140,6 @@ pub fn default_server_config() -> AybConfig {
             hosting_method: WebHostingMethod::Local,
             base_url: None,
         }),
-        isolation: None,
         snapshots: None,
     }
 }

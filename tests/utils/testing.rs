@@ -70,9 +70,6 @@ token_expiration_seconds = 3600
 [cors]
 origin = "*"
 
-[isolation]
-enabled = true
-
 [snapshots]
 sqlite_method = "Vacuum"
 access_key_id = "minioadmin"
