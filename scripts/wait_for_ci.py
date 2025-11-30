@@ -73,15 +73,19 @@ def get_repo_info() -> tuple[str, str]:
     """Get the GitHub owner and repo from the remote URL."""
     remote_url = run_git_command(["remote", "get-url", "origin"])
 
-    # Handle both SSH and HTTPS URLs
+    # Handle various URL formats:
     # SSH: git@github.com:owner/repo.git
     # HTTPS: https://github.com/owner/repo.git
+    # Proxy: http://proxy@host:port/git/owner/repo
     if remote_url.startswith("git@"):
         # SSH format
         match = re.search(r"git@github\.com:(.+)/(.+?)(?:\.git)?$", remote_url)
-    else:
+    elif "github.com" in remote_url:
         # HTTPS format
         match = re.search(r"github\.com/(.+)/(.+?)(?:\.git)?$", remote_url)
+    else:
+        # Try to extract from path (e.g., proxy URLs like /git/owner/repo)
+        match = re.search(r"/git/(.+)/(.+?)(?:\.git)?$", remote_url)
 
     if not match:
         print(f"Error: Could not parse GitHub repo from remote URL: {remote_url}")
