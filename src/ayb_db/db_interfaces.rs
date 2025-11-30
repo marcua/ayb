@@ -617,16 +617,31 @@ impl PostgresAybDb {
 
 implement_ayb_db!(PostgresAybDb);
 
-pub async fn connect_to_ayb_db(url: String) -> Result<Box<dyn AybDb>, AybError> {
+/// Enum representing the type of database URL
+#[derive(Debug, PartialEq)]
+pub enum AybDbType {
+    Sqlite,
+    Postgres,
+}
+
+/// Determines the database type from a database URL
+pub fn detect_ayb_db_type(url: &str) -> Result<AybDbType, AybError> {
     if url.starts_with("sqlite") {
-        Ok(Box::new(SqliteAybDb::connect(url).await))
+        Ok(AybDbType::Sqlite)
     } else if url.starts_with("postgres") {
-        Ok(Box::new(PostgresAybDb::connect(url).await))
+        Ok(AybDbType::Postgres)
     } else {
         Err(AybError::Other {
             message: format!(
                 "Database type for {url} is not supported (currently only SQLite and PostgreSQL)"
             ),
         })
+    }
+}
+
+pub async fn connect_to_ayb_db(url: String) -> Result<Box<dyn AybDb>, AybError> {
+    match detect_ayb_db_type(&url)? {
+        AybDbType::Sqlite => Ok(Box::new(SqliteAybDb::connect(url).await)),
+        AybDbType::Postgres => Ok(Box::new(PostgresAybDb::connect(url).await)),
     }
 }

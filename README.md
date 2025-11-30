@@ -251,7 +251,7 @@ Here is an explanation of the parameters:
 * `interval`: How frequently to take a snapshot of your data in human-readable format (e.g., every 30 minutes = `30m`, every hour = `1h`, every hour and 30 minutes = `1h30m`, with [more examples here](https://docs.rs/go-parse-duration/latest/go_parse_duration/)).
 * `max_snapshots`: How many old snapshots to keep before pruning the oldest ones.
 
-Once snapshots are enabled, you will see logs on the server with each periodic snapshot run. The following example shows how snapshots work, including how to list and restore them (using `interval = "3s"` and `max_snapshots = 2`):
+Once snapshots are enabled, you will see logs on the server with each periodic snapshot run. The following example shows how snapshots work, including how to list and restore them (using `interval = "3s"` and `max_snapshots = 2`). For server-side snapshot management, see [Production deployment](#server-side-snapshot-management).
 
 ```bash
 $ ayb client create_database marcua/snapshots.sqlite
@@ -438,6 +438,19 @@ AYB__PORT=8080
 AYB__AUTHENTICATION__FERNET_KEY=your-secret-key
 AYB__EMAIL__SMTP__SMTP_PASSWORD=secret
 ```
+
+### Server-side snapshot management
+The `ayb` metadata database (which stores user accounts, databases, and permissions) can be backed up and restored using server-side commands. These commands run locally on the server and require access to the configuration file:
+
+```bash
+# List snapshots for the ayb metadata database
+ayb server --config ayb.toml list_snapshots __ayb__/ayb
+
+# Restore the ayb metadata database from a snapshot
+ayb server --config ayb.toml restore_snapshot __ayb__/ayb <snapshot_id>
+```
+
+Server-side snapshot commands automatically create a backup before restoration and require a server restart to take effect.
 
 ## Testing
 `ayb` is largely tested through [end-to-end
