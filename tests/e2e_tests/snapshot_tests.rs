@@ -288,13 +288,21 @@ pub async fn test_ayb_db_snapshot_restore(
         .await?;
 
     // Wait for initial snapshot to be created
-    thread::sleep(time::Duration::from_secs(4));
-
-    // Get the initial snapshot (before we create the new database)
-    let initial_snapshots = server_list_snapshots(config_path, "__ayb__/ayb", "csv")?;
+    // Retry a few times to handle timing issues since the snapshot job runs asynchronously
+    let mut initial_snapshots = Vec::new();
+    for attempt in 1..=3 {
+        thread::sleep(time::Duration::from_secs(3));
+        initial_snapshots = server_list_snapshots(config_path, "__ayb__/ayb", "csv")?;
+        if !initial_snapshots.is_empty() {
+            break;
+        }
+        if attempt < 3 {
+            println!("Attempt {}: No snapshots yet, waiting longer...", attempt);
+        }
+    }
     assert!(
         !initial_snapshots.is_empty(),
-        "There should be at least one ayb_db snapshot"
+        "There should be at least one ayb_db snapshot after waiting"
     );
     let snapshot_before_db_creation = &initial_snapshots[0].snapshot_id;
 
