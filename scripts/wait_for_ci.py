@@ -12,12 +12,16 @@ Usage:
     python scripts/wait_for_ci.py
 
 Environment:
-    GITHUB_TOKEN: Required. A GitHub token with repo access.
+    GITHUB_TOKEN: Optional for public repos, required for private repos.
+                  Provides higher rate limits (5000/hr vs 60/hr unauthenticated).
                   Can be a personal access token or GITHUB_TOKEN from Actions.
 
 Example:
-    export GITHUB_TOKEN=ghp_xxxxxxxxxxxx
     git push origin my-branch
+    python scripts/wait_for_ci.py
+
+    # Or with authentication for higher rate limits:
+    export GITHUB_TOKEN=ghp_xxxxxxxxxxxx
     python scripts/wait_for_ci.py
 """
 
@@ -44,14 +48,9 @@ MAX_WAIT_SECONDS = 3600  # 1 hour max wait
 WORKFLOW_NAME = "Tests"  # Name from .github/workflows/tests.yml
 
 
-def get_github_token() -> str:
-    """Get GitHub token from environment."""
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("Error: GITHUB_TOKEN environment variable is required.")
-        print("Set it with: export GITHUB_TOKEN=ghp_xxxxxxxxxxxx")
-        sys.exit(1)
-    return token
+def get_github_token() -> Optional[str]:
+    """Get GitHub token from environment, if available."""
+    return os.environ.get("GITHUB_TOKEN")
 
 
 def run_git_command(args: list[str]) -> str:
@@ -99,16 +98,17 @@ def get_latest_head_sha() -> str:
 class GitHubAPI:
     """Simple GitHub API client."""
 
-    def __init__(self, token: str, owner: str, repo: str):
+    def __init__(self, owner: str, repo: str, token: Optional[str] = None):
         self.token = token
         self.owner = owner
         self.repo = repo
         self.base_url = f"https://api.github.com/repos/{owner}/{repo}"
         self.headers = {
-            "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         }
+        if token:
+            self.headers["Authorization"] = f"Bearer {token}"
 
     def get(self, endpoint: str, params: Optional[dict] = None) -> dict:
         """Make a GET request to the GitHub API."""
@@ -389,8 +389,12 @@ def main():
     print(f"Repository: {owner}/{repo}")
     print(f"Branch: {branch}")
     print(f"Commit: {head_sha[:8]}")
+    if token:
+        print("Auth: Using GITHUB_TOKEN")
+    else:
+        print("Auth: Unauthenticated (lower rate limits)")
 
-    api = GitHubAPI(token, owner, repo)
+    api = GitHubAPI(owner, repo, token)
 
     # Wait a moment for GitHub to register the push
     print("\nWaiting for workflow to start...")
