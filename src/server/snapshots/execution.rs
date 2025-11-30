@@ -131,7 +131,16 @@ async fn create_snapshots(config: &AybConfig, ayb_db: &Box<dyn AybDb>) -> Result
                         config.database_url
                     ),
                 })?;
-        let ayb_db_path = PathBuf::from(db_file_path);
+        let mut ayb_db_path = PathBuf::from(db_file_path);
+
+        // If the path is relative, make it absolute relative to the current working directory
+        if ayb_db_path.is_relative() {
+            ayb_db_path = std::env::current_dir()
+                .map_err(|err| AybError::SnapshotError {
+                    message: format!("Unable to get current working directory: {}", err),
+                })?
+                .join(ayb_db_path);
+        }
 
         // Canonicalize the path to get the absolute path
         let ayb_db_path =
