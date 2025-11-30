@@ -39,7 +39,7 @@ except ImportError:
 
 
 # Configuration
-POLL_INTERVAL_SECONDS = 30
+POLL_INTERVAL_SECONDS = 60
 MAX_WAIT_SECONDS = 3600  # 1 hour max wait
 WORKFLOW_NAME = "Tests"  # Name from .github/workflows/tests.yml
 
