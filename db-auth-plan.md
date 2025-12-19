@@ -144,7 +144,7 @@ Extend the existing `api_token` table with optional scope columns:
 ```sql
 -- Add scope fields (all nullable for backward compatibility)
 ALTER TABLE api_token ADD COLUMN database_id INT REFERENCES database(id);
-ALTER TABLE api_token ADD COLUMN permission_level SMALLINT;
+ALTER TABLE api_token ADD COLUMN query_permission_level SMALLINT;
 
 -- Add OAuth metadata
 ALTER TABLE api_token ADD COLUMN app_name VARCHAR(255);
@@ -155,7 +155,7 @@ ALTER TABLE api_token ADD COLUMN last_used_at TIMESTAMP;
 
 **Notes:**
 - `database_id = NULL` means the token works for all databases the user owns/has access to (existing behavior)
-- `permission_level = NULL` means full access (existing behavior); otherwise ReadOnly=1, ReadWrite=2
+- `query_permission_level` uses the same values as `QueryMode`: ReadOnly=1, ReadWrite=2, NULL=no cap
 - `app_name` and `app_origin` are for display and validation of OAuth-created tokens
 - Existing tokens continue to work unchanged - they just have NULL for the new columns
 
@@ -163,24 +163,19 @@ ALTER TABLE api_token ADD COLUMN last_used_at TIMESTAMP;
 
 Update `retrieve_and_validate_api_token` in `src/server/tokens.rs` to:
 
-1. Check both `api_token` (legacy) and `scoped_api_token` tables
-2. Return scope information along with the token
-3. Pass scope info through the request pipeline
+1. Return scope information along with the token
+2. Pass scope info through the request pipeline
 
 ```rust
 pub struct ValidatedToken {
     pub entity_id: i32,
     pub short_token: String,
-    pub database_scope: Option<i32>,      // None = all databases
-    pub permission_level: PermissionLevel, // ReadOnly or ReadWrite
-}
-
-pub enum PermissionLevel {
-    ReadOnly,
-    ReadWrite,
-    Full,  // For legacy tokens
+    pub database_id: Option<i32>,              // None = all databases
+    pub query_permission_level: Option<QueryMode>, // None = no cap (use user's permission)
 }
 ```
+
+Note: We reuse the existing `QueryMode` enum rather than creating a new one.
 
 #### 1.3 Enforce Scopes in Endpoints
 
@@ -190,29 +185,33 @@ Modify permission checks in `src/server/permissions.rs`:
 pub async fn highest_query_access_level(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
-    token_scope: &ValidatedToken,  // NEW: Pass token scope
+    token: &ValidatedToken,  // NEW: Pass validated token
     ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<Option<QueryMode>, AybError> {
-    // First check if token is scoped to this database
-    if let Some(scoped_db_id) = token_scope.database_scope {
-        if scoped_db_id != database.id {
+    // First check if token is scoped to a specific database
+    if let Some(token_db_id) = token.database_id {
+        if token_db_id != database.id {
             return Ok(None);  // Token can't access this database
         }
     }
 
-    // Then check token's permission cap
-    let token_cap = match token_scope.permission_level {
-        PermissionLevel::ReadOnly => QueryMode::ReadOnly,
-        PermissionLevel::ReadWrite | PermissionLevel::Full => QueryMode::ReadWrite,
-    };
+    // Get user's actual permission level (existing logic)
+    let user_permission: Option<QueryMode> = /* existing logic */;
 
-    // Get user's actual permission level
-    let user_permission = /* existing logic */;
-
-    // Return the more restrictive of the two
-    Ok(Some(std::cmp::min(user_permission, token_cap)))
+    // Return the more restrictive of token and user permissions
+    // Examples:
+    //   - User is owner (ReadWrite), token has ReadOnly → ReadOnly
+    //   - User has ReadOnly, token has ReadWrite → ReadOnly
+    //   - User is owner (ReadWrite), token has no cap (None) → ReadWrite
+    match (user_permission, token.query_permission_level) {
+        (None, _) => Ok(None),  // User has no access
+        (Some(user), None) => Ok(Some(user)),  // No token cap, use user permission
+        (Some(user), Some(token_cap)) => Ok(Some(std::cmp::min(user, token_cap))),
+    }
 }
 ```
+
+The key insight: `effective_permission = min(user_permission, token_permission)`. A read-only token can never write, even if the user is an owner. And a read-write token can't grant more access than the user actually has.
 
 ### Phase 2: Authorization Flow (OAuth-like Endpoints)
 
@@ -237,7 +236,7 @@ CREATE TABLE oauth_authorization_request (
 
     -- Selected by user
     database_id INT,                           -- The database user selected
-    permission_level SMALLINT,                 -- The permission level user approved
+    query_permission_level SMALLINT,           -- The permission level user approved (QueryMode values)
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,             -- Code expires after 10 minutes
