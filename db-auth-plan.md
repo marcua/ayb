@@ -137,36 +137,27 @@ This works because:
 
 ### Phase 1: Scoped Tokens (Database Layer Changes)
 
-#### 1.1 New Database Migration: `scoped_api_token`
+#### 1.1 Database Migration: Add Scope Columns to `api_token`
 
-Create a new table that extends tokens with scope information:
+Extend the existing `api_token` table with optional scope columns:
 
 ```sql
-CREATE TABLE scoped_api_token (
-    short_token VARCHAR(12) PRIMARY KEY,
-    entity_id INT NOT NULL,                    -- The user who owns this token
-    hash VARCHAR(64) NOT NULL,
-    status SMALLINT NOT NULL,                  -- Active=0, Revoked=1
+-- Add scope fields (all nullable for backward compatibility)
+ALTER TABLE api_token ADD COLUMN database_id INT REFERENCES database(id);
+ALTER TABLE api_token ADD COLUMN permission_level SMALLINT;
 
-    -- New scope fields
-    database_id INT,                           -- NULL = all databases (backward compat)
-    permission_level SMALLINT NOT NULL,        -- ReadOnly=1, ReadWrite=2
-
-    -- OAuth metadata
-    app_name VARCHAR(255),                     -- "todos-app" (for display in token list)
-    app_origin VARCHAR(255),                   -- "https://todos.example.com" (for validation)
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP,
-
-    FOREIGN KEY(entity_id) REFERENCES entity(id),
-    FOREIGN KEY(database_id) REFERENCES database(id)
-);
+-- Add OAuth metadata
+ALTER TABLE api_token ADD COLUMN app_name VARCHAR(255);
+ALTER TABLE api_token ADD COLUMN app_origin VARCHAR(255);
+ALTER TABLE api_token ADD COLUMN created_at TIMESTAMP;
+ALTER TABLE api_token ADD COLUMN last_used_at TIMESTAMP;
 ```
 
 **Notes:**
-- `database_id = NULL` means the token works for all databases the user owns/has access to (like current tokens)
-- `permission_level` caps what the token can do, even if the user has higher permissions
-- `app_origin` is used to validate redirect URIs come from the expected origin
+- `database_id = NULL` means the token works for all databases the user owns/has access to (existing behavior)
+- `permission_level = NULL` means full access (existing behavior); otherwise ReadOnly=1, ReadWrite=2
+- `app_name` and `app_origin` are for display and validation of OAuth-created tokens
+- Existing tokens continue to work unchanged - they just have NULL for the new columns
 
 #### 1.2 Modify Token Validation
 
@@ -631,8 +622,8 @@ Current ayb CORS config already allows this.
 ## Implementation Order
 
 ### Step 1: Scoped Tokens (Foundation)
-1. Add `scoped_api_token` table migration
-2. Modify token validation to support scopes
+1. Add scope columns to `api_token` table
+2. Modify token validation to return scope info
 3. Enforce scopes in permission checks
 4. Add token management API (list, revoke)
 
