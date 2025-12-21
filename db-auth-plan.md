@@ -18,14 +18,26 @@ This is not ideal because:
 ### The Ideal Flow
 
 1. App detects it doesn't have credentials stored
-2. App redirects user to ayb authorization page
+2. App redirects user to ayb authorization page, specifying desired permission level (read-only or read-write)
 3. User logs in to ayb (if not already logged in)
-4. User sees what the app is requesting (database access, permission level)
+4. User sees what permission level the app is requesting
 5. User picks an existing database or creates a new one
-6. User confirms the permission level (read-only or read-write)
+6. User confirms the permission level (can downgrade from app's request)
 7. Ayb creates a scoped token for just that database and permission level
-8. Ayb redirects back to the app with the token
-9. App stores the token and can now make API calls
+8. Ayb redirects back to the app with an authorization code
+9. App exchanges code for token and can now make API calls
+
+### Codebase Context
+
+**Endpoint Organization:**
+- API endpoints live in `src/server/api_endpoints/` and are mounted under `/v1/` with bearer token auth
+- UI endpoints live in `src/server/ui_endpoints/` and use cookie-based auth
+- Routes are configured in `src/server/server_runner.rs`
+
+**Testing Strategy:**
+- End-to-end tests in `tests/e2e_tests/` test API via CLI commands
+- Browser e2e tests in `tests/browser_e2e_tests/` test UI flows
+- Test utilities in `tests/utils/` provide helper functions
 
 ---
 
@@ -51,14 +63,15 @@ The most secure OAuth flow works like this:
 │ 2. App redirects to:                                                │
 │    https://ayb.example.com/oauth/authorize?                         │
 │      response_type=code                                             │
-│      &client_id=todos-app                                           │
 │      &redirect_uri=https://todos.example.com/callback               │
-│      &scope=database:marcua/todos:read-write                        │
+│      &scope=read-write                                              │
+│      &app_name=Todos                                                │
 │      &state=random123                                               │
 │                                                                     │
 │ 3. User authenticates with ayb (if not logged in)                   │
 │                                                                     │
-│ 4. User sees: "todos-app wants read-write access to marcua/todos"   │
+│ 4. User sees: "Todos wants read-write access"                       │
+│    User picks database: [marcua/todos ▼]                            │
 │    User clicks "Authorize"                                          │
 │                                                                     │
 │ 5. Ayb redirects to:                                                │
@@ -66,10 +79,10 @@ The most secure OAuth flow works like this:
 │                                                                     │
 │ 6. App exchanges code for token:                                    │
 │    POST https://ayb.example.com/oauth/token                         │
-│    { code: "xyz", client_id: "todos-app", ... }                     │
+│    { code: "xyz", code_verifier: "...", ... }                       │
 │                                                                     │
 │ 7. Ayb returns scoped token:                                        │
-│    { "access_token": "ayb_xxx_yyy", "scope": "..." }                │
+│    { "access_token": "ayb_xxx_yyy", "database": "marcua/todos" }    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -147,24 +160,29 @@ ALTER TABLE api_token ADD COLUMN database_id INT REFERENCES database(id);
 ALTER TABLE api_token ADD COLUMN query_permission_level SMALLINT;
 
 -- Add OAuth metadata
+ALTER TABLE api_token ADD COLUMN granted_by INT REFERENCES entity(id);
 ALTER TABLE api_token ADD COLUMN app_name VARCHAR(255);
-ALTER TABLE api_token ADD COLUMN app_origin VARCHAR(255);
+ALTER TABLE api_token ADD COLUMN app_origin_url VARCHAR(255);
 ALTER TABLE api_token ADD COLUMN created_at TIMESTAMP;
-ALTER TABLE api_token ADD COLUMN last_used_at TIMESTAMP;
+ALTER TABLE api_token ADD COLUMN expires_at TIMESTAMP;
 ```
 
 **Notes:**
 - `database_id = NULL` means the token works for all databases the user owns/has access to (existing behavior)
-- `query_permission_level` uses the same values as `QueryMode`: ReadOnly=1, ReadWrite=2, NULL=no cap
-- `app_name` and `app_origin` are for display and validation of OAuth-created tokens
+- `query_permission_level` uses the same values as `QueryMode`: ReadOnly=0, ReadWrite=1, NULL=no cap
+- `granted_by` tracks which entity authorized this token (for shared databases, may differ from `entity_id`)
+- `app_name` is the display name shown to users (e.g., "Todos")
+- `app_origin_url` is the full URL origin that created the token (e.g., "https://todos.example.com")
+- `expires_at = NULL` means the token never expires (default); otherwise token becomes invalid after this time
 - Existing tokens continue to work unchanged - they just have NULL for the new columns
 
 #### 1.2 Modify Token Validation
 
 Update `retrieve_and_validate_api_token` in `src/server/tokens.rs` to:
 
-1. Return scope information along with the token
-2. Pass scope info through the request pipeline
+1. Check token expiration (if `expires_at` is set and in the past, reject)
+2. Return scope information along with the token
+3. Pass scope info through the request pipeline
 
 ```rust
 pub struct ValidatedToken {
@@ -175,7 +193,7 @@ pub struct ValidatedToken {
 }
 ```
 
-Note: We reuse the existing `QueryMode` enum rather than creating a new one.
+Note: We reuse the existing `QueryMode` enum (ReadOnly=0, ReadWrite=1) rather than creating a new one.
 
 #### 1.3 Enforce Scopes in Endpoints
 
@@ -200,9 +218,9 @@ pub async fn highest_query_access_level(
 
     // Return the more restrictive of token and user permissions
     // Examples:
-    //   - User is owner (ReadWrite), token has ReadOnly → ReadOnly
-    //   - User has ReadOnly, token has ReadWrite → ReadOnly
-    //   - User is owner (ReadWrite), token has no cap (None) → ReadWrite
+    //   - User is owner (ReadWrite=1), token has ReadOnly=0 → ReadOnly
+    //   - User has ReadOnly=0, token has ReadWrite=1 → ReadOnly
+    //   - User is owner (ReadWrite=1), token has no cap (None) → ReadWrite
     match (user_permission, token.query_permission_level) {
         (None, _) => Ok(None),  // User has no access
         (Some(user), None) => Ok(Some(user)),  // No token cap, use user permission
@@ -211,7 +229,7 @@ pub async fn highest_query_access_level(
 }
 ```
 
-The key insight: `effective_permission = min(user_permission, token_permission)`. A read-only token can never write, even if the user is an owner. And a read-write token can't grant more access than the user actually has.
+The key insight: `effective_permission = min(user_permission, token_permission)`. Since `QueryMode` is `#[repr(i16)]` with ReadOnly=0 < ReadWrite=1, `std::cmp::min` correctly returns the more restrictive permission. A read-only token can never write, even if the user is an owner. And a read-write token can't grant more access than the user actually has.
 
 ### Phase 2: Authorization Flow (OAuth-like Endpoints)
 
@@ -224,45 +242,51 @@ CREATE TABLE oauth_authorization_request (
     code VARCHAR(64) PRIMARY KEY,              -- The authorization code
     entity_id INT NOT NULL,                    -- User who authorized
 
-    -- PKCE
-    code_challenge VARCHAR(128) NOT NULL,      -- SHA256 hash of verifier
-    code_challenge_method VARCHAR(10) NOT NULL, -- "S256" or "plain"
+    -- PKCE (only S256 supported)
+    code_challenge VARCHAR(128) NOT NULL,      -- BASE64URL(SHA256(code_verifier))
 
     -- Request details
     redirect_uri TEXT NOT NULL,
     app_name VARCHAR(255),
-    requested_scope TEXT NOT NULL,             -- JSON: {"database": "marcua/todos", "permission": "read-write"}
+    requested_query_permission_level SMALLINT NOT NULL, -- What the app requested (QueryMode value)
     state VARCHAR(255),                        -- Passed through to redirect
 
-    -- Selected by user
-    database_id INT,                           -- The database user selected
-    query_permission_level SMALLINT,           -- The permission level user approved (QueryMode values)
+    -- Selected by user during authorization
+    database_id INT NOT NULL,                  -- The database user selected or created
+    query_permission_level SMALLINT NOT NULL,  -- The permission level user approved (may be <= requested)
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,             -- Code expires after 10 minutes
-    used BOOLEAN NOT NULL DEFAULT FALSE,
+    used_at TIMESTAMP,                         -- NULL if unused, timestamp when exchanged for token
 
     FOREIGN KEY(entity_id) REFERENCES entity(id),
     FOREIGN KEY(database_id) REFERENCES database(id)
 );
 ```
 
+**Notes:**
+- Only S256 (SHA-256) is supported for `code_challenge` - the `plain` method is insecure and not implemented
+- `used_at` is NULL until the code is exchanged for a token, then set to the exchange timestamp
+- Codes with non-NULL `used_at` or past `expires_at` are invalid
+
 #### 2.2 New API Endpoints
 
-**GET `/oauth/authorize`** - Start authorization flow (redirects to UI)
+These endpoints live in `src/server/api_endpoints/` under the `/v1/` prefix.
+
+**GET `/v1/oauth/authorize`** - Start authorization flow (redirects to UI)
 
 Query parameters:
-- `response_type=code` (required)
-- `redirect_uri` - Where to redirect after authorization
-- `scope` - What access is requested (format: `database:entity/db:permission` or `database:new:permission`)
-- `state` - Opaque value passed through (for CSRF protection)
-- `code_challenge` - PKCE challenge
-- `code_challenge_method` - Must be "S256"
-- `app_name` - Display name for the app (optional, shown to user)
+- `response_type=code` (required, must be "code")
+- `redirect_uri` (required) - Where to redirect after authorization
+- `scope` (required) - Permission level requested: `read-only` or `read-write`
+- `state` (required) - Opaque value passed through (for CSRF protection)
+- `code_challenge` (required) - PKCE challenge: BASE64URL(SHA256(code_verifier))
+- `code_challenge_method` (required) - Must be "S256"
+- `app_name` (required) - Display name for the app (shown to user)
 
-This endpoint validates parameters and redirects to the authorization UI.
+This endpoint validates parameters and redirects to the authorization UI at `/oauth/authorize`.
 
-**POST `/oauth/token`** - Exchange code for token
+**POST `/v1/oauth/token`** - Exchange code for token
 
 Request body (form-encoded or JSON):
 ```json
@@ -279,45 +303,82 @@ Response:
 {
     "access_token": "ayb_abc123_def456",
     "token_type": "Bearer",
-    "scope": "database:marcua/todos:read-write",
-    "ayb_database_url": "https://ayb.example.com/v1/marcua/todos"
+    "database": "marcua/todos",
+    "query_permission_level": "read-write",
+    "database_url": "https://ayb.example.com/v1/marcua/todos"
 }
 ```
 
 #### 2.3 New UI Endpoints
 
-**GET `/oauth/authorize-ui`** - Authorization consent page
+These endpoints live in `src/server/ui_endpoints/` (cookie-based auth).
+
+**GET `/oauth/authorize`** - Authorization consent page
 
 Shows the user:
-- What app is requesting access
-- Dropdown to select existing database OR create new one
-- Permission level selection (read-only / read-write)
+- What app is requesting access (app_name)
+- What permission level is requested
+- Dropdown to select existing database
+- Form to create a new database (if desired)
+- Permission level selector (can downgrade from requested, not upgrade)
 - Authorize / Deny buttons
 
 If user is not logged in, redirects to login with a return URL.
 
-**POST `/oauth/authorize-ui`** - Process authorization decision
+**POST `/oauth/authorize`** - Process authorization decision
 
 If user authorizes:
-1. Create authorization code
-2. Store in `oauth_authorization_request` table
-3. Redirect to `redirect_uri?code=xyz&state=...`
+1. If creating new database, create it first
+2. Generate authorization code
+3. Store in `oauth_authorization_request` table
+4. Redirect to `redirect_uri?code=xyz&state=...`
 
 If user denies:
 1. Redirect to `redirect_uri?error=access_denied&state=...`
 
-### Phase 3: Token Management UI
+### Phase 3: Token Management
 
-#### 3.1 Token List Page
+#### 3.1 API Endpoints
 
-Add `GET /{entity}/tokens` UI endpoint showing:
+Add to `src/server/api_endpoints/`:
+
+**GET `/v1/tokens`** - List all tokens for authenticated entity
+```json
+{
+    "tokens": [
+        {
+            "short_token": "abc123...",
+            "database": "marcua/todos",        // null for unscoped tokens
+            "query_permission_level": "read-write",
+            "app_name": "Todos",
+            "created_at": "2024-01-15T10:30:00Z",
+            "expires_at": null
+        }
+    ]
+}
+```
+
+**DELETE `/v1/tokens/{short_token}`** - Revoke a token
+
+#### 3.2 CLI Commands
+
+Add to `src/client/`:
+
+```bash
+ayb client list_tokens                    # List all tokens
+ayb client revoke_token <short_token>     # Revoke a token
+```
+
+#### 3.3 UI Page
+
+Add to `src/server/ui_endpoints/`:
+
+**GET `/{entity}/tokens`** - Token management page (accessible via gear icon next to logout)
+
+Shows:
 - All active tokens for the user
-- For each token: app name, database scope, permission level, created date, last used
+- For each token: app name, database scope, permission level, created date, expiration
 - "Revoke" button for each token
-
-#### 3.2 Token Revocation API
-
-Add `DELETE /v1/tokens/{short_token}` API endpoint to revoke a token.
 
 ---
 
@@ -325,37 +386,26 @@ Add `DELETE /v1/tokens/{short_token}` API endpoint to revoke a token.
 
 One unique requirement is that apps should work with any ayb server, even ones the app developer doesn't know about. Here's how this works:
 
-### Option A: User Provides Server URL
+### Server Selection UI
 
-The simplest approach:
+Apps should provide a dropdown for server selection:
 
-1. App asks user: "Enter your ayb server URL" (with a default like `ayb.io`)
-2. App constructs authorization URL: `{server_url}/oauth/authorize?...`
-3. After authorization, app stores both the server URL and token
-
-```javascript
-// In the todos app
-const aybServer = localStorage.getItem('ayb_server')
-    || prompt('Enter your ayb server URL:', 'https://ayb.io');
-const authUrl = `${aybServer}/oauth/authorize?...`;
-window.location.href = authUrl;
+```
+┌────────────────────────────────────────┐
+│ Connect to your database               │
+│                                        │
+│ Server: [The Data (https://thedata.zone) ▼]
+│         ├─ The Data (https://thedata.zone)
+│         ├─ Other...
+│         └─────────────────────────────
+│                                        │
+│ [Connect]                              │
+└────────────────────────────────────────┘
 ```
 
-### Option B: Server Discovery via Well-Known URL
+If "Other..." is selected, show a text input for custom server URL.
 
-Apps can discover OAuth endpoints via a well-known configuration:
-
-**GET `/.well-known/ayb-configuration`**
-```json
-{
-    "authorization_endpoint": "/oauth/authorize",
-    "token_endpoint": "/oauth/token",
-    "supported_scopes": ["database:read-only", "database:read-write"],
-    "code_challenge_methods_supported": ["S256"]
-}
-```
-
-This is optional but helpful for apps that want to validate they're talking to a real ayb server.
+After authorization, the app stores both the server URL and token together.
 
 ### Security Consideration: Trusting Unknown Servers
 
@@ -377,9 +427,23 @@ To make integration easier, ayb could provide a small JavaScript library:
 // ayb-oauth.js
 
 class AybOAuth {
-    constructor(options = {}) {
-        this.serverUrl = options.serverUrl || 'https://ayb.io';
-        this.appName = options.appName || 'Unknown App';
+    /**
+     * @param {Object} options
+     * @param {string} options.appName - Required. Display name shown to users during authorization
+     * @param {string} options.queryPermissionLevel - Required. 'read-only' or 'read-write'
+     * @param {string} [options.serverUrl] - Optional. Defaults to 'https://thedata.zone'
+     * @param {string} [options.storageKey] - Optional. localStorage key. Defaults to 'ayb_auth'
+     */
+    constructor(options) {
+        if (!options.appName) throw new Error('appName is required');
+        if (!options.queryPermissionLevel) throw new Error('queryPermissionLevel is required');
+        if (!['read-only', 'read-write'].includes(options.queryPermissionLevel)) {
+            throw new Error('queryPermissionLevel must be "read-only" or "read-write"');
+        }
+
+        this.serverUrl = options.serverUrl || 'https://thedata.zone';
+        this.appName = options.appName;
+        this.queryPermissionLevel = options.queryPermissionLevel;
         this.storageKey = options.storageKey || 'ayb_auth';
     }
 
@@ -406,14 +470,14 @@ class AybOAuth {
         const params = new URLSearchParams({
             response_type: 'code',
             redirect_uri: window.location.origin + (options.callbackPath || '/'),
-            scope: options.scope || 'database:new:read-write',
+            scope: this.queryPermissionLevel,
             state: state,
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
             app_name: this.appName
         });
 
-        window.location.href = `${this.serverUrl}/oauth/authorize?${params}`;
+        window.location.href = `${this.serverUrl}/v1/oauth/authorize?${params}`;
     }
 
     // Handle the callback (call this on page load)
@@ -437,7 +501,7 @@ class AybOAuth {
 
         // Exchange code for token
         const codeVerifier = sessionStorage.getItem('ayb_pkce_verifier');
-        const response = await fetch(`${this.serverUrl}/oauth/token`, {
+        const response = await fetch(`${this.serverUrl}/v1/oauth/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -458,8 +522,9 @@ class AybOAuth {
         localStorage.setItem(this.storageKey, JSON.stringify({
             serverUrl: this.serverUrl,
             token: tokenData.access_token,
-            databaseUrl: tokenData.ayb_database_url,
-            scope: tokenData.scope
+            database: tokenData.database,
+            databaseUrl: tokenData.database_url,
+            queryPermissionLevel: tokenData.query_permission_level
         }));
 
         // Clean up URL
@@ -527,8 +592,9 @@ Usage in the todos app:
 
 ```javascript
 const ayb = new AybOAuth({
-    serverUrl: localStorage.getItem('ayb_server') || 'https://ayb.io',
-    appName: 'Todos App'
+    appName: 'Todos',
+    queryPermissionLevel: 'read-write',
+    serverUrl: localStorage.getItem('ayb_server') || 'https://thedata.zone'
 });
 
 // On page load
@@ -549,9 +615,7 @@ async function init() {
 }
 
 function connect() {
-    ayb.authorize({
-        scope: 'database:new:read-write'  // Create new DB with read-write
-    });
+    ayb.authorize();  // User will pick/create database on ayb
 }
 ```
 
@@ -559,21 +623,16 @@ function connect() {
 
 ## Scope Format
 
-Scopes define what access the app is requesting:
+Scopes are simple permission levels:
 
 | Scope | Meaning |
 |-------|---------|
-| `database:entity/dbname:read-only` | Read-only access to specific database |
-| `database:entity/dbname:read-write` | Read-write access to specific database |
-| `database:new:read-only` | Create new database with read-only access |
-| `database:new:read-write` | Create new database with read-write access |
-| `database:pick:read-only` | Let user pick existing database, read-only |
-| `database:pick:read-write` | Let user pick existing database, read-write |
+| `read-only` | App requests read-only access |
+| `read-write` | App requests read-write access |
 
-The authorization UI interprets these scopes:
-- `entity/dbname` - Pre-selected database (user can change)
-- `new` - Show "create new database" form
-- `pick` - Show database picker
+The app only specifies the permission level. The user chooses which database to grant access to (existing or new) during the authorization flow.
+
+The user can also downgrade the permission (e.g., grant read-only when app requested read-write), but cannot upgrade it.
 
 ---
 
@@ -586,35 +645,55 @@ When an app initiates authorization:
 - On token exchange, verify the `redirect_uri` matches exactly
 - Only allow `https://` URIs (except `http://localhost` for development)
 
+**Implementation:** Validate in `/v1/oauth/authorize` before storing, and verify match in `/v1/oauth/token`.
+
 ### 2. Code Expiration
 
 Authorization codes should:
 - Expire after 10 minutes
-- Be single-use (mark as `used` after exchange)
-- Be cryptographically random (64+ characters)
+- Be single-use (set `used_at` timestamp after exchange)
+- Be cryptographically random (64+ characters using `OsRng`)
+
+**Implementation:** Check `expires_at` and `used_at IS NULL` in `/v1/oauth/token`.
 
 ### 3. PKCE Enforcement
 
 For public clients (frontend apps):
 - Always require `code_challenge` in authorization request
 - Reject token requests without valid `code_verifier`
-- Only support `S256` method (not `plain`)
+- Only support `S256` method (SHA-256, base64url-encoded)
+
+**Implementation:**
+- In `/v1/oauth/authorize`: require `code_challenge` and `code_challenge_method=S256`
+- In `/v1/oauth/token`: compute `BASE64URL(SHA256(code_verifier))` and compare to stored `code_challenge`
 
 ### 4. Token Scoping
 
 Scoped tokens should:
-- Never exceed the permission level the user has
-- Be revocable by the user at any time
-- Show clear audit trail (which app, when created, last used)
+- Never exceed the permission level the user has (enforced by `min()` logic)
+- Be revocable by the user at any time via `/v1/tokens/{short_token}` DELETE
+- Show clear audit trail (app_name, created_at, expires_at)
+
+**Implementation:** All permission checks go through `highest_query_access_level()` which applies the min.
 
 ### 5. CORS Configuration
 
-The `/oauth/token` endpoint needs CORS headers to allow:
+The `/v1/oauth/token` endpoint needs CORS headers to allow:
 - Requests from any origin (the callback page)
 - POST method
 - Content-Type header
 
-Current ayb CORS config already allows this.
+**Implementation:** Current ayb CORS config (`cors.origin = "*"`) already allows this.
+
+### 6. State Parameter
+
+The `state` parameter prevents CSRF attacks:
+- App generates random state, stores in sessionStorage
+- App includes state in authorization request
+- ayb passes state through unchanged in redirect
+- App verifies returned state matches stored state
+
+**Implementation:** ayb just passes `state` through; the client library handles generation and verification.
 
 ---
 
@@ -647,6 +726,55 @@ Current ayb CORS config already allows this.
 
 ---
 
+## Testing Strategy
+
+### E2E Tests (in `tests/e2e_tests/`)
+
+Add `oauth_tests.rs` with tests for:
+
+1. **Token scoping**
+   - Token scoped to database A cannot query database B
+   - Token with read-only cannot write even if user has write access
+   - Token with write access limited to user's actual permission level
+   - Token with `expires_at` in past is rejected
+
+2. **OAuth flow**
+   - Valid authorization request redirects to consent UI
+   - Invalid parameters (missing `code_challenge`, bad `redirect_uri`) return errors
+   - Token exchange with valid code and verifier succeeds
+   - Token exchange with invalid verifier fails
+   - Token exchange with expired code fails
+   - Token exchange with already-used code fails
+
+3. **Token management**
+   - `GET /v1/tokens` lists user's tokens
+   - `DELETE /v1/tokens/{short_token}` revokes token
+   - Revoked token cannot be used for queries
+
+### Browser E2E Tests (in `tests/browser_e2e_tests/`)
+
+Add `oauth_tests.rs` with tests for:
+
+1. **Authorization consent UI**
+   - Shows app name and requested permission
+   - Database dropdown shows user's databases
+   - Can create new database from authorization flow
+   - Authorize redirects with code
+   - Deny redirects with error
+
+2. **Token management UI**
+   - Token list page shows all tokens
+   - Revoke button removes token
+
+### Test Utilities (in `tests/utils/`)
+
+Add helpers:
+- `oauth_authorize(config, params)` - Start OAuth flow
+- `oauth_token_exchange(config, code, verifier)` - Exchange code for token
+- `create_scoped_token(config, entity, database, permission)` - Create token directly for testing
+
+---
+
 ## Example: Updated Todos App Flow
 
 Here's how the todos app would work with this system:
@@ -657,14 +785,15 @@ Here's how the todos app would work with this system:
 │                                                                     │
 │ 1. App checks localStorage - no token found                         │
 │                                                                     │
-│ 2. App shows: "Connect to your ayb database"                        │
-│    [ayb server: https://ayb.io    ] [Connect]                       │
+│ 2. App shows: "Connect to your database"                            │
+│    Server: [The Data (https://thedata.zone) ▼]                      │
+│    [Connect]                                                        │
 │                                                                     │
 │ 3. User clicks Connect, app redirects to:                           │
-│    https://ayb.io/oauth/authorize?                                  │
+│    https://thedata.zone/v1/oauth/authorize?                         │
 │      response_type=code                                             │
 │      &redirect_uri=https://marcua.net/minitools/todos/              │
-│      &scope=database:new:read-write                                 │
+│      &scope=read-write                                              │
 │      &app_name=Todos                                                │
 │      &code_challenge=E9Melhoa2OwvFrE...                             │
 │      &code_challenge_method=S256                                    │
@@ -675,10 +804,12 @@ Here's how the todos app would work with this system:
 │                                                                     │
 │ 5. ayb shows authorization page:                                    │
 │    ┌──────────────────────────────────────────────┐                 │
-│    │ "Todos" wants to access your ayb database    │                 │
+│    │ "Todos" wants read-write access              │                 │
 │    │                                              │                 │
-│    │ Database: [Create new: todos     ▼]          │                 │
-│    │           (or select existing)               │                 │
+│    │ Database: [marcua/todos           ▼]         │                 │
+│    │           ├─ marcua/todos                    │                 │
+│    │           ├─ marcua/other-db                 │                 │
+│    │           └─ Create new database...          │                 │
 │    │                                              │                 │
 │    │ Permission: ○ Read only                      │                 │
 │    │             ● Read and write                 │                 │
@@ -690,13 +821,14 @@ Here's how the todos app would work with this system:
 │    https://marcua.net/minitools/todos/?code=xyz&state=abc123        │
 │                                                                     │
 │ 7. App exchanges code for token:                                    │
-│    POST https://ayb.io/oauth/token                                  │
+│    POST https://thedata.zone/v1/oauth/token                         │
 │    { code: "xyz", code_verifier: "dBjftJeZ...", ... }               │
 │                                                                     │
 │ 8. App receives:                                                    │
 │    {                                                                │
 │      "access_token": "ayb_xxx_yyy",                                 │
-│      "ayb_database_url": "https://ayb.io/v1/marcua/todos"           │
+│      "database": "marcua/todos",                                    │
+│      "database_url": "https://thedata.zone/v1/marcua/todos"         │
 │    }                                                                │
 │                                                                     │
 │ 9. App stores token in localStorage, ready to use!                  │
@@ -725,27 +857,15 @@ This proposal is a simplified, purpose-built OAuth implementation focused on ayb
 ## Open Questions
 
 1. **Token expiration**: Should scoped tokens expire? If so, how long? (Current tokens don't expire)
-
-2. **Rate limiting**: Should we add rate limits per token to prevent abuse?
-
-3. **Token rotation**: Should apps be able to request a new token before the old one expires?
-
-4. **Organization support**: How do org-owned databases work with this flow?
-
-5. **Multiple databases**: Should one authorization grant access to multiple databases?
-
-6. **Webhook notifications**: Should ayb notify apps when tokens are revoked?
+   - Proposal: Add optional `expires_at` column (NULL = never expires). Alert users on token list page when tokens are near expiration.
 
 ---
 
-## Summary
+## Future Work
 
-This plan adds database-scoped, permission-limited tokens to ayb, with an OAuth 2.0 + PKCE authorization flow that works for frontend-only applications. The key features are:
+Items explicitly deferred from this implementation:
 
-1. **Scoped tokens**: Tokens can be limited to specific databases and permission levels
-2. **OAuth flow**: Standard authorization code flow with PKCE for security
-3. **Frontend-friendly**: No backend required for apps
-4. **Server-agnostic**: Apps can work with any ayb server the user chooses
-5. **User control**: Users decide exactly what access to grant and can revoke anytime
-
-The implementation can be phased, starting with scoped tokens and basic OAuth, then adding UX improvements and a client library.
+1. **Rate limiting**: Add rate limits per token to prevent abuse
+2. **Expired token cleanup**: Background job to delete tokens past `expires_at`
+3. **Refresh tokens**: Allow apps to get new tokens without re-authorization
+4. **Organization support**: Allow org-owned databases in the authorization flow
