@@ -24,9 +24,9 @@ async fn update_database(
         let mut partial_database = PartialDatabase {
             public_sharing_level: None,
         };
-        if public_sharing_level.is_some() {
+        if let Some(level) = public_sharing_level {
             partial_database.public_sharing_level =
-                Some(PublicSharingLevel::from_str(&public_sharing_level.unwrap())? as i16);
+                Some(PublicSharingLevel::from_str(&level)? as i16);
         }
 
         // Check if there are any fields to update
