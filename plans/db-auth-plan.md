@@ -165,6 +165,7 @@ ALTER TABLE api_token ADD COLUMN app_name VARCHAR(255);
 ALTER TABLE api_token ADD COLUMN app_origin_url VARCHAR(255);
 ALTER TABLE api_token ADD COLUMN created_at TIMESTAMP;
 ALTER TABLE api_token ADD COLUMN expires_at TIMESTAMP;
+ALTER TABLE api_token ADD COLUMN revoked_at TIMESTAMP;
 ```
 
 **Notes:**
@@ -174,15 +175,22 @@ ALTER TABLE api_token ADD COLUMN expires_at TIMESTAMP;
 - `app_name` is the display name shown to users (e.g., "Todos")
 - `app_origin_url` is the full URL origin that created the token (e.g., "https://todos.example.com")
 - `expires_at = NULL` means the token never expires (default); otherwise token becomes invalid after this time
+- `revoked_at = NULL` means the token is active; set to timestamp when user revokes (retained for audit trail)
 - Existing tokens continue to work unchanged - they just have NULL for the new columns
+
+**Token scope restrictions:**
+- A database-scoped token (`database_id != NULL`) can only access that specific database
+- A database-scoped token cannot be used to list databases, create databases, or manage other tokens
+- Only unscoped tokens (`database_id = NULL`) can perform account-level operations
 
 #### 1.2 Modify Token Validation
 
 Update `retrieve_and_validate_api_token` in `src/server/tokens.rs` to:
 
-1. Check token expiration (if `expires_at` is set and in the past, reject)
-2. Return scope information along with the token
-3. Pass scope info through the request pipeline
+1. Check token is not revoked (`revoked_at IS NULL`)
+2. Check token expiration (if `expires_at` is set and in the past, reject)
+3. Return scope information along with the token
+4. Pass scope info through the request pipeline
 
 ```rust
 pub struct ValidatedToken {
@@ -218,18 +226,20 @@ pub async fn highest_query_access_level(
 
     // Return the more restrictive of token and user permissions
     // Examples:
-    //   - User is owner (ReadWrite=1), token has ReadOnly=0 → ReadOnly
-    //   - User has ReadOnly=0, token has ReadWrite=1 → ReadOnly
-    //   - User is owner (ReadWrite=1), token has no cap (None) → ReadWrite
+    //   - User is owner (ReadWrite), token has ReadOnly → ReadOnly
+    //   - User has ReadOnly, token has ReadWrite → ReadOnly
+    //   - User is owner (ReadWrite), token has no cap (None) → ReadWrite
     match (user_permission, token.query_permission_level) {
         (None, _) => Ok(None),  // User has no access
         (Some(user), None) => Ok(Some(user)),  // No token cap, use user permission
-        (Some(user), Some(token_cap)) => Ok(Some(std::cmp::min(user, token_cap))),
+        (Some(QueryMode::ReadOnly), Some(_)) => Ok(Some(QueryMode::ReadOnly)),  // User is read-only, can't upgrade
+        (Some(QueryMode::ReadWrite), Some(QueryMode::ReadOnly)) => Ok(Some(QueryMode::ReadOnly)),  // Token caps to read-only
+        (Some(QueryMode::ReadWrite), Some(QueryMode::ReadWrite)) => Ok(Some(QueryMode::ReadWrite)),  // Both allow write
     }
 }
 ```
 
-The key insight: `effective_permission = min(user_permission, token_permission)`. Since `QueryMode` is `#[repr(i16)]` with ReadOnly=0 < ReadWrite=1, `std::cmp::min` correctly returns the more restrictive permission. A read-only token can never write, even if the user is an owner. And a read-write token can't grant more access than the user actually has.
+The key insight: the effective permission is the more restrictive of user and token permissions. We use explicit pattern matching rather than relying on the numeric representation of `QueryMode`. A read-only token can never write, even if the user is an owner. And a read-write token can't grant more access than the user actually has.
 
 ### Phase 2: Authorization Flow (OAuth-like Endpoints)
 
@@ -269,22 +279,9 @@ CREATE TABLE oauth_authorization_request (
 - `used_at` is NULL until the code is exchanged for a token, then set to the exchange timestamp
 - Codes with non-NULL `used_at` or past `expires_at` are invalid
 
-#### 2.2 New API Endpoints
+#### 2.2 New API Endpoint
 
-These endpoints live in `src/server/api_endpoints/` under the `/v1/` prefix.
-
-**GET `/v1/oauth/authorize`** - Start authorization flow (redirects to UI)
-
-Query parameters:
-- `response_type=code` (required, must be "code")
-- `redirect_uri` (required) - Where to redirect after authorization
-- `scope` (required) - Permission level requested: `read-only` or `read-write`
-- `state` (required) - Opaque value passed through (for CSRF protection)
-- `code_challenge` (required) - PKCE challenge: BASE64URL(SHA256(code_verifier))
-- `code_challenge_method` (required) - Must be "S256"
-- `app_name` (required) - Display name for the app (shown to user)
-
-This endpoint validates parameters and redirects to the authorization UI at `/oauth/authorize`.
+Add to `src/server/api_endpoints/`:
 
 **POST `/v1/oauth/token`** - Exchange code for token
 
@@ -315,6 +312,17 @@ These endpoints live in `src/server/ui_endpoints/` (cookie-based auth).
 
 **GET `/oauth/authorize`** - Authorization consent page
 
+Query parameters:
+- `response_type=code` (required, must be "code") - OAuth 2.0 protocol requirement for future grant type extensibility
+- `redirect_uri` (required) - Where to redirect after authorization
+- `scope` (required) - Permission level requested: `read-only` or `read-write`
+- `state` (required) - Opaque value passed through (for CSRF protection)
+- `code_challenge` (required) - PKCE challenge: BASE64URL(SHA256(code_verifier))
+- `code_challenge_method` (required) - Must be "S256"; OAuth 2.0 protocol requirement for future method extensibility
+- `app_name` (required) - Display name for the app (shown to user)
+
+If user is not logged in, redirects to login with a return URL that preserves all parameters.
+
 Shows the user:
 - What app is requesting access (app_name)
 - What permission level is requested
@@ -322,8 +330,6 @@ Shows the user:
 - Form to create a new database (if desired)
 - Permission level selector (can downgrade from requested, not upgrade)
 - Authorize / Deny buttons
-
-If user is not logged in, redirects to login with a return URL.
 
 **POST `/oauth/authorize`** - Process authorization decision
 
@@ -337,6 +343,8 @@ If user denies:
 1. Redirect to `redirect_uri?error=access_denied&state=...`
 
 ### Phase 3: Token Management
+
+**Important:** These endpoints require an unscoped token (one with `database_id = NULL`). A database-scoped token cannot list or manage other tokens, as that would allow an app to escalate its permissions.
 
 #### 3.1 API Endpoints
 
@@ -352,13 +360,16 @@ Add to `src/server/api_endpoints/`:
             "query_permission_level": "read-write",
             "app_name": "Todos",
             "created_at": "2024-01-15T10:30:00Z",
-            "expires_at": null
+            "expires_at": null,
+            "revoked_at": null                 // null if active, timestamp if revoked
         }
     ]
 }
 ```
 
 **DELETE `/v1/tokens/{short_token}`** - Revoke a token
+
+Sets `revoked_at` timestamp rather than deleting the row, for audit trail purposes. Revoked tokens are excluded from the list by default but retained in the database.
 
 #### 3.2 CLI Commands
 
@@ -373,7 +384,9 @@ ayb client revoke_token <short_token>     # Revoke a token
 
 Add to `src/server/ui_endpoints/`:
 
-**GET `/{entity}/tokens`** - Token management page (accessible via gear icon next to logout)
+**GET `/{entity}/tokens`** - Token management page
+
+Access via username dropdown in the header (click username → dropdown with "Tokens" and "Log out" options).
 
 Shows:
 - All active tokens for the user
@@ -477,7 +490,7 @@ class AybOAuth {
             app_name: this.appName
         });
 
-        window.location.href = `${this.serverUrl}/v1/oauth/authorize?${params}`;
+        window.location.href = `${this.serverUrl}/oauth/authorize?${params}`;
     }
 
     // Handle the callback (call this on page load)
@@ -645,7 +658,7 @@ When an app initiates authorization:
 - On token exchange, verify the `redirect_uri` matches exactly
 - Only allow `https://` URIs (except `http://localhost` for development)
 
-**Implementation:** Validate in `/v1/oauth/authorize` before storing, and verify match in `/v1/oauth/token`.
+**Implementation:** Validate in `/oauth/authorize` (UI endpoint) before storing, and verify match in `/v1/oauth/token`.
 
 ### 2. Code Expiration
 
@@ -664,7 +677,7 @@ For public clients (frontend apps):
 - Only support `S256` method (SHA-256, base64url-encoded)
 
 **Implementation:**
-- In `/v1/oauth/authorize`: require `code_challenge` and `code_challenge_method=S256`
+- In `/oauth/authorize`: require `code_challenge` and `code_challenge_method=S256`
 - In `/v1/oauth/token`: compute `BASE64URL(SHA256(code_verifier))` and compare to stored `code_challenge`
 
 ### 4. Token Scoping
@@ -694,6 +707,33 @@ The `state` parameter prevents CSRF attacks:
 - App verifies returned state matches stored state
 
 **Implementation:** ayb just passes `state` through; the client library handles generation and verification.
+
+### 7. Security Review Summary
+
+A security engineer reviewing this implementation should verify:
+
+**Authentication & Authorization:**
+- [ ] PKCE verifier/challenge validation uses constant-time comparison
+- [ ] Authorization codes are generated with cryptographically secure randomness (`OsRng`)
+- [ ] Token hashes use a secure algorithm (SHA-256 with proper salting)
+- [ ] Database-scoped tokens cannot access other databases or account-level endpoints
+- [ ] Permission intersection logic correctly prevents privilege escalation
+
+**Input Validation:**
+- [ ] `redirect_uri` is validated against allowlist (https only, except localhost)
+- [ ] `redirect_uri` comparison is exact (no partial matching that could be bypassed)
+- [ ] All OAuth parameters are properly sanitized before storage/use
+- [ ] SQL injection prevented via parameterized queries (already standard in ayb)
+
+**Session Security:**
+- [ ] Authorization codes expire and are single-use
+- [ ] Tokens can be revoked and revocation is checked on every request
+- [ ] `state` parameter is passed through opaquely (client-side CSRF protection)
+
+**Information Disclosure:**
+- [ ] Error messages don't leak sensitive information about valid/invalid tokens
+- [ ] Token list endpoint only returns tokens owned by the authenticated entity
+- [ ] Audit trail (`revoked_at`, `created_at`) doesn't expose sensitive timing info
 
 ---
 
@@ -790,7 +830,7 @@ Here's how the todos app would work with this system:
 │    [Connect]                                                        │
 │                                                                     │
 │ 3. User clicks Connect, app redirects to:                           │
-│    https://thedata.zone/v1/oauth/authorize?                         │
+│    https://thedata.zone/oauth/authorize?                            │
 │      response_type=code                                             │
 │      &redirect_uri=https://marcua.net/minitools/todos/              │
 │      &scope=read-write                                              │
