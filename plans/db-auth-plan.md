@@ -326,8 +326,7 @@ If user is not logged in, redirects to login with a return URL that preserves al
 Shows the user:
 - What app is requesting access (app_name)
 - What permission level is requested
-- Dropdown to select existing database
-- Form to create a new database (if desired)
+- Dropdown to select existing database OR create new one. Creation can reuse the new database creation interface on the database list page in the UI.
 - Permission level selector (can downgrade from requested, not upgrade)
 - Authorize / Deny buttons
 
@@ -724,6 +723,7 @@ A security engineer reviewing this implementation should verify:
 - [ ] `redirect_uri` comparison is exact (no partial matching that could be bypassed)
 - [ ] All OAuth parameters are properly sanitized before storage/use
 - [ ] SQL injection prevented via parameterized queries (already standard in ayb)
+- [ ] `/oauth/` is in the restricted registration username list (prevents entity `oauth` from claiming the path)
 
 **Session Security:**
 - [ ] Authorization codes expire and are single-use
@@ -777,6 +777,7 @@ Add `oauth_tests.rs` with tests for:
    - Token with read-only cannot write even if user has write access
    - Token with write access limited to user's actual permission level
    - Token with `expires_at` in past is rejected
+   - Database-scoped token cannot be used to list or create databases
 
 2. **OAuth flow**
    - Valid authorization request redirects to consent UI
