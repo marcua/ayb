@@ -10,7 +10,7 @@ use crate::browser_e2e_tests::{
 };
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_health_check, test_permissions,
-    test_registration, test_snapshots,
+    test_registration, test_snapshots, test_tokens,
 };
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
@@ -97,6 +97,7 @@ async fn client_server_integration(
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
+    test_tokens(&config_path, &api_keys)?;
 
     Ok(())
 }

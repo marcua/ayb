@@ -1,0 +1,60 @@
+{% extends "base_content.html" %}
+
+{% block title %}{{ entity }} - Tokens{% endblock %}
+
+{% block page_content %}
+<div class="max-w-screen-xl mx-auto px-6">
+    <div class="uk-card">
+        <div class="uk-card-header space-y-2 flex justify-between items-center">
+            <h2 class="uk-h2">API Tokens for {{ entity }}</h2>
+            <a href="/{{ entity }}" class="uk-btn uk-btn-default uk-btn-sm">
+                <uk-icon icon="arrow-left"></uk-icon> Back to profile
+            </a>
+        </div>
+        <div class="uk-card-body space-y-2">
+            <hr class="uk-hr" />
+            {% if tokens | length == 0 %}
+            <div class="block uk-card">
+                <p class="uk-card-body space-y-2">No active API tokens found.</p>
+            </div>
+            {% else %}
+            <table class="uk-table uk-table-divider uk-table-hover">
+                <thead>
+                    <tr>
+                        <th>Short Token</th>
+                        <th>Scope</th>
+                        <th>Permission</th>
+                        <th>App</th>
+                        <th>Created</th>
+                        <th>Expires</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tokens-table">
+                    {% for token in tokens %}
+                    <tr id="token-row-{{ token.short_token }}">
+                        <td><code>{{ token.short_token }}</code></td>
+                        <td>{{ token.scoped_database | default(value="(all databases)") }}</td>
+                        <td>{{ token.permission_level | default(value="(full access)") }}</td>
+                        <td>{{ token.app_name | default(value="") }}</td>
+                        <td>{{ token.created_at | default(value="") }}</td>
+                        <td>{{ token.expires_at | default(value="(never)") }}</td>
+                        <td>
+                            <button
+                                class="uk-btn uk-btn-danger uk-btn-sm"
+                                hx-delete="/{{ entity }}/tokens/{{ token.short_token }}"
+                                hx-target="#token-row-{{ token.short_token }}"
+                                hx-swap="outerHTML"
+                                hx-confirm="Are you sure you want to revoke this token?">
+                                Revoke
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

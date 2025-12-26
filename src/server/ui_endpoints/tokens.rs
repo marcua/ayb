@@ -1,0 +1,43 @@
+use crate::server::config::AybConfig;
+use crate::server::ui_endpoints::auth::init_ayb_client;
+use crate::server::ui_endpoints::templates::{error_snippet, ok_response, success_snippet};
+use actix_web::{delete, get, web, HttpRequest, HttpResponse, Result};
+
+#[get("/{entity}/tokens")]
+pub async fn entity_tokens(
+    req: HttpRequest,
+    path: web::Path<String>,
+    ayb_config: web::Data<AybConfig>,
+) -> Result<HttpResponse> {
+    let entity_slug = path.into_inner().to_lowercase();
+    let client = init_ayb_client(&ayb_config, &req);
+
+    match client.list_tokens().await {
+        Ok(token_list) => {
+            let mut context = tera::Context::new();
+            context.insert("entity", &entity_slug);
+            context.insert("tokens", &token_list.tokens);
+            context.insert(
+                "logged_in_entity",
+                &req.cookie("ayb_entity").map(|c| c.value().to_string()),
+            );
+            ok_response("entity_tokens.html", &context)
+        }
+        Err(err) => error_snippet("Error loading tokens", &err.to_string()),
+    }
+}
+
+#[delete("/{entity}/tokens/{short_token}")]
+pub async fn revoke_token(
+    req: HttpRequest,
+    path: web::Path<(String, String)>,
+    ayb_config: web::Data<AybConfig>,
+) -> Result<HttpResponse> {
+    let (_entity_slug, short_token) = path.into_inner();
+    let client = init_ayb_client(&ayb_config, &req);
+
+    match client.revoke_token(&short_token).await {
+        Ok(_) => success_snippet(&format!("Token {} revoked successfully", short_token)),
+        Err(err) => error_snippet("Error revoking token", &err.to_string()),
+    }
+}

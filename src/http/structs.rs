@@ -1,6 +1,7 @@
 use crate::ayb_db::models::{
-    DBType, DatabasePermission, EntityType, InstantiatedDatabase as PersistedDatabase,
-    InstantiatedDatabase, InstantiatedEntity as PersistedEntity,
+    APITokenWithDatabase, DBType, DatabasePermission, EntityDatabaseSharingLevel, EntityType,
+    InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
+    InstantiatedEntity as PersistedEntity,
 };
 use crate::formatting::TabularFormatter;
 use crate::hosted_db::QueryMode;
@@ -241,4 +242,80 @@ impl TabularFormatter for Vec<DatabasePermission> {
 
         table
     }
+}
+
+/// Token information returned by the list tokens endpoint
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct APITokenInfo {
+    pub short_token: String,
+    pub scoped_database: Option<String>, // entity/database or None for unscoped
+    pub permission_level: Option<String>, // "read-only" or "read-write" or None
+    pub app_name: Option<String>,
+    pub created_at: Option<String>,
+    pub expires_at: Option<String>,
+}
+
+impl From<APITokenWithDatabase> for APITokenInfo {
+    fn from(token: APITokenWithDatabase) -> Self {
+        let scoped_database = match (token.entity_slug, token.database_slug) {
+            (Some(entity), Some(db)) => Some(format!("{}/{}", entity, db)),
+            _ => None,
+        };
+
+        let permission_level = token.query_permission_level.map(|level| {
+            EntityDatabaseSharingLevel::try_from(level)
+                .map(|l| l.to_str().to_string())
+                .unwrap_or_else(|_| "unknown".to_string())
+        });
+
+        Self {
+            short_token: token.short_token,
+            scoped_database,
+            permission_level,
+            app_name: token.app_name,
+            created_at: token.created_at.map(|dt| dt.to_string()),
+            expires_at: token.expires_at.map(|dt| dt.to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TokenList {
+    pub tokens: Vec<APITokenInfo>,
+}
+
+impl TabularFormatter for Vec<APITokenInfo> {
+    fn to_table(&self) -> Table {
+        let mut table = Table::new();
+        table.set_titles(Row::new(vec![
+            Cell::new("Short token"),
+            Cell::new("Scope"),
+            Cell::new("Permission"),
+            Cell::new("App"),
+            Cell::new("Created"),
+            Cell::new("Expires"),
+        ]));
+
+        self.iter()
+            .map(|v| {
+                Row::new(vec![
+                    Cell::new(&v.short_token),
+                    Cell::new(v.scoped_database.as_deref().unwrap_or("(all databases)")),
+                    Cell::new(v.permission_level.as_deref().unwrap_or("(full access)")),
+                    Cell::new(v.app_name.as_deref().unwrap_or("")),
+                    Cell::new(v.created_at.as_deref().unwrap_or("")),
+                    Cell::new(v.expires_at.as_deref().unwrap_or("(never)")),
+                ])
+            })
+            .for_each(|c| {
+                table.add_row(c);
+            });
+
+        table
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ShortTokenPath {
+    pub short_token: String,
 }

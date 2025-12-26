@@ -288,12 +288,32 @@ impl APITokenStatus {
     }
 }
 
-#[derive(Debug, FromRow, Serialize, Deserialize)]
+#[derive(Debug, FromRow, Serialize, Deserialize, Clone)]
 pub struct APIToken {
     pub entity_id: i32,
     pub short_token: String,
     pub hash: String,
     pub status: i16,
+    // Scoped token fields (nullable for backward compatibility)
+    pub database_id: Option<i32>,
+    pub query_permission_level: Option<i16>,
+    pub app_name: Option<String>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub expires_at: Option<chrono::NaiveDateTime>,
+}
+
+/// A row returned when listing tokens with their associated database slug
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct APITokenWithDatabase {
+    pub short_token: String,
+    pub status: i16,
+    pub database_id: Option<i32>,
+    pub database_slug: Option<String>,
+    pub entity_slug: Option<String>,
+    pub query_permission_level: Option<i16>,
+    pub app_name: Option<String>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub expires_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(

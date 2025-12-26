@@ -89,6 +89,11 @@ fn templates() -> &'static Tera {
             include_str!("templates/success_snippet.html"),
         )
         .unwrap();
+        tera.add_raw_template(
+            "entity_tokens.html",
+            include_str!("templates/entity_tokens.html"),
+        )
+        .unwrap();
 
         tera.build_inheritance_chains().unwrap();
 

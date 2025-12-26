@@ -56,6 +56,11 @@ pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, Stri
             short_token: pak.short_token().to_string(),
             hash,
             status: APITokenStatus::Active as i16,
+            database_id: None,
+            query_permission_level: None,
+            app_name: None,
+            created_at: Some(chrono::Utc::now().naive_utc()),
+            expires_at: None,
         },
         pak.to_string(),
     ))
@@ -73,5 +78,22 @@ pub async fn retrieve_and_validate_api_token(
             message: "Invalid API token".to_string(),
         });
     }
+
+    // Check if token is revoked
+    if api_token.status == APITokenStatus::Revoked as i16 {
+        return Err(AybError::Other {
+            message: "API token has been revoked".to_string(),
+        });
+    }
+
+    // Check if token is expired
+    if let Some(expires_at) = api_token.expires_at {
+        if expires_at < chrono::Utc::now().naive_utc() {
+            return Err(AybError::Other {
+                message: "API token has expired".to_string(),
+            });
+        }
+    }
+
     Ok(api_token)
 }

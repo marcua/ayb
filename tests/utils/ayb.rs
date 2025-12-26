@@ -301,3 +301,31 @@ pub fn list_database_permissions(
     cmd.stdout(format!("{result}\n"));
     Ok(())
 }
+
+pub fn list_tokens(
+    config: &str,
+    api_key: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "list_tokens", "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
+
+pub fn revoke_token(
+    config: &str,
+    api_key: &str,
+    short_token: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "revoke_token", short_token; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
