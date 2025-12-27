@@ -253,6 +253,7 @@ pub struct APITokenInfo {
     pub app_name: Option<String>,
     pub created_at: Option<String>,
     pub expires_at: Option<String>,
+    pub revoked_at: Option<String>,
 }
 
 impl From<APITokenWithDatabase> for APITokenInfo {
@@ -275,6 +276,7 @@ impl From<APITokenWithDatabase> for APITokenInfo {
             app_name: token.app_name,
             created_at: token.created_at.map(|dt| dt.to_string()),
             expires_at: token.expires_at.map(|dt| dt.to_string()),
+            revoked_at: token.revoked_at.map(|dt| dt.to_string()),
         }
     }
 }

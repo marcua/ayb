@@ -61,6 +61,7 @@ pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, Stri
             app_name: None,
             created_at: Some(chrono::Utc::now().naive_utc()),
             expires_at: None,
+            revoked_at: None,
         },
         pak.to_string(),
     ))

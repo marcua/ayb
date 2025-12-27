@@ -108,9 +108,9 @@ macro_rules! implement_ayb_db {
             async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError> {
                 let returned_token: APIToken = sqlx::query_as(
                     r#"
-                INSERT INTO api_token ( entity_id, short_token, hash, status, database_id, query_permission_level, app_name, created_at, expires_at )
-                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 )
-RETURNING entity_id, short_token, hash, status, database_id, query_permission_level, app_name, created_at, expires_at
+                INSERT INTO api_token ( entity_id, short_token, hash, status, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at )
+                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )
+RETURNING entity_id, short_token, hash, status, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at
                 "#,
                 )
                     .bind(api_token.entity_id)
@@ -122,6 +122,7 @@ RETURNING entity_id, short_token, hash, status, database_id, query_permission_le
                     .bind(&api_token.app_name)
                     .bind(api_token.created_at)
                     .bind(api_token.expires_at)
+                    .bind(api_token.revoked_at)
                     .fetch_one(&self.pool)
                     .await?;
 
@@ -214,7 +215,8 @@ SELECT
     query_permission_level,
     app_name,
     created_at,
-    expires_at
+    expires_at,
+    revoked_at
 FROM api_token
 WHERE short_token = $1
         "#,
@@ -599,7 +601,8 @@ SELECT
     api_token.query_permission_level,
     api_token.app_name,
     api_token.created_at,
-    api_token.expires_at
+    api_token.expires_at,
+    api_token.revoked_at
 FROM api_token
 LEFT JOIN database ON api_token.database_id = database.id
 LEFT JOIN entity ON database.entity_id = entity.id
@@ -623,7 +626,7 @@ ORDER BY api_token.created_at DESC NULLS LAST
                 let result = sqlx::query(
                     r#"
 UPDATE api_token
-SET status = 1
+SET status = 1, revoked_at = CURRENT_TIMESTAMP
 WHERE short_token = $1 AND entity_id = $2
                     "#,
                 )

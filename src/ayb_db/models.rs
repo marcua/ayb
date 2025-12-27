@@ -300,6 +300,7 @@ pub struct APIToken {
     pub app_name: Option<String>,
     pub created_at: Option<chrono::NaiveDateTime>,
     pub expires_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
 }
 
 /// A row returned when listing tokens with their associated database slug
@@ -314,6 +315,7 @@ pub struct APITokenWithDatabase {
     pub app_name: Option<String>,
     pub created_at: Option<chrono::NaiveDateTime>,
     pub expires_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(

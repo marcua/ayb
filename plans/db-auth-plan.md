@@ -920,7 +920,7 @@ Items explicitly deferred from this implementation:
 The following has been implemented:
 
 - [x] **Database Migration** (Phase 1.1): Added scope columns to `api_token` table
-  - `database_id`, `query_permission_level`, `app_name`, `created_at`, `expires_at`
+  - `database_id`, `query_permission_level`, `app_name`, `created_at`, `expires_at`, `revoked_at`
 
 - [x] **Token Validation** (Phase 1.2): Updated `retrieve_and_validate_api_token` to:
   - Check token status (revoked tokens are rejected)
