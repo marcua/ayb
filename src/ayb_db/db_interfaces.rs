@@ -98,15 +98,29 @@ macro_rules! implement_ayb_db {
             async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError> {
                 let returned_token: APIToken = sqlx::query_as(
                     r#"
-                INSERT INTO api_token ( entity_id, short_token, hash, status )
-                VALUES ( $1, $2, $3, $4 )
-RETURNING entity_id, short_token, hash, status
+INSERT INTO api_token (
+    entity_id, short_token, hash, status,
+    database_id, query_permission_level, granted_by,
+    app_name, app_origin_url, created_at, expires_at, revoked_at
+)
+VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 )
+RETURNING entity_id, short_token, hash, status,
+    database_id, query_permission_level, granted_by,
+    app_name, app_origin_url, created_at, expires_at, revoked_at
                 "#,
                 )
                     .bind(api_token.entity_id)
                     .bind(&api_token.short_token)
                     .bind(&api_token.hash)
                     .bind(api_token.status)
+                    .bind(api_token.database_id)
+                    .bind(api_token.query_permission_level)
+                    .bind(api_token.granted_by)
+                    .bind(&api_token.app_name)
+                    .bind(&api_token.app_origin_url)
+                    .bind(api_token.created_at)
+                    .bind(api_token.expires_at)
+                    .bind(api_token.revoked_at)
                     .fetch_one(&self.pool)
                     .await?;
 
@@ -191,10 +205,18 @@ WHERE entity_id = $1 AND database_id = $2;
                 let api_token: APIToken = sqlx::query_as(
                     r#"
 SELECT
-    short_token,
     entity_id,
+    short_token,
     hash,
-    status
+    status,
+    database_id,
+    query_permission_level,
+    granted_by,
+    app_name,
+    app_origin_url,
+    created_at,
+    expires_at,
+    revoked_at
 FROM api_token
 WHERE short_token = $1
         "#,

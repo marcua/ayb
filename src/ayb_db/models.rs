@@ -294,6 +294,15 @@ pub struct APIToken {
     pub short_token: String,
     pub hash: String,
     pub status: i16,
+    // Scoped token fields (all nullable for backward compatibility)
+    pub database_id: Option<i32>,
+    pub query_permission_level: Option<i16>,
+    pub granted_by: Option<i32>,
+    pub app_name: Option<String>,
+    pub app_origin_url: Option<String>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub expires_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(

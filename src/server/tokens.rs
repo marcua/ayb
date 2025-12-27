@@ -56,6 +56,15 @@ pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, Stri
             short_token: pak.short_token().to_string(),
             hash,
             status: APITokenStatus::Active as i16,
+            // Scoped token fields - all None for unscoped tokens
+            database_id: None,
+            query_permission_level: None,
+            granted_by: None,
+            app_name: None,
+            app_origin_url: None,
+            created_at: Some(chrono::Utc::now().naive_utc()),
+            expires_at: None,
+            revoked_at: None,
         },
         pak.to_string(),
     ))
