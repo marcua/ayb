@@ -7,7 +7,16 @@
             <a href="/" class="text-xl font-bold">ayb</a>
             <div>
                 {% if logged_in_entity %}
-                <a href="/{{ logged_in_entity }}">{{ logged_in_entity }}</a> <span>(<a href="/log_out">log out</a>)</span>
+                <div class="uk-inline">
+                    <a class="uk-link-text" href="#">{{ logged_in_entity }}</a>
+                    <div uk-dropdown="mode: click; pos: bottom-right">
+                        <ul class="uk-nav uk-dropdown-nav">
+                            <li><a href="/{{ logged_in_entity }}/tokens">Tokens</a></li>
+                            <li class="uk-nav-divider"></li>
+                            <li><a href="/log_out">Log out</a></li>
+                        </ul>
+                    </div>
+                </div>
                 {% else %}
                 <a href="/register">Register</a>
                 <a href="/log_in">Log in</a>
