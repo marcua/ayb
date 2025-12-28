@@ -39,7 +39,7 @@ pub async fn revoke_token(
     match client.revoke_token(&short_token).await {
         Ok(_) => Ok(HttpResponse::Ok()
             .content_type("text/html")
-            .body(r#"<tr class="text-muted-foreground"><td colspan="7" class="text-center italic py-2">Token revoked</td></tr>"#)),
+            .body(format!(r#"<tr class="text-muted-foreground"><td colspan="7" class="text-center italic py-2">Token {} revoked successfully</td></tr>"#, short_token))),
         Err(err) => error_snippet("Error revoking token", &err.to_string()),
     }
 }
