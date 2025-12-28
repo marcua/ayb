@@ -1,6 +1,6 @@
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
-use crate::server::ui_endpoints::templates::{error_snippet, ok_response, success_snippet};
+use crate::server::ui_endpoints::templates::{error_snippet, ok_response};
 use actix_web::{delete, get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}/tokens")]
@@ -37,7 +37,9 @@ pub async fn revoke_token(
     let client = init_ayb_client(&ayb_config, &req);
 
     match client.revoke_token(&short_token).await {
-        Ok(_) => success_snippet(&format!("Token {} revoked successfully", short_token)),
+        Ok(_) => Ok(HttpResponse::Ok()
+            .content_type("text/html")
+            .body(r#"<tr class="text-muted-foreground"><td colspan="7" class="text-center italic py-2">Token revoked</td></tr>"#)),
         Err(err) => error_snippet("Error revoking token", &err.to_string()),
     }
 }
