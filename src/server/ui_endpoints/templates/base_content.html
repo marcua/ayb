@@ -8,9 +8,10 @@
             <div>
                 {% if logged_in_entity %}
                 <div class="uk-inline">
-                    <a class="uk-link-text" href="#">{{ logged_in_entity }}</a>
+                    <a class="uk-link-text" href="#">{{ logged_in_entity }} <uk-icon icon="chevron-down" class="uk-icon"></uk-icon></a>
                     <div uk-dropdown="mode: click; pos: bottom-right">
                         <ul class="uk-nav uk-dropdown-nav">
+                            <li><a href="/{{ logged_in_entity }}">Profile</a></li>
                             <li><a href="/{{ logged_in_entity }}/tokens">Tokens</a></li>
                             <li class="uk-nav-divider"></li>
                             <li><a href="/log_out">Log out</a></li>

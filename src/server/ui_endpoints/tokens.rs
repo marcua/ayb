@@ -1,5 +1,5 @@
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::auth::init_ayb_client;
+use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
 use crate::server::ui_endpoints::templates::{error_snippet, ok_response, success_snippet};
 use actix_web::{delete, get, web, HttpRequest, HttpResponse, Result};
 
@@ -19,7 +19,7 @@ pub async fn entity_tokens(
             context.insert("tokens", &token_list.tokens);
             context.insert(
                 "logged_in_entity",
-                &req.cookie("ayb_entity").map(|c| c.value().to_string()),
+                &authentication_details(&req).map(|details| details.entity),
             );
             ok_response("entity_tokens.html", &context)
         }
