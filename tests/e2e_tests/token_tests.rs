@@ -6,7 +6,7 @@ pub fn test_tokens(
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let first_entity_api_keys = api_keys
-        .get(super::FIRST_ENTITY_SLUG)
+        .get("first")
         .expect("first entity api key should exist");
     let first_entity_key = first_entity_api_keys
         .first()
