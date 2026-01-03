@@ -10,6 +10,7 @@ mod register;
 mod sharing;
 mod snapshots;
 mod templates;
+mod tokens;
 
 pub use confirm::confirm as confirm_endpoint;
 pub use create_database::create_database as create_database_endpoint;
@@ -30,3 +31,4 @@ pub use snapshots::{
     database_snapshots as database_snapshots_endpoint,
     restore_snapshot as restore_snapshot_endpoint,
 };
+pub use tokens::{entity_tokens as entity_tokens_endpoint, revoke_token as revoke_token_endpoint};

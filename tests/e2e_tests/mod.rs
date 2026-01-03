@@ -4,6 +4,7 @@ mod health_check_tests;
 mod permissions_tests;
 mod registration_tests;
 mod snapshot_tests;
+mod token_management_tests;
 
 pub use create_and_query_db_tests::test_create_and_query_db;
 pub use entity_details_and_profile_tests::test_entity_details_and_profile;
@@ -11,6 +12,7 @@ pub use health_check_tests::test_health_check;
 pub use permissions_tests::test_permissions;
 pub use registration_tests::test_registration;
 pub use snapshot_tests::test_snapshots;
+pub use token_management_tests::test_token_management;
 
 const FIRST_ENTITY_DB: &str = "e2e-first/test.sqlite";
 const FIRST_ENTITY_DB_CASED: &str = "E2E-FiRST/test.sqlite";

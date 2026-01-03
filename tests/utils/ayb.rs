@@ -3,6 +3,7 @@ use ayb::server::snapshots::models::ListSnapshotResult;
 use chrono::DateTime;
 use predicates::prelude::*;
 use regex::Regex;
+use serde_json;
 use std::process::Command;
 
 // ayb_assert_cmd!("value1", value2; {
@@ -295,6 +296,66 @@ pub fn list_database_permissions(
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "list_database_permissions", database, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
+
+pub fn list_tokens(
+    config: &str,
+    api_key: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "list_tokens", "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
+
+/// List tokens and return the short tokens as a Vec for assertions
+pub fn list_tokens_json(
+    config: &str,
+    api_key: &str,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let output = Command::cargo_bin("ayb")?
+        .args([
+            "client",
+            "--config",
+            config,
+            "list_tokens",
+            "--format",
+            "json",
+        ])
+        .env("AYB_API_TOKEN", api_key)
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+    // Parse JSON response to extract short tokens
+    // The response is an array of token objects with "short_token" field
+    let tokens: Vec<serde_json::Value> = serde_json::from_str(&stdout)?;
+    let short_tokens: Vec<String> = tokens
+        .iter()
+        .filter_map(|t| {
+            t.get("short_token")
+                .and_then(|v| v.as_str())
+                .map(String::from)
+        })
+        .collect();
+    Ok(short_tokens)
+}
+
+pub fn revoke_token(
+    config: &str,
+    api_key: &str,
+    short_token: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "revoke_token", short_token; {
         "AYB_API_TOKEN" => api_key,
     });
 
