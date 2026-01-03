@@ -108,15 +108,14 @@ macro_rules! implement_ayb_db {
             async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError> {
                 let returned_token: APIToken = sqlx::query_as(
                     r#"
-                INSERT INTO api_token ( entity_id, short_token, hash, status, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at )
-                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10 )
-RETURNING entity_id, short_token, hash, status, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at
+                INSERT INTO api_token ( entity_id, short_token, hash, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at )
+                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 )
+RETURNING entity_id, short_token, hash, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at
                 "#,
                 )
                     .bind(api_token.entity_id)
                     .bind(&api_token.short_token)
                     .bind(&api_token.hash)
-                    .bind(api_token.status)
                     .bind(api_token.database_id)
                     .bind(api_token.query_permission_level)
                     .bind(&api_token.app_name)
@@ -210,7 +209,6 @@ SELECT
     short_token,
     entity_id,
     hash,
-    status,
     database_id,
     query_permission_level,
     app_name,
@@ -594,7 +592,6 @@ WHERE entity_database_permission.database_id = $1
                     r#"
 SELECT
     api_token.short_token,
-    api_token.status,
     api_token.database_id,
     database.slug as database_slug,
     entity.slug as entity_slug,
@@ -607,7 +604,7 @@ FROM api_token
 LEFT JOIN database ON api_token.database_id = database.id
 LEFT JOIN entity ON database.entity_id = entity.id
 WHERE api_token.entity_id = $1
-  AND api_token.status = 0
+  AND api_token.revoked_at IS NULL
 ORDER BY api_token.created_at DESC NULLS LAST
                     "#,
                 )
@@ -626,8 +623,8 @@ ORDER BY api_token.created_at DESC NULLS LAST
                 let result = sqlx::query(
                     r#"
 UPDATE api_token
-SET status = 1, revoked_at = CURRENT_TIMESTAMP
-WHERE short_token = $1 AND entity_id = $2
+SET revoked_at = CURRENT_TIMESTAMP
+WHERE short_token = $1 AND entity_id = $2 AND revoked_at IS NULL
                     "#,
                 )
                 .bind(short_token)

@@ -1,5 +1,5 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{APIToken, APITokenStatus, InstantiatedEntity};
+use crate::ayb_db::models::{APIToken, InstantiatedEntity};
 use crate::error::AybError;
 use crate::http::structs::AuthenticationDetails;
 use crate::server::config::AybConfigAuthentication;
@@ -55,7 +55,6 @@ pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, Stri
             entity_id: entity.id,
             short_token: pak.short_token().to_string(),
             hash,
-            status: APITokenStatus::Active as i16,
             database_id: None,
             query_permission_level: None,
             app_name: None,
@@ -75,14 +74,14 @@ pub async fn retrieve_and_validate_api_token(
     let pak = PrefixedApiKey::from_string(token)?;
     let api_token = (ayb_db.get_api_token(pak.short_token())).await?;
     if !controller.check_hash(&pak, &api_token.hash) {
-        return Err(AybError::Other {
+        return Err(AybError::InvalidToken {
             message: "Invalid API token".to_string(),
         });
     }
 
-    // Check if token is revoked
-    if api_token.status == APITokenStatus::Revoked as i16 {
-        return Err(AybError::Other {
+    // Check if token is revoked (revoked_at is set)
+    if api_token.revoked_at.is_some() {
+        return Err(AybError::InvalidToken {
             message: "API token has been revoked".to_string(),
         });
     }
@@ -90,7 +89,7 @@ pub async fn retrieve_and_validate_api_token(
     // Check if token is expired
     if let Some(expires_at) = api_token.expires_at {
         if expires_at < chrono::Utc::now().naive_utc() {
-            return Err(AybError::Other {
+            return Err(AybError::InvalidToken {
                 message: "API token has expired".to_string(),
             });
         }

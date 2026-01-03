@@ -260,40 +260,11 @@ pub struct InstantiatedAuthenticationMethod {
     pub email_address: String,
 }
 
-#[derive(
-    Serialize_repr, Deserialize_repr, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum,
-)]
-#[repr(i16)]
-pub enum APITokenStatus {
-    Active = 0,
-    Revoked = 1,
-}
-
-from_str!(APITokenStatus, {
-    "active" => APITokenStatus::Active,
-    "revoked" => APITokenStatus::Revoked
-});
-
-try_from_i16!(APITokenStatus, {
-    0 => APITokenStatus::Active,
-    1 => APITokenStatus::Revoked
-});
-
-impl APITokenStatus {
-    pub fn to_str(&self) -> &str {
-        match self {
-            APITokenStatus::Active => "active",
-            APITokenStatus::Revoked => "revoked",
-        }
-    }
-}
-
 #[derive(Debug, FromRow, Serialize, Deserialize, Clone)]
 pub struct APIToken {
     pub entity_id: i32,
     pub short_token: String,
     pub hash: String,
-    pub status: i16,
     // Scoped token fields (nullable for backward compatibility)
     pub database_id: Option<i32>,
     pub query_permission_level: Option<i16>,
@@ -307,7 +278,6 @@ pub struct APIToken {
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct APITokenWithDatabase {
     pub short_token: String,
-    pub status: i16,
     pub database_id: Option<i32>,
     pub database_slug: Option<String>,
     pub entity_slug: Option<String>,

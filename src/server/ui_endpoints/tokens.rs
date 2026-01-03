@@ -3,7 +3,8 @@ use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client}
 use crate::server::ui_endpoints::templates::{error_snippet, ok_response};
 use actix_web::{delete, get, web, HttpRequest, HttpResponse, Result};
 
-#[get("/{entity}/tokens")]
+// Note: We use /-/tokens to avoid conflicts with databases named "tokens"
+#[get("/{entity}/-/tokens")]
 pub async fn entity_tokens(
     req: HttpRequest,
     path: web::Path<String>,
@@ -27,7 +28,7 @@ pub async fn entity_tokens(
     }
 }
 
-#[delete("/{entity}/tokens/{short_token}")]
+#[delete("/{entity}/-/tokens/{short_token}")]
 pub async fn revoke_token(
     req: HttpRequest,
     path: web::Path<(String, String)>,

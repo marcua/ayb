@@ -82,7 +82,7 @@ async fn entity_validator(
                     match entity {
                         Ok(entity) => {
                             req.extensions_mut().insert(entity);
-                            // Store the API token for scope checking in permission checks
+                            // Store the API token for scope checking (used in api_endpoints/query.rs)
                             req.extensions_mut().insert(api_token);
                             Ok(req)
                         }

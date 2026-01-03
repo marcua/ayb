@@ -6,11 +6,11 @@ mod utils;
 
 use crate::browser_e2e_tests::{
     test_create_and_query_database_flow, test_entity_profile_flow, test_permissions_flow,
-    test_registration_flow, test_snapshots_flow,
+    test_registration_flow, test_snapshots_flow, test_token_management_flow,
 };
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_health_check, test_permissions,
-    test_registration, test_snapshots, test_tokens,
+    test_registration, test_snapshots, test_token_management,
 };
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
@@ -97,7 +97,7 @@ async fn client_server_integration(
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
-    test_tokens(&config_path, &api_keys)?;
+    test_token_management(&config_path, &api_keys)?;
 
     Ok(())
 }
@@ -143,6 +143,9 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test snapshots functionality
     test_snapshots_flow(&page, &username, &base_url).await?;
+
+    // Test token management UI
+    test_token_management_flow(&page, &username).await?;
 
     Ok(())
 }
