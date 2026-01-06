@@ -19,10 +19,6 @@ pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(
         .click()
         .await?;
 
-    // Wait for the page to load
-    page.wait_for_load_state(Some(playwright::api::DocumentLoadState::NetworkIdle), None)
-        .await?;
-
     // Step 2: Verify we're on the tokens page
     let page_url = page.url()?;
     assert!(
@@ -67,9 +63,6 @@ pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(
     page.click_builder("a:has-text('Profile')")
         .timeout(5000.0)
         .click()
-        .await?;
-
-    page.wait_for_load_state(Some(playwright::api::DocumentLoadState::NetworkIdle), None)
         .await?;
 
     // Verify we're back on the profile page
