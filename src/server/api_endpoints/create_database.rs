@@ -10,6 +10,7 @@ use crate::hosted_db::paths::{
 };
 use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
 use crate::server::config::AybConfig;
+use crate::server::database_name_validation::validate_database_name;
 use crate::server::permissions::can_create_database;
 use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
@@ -24,6 +25,11 @@ async fn create_database(
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
+    let database_slug = &path.database;
+
+    // Validate database name is not reserved
+    validate_database_name(database_slug)?;
+
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let db_type = get_required_header(&req, "db-type")?;
     let public_sharing_level = get_required_header(&req, "public-sharing-level")?;

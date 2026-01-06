@@ -1,6 +1,7 @@
 use crate::ayb_db::models::{DBType, PublicSharingLevel};
 use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
+use crate::server::database_name_validation::validate_database_name;
 use crate::server::ui_endpoints::auth::init_ayb_client;
 use crate::server::ui_endpoints::templates::error_snippet;
 use actix_web::{post, web, HttpRequest, HttpResponse, Result};
@@ -22,6 +23,12 @@ pub async fn create_database(
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &form.database_slug.to_lowercase();
+
+    // Validate database name is not reserved
+    if let Err(err) = validate_database_name(database_slug) {
+        return error_snippet("Invalid database name", &err.to_string());
+    }
+
     let public_sharing_level = PublicSharingLevel::from_str(&form.public_sharing_level)?;
 
     let client = init_ayb_client(&ayb_config, &req);

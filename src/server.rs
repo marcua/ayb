@@ -1,5 +1,6 @@
 pub mod api_endpoints;
 pub mod config;
+pub mod database_name_validation;
 pub mod permissions;
 pub mod server_runner;
 pub mod snapshots;
