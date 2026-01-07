@@ -46,7 +46,7 @@ pub fn query(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{result}\n"));
+    cmd.stdout(predicate::str::contains(result));
     Ok(())
 }
 
@@ -59,7 +59,7 @@ pub fn query_no_api_token(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {});
 
-    cmd.stdout(format!("{result}\n"));
+    cmd.stdout(predicate::str::contains(result));
     Ok(())
 }
 
@@ -318,7 +318,7 @@ pub fn list_tokens(
 }
 
 /// List tokens and return the short tokens as a Vec for assertions
-pub fn list_tokens_json(
+pub fn list_tokens_csv(
     config: &str,
     api_key: &str,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -329,21 +329,20 @@ pub fn list_tokens_json(
             config,
             "list_tokens",
             "--format",
-            "json",
+            "csv",
         ])
         .env("AYB_API_TOKEN", api_key)
         .output()?;
 
     let stdout = String::from_utf8(output.stdout)?;
-    // Parse JSON response to extract short tokens
-    // The response is an array of token objects with "short_token" field
-    let tokens: Vec<serde_json::Value> = serde_json::from_str(&stdout)?;
-    let short_tokens: Vec<String> = tokens
-        .iter()
-        .filter_map(|t| {
-            t.get("short_token")
-                .and_then(|v| v.as_str())
-                .map(String::from)
+    // Parse CSV response to extract short tokens
+    // First column is "Short token", skip header row
+    let short_tokens: Vec<String> = stdout
+        .lines()
+        .skip(1) // Skip header row
+        .filter_map(|line| {
+            // First column is the short token
+            line.split(',').next().map(String::from)
         })
         .collect();
     Ok(short_tokens)

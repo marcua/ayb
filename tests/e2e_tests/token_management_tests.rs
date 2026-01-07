@@ -1,4 +1,4 @@
-use crate::utils::ayb::{list_tokens, list_tokens_json, query, revoke_token};
+use crate::utils::ayb::{list_tokens, list_tokens_csv, query, revoke_token};
 use std::collections::HashMap;
 
 /// Extract the short token from a full API key.
@@ -37,7 +37,7 @@ pub fn test_token_management(
 
     // Test 1: List tokens - verify we see all expected tokens
     // The list should contain the short tokens (without ayb_ prefix)
-    let token_list = list_tokens_json(config_path, first_key)?;
+    let token_list = list_tokens_csv(config_path, first_key)?;
     assert!(
         token_list.contains(&first_short_token),
         "Token list should contain first token: {}",
@@ -73,7 +73,7 @@ pub fn test_token_management(
         "SELECT 1",
         super::FIRST_ENTITY_DB,
         "table",
-        "1", // Should succeed and return result
+        "Rows: 1", // Should succeed and return one row
     )?;
 
     // Test 3: Revoke the second token
@@ -95,7 +95,7 @@ pub fn test_token_management(
     )?;
 
     // Test 5: List tokens again - second token should be gone
-    let token_list_after = list_tokens_json(config_path, first_key)?;
+    let token_list_after = list_tokens_csv(config_path, first_key)?;
 
     // First token should still be present
     assert!(
