@@ -30,7 +30,7 @@ regex = { version = "1.12.2"}
 reqwest = { version = "0.12.26", features = ["json"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 rustyline = { version = "17.0.2" }
-rust-s3 = { version = "0.37.0" }
+rust-s3 = { version = "0.37.1" }
 scraper = { version = "0.24.0" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.143", features = ["raw_value"] }
