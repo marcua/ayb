@@ -3,7 +3,7 @@ use crate::ayb_db::models::{DBType, InstantiatedEntity, PublicSharingLevel};
 use crate::error::AybError;
 use crate::http::structs::{DatabaseDetails, EntityDatabasePath};
 use crate::server::permissions::{
-    can_discover_database, can_manage_database, highest_query_access_level,
+    can_discover_database, can_manage_database, highest_query_access_level_with_token,
 };
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web, HttpResponse, Result};
@@ -25,7 +25,8 @@ pub async fn database_details(
     if can_discover_database(&authenticated_entity, &database, &ayb_db).await? {
         let can_manage = can_manage_database(&authenticated_entity, &database, &ayb_db).await?;
         let access_level =
-            highest_query_access_level(&authenticated_entity, &database, &ayb_db).await?;
+            highest_query_access_level_with_token(&authenticated_entity, &database, None, &ayb_db)
+                .await?;
 
         let details = DatabaseDetails {
             entity_slug: entity_slug.to_string(),

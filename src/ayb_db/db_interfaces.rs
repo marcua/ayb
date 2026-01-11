@@ -605,6 +605,7 @@ LEFT JOIN database ON api_token.database_id = database.id
 LEFT JOIN entity ON database.entity_id = entity.id
 WHERE api_token.entity_id = $1
   AND api_token.revoked_at IS NULL
+  AND (api_token.expires_at IS NULL OR api_token.expires_at > CURRENT_TIMESTAMP)
 ORDER BY api_token.created_at DESC NULLS LAST
                     "#,
                 )

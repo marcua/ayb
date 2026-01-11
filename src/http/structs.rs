@@ -244,7 +244,9 @@ impl TabularFormatter for Vec<DatabasePermission> {
     }
 }
 
-/// Token information returned by the list tokens endpoint
+/// API response struct for token information.
+/// Formats internal data for clients: combines entity/database into a path,
+/// converts timestamps to strings, and translates permission levels to strings.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct APITokenInfo {
     pub short_token: String,

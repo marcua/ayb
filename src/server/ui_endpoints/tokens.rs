@@ -3,7 +3,6 @@ use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client}
 use crate::server::ui_endpoints::templates::{error_snippet, ok_response};
 use actix_web::{delete, get, web, HttpRequest, HttpResponse, Result};
 
-// Settings endpoints use /settings/ prefix with reserved entity name
 #[get("/settings/tokens")]
 pub async fn entity_tokens(
     req: HttpRequest,

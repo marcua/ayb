@@ -260,12 +260,14 @@ pub struct InstantiatedAuthenticationMethod {
     pub email_address: String,
 }
 
+/// Full API token row from database, including sensitive fields (hash).
+/// Used for token creation and validation where the hash is needed.
 #[derive(Debug, FromRow, Serialize, Deserialize, Clone)]
 pub struct APIToken {
     pub entity_id: i32,
     pub short_token: String,
     pub hash: String,
-    // Scoped token fields (nullable for backward compatibility)
+    // Scoped token fields
     pub database_id: Option<i32>,
     pub query_permission_level: Option<i16>,
     pub app_name: Option<String>,
@@ -274,7 +276,8 @@ pub struct APIToken {
     pub revoked_at: Option<chrono::NaiveDateTime>,
 }
 
-/// A row returned when listing tokens with their associated database slug
+/// Query result for listing tokens with JOINed database/entity slugs.
+/// Used for list_api_tokens where we need human-readable names but not the hash.
 #[derive(Debug, FromRow, Serialize, Deserialize)]
 pub struct APITokenWithDatabase {
     pub short_token: String,

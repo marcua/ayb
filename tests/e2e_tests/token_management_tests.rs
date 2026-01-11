@@ -1,5 +1,5 @@
 use crate::utils::ayb::{list_tokens, list_tokens_csv, query, revoke_token};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Extract the short token from a full API key.
 /// Token format is: ayb_<short_token>_<secret>
@@ -29,41 +29,22 @@ pub fn test_token_management(
 
     let first_key = &first_entity_api_keys[0];
     let second_key = &first_entity_api_keys[1];
-    let third_key = first_entity_api_keys.get(2);
 
     // Extract short tokens (without ayb_ prefix)
     let first_short_token = extract_short_token(first_key);
     let second_short_token = extract_short_token(second_key);
 
-    // Test 1: List tokens - verify we see all expected tokens
+    // Test 1: List tokens - verify we see exactly all expected tokens
     // The list should contain the short tokens (without ayb_ prefix)
     let token_list = list_tokens_csv(config_path, first_key)?;
-    assert!(
-        token_list.contains(&first_short_token),
-        "Token list should contain first token: {}",
-        first_short_token
-    );
-    assert!(
-        token_list.contains(&second_short_token),
-        "Token list should contain second token: {}",
-        second_short_token
-    );
-    if let Some(third) = third_key {
-        let third_short_token = extract_short_token(third);
-        assert!(
-            token_list.contains(&third_short_token),
-            "Token list should contain third token: {}",
-            third_short_token
-        );
-    }
-
-    // Verify row count matches expected tokens
-    let expected_count = first_entity_api_keys.len();
-    let actual_count = token_list.len();
+    let actual_tokens: HashSet<String> = token_list.into_iter().collect();
+    let expected_tokens: HashSet<String> = first_entity_api_keys
+        .iter()
+        .map(|k| extract_short_token(k))
+        .collect();
     assert_eq!(
-        actual_count, expected_count,
-        "Token list should have {} tokens, found {}",
-        expected_count, actual_count
+        actual_tokens, expected_tokens,
+        "Token list should contain exactly the expected tokens"
     );
 
     // Test 2: Verify second token works BEFORE revocation
@@ -96,27 +77,18 @@ pub fn test_token_management(
 
     // Test 5: List tokens again - second token should be gone
     let token_list_after = list_tokens_csv(config_path, first_key)?;
+    let actual_tokens_after: HashSet<String> = token_list_after.into_iter().collect();
 
-    // First token should still be present
-    assert!(
-        token_list_after.contains(&first_short_token),
-        "Token list should still contain first token after revocation"
-    );
+    // Build expected set: all tokens except the revoked second token
+    let expected_tokens_after: HashSet<String> = first_entity_api_keys
+        .iter()
+        .map(|k| extract_short_token(k))
+        .filter(|t| t != &second_short_token)
+        .collect();
 
-    // Second token should be gone
-    assert!(
-        !token_list_after.contains(&second_short_token),
-        "Token list should NOT contain revoked second token"
-    );
-
-    // Verify correct count after revocation
-    let expected_after = expected_count - 1;
     assert_eq!(
-        token_list_after.len(),
-        expected_after,
-        "Token list should have {} tokens after revocation, found {}",
-        expected_after,
-        token_list_after.len()
+        actual_tokens_after, expected_tokens_after,
+        "Token list after revocation should contain exactly the non-revoked tokens"
     );
 
     // Also verify with table format for visual confirmation
