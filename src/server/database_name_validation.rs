@@ -1,8 +1,8 @@
 use crate::error::AybError;
 
 /// Reserved database names that cannot be used to prevent route conflicts.
-/// The `-` is reserved because it's used as a system route prefix (e.g., /{entity}/-/tokens).
-const RESERVED_DATABASE_NAMES: &[&str] = &["-"];
+/// Currently empty - entity names like "settings" are reserved via username_validation.rs.
+const RESERVED_DATABASE_NAMES: &[&str] = &[];
 
 pub fn is_database_name_reserved(name: &str) -> bool {
     RESERVED_DATABASE_NAMES.contains(&name.to_lowercase().as_str())

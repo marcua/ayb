@@ -22,7 +22,7 @@ pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(
     // Step 2: Verify we're on the tokens page
     let page_url = page.url()?;
     assert!(
-        page_url.contains("/-/tokens"),
+        page_url.contains("/settings/tokens"),
         "Should be on the tokens page, got: {}",
         page_url
     );

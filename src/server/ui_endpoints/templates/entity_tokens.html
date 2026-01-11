@@ -37,7 +37,7 @@
                 <td>
                     <button
                         class="uk-btn uk-btn-danger uk-btn-sm"
-                        hx-delete="/{{ entity }}/-/tokens/{{ token.short_token }}"
+                        hx-delete="/settings/tokens/{{ token.short_token }}"
                         hx-target="#token-row-{{ token.short_token }}"
                         hx-swap="outerHTML"
                         hx-confirm="Are you sure you want to revoke this token?">
