@@ -1,4 +1,3 @@
-use assert_cmd::prelude::*;
 use ayb::error::AybError;
 use ayb::server::config::read_config;
 use ayb::server::snapshots::storage::SnapshotStorage;
@@ -13,7 +12,7 @@ use std::sync::Once;
 // })
 macro_rules! ayb_cmd {
     ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
-        Command::cargo_bin("ayb")?
+        Command::new(env!("CARGO_BIN_EXE_ayb"))
                 .args([$($value,)*])
                 $(.env($env_left, $env_right))*
     }

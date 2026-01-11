@@ -11,7 +11,7 @@ use std::process::Command;
 #[macro_export]
 macro_rules! ayb_assert_cmd {
     ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
-        Command::cargo_bin("ayb")?
+        std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
                 .args([$($value,)*])
                 $(.env($env_left, $env_right))*
                 .assert()
@@ -207,7 +207,7 @@ pub fn update_profile(
     links: Option<Vec<&str>>,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("ayb")?;
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_ayb"));
     cmd.args(["client", "--config", config, "update_profile", entity])
         .env("AYB_API_TOKEN", api_key);
 
@@ -242,7 +242,7 @@ pub fn update_database(
     public_sharing_level: Option<&str>,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("ayb")?;
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_ayb"));
     cmd.args(["client", "--config", config, "update_database", database])
         .env("AYB_API_TOKEN", api_key);
 
