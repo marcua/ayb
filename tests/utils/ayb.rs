@@ -1,3 +1,4 @@
+use assert_cmd::assert::OutputAssertExt;
 use assert_cmd::prelude::*;
 use ayb::server::snapshots::models::ListSnapshotResult;
 use chrono::DateTime;
@@ -11,11 +12,14 @@ use std::process::Command;
 #[macro_export]
 macro_rules! ayb_assert_cmd {
     ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
-        std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
+        assert_cmd::assert::OutputAssertExt::assert(
+            std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
                 .args([$($value,)*])
                 $(.env($env_left, $env_right))*
-                .assert()
-                .success()
+                .output()
+                .expect("failed to execute ayb command")
+        )
+        .success()
     }
 }
 
@@ -321,7 +325,7 @@ pub fn list_tokens_csv(
     config: &str,
     api_key: &str,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let output = Command::cargo_bin("ayb")?
+    let output = Command::new(env!("CARGO_BIN_EXE_ayb"))
         .args([
             "client",
             "--config",

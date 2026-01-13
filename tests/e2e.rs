@@ -17,7 +17,6 @@ use crate::utils::email::{clear_email_data, extract_token_from_emails, get_email
 use crate::utils::testing::{
     ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup,
 };
-use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
 use std::thread;
@@ -37,7 +36,7 @@ fn create_additional_token_via_cli(
     let email_count_before = emails_before.len();
 
     // Trigger log_in which sends an email with a confirmation token
-    let output = Command::cargo_bin("ayb")?
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
         .args(["client", "--url", server_url, "log_in", username])
         .output()?;
 
@@ -60,7 +59,7 @@ fn create_additional_token_via_cli(
         .expect("Should extract token from login email");
 
     // Confirm the token to create a new API key
-    let output = Command::cargo_bin("ayb")?
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
         .args(["client", "--url", server_url, "confirm", &login_token])
         .output()?;
 
