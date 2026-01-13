@@ -8,7 +8,7 @@ use ayb::error::AybError;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
-use std::process::{Command, Output};
+use std::process::Output;
 
 fn extract_api_key(output: &Output) -> Result<String, AybError> {
     let output_str = std::str::from_utf8(&output.stdout)?;

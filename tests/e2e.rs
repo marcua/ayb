@@ -20,7 +20,6 @@ use crate::utils::testing::{
 use assert_cmd::prelude::*;
 use ayb::client::config::ClientConfig;
 use regex::Regex;
-use std::process::Command;
 use std::thread;
 use std::time;
 
