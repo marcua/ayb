@@ -635,5 +635,6 @@ yourname
 yoursite
 yourusername
 # ayb-specific reserved names
+__ayb__
 confirm
 v1

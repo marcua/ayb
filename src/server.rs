@@ -1,4 +1,5 @@
 pub mod api_endpoints;
+pub mod cli;
 pub mod config;
 pub mod permissions;
 pub mod server_runner;

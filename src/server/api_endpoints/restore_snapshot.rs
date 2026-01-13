@@ -21,6 +21,7 @@ async fn restore_snapshot(
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database;
+
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
 

@@ -181,6 +181,58 @@ pub fn restore_snapshot(
     Ok(())
 }
 
+pub fn server_list_snapshots(
+    server_config: &str,
+    database: &str,
+    format: &str,
+) -> Result<Vec<ListSnapshotResult>, Box<dyn std::error::Error>> {
+    let output = Command::cargo_bin("ayb")?
+        .args([
+            "server",
+            "--config",
+            server_config,
+            "list_snapshots",
+            database,
+            "--format",
+            format,
+        ])
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+
+    // Parse CSV output to extract snapshot information
+    let mut snapshots = Vec::new();
+    for line in stdout.lines().skip(1) {
+        // Skip header line
+        if line.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = line.split(',').collect();
+        if parts.len() >= 2 {
+            snapshots.push(ListSnapshotResult {
+                snapshot_id: parts[0].to_string(),
+                last_modified_at: DateTime::parse_from_rfc3339(parts[1]).unwrap().to_utc(),
+            });
+        }
+    }
+
+    Ok(snapshots)
+}
+
+pub fn server_restore_snapshot(
+    server_config: &str,
+    database: &str,
+    snapshot_id: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("server", "--config", server_config, "restore_snapshot", database, snapshot_id; {});
+
+    cmd.stdout(predicate::str::contains(format!(
+        "Successfully restored {}",
+        database
+    )));
+    Ok(())
+}
+
 pub fn profile(
     config: &str,
     api_key: &str,
