@@ -3,7 +3,6 @@ use ayb::server::snapshots::models::ListSnapshotResult;
 use chrono::DateTime;
 use predicates::prelude::*;
 use regex::Regex;
-use serde_json;
 use std::process::Command;
 
 // ayb_assert_cmd!("value1", value2; {

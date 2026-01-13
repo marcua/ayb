@@ -65,11 +65,9 @@ pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(
     BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_button", &[]).await?;
 
     // Click the last revoke button (safest - least likely to be the active session token)
-    // Set up dialog handler to accept the confirmation
-    page.once_dialog(|dialog| async move {
-        let _ = dialog.accept(None).await;
-    })
-    .await;
+    // Override window.confirm to auto-accept the hx-confirm dialog
+    page.evaluate::<(), ()>("window.confirm = () => true", ())
+        .await?;
 
     let last_button = revoke_buttons
         .last()
