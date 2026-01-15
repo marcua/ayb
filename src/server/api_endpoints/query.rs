@@ -7,7 +7,7 @@ use crate::hosted_db::paths::current_database_path;
 use crate::hosted_db::{run_query, QueryResult};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
-use crate::server::permissions::highest_query_access_level_with_token;
+use crate::server::permissions::highest_query_access_level;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{post, web};
 
@@ -29,8 +29,7 @@ async fn query(
     let token = token_ref.as_ref();
 
     let access_level =
-        highest_query_access_level_with_token(&authenticated_entity, &database, token, &ayb_db)
-            .await?;
+        highest_query_access_level(&authenticated_entity, &database, token, &ayb_db).await?;
     match access_level {
         Some(access_level) => {
             let db_type = DBType::try_from(database.db_type)?;

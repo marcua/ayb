@@ -85,7 +85,6 @@ pub trait AybDb: DynClone + Send + Sync {
         entity: &InstantiatedEntity,
         short_token: &str,
     ) -> Result<(), AybError>;
-    async fn get_database_by_id(&self, database_id: i32) -> Result<InstantiatedDatabase, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -641,36 +640,6 @@ WHERE short_token = $1 AND entity_id = $2 AND revoked_at IS NULL
                 }
 
                 Ok(())
-            }
-
-            async fn get_database_by_id(
-                &self,
-                database_id: i32,
-            ) -> Result<InstantiatedDatabase, AybError> {
-                let db: InstantiatedDatabase = sqlx::query_as(
-                    r#"
-SELECT
-    id,
-    entity_id,
-    slug,
-    db_type,
-    public_sharing_level
-FROM database
-WHERE id = $1
-                    "#,
-                )
-                .bind(database_id)
-                .fetch_one(&self.pool)
-                .await
-                .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
-                        id: database_id.to_string(),
-                        record_type: "database".into(),
-                    }),
-                    _ => Err(AybError::from(err)),
-                })?;
-
-                Ok(db)
             }
         }
     };

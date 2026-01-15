@@ -104,7 +104,7 @@ fn apply_token_permission_cap(
     })
 }
 
-pub async fn highest_query_access_level_with_token(
+pub async fn highest_query_access_level(
     authenticated_entity: &InstantiatedEntity,
     database: &InstantiatedDatabase,
     token: Option<&APIToken>,
