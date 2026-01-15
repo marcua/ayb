@@ -2,6 +2,11 @@ use crate::utils::browser::BrowserHelpers;
 use playwright::api::Page;
 use std::error::Error;
 
+// TODO(marcua): Once the OAuth flow is implemented, add tests for scoped tokens
+// that reduce the access level a user would otherwise have (e.g., a read-only
+// token for a user with read-write access). This will exercise the
+// highest_query_access_level permission capping logic.
+
 pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(), Box<dyn Error>> {
     // Step 1: Navigate to the tokens page via the dropdown menu
     // Click on the username dropdown to open the menu

@@ -1,6 +1,11 @@
 use crate::utils::ayb::{list_tokens, list_tokens_csv, query, revoke_token};
 use std::collections::{HashMap, HashSet};
 
+// TODO(marcua): Once the OAuth flow is implemented, add tests for scoped tokens
+// that reduce the access level a user would otherwise have (e.g., a read-only
+// token for a user with read-write access). This will exercise the
+// highest_query_access_level permission capping logic.
+
 /// Extract the short token from a full API key.
 /// Token format is: ayb_<short_token>_<secret>
 /// Returns just the <short_token> part (no prefix).

@@ -928,7 +928,7 @@ The following has been implemented:
   - Pass token info through request pipeline
 
 - [x] **Scope Enforcement** (Phase 1.3): Modified permission checks in `permissions.rs`:
-  - `highest_query_access_level_with_token()` enforces database scoping and permission caps
+  - `highest_query_access_level()` enforces database scoping and permission caps
   - Token permission is intersected with user permission (most restrictive wins)
 
 - [x] **Token Management API** (Phase 3.1):
@@ -956,3 +956,6 @@ The OAuth authorization flow has not been implemented yet:
 - [ ] `/v1/oauth/token` exchange endpoint
 - [ ] PKCE validation
 - [ ] Client-side library
+- [ ] Add tests for scoped tokens that reduce the access level a user would otherwise
+      have (e.g., a read-only token for a user with read-write access). This will
+      exercise the `highest_query_access_level` permission capping logic.
