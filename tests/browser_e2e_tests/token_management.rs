@@ -69,31 +69,26 @@ pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_button", &[]).await?;
 
-    // Click the last revoke button (safest - least likely to be the active session token)
-    // Override window.confirm to auto-accept the hx-confirm dialog
-    page.evaluate::<(), ()>("window.confirm = () => true", ())
-        .await?;
-
+    // Click the last revoke button
     let last_button = revoke_buttons
         .last()
         .expect("Should have at least one button");
     last_button.click_builder().click().await?;
 
-    // Wait for htmx to process the deletion
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // Wait for htmx to process the revocation
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
-    // Take screenshot after revocation
+    // Take screenshot after revocation - row should show "revoked successfully" message
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_revoke", &[]).await?;
 
-    // Verify token count decreased (htmx should have removed the row)
-    let rows_after_revoke = page.query_selector_all("table tbody tr").await?;
-    assert_eq!(
-        rows_after_revoke.len(),
-        initial_count - 1,
-        "Should have one less token after revocation"
+    // Verify the revocation message appears
+    let page_text = page.inner_text("body", None).await?;
+    assert!(
+        page_text.contains("revoked successfully"),
+        "Should show revocation success message"
     );
 
-    // Reload the page and verify the revoked token is still gone
+    // Reload the page and verify the revoked token is gone
     page.reload_builder().reload().await?;
     page.wait_for_selector_builder("table")
         .timeout(5000.0)
@@ -104,7 +99,7 @@ pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(
     assert_eq!(
         rows_after_reload.len(),
         initial_count - 1,
-        "Token should still be gone after page reload"
+        "Token should be gone after page reload"
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_reload", &[]).await?;
 

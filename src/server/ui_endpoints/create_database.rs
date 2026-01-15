@@ -22,7 +22,6 @@ pub async fn create_database(
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &form.database_slug.to_lowercase();
-
     let public_sharing_level = PublicSharingLevel::from_str(&form.public_sharing_level)?;
 
     let client = init_ayb_client(&ayb_config, &req);
