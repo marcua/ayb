@@ -1,4 +1,6 @@
+use crate::ayb_assert_cmd;
 use crate::utils::ayb::{list_tokens, list_tokens_csv, query, revoke_token};
+use predicates::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 // TODO(marcua): Once the OAuth flow is implemented, add tests for scoped tokens
@@ -96,8 +98,13 @@ pub fn test_token_management(
         "Token list after revocation should contain exactly the non-revoked tokens"
     );
 
-    // Also verify with table format for visual confirmation
+    // Also verify with table format that first token is present and second is absent
     list_tokens(config_path, first_key, "table", &first_short_token)?;
+    // Verify revoked token doesn't appear in table output
+    let cmd = ayb_assert_cmd!("client", "--config", config_path, "list_tokens", "--format", "table"; {
+        "AYB_API_TOKEN" => first_key,
+    });
+    cmd.stdout(predicate::str::contains(&second_short_token).not());
 
     println!("Token management tests passed successfully");
     Ok(())

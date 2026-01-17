@@ -13,7 +13,7 @@ use crate::e2e_tests::{
     test_registration, test_snapshots, test_token_management,
 };
 use crate::utils::browser::BrowserHelpers;
-use crate::utils::email::{clear_email_data, extract_token_from_emails, get_emails_for_recipient};
+use crate::utils::email::clear_email_data;
 use crate::utils::testing::{
     ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup,
 };
@@ -21,57 +21,6 @@ use ayb::client::config::ClientConfig;
 use regex::Regex;
 use std::thread;
 use std::time;
-
-/// Create an additional API token for a user via CLI log_in + confirm flow.
-/// This is useful for browser tests where we need multiple tokens to test revocation.
-fn create_additional_token_via_cli(
-    test_type: &str,
-    server_url: &str,
-    username: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let email = format!("{}@example.com", username);
-
-    // Get current email count before log_in
-    let emails_before = get_emails_for_recipient(test_type, &email)?;
-    let email_count_before = emails_before.len();
-
-    // Trigger log_in which sends an email with a confirmation token
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
-        .args(["client", "--url", server_url, "log_in", username])
-        .output()?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("Check your email to finish logging in"),
-        "Expected log_in success message, got: {}",
-        stdout
-    );
-
-    // Get the new email with the confirmation token
-    let emails_after = get_emails_for_recipient(test_type, &email)?;
-    assert!(
-        emails_after.len() > email_count_before,
-        "Expected new email after log_in"
-    );
-
-    // Extract token from the latest email
-    let login_token = extract_token_from_emails(&[emails_after.last().unwrap().clone()])
-        .expect("Should extract token from login email");
-
-    // Confirm the token to create a new API key
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
-        .args(["client", "--url", server_url, "confirm", &login_token])
-        .output()?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("ayb_"),
-        "Expected API key in confirm output, got: {}",
-        stdout
-    );
-
-    Ok(())
-}
 
 #[tokio::test]
 async fn client_server_integration_postgres() -> Result<(), Box<dyn std::error::Error>> {
@@ -193,11 +142,8 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     // Test snapshots functionality
     test_snapshots_flow(&page, &username, &base_url).await?;
 
-    // Create an additional token via CLI so we have 2 tokens for revocation testing
-    create_additional_token_via_cli("browser_sqlite", &base_url, &username)?;
-
     // Test token management UI
-    test_token_management_flow(&page, &username).await?;
+    test_token_management_flow(&page, &username, &base_url, "browser_sqlite").await?;
 
     Ok(())
 }

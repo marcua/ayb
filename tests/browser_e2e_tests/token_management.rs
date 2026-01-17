@@ -1,4 +1,5 @@
 use crate::utils::browser::BrowserHelpers;
+use crate::utils::email::{extract_token_from_emails, get_emails_for_recipient};
 use playwright::api::Page;
 use std::error::Error;
 
@@ -7,7 +8,27 @@ use std::error::Error;
 // token for a user with read-write access). This will exercise the
 // highest_query_access_level permission capping logic.
 
-pub async fn test_token_management_flow(page: &Page, username: &str) -> Result<(), Box<dyn Error>> {
+pub async fn test_token_management_flow(
+    page: &Page,
+    username: &str,
+    base_url: &str,
+    test_type: &str,
+) -> Result<(), Box<dyn Error>> {
+    // Create an additional token via CLI so we have 2 tokens for revocation testing
+    let email = format!("{}@example.com", username);
+    let emails_before = get_emails_for_recipient(test_type, &email)?;
+    std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
+        .args(["client", "--url", base_url, "log_in", username])
+        .output()?;
+    let emails_after = get_emails_for_recipient(test_type, &email)?;
+    if emails_after.len() > emails_before.len() {
+        if let Some(token) = extract_token_from_emails(&[emails_after.last().unwrap().clone()]) {
+            std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
+                .args(["client", "--url", base_url, "confirm", &token])
+                .output()?;
+        }
+    }
+
     // Step 1: Navigate to the tokens page via the dropdown menu
     // Click on the username dropdown to open the menu
     page.click_builder(&format!("a:has-text('{}')", username))
