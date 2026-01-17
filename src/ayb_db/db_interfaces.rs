@@ -1,7 +1,7 @@
 use crate::ayb_db::models::{
-    APIToken, AuthenticationMethod, Database, DatabasePermission, Entity, EntityDatabasePermission,
-    EntityDatabaseSharingLevel, InstantiatedAuthenticationMethod, InstantiatedDatabase,
-    InstantiatedEntity, PartialDatabase, PartialEntity,
+    APIToken, APITokenWithDatabase, AuthenticationMethod, Database, DatabasePermission, Entity,
+    EntityDatabasePermission, EntityDatabaseSharingLevel, InstantiatedAuthenticationMethod,
+    InstantiatedDatabase, InstantiatedEntity, PartialDatabase, PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -76,6 +76,15 @@ pub trait AybDb: DynClone + Send + Sync {
         &self,
         database: &InstantiatedDatabase,
     ) -> Result<Vec<DatabasePermission>, AybError>;
+    async fn list_api_tokens(
+        &self,
+        entity: &InstantiatedEntity,
+    ) -> Result<Vec<APITokenWithDatabase>, AybError>;
+    async fn revoke_api_token(
+        &self,
+        entity: &InstantiatedEntity,
+        short_token: &str,
+    ) -> Result<(), AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -98,15 +107,20 @@ macro_rules! implement_ayb_db {
             async fn create_api_token(&self, api_token: &APIToken) -> Result<APIToken, AybError> {
                 let returned_token: APIToken = sqlx::query_as(
                     r#"
-                INSERT INTO api_token ( entity_id, short_token, hash, status )
-                VALUES ( $1, $2, $3, $4 )
-RETURNING entity_id, short_token, hash, status
+                INSERT INTO api_token ( entity_id, short_token, hash, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at )
+                VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 )
+RETURNING entity_id, short_token, hash, database_id, query_permission_level, app_name, created_at, expires_at, revoked_at
                 "#,
                 )
                     .bind(api_token.entity_id)
                     .bind(&api_token.short_token)
                     .bind(&api_token.hash)
-                    .bind(api_token.status)
+                    .bind(api_token.database_id)
+                    .bind(api_token.query_permission_level)
+                    .bind(&api_token.app_name)
+                    .bind(api_token.created_at)
+                    .bind(api_token.expires_at)
+                    .bind(api_token.revoked_at)
                     .fetch_one(&self.pool)
                     .await?;
 
@@ -194,7 +208,12 @@ SELECT
     short_token,
     entity_id,
     hash,
-    status
+    database_id,
+    query_permission_level,
+    app_name,
+    created_at,
+    expires_at,
+    revoked_at
 FROM api_token
 WHERE short_token = $1
         "#,
@@ -562,6 +581,65 @@ WHERE entity_database_permission.database_id = $1
                     .collect::<Result<Vec<_>, AybError>>()?;
 
                 Ok(sharing_entries)
+            }
+
+            async fn list_api_tokens(
+                &self,
+                entity: &InstantiatedEntity,
+            ) -> Result<Vec<APITokenWithDatabase>, AybError> {
+                let tokens: Vec<APITokenWithDatabase> = sqlx::query_as(
+                    r#"
+SELECT
+    api_token.short_token,
+    api_token.database_id,
+    database.slug as database_slug,
+    entity.slug as entity_slug,
+    api_token.query_permission_level,
+    api_token.app_name,
+    api_token.created_at,
+    api_token.expires_at,
+    api_token.revoked_at
+FROM api_token
+LEFT JOIN database ON api_token.database_id = database.id
+LEFT JOIN entity ON database.entity_id = entity.id
+WHERE api_token.entity_id = $1
+  AND api_token.revoked_at IS NULL
+  AND (api_token.expires_at IS NULL OR api_token.expires_at > CURRENT_TIMESTAMP)
+ORDER BY api_token.created_at DESC NULLS LAST
+                    "#,
+                )
+                .bind(entity.id)
+                .fetch_all(&self.pool)
+                .await?;
+
+                Ok(tokens)
+            }
+
+            async fn revoke_api_token(
+                &self,
+                entity: &InstantiatedEntity,
+                short_token: &str,
+            ) -> Result<(), AybError> {
+                let result = sqlx::query(
+                    r#"
+UPDATE api_token
+SET revoked_at = CURRENT_TIMESTAMP
+WHERE short_token = $1 AND entity_id = $2 AND revoked_at IS NULL
+                    "#,
+                )
+                .bind(short_token)
+                .bind(entity.id)
+                .execute(&self.pool)
+                .await?;
+
+                if result.rows_affected() == 0 {
+                    return Err(AybError::RecordNotFound {
+                        id: short_token.into(),
+                        record_type: "api_token".into(),
+                    });
+                }
+
+                Ok(())
             }
         }
     };

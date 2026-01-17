@@ -3,7 +3,7 @@ use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{
     APIToken, Database, DatabaseDetails, DatabasePermissions, EmptyResponse, EntityQueryResponse,
-    SnapshotList,
+    SnapshotList, TokenList,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
@@ -355,6 +355,34 @@ impl AybClient {
             .await?;
 
         self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn list_tokens(&self) -> Result<TokenList, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url("tokens".to_owned()))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::OK)
+            .await
+    }
+
+    pub async fn revoke_token(&self, short_token: &str) -> Result<(), AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .delete(self.make_url(format!("tokens/{short_token}")))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_empty_response(response, reqwest::StatusCode::OK)
             .await
     }
 }

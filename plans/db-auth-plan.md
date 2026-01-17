@@ -910,3 +910,52 @@ Items explicitly deferred from this implementation:
 2. **Expired token cleanup**: Background job to delete tokens past `expires_at`
 3. **Refresh tokens**: Allow apps to get new tokens without re-authorization
 4. **Organization support**: Allow org-owned databases in the authorization flow
+
+---
+
+## Implementation Status
+
+### Completed: Scoped Tokens (Phase 1 & 3)
+
+The following has been implemented:
+
+- [x] **Database Migration** (Phase 1.1): Added scope columns to `api_token` table
+  - `database_id`, `query_permission_level`, `app_name`, `created_at`, `expires_at`, `revoked_at`
+
+- [x] **Token Validation** (Phase 1.2): Updated `retrieve_and_validate_api_token` to:
+  - Check token status (revoked tokens are rejected)
+  - Check token expiration (expired tokens are rejected)
+  - Pass token info through request pipeline
+
+- [x] **Scope Enforcement** (Phase 1.3): Modified permission checks in `permissions.rs`:
+  - `highest_query_access_level()` enforces database scoping and permission caps
+  - Token permission is intersected with user permission (most restrictive wins)
+
+- [x] **Token Management API** (Phase 3.1):
+  - `GET /v1/tokens` - List all active tokens for authenticated entity
+  - `DELETE /v1/tokens/{short_token}` - Revoke a token
+
+- [x] **CLI Commands** (Phase 3.2):
+  - `ayb client list_tokens` - List all tokens
+  - `ayb client revoke_token <short_token>` - Revoke a token
+
+- [x] **Token Management UI** (Phase 3.3):
+  - `GET /{entity}/tokens` - Token management page
+  - Shows tokens with scope, permissions, app name, created/expires dates
+  - Revoke button for each token
+
+- [x] **Tests**: Added token tests to e2e test suite
+
+### Pending: OAuth Flow (Phase 2)
+
+The OAuth authorization flow has not been implemented yet:
+
+- [ ] `oauth_authorization_request` table migration
+- [ ] `/oauth/authorize` redirect endpoint
+- [ ] Authorization consent UI
+- [ ] `/v1/oauth/token` exchange endpoint
+- [ ] PKCE validation
+- [ ] Client-side library
+- [ ] Add tests for scoped tokens that reduce the access level a user would otherwise
+      have (e.g., a read-only token for a user with read-write access). This will
+      exercise the `highest_query_access_level` permission capping logic.

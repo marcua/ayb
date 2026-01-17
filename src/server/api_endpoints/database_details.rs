@@ -25,7 +25,7 @@ pub async fn database_details(
     if can_discover_database(&authenticated_entity, &database, &ayb_db).await? {
         let can_manage = can_manage_database(&authenticated_entity, &database, &ayb_db).await?;
         let access_level =
-            highest_query_access_level(&authenticated_entity, &database, &ayb_db).await?;
+            highest_query_access_level(&authenticated_entity, &database, None, &ayb_db).await?;
 
         let details = DatabaseDetails {
             entity_slug: entity_slug.to_string(),
