@@ -5,6 +5,7 @@ mod database;
 mod entity_details;
 mod log_in;
 mod log_out;
+mod oauth;
 mod query;
 mod register;
 mod sharing;
@@ -20,6 +21,10 @@ pub use entity_details::{
 };
 pub use log_in::{log_in as log_in_endpoint, log_in_submit as log_in_submit_endpoint};
 pub use log_out::log_out as log_out_endpoint;
+pub use oauth::{
+    oauth_authorize as oauth_authorize_endpoint,
+    oauth_authorize_submit as oauth_authorize_submit_endpoint,
+};
 pub use query::query as query_endpoint;
 pub use register::{register as register_endpoint, register_submit as register_submit_endpoint};
 pub use sharing::{

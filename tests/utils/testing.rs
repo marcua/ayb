@@ -50,6 +50,16 @@ pub fn generate_test_config(test_type: &str) -> Result<String, Box<dyn std::erro
     };
     let path_prefix = test_type;
 
+    // Only include isolation config if nsjail binary exists
+    let isolation_section = if std::path::Path::new("tests/nsjail").exists() {
+        r#"
+[isolation]
+nsjail_path = "tests/nsjail"
+"#
+    } else {
+        ""
+    };
+
     let config_content = format!(
         r#"host = "0.0.0.0"
 port = {port}
@@ -68,10 +78,7 @@ token_expiration_seconds = 3600
 
 [cors]
 origin = "*"
-
-[isolation]
-nsjail_path = "tests/nsjail"
-
+{isolation_section}
 [snapshots]
 sqlite_method = "Vacuum"
 access_key_id = "minioadmin"
@@ -88,7 +95,8 @@ max_snapshots = 6
         port = port,
         database_url = database_url,
         test_type = test_type,
-        path_prefix = path_prefix
+        path_prefix = path_prefix,
+        isolation_section = isolation_section
     );
 
     // Write the configuration to file

@@ -323,3 +323,57 @@ impl TabularFormatter for Vec<APITokenInfo> {
 pub struct ShortTokenPath {
     pub short_token: String,
 }
+
+// OAuth-related structs
+
+/// Query parameters for OAuth authorization request (GET /oauth/authorize)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OAuthAuthorizeRequest {
+    pub response_type: String,         // Must be "code"
+    pub redirect_uri: String,          // Where to redirect after authorization
+    pub scope: String,                 // "read-only" or "read-write"
+    pub state: Option<String>,         // Opaque value for CSRF protection
+    pub code_challenge: String,        // PKCE: BASE64URL(SHA256(code_verifier))
+    pub code_challenge_method: String, // Must be "S256"
+    pub app_name: String,              // Display name for the app
+}
+
+/// Form data for OAuth authorization submit (POST /oauth/authorize)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OAuthAuthorizeSubmit {
+    pub database_id: i32,         // Selected database ID
+    pub permission_level: String, // "read-only" or "read-write"
+    pub action: String,           // "authorize" or "deny"
+    // These are preserved from the original request
+    pub redirect_uri: String,
+    pub state: Option<String>,
+    pub code_challenge: String,
+    pub app_name: String,
+    pub requested_scope: String,
+}
+
+/// Request body for OAuth token exchange (POST /v1/oauth/token)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OAuthTokenRequest {
+    pub grant_type: String,    // Must be "authorization_code"
+    pub code: String,          // The authorization code
+    pub redirect_uri: String,  // Must match the original redirect_uri
+    pub code_verifier: String, // PKCE: the original code_verifier
+}
+
+/// Response for OAuth token exchange
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OAuthTokenResponse {
+    pub access_token: String,
+    pub token_type: String,             // Always "Bearer"
+    pub database: String,               // entity/database path
+    pub query_permission_level: String, // "read-only" or "read-write"
+    pub database_url: String,           // Full URL to the database API endpoint
+}
+
+/// Error response for OAuth
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OAuthErrorResponse {
+    pub error: String,
+    pub error_description: Option<String>,
+}

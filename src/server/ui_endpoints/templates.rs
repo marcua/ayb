@@ -94,6 +94,16 @@ fn templates() -> &'static Tera {
             include_str!("templates/entity_tokens.html"),
         )
         .unwrap();
+        tera.add_raw_template(
+            "oauth_authorize.html",
+            include_str!("templates/oauth_authorize.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "oauth_error.html",
+            include_str!("templates/oauth_error.html"),
+        )
+        .unwrap();
 
         tera.build_inheritance_chains().unwrap();
 
