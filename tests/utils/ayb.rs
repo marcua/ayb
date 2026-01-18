@@ -103,7 +103,7 @@ pub fn log_in(
     Ok(())
 }
 
-pub fn confirm_with_url(
+pub fn confirm(
     server_url: &str,
     token: &str,
     result: &str,
