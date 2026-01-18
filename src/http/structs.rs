@@ -261,7 +261,7 @@ pub struct APITokenInfo {
 impl From<APITokenWithDatabase> for APITokenInfo {
     fn from(token: APITokenWithDatabase) -> Self {
         let scoped_database = match (token.entity_slug, token.database_slug) {
-            (Some(entity), Some(db)) => Some(format!("{}/{}", entity, db)),
+            (Some(entity), Some(db)) => Some(format!("{entity}/{db}")),
             _ => None,
         };
 

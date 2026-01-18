@@ -1,5 +1,4 @@
 use assert_cmd::assert::OutputAssertExt;
-use assert_cmd::prelude::*;
 use ayb::server::snapshots::models::ListSnapshotResult;
 use chrono::DateTime;
 use predicates::prelude::*;
