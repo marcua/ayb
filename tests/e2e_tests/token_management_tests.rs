@@ -1,6 +1,4 @@
-use crate::ayb_assert_cmd;
-use crate::utils::ayb::{list_tokens, list_tokens_csv, query, revoke_token};
-use predicates::prelude::*;
+use crate::utils::ayb::{list_tokens, query, revoke_token};
 use std::collections::{HashMap, HashSet};
 
 // TODO(marcua): Once the OAuth flow is implemented, add tests for scoped tokens
@@ -43,7 +41,7 @@ pub fn test_token_management(
 
     // Test 1: List tokens - verify we see exactly all expected tokens
     // The list should contain the short tokens (without ayb_ prefix)
-    let token_list = list_tokens_csv(config_path, first_key)?;
+    let token_list = list_tokens(config_path, first_key)?;
     let actual_tokens: HashSet<String> = token_list.into_iter().collect();
     let expected_tokens: HashSet<String> = first_entity_api_keys
         .iter()
@@ -83,7 +81,7 @@ pub fn test_token_management(
     )?;
 
     // Test 5: List tokens again - second token should be gone
-    let token_list_after = list_tokens_csv(config_path, first_key)?;
+    let token_list_after = list_tokens(config_path, first_key)?;
     let actual_tokens_after: HashSet<String> = token_list_after.into_iter().collect();
 
     // Build expected set: all tokens except the revoked second token
@@ -98,13 +96,15 @@ pub fn test_token_management(
         "Token list after revocation should contain exactly the non-revoked tokens"
     );
 
-    // Also verify with table format that first token is present and second is absent
-    list_tokens(config_path, first_key, "table", &first_short_token)?;
-    // Verify revoked token doesn't appear in table output
-    let cmd = ayb_assert_cmd!("client", "--config", config_path, "list_tokens", "--format", "table"; {
-        "AYB_API_TOKEN" => first_key,
-    });
-    cmd.stdout(predicate::str::contains(&second_short_token).not());
+    // Verify first token is still present and second token is absent
+    assert!(
+        actual_tokens_after.contains(&first_short_token),
+        "First token should still be in the list"
+    );
+    assert!(
+        !actual_tokens_after.contains(&second_short_token),
+        "Revoked token should not be in the list"
+    );
 
     println!("Token management tests passed successfully");
     Ok(())

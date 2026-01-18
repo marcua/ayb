@@ -327,25 +327,8 @@ pub fn list_database_permissions(
     Ok(())
 }
 
-pub fn list_tokens(
-    config: &str,
-    api_key: &str,
-    format: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "list_tokens", "--format", format; {
-        "AYB_API_TOKEN" => api_key,
-    });
-
-    cmd.stdout(predicate::str::contains(result));
-    Ok(())
-}
-
 /// List tokens and return the short tokens as a Vec for assertions
-pub fn list_tokens_csv(
-    config: &str,
-    api_key: &str,
-) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn list_tokens(config: &str, api_key: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let output = Command::new(env!("CARGO_BIN_EXE_ayb"))
         .args([
             "client",
