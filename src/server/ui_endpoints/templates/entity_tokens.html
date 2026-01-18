@@ -36,11 +36,9 @@
                 <td>{{ token.expires_at | default(value="(never)") }}</td>
                 <td>
                     <button
+                        type="button"
                         class="uk-btn uk-btn-danger uk-btn-sm"
-                        hx-delete="/settings/tokens/{{ token.short_token }}"
-                        hx-target="#token-row-{{ token.short_token }}"
-                        hx-swap="outerHTML"
-                        hx-confirm="Are you sure you want to revoke this token?">
+                        onclick="confirmRevokeToken('{{ token.short_token }}')">
                         Revoke
                     </button>
                 </td>
@@ -50,5 +48,61 @@
     </table>
     </div>
     {% endif %}
+
+    <!-- Revoke token confirmation modal -->
+    <div id="revoke-token-modal" class="uk-flex-top" data-uk-modal>
+        <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+            <h2 class="uk-modal-title">Revoke token</h2>
+            <p class="mt-1">Are you sure you want to revoke token <code id="revoke-token-id"></code>?</p>
+            <p class="uk-text-muted text-sm mt-2">This token will no longer be able to access the API.</p>
+            <p class="uk-text-right mt-4">
+                <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
+                <button
+                    class="uk-btn uk-btn-destructive"
+                    id="confirm-revoke-btn"
+                    type="button"
+                    onclick="revokeToken()">
+                    Revoke token
+                </button>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let revokeTokenShortToken = '';
+
+        function confirmRevokeToken(shortToken) {
+            revokeTokenShortToken = shortToken;
+            document.getElementById('revoke-token-id').textContent = shortToken;
+            UIkit.modal('#revoke-token-modal').show();
+        }
+
+        function revokeToken() {
+            const shortToken = revokeTokenShortToken;
+            const targetRow = document.getElementById('token-row-' + shortToken);
+
+            fetch('/settings/tokens/' + shortToken, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                }
+                throw new Error('Failed to revoke token');
+            })
+            .then(html => {
+                // Replace the row with the success message
+                targetRow.outerHTML = html;
+                UIkit.modal('#revoke-token-modal').hide();
+            })
+            .catch(error => {
+                console.error('Error revoking token:', error);
+                UIkit.modal('#revoke-token-modal').hide();
+            });
+        }
+    </script>
 </div>
 {% endblock %}
