@@ -35,8 +35,7 @@ pub fn test_token_management(
     let first_key = &first_entity_api_keys[0];
     let second_key = &first_entity_api_keys[1];
 
-    // Extract short tokens (without ayb_ prefix)
-    let first_short_token = extract_short_token(first_key);
+    // Extract short token for the second key (without ayb_ prefix)
     let second_short_token = extract_short_token(second_key);
 
     // Test 1: List tokens - verify we see exactly all expected tokens
@@ -94,16 +93,6 @@ pub fn test_token_management(
     assert_eq!(
         actual_tokens_after, expected_tokens_after,
         "Token list after revocation should contain exactly the non-revoked tokens"
-    );
-
-    // Verify first token is still present and second token is absent
-    assert!(
-        actual_tokens_after.contains(&first_short_token),
-        "First token should still be in the list"
-    );
-    assert!(
-        !actual_tokens_after.contains(&second_short_token),
-        "Revoked token should not be in the list"
     );
 
     println!("Token management tests passed successfully");
