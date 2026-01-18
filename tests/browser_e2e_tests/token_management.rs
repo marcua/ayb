@@ -112,6 +112,9 @@ pub async fn test_token_management_flow(
         .wait_for_selector()
         .await?;
 
+    // Extra delay for modal animation to complete
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
     // Take screenshot of the confirmation modal
     BrowserHelpers::screenshot_compare(page, "tokens_revoke_modal", &[]).await?;
 
