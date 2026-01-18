@@ -353,8 +353,8 @@ You can list and revoke API tokens:
 # List all active API tokens
 $ ayb client list_tokens
 
-# Revoke a specific token
-$ ayb client revoke_token ayb_xxxxxx
+# Revoke a specific token (using short token from list_tokens)
+$ ayb client revoke_token xxxxxx
 ```
 
 ### Isolation

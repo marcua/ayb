@@ -262,7 +262,7 @@ pub fn client_commands() -> Command {
         .subcommand(
             Command::new("revoke_token")
                 .about("Revoke an API token")
-                .arg(arg!(<short_token> "The short token to revoke (e.g., ayb_xxxxxx)")
+                .arg(arg!(<short_token> "The short token to revoke (from list_tokens output)")
                      .required(true))
         )
 }
