@@ -24,6 +24,7 @@ async fn create_database(
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
+
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let db_type = get_required_header(&req, "db-type")?;
     let public_sharing_level = get_required_header(&req, "public-sharing-level")?;

@@ -1,4 +1,4 @@
-use assert_cmd::prelude::*;
+use assert_cmd::assert::OutputAssertExt;
 use ayb::server::snapshots::models::ListSnapshotResult;
 use chrono::DateTime;
 use predicates::prelude::*;
@@ -11,11 +11,14 @@ use std::process::Command;
 #[macro_export]
 macro_rules! ayb_assert_cmd {
     ($($value:expr),+; { $($env_left:literal => $env_right:expr),* $(,)? }) => {
-        std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
+        assert_cmd::assert::OutputAssertExt::assert(
+            std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
                 .args([$($value,)*])
                 $(.env($env_left, $env_right))*
-                .assert()
-                .success()
+                .output()
+                .expect("failed to execute ayb command")
+        )
+        .success()
     }
 }
 
@@ -45,7 +48,7 @@ pub fn query(
         "AYB_API_TOKEN" => api_key,
     });
 
-    cmd.stdout(format!("{result}\n"));
+    cmd.stdout(predicate::str::contains(result));
     Ok(())
 }
 
@@ -58,7 +61,7 @@ pub fn query_no_api_token(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "query", database, "--format", format, query; {});
 
-    cmd.stdout(format!("{result}\n"));
+    cmd.stdout(predicate::str::contains(result));
     Ok(())
 }
 
@@ -86,6 +89,28 @@ pub fn register(
     });
 
     cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
+
+pub fn log_in(
+    server_url: &str,
+    username: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "log_in", username; {});
+
+    cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
+
+pub fn confirm(
+    server_url: &str,
+    token: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "confirm", token; {});
+
+    cmd.stdout(predicate::str::contains(result));
     Ok(())
 }
 
@@ -295,6 +320,48 @@ pub fn list_database_permissions(
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cmd = ayb_assert_cmd!("client", "--config", config, "list_database_permissions", database, "--format", format; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
+
+/// List tokens and return the short tokens as a Vec for assertions
+pub fn list_tokens(config: &str, api_key: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_ayb"))
+        .args([
+            "client",
+            "--config",
+            config,
+            "list_tokens",
+            "--format",
+            "csv",
+        ])
+        .env("AYB_API_TOKEN", api_key)
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+    // Parse CSV response to extract short tokens
+    // First column is "Short token", skip header row
+    let short_tokens: Vec<String> = stdout
+        .lines()
+        .skip(1) // Skip header row
+        .filter_map(|line| {
+            // First column is the short token
+            line.split(',').next().map(String::from)
+        })
+        .collect();
+    Ok(short_tokens)
+}
+
+pub fn revoke_token(
+    config: &str,
+    api_key: &str,
+    short_token: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "revoke_token", short_token; {
         "AYB_API_TOKEN" => api_key,
     });
 

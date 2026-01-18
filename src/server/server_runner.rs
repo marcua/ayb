@@ -39,7 +39,9 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
             .service(api_endpoints::list_snapshots_endpoint)
             .service(api_endpoints::restore_snapshot_endpoint)
             .service(api_endpoints::share_endpoint)
-            .service(api_endpoints::list_database_permissions_endpoint),
+            .service(api_endpoints::list_database_permissions_endpoint)
+            .service(api_endpoints::list_tokens_endpoint)
+            .service(api_endpoints::revoke_token_endpoint),
     );
 
     // Only add UI routes if web frontend is configured for local serving
@@ -51,6 +53,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::register_endpoint)
                 .service(ui_endpoints::register_submit_endpoint)
                 .service(ui_endpoints::confirm_endpoint)
+                .service(ui_endpoints::entity_tokens_endpoint)
+                .service(ui_endpoints::revoke_token_endpoint)
                 .service(ui_endpoints::entity_details_endpoint)
                 .service(ui_endpoints::create_database_endpoint)
                 .service(ui_endpoints::update_profile_endpoint)
@@ -78,6 +82,7 @@ async fn entity_validator(
                     match entity {
                         Ok(entity) => {
                             req.extensions_mut().insert(entity);
+                            req.extensions_mut().insert(api_token);
                             Ok(req)
                         }
                         Err(e) => Err((e.into(), req)),

@@ -1,6 +1,7 @@
 {% if snapshots and (snapshots | length > 0) %}
 <div class="mt-4">
     <h5 class="text-sm font-medium mb-2">Available snapshots</h5>
+    <div class="overflow-x-auto">
     <table class="uk-table uk-table-striped uk-table-small">
         <thead>
             <tr>
@@ -27,6 +28,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% else %}
 <div class="mt-4">

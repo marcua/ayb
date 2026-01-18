@@ -347,6 +347,16 @@ $ ayb client share marcua/test.sqlite sofia manager
 $ ayb client list_database_permissions marcua/test.sqlite
 ```
 
+### Token management
+You can list and revoke API tokens:
+```bash
+# List all active API tokens
+$ ayb client list_tokens
+
+# Revoke a specific token (using short token from list_tokens)
+$ ayb client revoke_token xxxxxx
+```
+
 ### Isolation
 `ayb` allows multiple users to run queries against databases that are
 stored on the same machine. Isolation enables you to prevent one user

@@ -250,6 +250,21 @@ pub fn client_commands() -> Command {
                         .default_value(OutputFormat::Table.to_str())
                         .required(false))
         )
+        .subcommand(
+            Command::new("list_tokens")
+                .about("List your API tokens")
+                .arg(
+                    arg!(--format <type> "The format in which to output the result")
+                        .value_parser(value_parser!(OutputFormat))
+                        .default_value(OutputFormat::Table.to_str())
+                        .required(false))
+        )
+        .subcommand(
+            Command::new("revoke_token")
+                .about("Revoke an API token")
+                .arg(arg!(<short_token> "The short token to revoke (from list_tokens output)")
+                     .required(true))
+        )
 }
 
 pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()> {
@@ -647,6 +662,35 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                             OutputFormat::Csv => response.permissions.generate_csv()?,
                         }
                     }
+                }
+                Err(err) => {
+                    println!("Error: {err}");
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("list_tokens") {
+        if let Some(format) = matches.get_one::<OutputFormat>("format") {
+            match client.list_tokens().await {
+                Ok(response) => {
+                    if response.tokens.is_empty() {
+                        println!("No active API tokens");
+                    } else {
+                        match format {
+                            OutputFormat::Table => response.tokens.generate_table()?,
+                            OutputFormat::Csv => response.tokens.generate_csv()?,
+                        }
+                    }
+                }
+                Err(err) => {
+                    println!("Error: {err}");
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("revoke_token") {
+        if let Some(short_token) = matches.get_one::<String>("short_token") {
+            match client.revoke_token(short_token).await {
+                Ok(_) => {
+                    println!("Successfully revoked token {short_token}");
                 }
                 Err(err) => {
                     println!("Error: {err}");

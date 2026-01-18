@@ -636,4 +636,5 @@ yoursite
 yourusername
 # ayb-specific reserved names
 confirm
+tokens
 v1

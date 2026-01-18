@@ -1,5 +1,5 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{DBType, InstantiatedEntity};
+use crate::ayb_db::models::{APIToken, DBType, InstantiatedEntity};
 
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
@@ -19,14 +19,17 @@ async fn query(
     ayb_config: web::Data<AybConfig>,
     daemon_registry: web::Data<DaemonRegistry>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
+    api_token: Option<web::ReqData<APIToken>>,
 ) -> Result<web::Json<QueryResult>, AybError> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &path.database;
     let database = ayb_db.get_database(entity_slug, database_slug).await?;
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
+    let token_ref = api_token.as_ref().map(|t| t.clone().into_inner());
+    let token = token_ref.as_ref();
 
     let access_level =
-        highest_query_access_level(&authenticated_entity, &database, &ayb_db).await?;
+        highest_query_access_level(&authenticated_entity, &database, token, &ayb_db).await?;
     match access_level {
         Some(access_level) => {
             let db_type = DBType::try_from(database.db_type)?;
