@@ -1,3 +1,4 @@
+use crate::utils::ayb::{confirm_with_url, log_in};
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::{extract_token_from_emails, get_emails_for_recipient};
 use playwright::api::Page;
@@ -15,19 +16,21 @@ pub async fn test_token_management_flow(
     test_type: &str,
 ) -> Result<(), Box<dyn Error>> {
     // Create an additional token via CLI so we have 2 tokens for revocation testing
-    let email = format!("{}@example.com", username);
+    let email = format!("{username}@example.com");
     let emails_before = get_emails_for_recipient(test_type, &email)?;
-    std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
-        .args(["client", "--url", base_url, "log_in", username])
-        .output()?;
+    log_in(
+        base_url,
+        username,
+        &format!("Check your email to finish logging in {username}"),
+    )?;
     let emails_after = get_emails_for_recipient(test_type, &email)?;
-    if emails_after.len() > emails_before.len() {
-        if let Some(token) = extract_token_from_emails(&[emails_after.last().unwrap().clone()]) {
-            std::process::Command::new(env!("CARGO_BIN_EXE_ayb"))
-                .args(["client", "--url", base_url, "confirm", &token])
-                .output()?;
-        }
-    }
+    assert!(
+        emails_after.len() > emails_before.len(),
+        "Should have received a new email after log_in"
+    );
+    let token = extract_token_from_emails(&[emails_after.last().unwrap().clone()])
+        .expect("Should be able to extract token from email");
+    confirm_with_url(base_url, &token, "Successfully authenticated")?;
 
     // Step 1: Navigate to the tokens page via the dropdown menu
     // Click on the username dropdown to open the menu

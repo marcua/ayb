@@ -92,6 +92,28 @@ pub fn register(
     Ok(())
 }
 
+pub fn log_in(
+    server_url: &str,
+    username: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "log_in", username; {});
+
+    cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
+
+pub fn confirm_with_url(
+    server_url: &str,
+    token: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--url", server_url, "confirm", token; {});
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
+
 pub fn list_databases(
     config: &str,
     api_key: &str,
