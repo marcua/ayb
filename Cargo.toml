@@ -33,7 +33,7 @@ rustyline = { version = "17.0.2" }
 rust-s3 = { version = "0.37.1" }
 scraper = { version = "0.25.0" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.147", features = ["raw_value"] }
+serde_json = { version = "1.0.148", features = ["raw_value"] }
 serde_repr = { version = "0.1.20" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 time = { version = "0.3.44" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
