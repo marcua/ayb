@@ -38,8 +38,8 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 
 fn i16_to_permission_level(level: i16) -> &'static str {
     match level {
-        1 => "read-only",
-        2 => "read-write",
+        0 => "read-only",
+        1 => "read-write",
         _ => "unknown",
     }
 }

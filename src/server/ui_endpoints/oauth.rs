@@ -28,8 +28,8 @@ fn validate_redirect_uri(uri: &str) -> bool {
 
 fn permission_level_to_i16(level: &str) -> Option<i16> {
     match level {
-        "read-only" => Some(1),  // EntityDatabaseSharingLevel::ReadOnly
-        "read-write" => Some(2), // EntityDatabaseSharingLevel::ReadWrite
+        "read-only" => Some(0),  // QueryMode::ReadOnly
+        "read-write" => Some(1), // QueryMode::ReadWrite
         _ => None,
     }
 }
