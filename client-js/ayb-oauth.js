@@ -185,9 +185,9 @@ class AybOAuth {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${auth.token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'text/plain'
             },
-            body: JSON.stringify({ query: sql })
+            body: sql
         });
 
         if (!response.ok) {
