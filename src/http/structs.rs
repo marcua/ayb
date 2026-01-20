@@ -341,7 +341,7 @@ pub struct OAuthAuthorizeRequest {
 /// Form data for OAuth authorization submit (POST /oauth/authorize)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OAuthAuthorizeSubmit {
-    pub database_id: i32,         // Selected database ID
+    pub database: String,         // Selected database as "entity/slug"
     pub permission_level: String, // "read-only" or "read-write"
     pub action: String,           // "authorize" or "deny"
     // These are preserved from the original request

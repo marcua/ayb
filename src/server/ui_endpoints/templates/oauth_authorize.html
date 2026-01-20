@@ -28,9 +28,9 @@
                     then return here.
                 </p>
                 {% else %}
-                <select name="database_id" required class="uk-select w-full">
+                <select name="database" required class="uk-select w-full">
                     {% for db in databases %}
-                    <option value="{{ db.id }}">{{ entity }}/{{ db.slug }}</option>
+                    <option value="{{ entity }}/{{ db.slug }}">{{ entity }}/{{ db.slug }}</option>
                     {% endfor %}
                 </select>
                 {% endif %}

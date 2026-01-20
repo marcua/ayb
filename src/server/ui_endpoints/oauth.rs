@@ -170,8 +170,18 @@ pub async fn oauth_authorize_submit(
         }
     };
 
+    // Parse database path (entity/slug format)
+    let db_parts: Vec<&str> = form.database.splitn(2, '/').collect();
+    if db_parts.len() != 2 {
+        return Ok(oauth_error_page(
+            "invalid_request",
+            "Invalid database format",
+        ));
+    }
+    let (db_entity, db_slug) = (db_parts[0], db_parts[1]);
+
     // Verify user owns/has access to the database
-    let database = match ayb_db.get_database_by_id(form.database_id).await {
+    let database = match ayb_db.get_database(db_entity, db_slug).await {
         Ok(db) => db,
         Err(err) => {
             return Ok(oauth_error_page("server_error", &err.to_string()));
