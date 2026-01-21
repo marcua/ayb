@@ -1,5 +1,5 @@
 use crate::ayb_db::models::{
-    APITokenWithDatabase, DBType, DatabasePermission, EntityDatabaseSharingLevel, EntityType,
+    APITokenWithDatabase, DBType, DatabasePermission, EntityType,
     InstantiatedDatabase as PersistedDatabase, InstantiatedDatabase,
     InstantiatedEntity as PersistedEntity,
 };
@@ -265,10 +265,11 @@ impl From<APITokenWithDatabase> for APITokenInfo {
             _ => None,
         };
 
-        let permission_level = token.query_permission_level.map(|level| {
-            EntityDatabaseSharingLevel::try_from(level)
-                .map(|l| l.to_str().to_string())
-                .unwrap_or_else(|_| "unknown".to_string())
+        // query_permission_level uses QueryMode values: 0=read-only, 1=read-write
+        let permission_level = token.query_permission_level.map(|level| match level {
+            0 => "read-only".to_string(),
+            1 => "read-write".to_string(),
+            _ => "unknown".to_string(),
         });
 
         Self {
