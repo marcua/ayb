@@ -105,7 +105,6 @@
                 <div class="uk-card-body">
                     <p class="text-muted-foreground text-sm mb-3">
                         {{ app_name }} is requesting <strong>{{ requested_scope }}</strong> access.
-                        You can grant less permission than requested.
                     </p>
                     <div class="uk-btn-group" data-uk-button-radio>
                         <button
@@ -126,16 +125,6 @@
                     </div>
                     <input type="hidden" id="permission-level-value" name="permission_level" value="{{ requested_scope }}">
                 </div>
-            </div>
-
-            <!-- Warning about what the app can do -->
-            <div class="uk-alert uk-alert-primary" data-uk-alert>
-                <p class="text-sm">
-                    <strong>Note:</strong> By authorizing, you grant {{ app_name }} access to
-                    query the selected database with the chosen permission level. You can
-                    revoke this access anytime from your
-                    <a href="/settings/tokens" class="underline" target="_blank">token settings</a>.
-                </p>
             </div>
 
             <!-- Action buttons -->
