@@ -214,13 +214,16 @@
         successDiv.hidden = true;
 
         try {
-            const formData = new FormData();
-            formData.append('database_slug', slug);
-            formData.append('public_sharing_level', publicSharingLevel);
+            const params = new URLSearchParams();
+            params.append('database_slug', slug);
+            params.append('public_sharing_level', publicSharingLevel);
 
             const response = await fetch('/{{ entity }}/create_database', {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
             });
 
             if (response.ok) {
