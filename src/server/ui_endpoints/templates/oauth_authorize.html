@@ -36,56 +36,58 @@
                     <!-- Create database form (hidden by default) -->
                     <div id="create-database-form" class="mt-4" hidden>
                         <div class="border-t pt-4">
-                            <h5 class="text-sm font-medium mb-3">Create a new database</h5>
-                            <div class="mb-4">
-                                <label for="database-slug" class="block text-sm font-medium mb-1">Database name</label>
-                                <input
-                                    type="text"
-                                    id="database-slug"
-                                    name="database_slug"
-                                    class="p-2 border rounded focus:border-blue-500 w-full"
-                                    placeholder="example.sqlite"
-                                    pattern="[A-Za-z0-9\-_\.]+"
-                                    title="Only letters, numbers, underscores, hyphens, and periods are allowed"
-                                    oninput="onDatabaseSlugInput(this)">
-                            </div>
+                            <div id="create-form-inputs">
+                                <h5 class="text-sm font-medium mb-3">Create a new database</h5>
+                                <div class="mb-4">
+                                    <label for="database-slug" class="block text-sm font-medium mb-1">Database name</label>
+                                    <input
+                                        type="text"
+                                        id="database-slug"
+                                        name="database_slug"
+                                        class="p-2 border rounded focus:border-blue-500 w-full"
+                                        placeholder="example.sqlite"
+                                        pattern="[A-Za-z0-9\-_\.]+"
+                                        title="Only letters, numbers, underscores, hyphens, and periods are allowed"
+                                        oninput="onDatabaseSlugInput(this)">
+                                </div>
 
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium mb-1">Public sharing level</label>
-                                <div class="uk-btn-group" data-uk-button-radio>
-                                    <button
-                                        type="button"
-                                        class="uk-btn uk-btn-default uk-btn-sm uk-active"
-                                        data-value="no-access"
-                                        onclick="setNewDbPublicSharingLevel(this, 'no-access')">
-                                        Private
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="uk-btn uk-btn-default uk-btn-sm"
-                                        data-value="fork"
-                                        onclick="setNewDbPublicSharingLevel(this, 'fork')">
-                                        Forkable
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="uk-btn uk-btn-default uk-btn-sm"
-                                        data-value="read-only"
-                                        onclick="setNewDbPublicSharingLevel(this, 'read-only')">
-                                        Read-only
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-1">Public sharing level</label>
+                                    <div class="uk-btn-group" data-uk-button-radio>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default uk-btn-sm uk-active"
+                                            data-value="no-access"
+                                            onclick="setNewDbPublicSharingLevel(this, 'no-access')">
+                                            Private
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default uk-btn-sm"
+                                            data-value="fork"
+                                            onclick="setNewDbPublicSharingLevel(this, 'fork')">
+                                            Forkable
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="uk-btn uk-btn-default uk-btn-sm"
+                                            data-value="read-only"
+                                            onclick="setNewDbPublicSharingLevel(this, 'read-only')">
+                                            Read-only
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="new-db-public-sharing-level" name="new_db_public_sharing_level" value="no-access">
+                                </div>
+                                <div>
+                                    <button type="button" id="create-database-btn" class="uk-btn uk-btn-primary uk-btn-sm" disabled
+                                            onclick="createDatabase()">
+                                        Create database
                                     </button>
                                 </div>
-                                <input type="hidden" id="new-db-public-sharing-level" name="new_db_public_sharing_level" value="no-access">
+                                <div id="create-database-error" class="mt-2"></div>
                             </div>
-                            <div>
-                                <button type="button" id="create-database-btn" class="uk-btn uk-btn-primary uk-btn-sm" disabled
-                                        onclick="createDatabase()">
-                                    Create database
-                                </button>
-                            </div>
-                            <div id="create-database-error" class="mt-2"></div>
                             <div id="create-database-success" class="mt-2" hidden>
-                                <p class="text-sm text-green-600">Database created! You can now authorize.</p>
+                                <p class="text-sm text-green-600"><uk-icon icon="check" class="mr-1"></uk-icon> Database created! You can now authorize.</p>
                             </div>
                         </div>
                     </div>
@@ -243,9 +245,9 @@
                 selectedDatabase = newDbPath;
                 document.getElementById('selected-database').value = newDbPath;
 
-                // Show success and hide form
+                // Hide form inputs and show success message
+                document.getElementById('create-form-inputs').hidden = true;
                 successDiv.hidden = false;
-                document.getElementById('database-slug').value = '';
                 updateAuthorizeButton();
             } else {
                 const text = await response.text();
