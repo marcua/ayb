@@ -593,7 +593,6 @@ dependencies = [
  "prefixed-api-key",
  "prettytable-rs",
  "quoted_printable",
- "rand 0.8.5",
  "regex",
  "reqwest 0.13.1",
  "rusqlite",
