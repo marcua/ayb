@@ -42,9 +42,8 @@ toml = { version = "0.9.10" }
 tokio = { version = "1.49.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.15.1", features = ["signal"]}
 prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
-sha2 = "0.10"
-rand = "0.8"
-base64 = "0.22"
+sha2 = { version = "0.10" }
+base64 = { version = "0.22" }
 prettytable-rs = { version = "0.10.0"}
 url = { version = "2.5.7", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
