@@ -83,12 +83,17 @@ pub async fn oauth_authorize(
 
     let entity_slug = logged_in_entity.as_ref().unwrap();
 
-    // Get user's databases
+    // Get user's databases. If the API call fails (e.g., stale session token),
+    // redirect to login so the user can re-authenticate.
     let client = init_ayb_client(&ayb_config, &req);
     let databases = match client.entity_details(entity_slug).await {
         Ok(entity_response) => entity_response.databases,
-        Err(err) => {
-            return Ok(oauth_error_page("server_error", &err.to_string()));
+        Err(_) => {
+            let current_url = req.uri().to_string();
+            let login_url = format!("/log_in?next={}", urlencoding::encode(&current_url));
+            return Ok(HttpResponse::Found()
+                .insert_header((header::LOCATION, login_url))
+                .finish());
         }
     };
 

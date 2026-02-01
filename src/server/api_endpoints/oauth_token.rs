@@ -183,7 +183,7 @@ pub async fn oauth_token(
     // Build the response
     let base_url = local_base_url(&ayb_config);
     let database_path = format!("{}/{}", entity.slug, database.slug);
-    let database_url = format!("{}/v1/{}", base_url, database_path);
+    let database_url = format!("{base_url}/v1/{database_path}");
 
     Ok(HttpResponse::Ok().json(OAuthTokenResponse {
         access_token: token_string,
