@@ -10,12 +10,13 @@
 <div class="bg-white rounded-lg shadow-sm p-6">
     <h1 class="text-2xl font-bold mb-6">Log in</h1>
     <form method="POST" class="space-y-4">
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
         <div>
             <label class="uk-form-label">Username</label>
-            <input type="text" name="username" required 
+            <input type="text" name="username" required
                    class="uk-input">
         </div>
-        <button type="submit" 
+        <button type="submit"
                 class="uk-btn uk-btn-primary w-full">
             Log in
         </button>
