@@ -13,4 +13,11 @@
     Please check your email for a confirmation link.
   </p>
 </div>
+{% if next %}
+<div id="login-next" data-next="{{ next }}" hidden></div>
+<script>
+    var el = document.getElementById('login-next');
+    if (el) { localStorage.setItem('ayb_login_next', el.getAttribute('data-next')); }
+</script>
+{% endif %}
 {% endblock %}

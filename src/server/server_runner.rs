@@ -24,7 +24,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     cfg.service(api_endpoints::health_endpoint)
         .service(api_endpoints::confirm_endpoint)
         .service(api_endpoints::log_in_endpoint)
-        .service(api_endpoints::register_endpoint);
+        .service(api_endpoints::register_endpoint)
+        .service(api_endpoints::oauth_token_endpoint);
 
     // Authenticated API endpoints
     cfg.service(
@@ -55,6 +56,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::confirm_endpoint)
                 .service(ui_endpoints::entity_tokens_endpoint)
                 .service(ui_endpoints::revoke_token_endpoint)
+                .service(ui_endpoints::oauth_authorize_endpoint)
+                .service(ui_endpoints::oauth_authorize_submit_endpoint)
                 .service(ui_endpoints::entity_details_endpoint)
                 .service(ui_endpoints::create_database_endpoint)
                 .service(ui_endpoints::update_profile_endpoint)
