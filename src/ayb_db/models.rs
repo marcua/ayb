@@ -358,6 +358,25 @@ pub struct OAuthAuthorizationRequest {
     pub used_at: Option<chrono::NaiveDateTime>,
 }
 
+/// OAuth authorization request enriched with JOINed database and entity slugs.
+#[derive(Debug, FromRow, Serialize, Deserialize)]
+pub struct OAuthAuthorizationRequestWithDatabase {
+    pub code: String,
+    pub entity_id: i32,
+    pub code_challenge: String,
+    pub redirect_uri: String,
+    pub app_name: String,
+    pub requested_query_permission_level: i16,
+    pub state: Option<String>,
+    pub database_id: i32,
+    pub query_permission_level: i16,
+    pub created_at: chrono::NaiveDateTime,
+    pub expires_at: chrono::NaiveDateTime,
+    pub used_at: Option<chrono::NaiveDateTime>,
+    pub database_slug: String,
+    pub entity_slug: String,
+}
+
 /// Input struct for creating a new OAuth authorization request.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewOAuthAuthorizationRequest {

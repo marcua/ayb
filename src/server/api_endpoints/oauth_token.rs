@@ -122,31 +122,6 @@ pub async fn oauth_token(
         );
     }
 
-    // Get the database and entity info for the response
-    let database = match ayb_db.get_database_by_id(auth_request.database_id).await {
-        Ok(db) => db,
-        Err(err) => {
-            return Ok(
-                HttpResponse::InternalServerError().json(OAuthErrorResponse {
-                    error: "server_error".to_string(),
-                    error_description: Some(err.to_string()),
-                }),
-            );
-        }
-    };
-
-    let entity = match ayb_db.get_entity_by_id(database.entity_id).await {
-        Ok(e) => e,
-        Err(err) => {
-            return Ok(
-                HttpResponse::InternalServerError().json(OAuthErrorResponse {
-                    error: "server_error".to_string(),
-                    error_description: Some(err.to_string()),
-                }),
-            );
-        }
-    };
-
     // Create a new scoped API token
     let controller: PrefixedApiKeyController<OsRng, PakSha256> =
         PrefixedApiKeyController::configure()
@@ -182,7 +157,10 @@ pub async fn oauth_token(
 
     // Build the response
     let base_url = local_base_url(&ayb_config);
-    let database_path = format!("{}/{}", entity.slug, database.slug);
+    let database_path = format!(
+        "{}/{}",
+        auth_request.entity_slug, auth_request.database_slug
+    );
     let database_url = format!("{base_url}/v1/{database_path}");
 
     Ok(HttpResponse::Ok().json(OAuthTokenResponse {

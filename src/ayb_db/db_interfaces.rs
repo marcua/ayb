@@ -2,7 +2,8 @@ use crate::ayb_db::models::{
     APIToken, APITokenWithDatabase, AuthenticationMethod, Database, DatabasePermission, Entity,
     EntityDatabasePermission, EntityDatabaseSharingLevel, InstantiatedAuthenticationMethod,
     InstantiatedDatabase, InstantiatedEntity, NewOAuthAuthorizationRequest,
-    OAuthAuthorizationRequest, PartialDatabase, PartialEntity,
+    OAuthAuthorizationRequest, OAuthAuthorizationRequestWithDatabase, PartialDatabase,
+    PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -93,9 +94,8 @@ pub trait AybDb: DynClone + Send + Sync {
     async fn get_oauth_authorization_request(
         &self,
         code: &str,
-    ) -> Result<OAuthAuthorizationRequest, AybError>;
+    ) -> Result<OAuthAuthorizationRequestWithDatabase, AybError>;
     async fn mark_oauth_authorization_request_used(&self, code: &str) -> Result<(), AybError>;
-    async fn get_database_by_id(&self, database_id: i32) -> Result<InstantiatedDatabase, AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -689,14 +689,27 @@ RETURNING code, entity_id, code_challenge, redirect_uri, app_name,
             async fn get_oauth_authorization_request(
                 &self,
                 code: &str,
-            ) -> Result<OAuthAuthorizationRequest, AybError> {
-                let auth_request: OAuthAuthorizationRequest = sqlx::query_as(
+            ) -> Result<OAuthAuthorizationRequestWithDatabase, AybError> {
+                let auth_request: OAuthAuthorizationRequestWithDatabase = sqlx::query_as(
                     r#"
-SELECT code, entity_id, code_challenge, redirect_uri, app_name,
-    requested_query_permission_level, state, database_id,
-    query_permission_level, created_at, expires_at, used_at
+SELECT oauth_authorization_request.code,
+    oauth_authorization_request.entity_id,
+    oauth_authorization_request.code_challenge,
+    oauth_authorization_request.redirect_uri,
+    oauth_authorization_request.app_name,
+    oauth_authorization_request.requested_query_permission_level,
+    oauth_authorization_request.state,
+    oauth_authorization_request.database_id,
+    oauth_authorization_request.query_permission_level,
+    oauth_authorization_request.created_at,
+    oauth_authorization_request.expires_at,
+    oauth_authorization_request.used_at,
+    database.slug as database_slug,
+    entity.slug as entity_slug
 FROM oauth_authorization_request
-WHERE code = $1
+JOIN database ON oauth_authorization_request.database_id = database.id
+JOIN entity ON database.entity_id = entity.id
+WHERE oauth_authorization_request.code = $1
                     "#,
                 )
                 .bind(code)
@@ -737,30 +750,6 @@ WHERE code = $1 AND used_at IS NULL
                 Ok(())
             }
 
-            async fn get_database_by_id(
-                &self,
-                database_id: i32,
-            ) -> Result<InstantiatedDatabase, AybError> {
-                let db: InstantiatedDatabase = sqlx::query_as(
-                    r#"
-SELECT id, entity_id, slug, db_type, public_sharing_level
-FROM database
-WHERE id = $1
-                    "#,
-                )
-                .bind(database_id)
-                .fetch_one(&self.pool)
-                .await
-                .or_else(|err| match err {
-                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
-                        id: database_id.to_string(),
-                        record_type: "database".into(),
-                    }),
-                    _ => Err(AybError::from(err)),
-                })?;
-
-                Ok(db)
-            }
         }
     };
 }
