@@ -604,6 +604,7 @@ dependencies = [
  "serde_repr",
  "sha2",
  "sqlx",
+ "subtle",
  "tempfile",
  "tera",
  "time 0.3.44",

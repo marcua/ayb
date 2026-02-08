@@ -1,13 +1,18 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::NewOAuthAuthorizationRequest;
+use crate::hosted_db::QueryMode;
 use crate::http::structs::{OAuthAuthorizeRequest, OAuthAuthorizeSubmit};
 use crate::server::config::AybConfig;
-use crate::server::ui_endpoints::auth::{authentication_details, init_ayb_client};
+use crate::server::permissions::highest_query_access_level;
+use crate::server::ui_endpoints::auth::{
+    authentication_details, init_ayb_client, redirect_to_login,
+};
 use crate::server::ui_endpoints::templates::{ok_response, render};
 use actix_web::{get, http::header, post, web, HttpRequest, HttpResponse, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use prefixed_api_key::rand::rngs::OsRng;
 use prefixed_api_key::rand::RngCore;
+use std::str::FromStr;
 
 fn generate_authorization_code() -> String {
     let mut bytes = [0u8; 32];
@@ -24,14 +29,6 @@ fn validate_redirect_uri(uri: &str) -> bool {
         return true;
     }
     false
-}
-
-fn permission_level_to_i16(level: &str) -> Option<i16> {
-    match level {
-        "read-only" => Some(0),  // QueryMode::ReadOnly
-        "read-write" => Some(1), // QueryMode::ReadWrite
-        _ => None,
-    }
 }
 
 #[get("/oauth/authorize")]
@@ -64,8 +61,7 @@ pub async fn oauth_authorize(
         ));
     }
 
-    let requested_permission = permission_level_to_i16(&query.scope);
-    if requested_permission.is_none() {
+    if QueryMode::from_str(&query.scope).is_err() {
         return Ok(oauth_error_page(
             "invalid_scope",
             "scope must be 'read-only' or 'read-write'",
@@ -74,26 +70,20 @@ pub async fn oauth_authorize(
 
     // If not logged in, redirect to login with return URL
     if logged_in_entity.is_none() {
-        let current_url = req.uri().to_string();
-        let login_url = format!("/log_in?next={}", urlencoding::encode(&current_url));
-        return Ok(HttpResponse::Found()
-            .insert_header((header::LOCATION, login_url))
-            .finish());
+        return Ok(redirect_to_login(&req));
     }
 
     let entity_slug = logged_in_entity.as_ref().unwrap();
 
     // Get user's databases. If the API call fails (e.g., stale session token),
     // redirect to login so the user can re-authenticate.
+    // TODO(marcua): Also show databases the user has access to beyond owned ones
+    // (e.g., databases where they have manager/writer/reader permissions).
     let client = init_ayb_client(&ayb_config, &req);
     let databases = match client.entity_details(entity_slug).await {
         Ok(entity_response) => entity_response.databases,
         Err(_) => {
-            let current_url = req.uri().to_string();
-            let login_url = format!("/log_in?next={}", urlencoding::encode(&current_url));
-            return Ok(HttpResponse::Found()
-                .insert_header((header::LOCATION, login_url))
-                .finish());
+            return Ok(redirect_to_login(&req));
         }
     };
 
@@ -120,7 +110,7 @@ pub async fn oauth_authorize_submit(
     let logged_in = authentication_details(&req);
 
     if logged_in.is_none() {
-        return Ok(HttpResponse::Unauthorized().body("Not logged in"));
+        return Ok(oauth_error_page("unauthorized", "Not logged in"));
     }
 
     let auth_details = logged_in.unwrap();
@@ -138,34 +128,17 @@ pub async fn oauth_authorize_submit(
             .finish());
     }
 
-    // Validate permission level
-    let permission_level = match permission_level_to_i16(&form.permission_level) {
-        Some(level) => level,
-        None => {
-            return Ok(oauth_error_page(
-                "invalid_request",
-                "Invalid permission level",
-            ));
-        }
-    };
-
-    let requested_permission = match permission_level_to_i16(&form.requested_scope) {
-        Some(level) => level,
-        None => {
+    // Validate requested scope
+    let requested_permission = match QueryMode::from_str(&form.requested_scope) {
+        Ok(mode) => mode,
+        Err(_) => {
             return Ok(oauth_error_page(
                 "invalid_request",
                 "Invalid requested scope",
             ));
         }
     };
-
-    // User cannot grant more permission than requested
-    if permission_level > requested_permission {
-        return Ok(oauth_error_page(
-            "invalid_request",
-            "Cannot grant more permission than requested",
-        ));
-    }
+    let permission_level = requested_permission as i16;
 
     // Get entity ID
     let entity = match ayb_db.get_entity_by_slug(&auth_details.entity).await {
@@ -185,13 +158,38 @@ pub async fn oauth_authorize_submit(
     }
     let (db_entity, db_slug) = (db_parts[0], db_parts[1]);
 
-    // Verify user owns/has access to the database
+    // Verify user has access to the database
     let database = match ayb_db.get_database(db_entity, db_slug).await {
         Ok(db) => db,
         Err(err) => {
             return Ok(oauth_error_page("server_error", &err.to_string()));
         }
     };
+
+    // Verify the authenticated user has sufficient access to the database
+    let user_access = match highest_query_access_level(&entity, &database, None, &ayb_db).await {
+        Ok(access) => access,
+        Err(err) => {
+            return Ok(oauth_error_page("server_error", &err.to_string()));
+        }
+    };
+
+    match user_access {
+        None => {
+            return Ok(oauth_error_page(
+                "access_denied",
+                "You do not have access to this database",
+            ));
+        }
+        Some(access) => {
+            if !access.permits(requested_permission) {
+                return Ok(oauth_error_page(
+                    "access_denied",
+                    "Your access level is lower than the requested permission",
+                ));
+            }
+        }
+    }
 
     // Generate authorization code
     let code = generate_authorization_code();
@@ -204,7 +202,7 @@ pub async fn oauth_authorize_submit(
         code_challenge: form.code_challenge.clone(),
         redirect_uri: form.redirect_uri.clone(),
         app_name: form.app_name.clone(),
-        requested_query_permission_level: requested_permission,
+        requested_query_permission_level: permission_level,
         state: form.state.clone(),
         database_id: database.id,
         query_permission_level: permission_level,

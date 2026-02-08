@@ -13,6 +13,10 @@
                 Continue
     </a>
 </div>
+<!-- Tera's HTML auto-escaping converts / to &#x2F; in template output.
+     Browsers don't decode HTML entities inside <script> tags, so we store
+     the value in a data attribute on a hidden div (where entities are decoded)
+     and read it via JavaScript. -->
 <div id="default-redirect" data-url="/{{ entity }}" hidden></div>
 <script>
     (function() {

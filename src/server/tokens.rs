@@ -66,6 +66,30 @@ pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, Stri
     ))
 }
 
+pub fn generate_scoped_api_token(
+    entity_id: i32,
+    database_id: i32,
+    query_permission_level: i16,
+    app_name: String,
+) -> Result<(APIToken, String), AybError> {
+    let controller = api_key_controller()?;
+    let (pak, hash) = controller.generate_key_and_hash();
+    Ok((
+        APIToken {
+            entity_id,
+            short_token: pak.short_token().to_string(),
+            hash,
+            database_id: Some(database_id),
+            query_permission_level: Some(query_permission_level),
+            app_name: Some(app_name),
+            created_at: Some(chrono::Utc::now().naive_utc()),
+            expires_at: None,
+            revoked_at: None,
+        },
+        pak.to_string(),
+    ))
+}
+
 pub async fn retrieve_and_validate_api_token(
     token: &str,
     ayb_db: &web::Data<Box<dyn AybDb>>,

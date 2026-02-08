@@ -7,7 +7,7 @@
     <div class="max-w-lg mx-auto">
         <h3 class="text-lg font-medium mb-2">Authorize application</h3>
         <p class="text-muted-foreground mb-4">
-            <strong class="text-primary">{{ app_name }}</strong> wants to access one of your databases.
+            <strong class="text-primary">{{ app_name }}</strong> is requesting <strong>{{ requested_scope }}</strong> access to one of your databases.
         </p>
 
         <form method="POST" action="/oauth/authorize" id="oauth-form" class="space-y-6">
@@ -38,48 +38,9 @@
                         <div class="border-t pt-4">
                             <div id="create-form-inputs">
                                 <h5 class="text-sm font-medium mb-3">Create a new database</h5>
-                                <div class="mb-4">
-                                    <label for="database-slug" class="block text-sm font-medium mb-1">Database name</label>
-                                    <input
-                                        type="text"
-                                        id="database-slug"
-                                        name="database_slug"
-                                        class="p-2 border rounded focus:border-blue-500 w-full"
-                                        placeholder="example.sqlite"
-                                        pattern="[A-Za-z0-9\-_\.]+"
-                                        title="Only letters, numbers, underscores, hyphens, and periods are allowed"
-                                        oninput="onDatabaseSlugInput(this)">
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium mb-1">Public sharing level</label>
-                                    <div class="uk-btn-group" data-uk-button-radio>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default uk-btn-sm uk-active"
-                                            data-value="no-access"
-                                            onclick="setNewDbPublicSharingLevel(this, 'no-access')">
-                                            Private
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default uk-btn-sm"
-                                            data-value="fork"
-                                            onclick="setNewDbPublicSharingLevel(this, 'fork')">
-                                            Forkable
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="uk-btn uk-btn-default uk-btn-sm"
-                                            data-value="read-only"
-                                            onclick="setNewDbPublicSharingLevel(this, 'read-only')">
-                                            Read-only
-                                        </button>
-                                    </div>
-                                    <input type="hidden" id="new-db-public-sharing-level" name="new_db_public_sharing_level" value="no-access">
-                                </div>
+                                {% include "create_database_fields.html" %}
                                 <div>
-                                    <button type="button" id="create-database-btn" class="uk-btn uk-btn-primary uk-btn-sm" disabled
+                                    <button type="button" id="create-database-submit" class="uk-btn uk-btn-primary uk-btn-sm" disabled
                                             onclick="createDatabase()">
                                         Create database
                                     </button>
@@ -94,36 +55,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Permission level selection -->
-            <div class="uk-card uk-card-default">
-                <div class="uk-card-header">
-                    <h4 class="uk-card-title">Permission level</h4>
-                </div>
-                <div class="uk-card-body">
-                    <p class="text-muted-foreground text-sm mb-3">
-                        {{ app_name }} is requesting <strong>{{ requested_scope }}</strong> access.
-                    </p>
-                    <div class="uk-btn-group" data-uk-button-radio>
-                        <button
-                            type="button"
-                            class="uk-btn uk-btn-default{% if requested_scope == 'read-only' %} uk-active{% endif %}"
-                            data-value="read-only"
-                            onclick="setPermissionLevel(this, 'read-only')">
-                            Read-only
-                        </button>
-                        <button
-                            type="button"
-                            class="uk-btn uk-btn-default{% if requested_scope == 'read-write' %} uk-active{% endif %}"
-                            data-value="read-write"
-                            {% if requested_scope == "read-only" %}disabled{% endif %}
-                            onclick="setPermissionLevel(this, 'read-write')">
-                            Read-write
-                        </button>
-                    </div>
-                    <input type="hidden" id="permission-level-value" name="permission_level" value="{{ requested_scope }}">
                 </div>
             </div>
 
@@ -167,25 +98,6 @@
         }
     }
 
-    function onDatabaseSlugInput(input) {
-        const createBtn = document.getElementById('create-database-btn');
-        createBtn.disabled = input.value.trim() === '' || creatingDatabase;
-    }
-
-    function setNewDbPublicSharingLevel(button, value) {
-        document.getElementById('new-db-public-sharing-level').value = value;
-        const buttons = button.parentElement.querySelectorAll('button');
-        buttons.forEach(btn => btn.classList.remove('uk-active'));
-        button.classList.add('uk-active');
-    }
-
-    function setPermissionLevel(button, value) {
-        document.getElementById('permission-level-value').value = value;
-        const buttons = button.parentElement.querySelectorAll('button');
-        buttons.forEach(btn => btn.classList.remove('uk-active'));
-        button.classList.add('uk-active');
-    }
-
     function updateAuthorizeButton() {
         const authorizeBtn = document.getElementById('authorize-btn');
         authorizeBtn.disabled = !selectedDatabase;
@@ -193,8 +105,8 @@
 
     async function createDatabase() {
         const slug = document.getElementById('database-slug').value.trim();
-        const publicSharingLevel = document.getElementById('new-db-public-sharing-level').value;
-        const createBtn = document.getElementById('create-database-btn');
+        const publicSharingLevel = document.getElementById('public-sharing-level').value;
+        const createBtn = document.getElementById('create-database-submit');
         const errorDiv = document.getElementById('create-database-error');
         const successDiv = document.getElementById('create-database-success');
         const select = document.getElementById('database-select');
@@ -257,6 +169,12 @@
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         updateAuthorizeButton();
+        // Enable/disable create button based on slug input
+        const databaseSlug = document.getElementById('database-slug');
+        const submitButton = document.getElementById('create-database-submit');
+        databaseSlug.addEventListener('input', function() {
+            submitButton.disabled = this.value.trim() === '' || creatingDatabase;
+        });
     });
 </script>
 {% endblock %}

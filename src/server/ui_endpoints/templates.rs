@@ -28,6 +28,11 @@ fn templates() -> &'static Tera {
             include_str!("templates/confirm_success.html"),
         )
         .unwrap();
+        tera.add_raw_template(
+            "create_database_fields.html",
+            include_str!("templates/create_database_fields.html"),
+        )
+        .unwrap();
         tera.add_raw_template("database.html", include_str!("templates/database.html"))
             .unwrap();
         tera.add_raw_template(

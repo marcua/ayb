@@ -265,11 +265,10 @@ impl From<APITokenWithDatabase> for APITokenInfo {
             _ => None,
         };
 
-        // query_permission_level uses QueryMode values: 0=read-only, 1=read-write
-        let permission_level = token.query_permission_level.map(|level| match level {
-            0 => "read-only".to_string(),
-            1 => "read-write".to_string(),
-            _ => "unknown".to_string(),
+        let permission_level = token.query_permission_level.and_then(|level| {
+            QueryMode::try_from(level)
+                .map(|q| q.to_str().to_string())
+                .ok()
         });
 
         Self {
@@ -342,9 +341,8 @@ pub struct OAuthAuthorizeRequest {
 /// Form data for OAuth authorization submit (POST /oauth/authorize)
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OAuthAuthorizeSubmit {
-    pub database: String,         // Selected database as "entity/slug"
-    pub permission_level: String, // "read-only" or "read-write"
-    pub action: String,           // "authorize" or "deny"
+    pub database: String, // Selected database as "entity/slug"
+    pub action: String,   // "authorize" or "deny"
     // These are preserved from the original request
     pub redirect_uri: String,
     pub state: Option<String>,
