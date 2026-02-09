@@ -13,4 +13,15 @@
     Please check your email for a confirmation link.
   </p>
 </div>
+{% if next %}
+<!-- Tera's HTML auto-escaping converts / to &#x2F; in template output.
+     Browsers don't decode HTML entities inside <script> tags, so we store
+     the value in a data attribute on a hidden div (where entities are decoded)
+     and read it via JavaScript. -->
+<div id="login-next" data-next="{{ next }}" hidden></div>
+<script>
+    var el = document.getElementById('login-next');
+    if (el) { localStorage.setItem('ayb_login_next', el.getAttribute('data-next')); }
+</script>
+{% endif %}
 {% endblock %}

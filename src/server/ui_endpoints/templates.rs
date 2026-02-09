@@ -28,6 +28,11 @@ fn templates() -> &'static Tera {
             include_str!("templates/confirm_success.html"),
         )
         .unwrap();
+        tera.add_raw_template(
+            "create_database_fields.html",
+            include_str!("templates/create_database_fields.html"),
+        )
+        .unwrap();
         tera.add_raw_template("database.html", include_str!("templates/database.html"))
             .unwrap();
         tera.add_raw_template(
@@ -92,6 +97,16 @@ fn templates() -> &'static Tera {
         tera.add_raw_template(
             "entity_tokens.html",
             include_str!("templates/entity_tokens.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "oauth_authorize.html",
+            include_str!("templates/oauth_authorize.html"),
+        )
+        .unwrap();
+        tera.add_raw_template(
+            "oauth_error.html",
+            include_str!("templates/oauth_error.html"),
         )
         .unwrap();
 

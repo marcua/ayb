@@ -1,0 +1,48 @@
+<div class="mb-4">
+    <label for="database-slug" class="block text-sm font-medium mb-1">Database name</label>
+    <input
+        type="text"
+        id="database-slug"
+        name="database_slug"
+        class="p-2 border rounded focus:border-blue-500 w-full"
+        placeholder="example.sqlite"
+        pattern="[A-Za-z0-9\-_\.]+"
+        title="Only letters, numbers, underscores, hyphens, and periods are allowed">
+</div>
+
+<div class="mb-4">
+    <label class="block text-sm font-medium mb-1">Public sharing level</label>
+    <div class="uk-btn-group" data-uk-button-radio>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default uk-active"
+            data-value="no-access"
+            onclick="setPublicSharingLevel(this, 'no-access')">
+            Private
+        </button>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default"
+            data-value="fork"
+            onclick="setPublicSharingLevel(this, 'fork')">
+            Forkable
+        </button>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default"
+            data-value="read-only"
+            onclick="setPublicSharingLevel(this, 'read-only')">
+            Read-only
+        </button>
+    </div>
+    <input type="hidden" id="public-sharing-level" name="public_sharing_level" value="no-access">
+</div>
+
+<script>
+    function setPublicSharingLevel(button, value) {
+        document.getElementById('public-sharing-level').value = value;
+        const buttons = button.parentElement.querySelectorAll('button');
+        buttons.forEach(btn => btn.classList.remove('uk-active'));
+        button.classList.add('uk-active');
+    }
+</script>

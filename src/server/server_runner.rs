@@ -24,7 +24,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     cfg.service(api_endpoints::health_endpoint)
         .service(api_endpoints::confirm_endpoint)
         .service(api_endpoints::log_in_endpoint)
-        .service(api_endpoints::register_endpoint);
+        .service(api_endpoints::register_endpoint)
+        .service(api_endpoints::oauth_token_endpoint);
 
     // Authenticated API endpoints
     cfg.service(
@@ -55,6 +56,8 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::confirm_endpoint)
                 .service(ui_endpoints::entity_tokens_endpoint)
                 .service(ui_endpoints::revoke_token_endpoint)
+                .service(ui_endpoints::oauth_authorize_endpoint)
+                .service(ui_endpoints::oauth_authorize_submit_endpoint)
                 .service(ui_endpoints::entity_details_endpoint)
                 .service(ui_endpoints::create_database_endpoint)
                 .service(ui_endpoints::update_profile_endpoint)
@@ -138,19 +141,20 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         .expect("unable to start periodic snapshot scheduler");
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
-    if ayb_conf.isolation.is_none() {
-        println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
-    } else if OS != "linux" {
-        println!(
-            "Warning: nsjail isolation is only supported on Linux. Running without isolation on {OS}"
-        );
-        ayb_conf_for_server.isolation = None;
-    } else {
-        let isolation = ayb_conf.isolation.unwrap();
-        let nsjail_path = Path::new(&isolation.nsjail_path);
-        if !nsjail_path.exists() {
-            panic!("nsjail path {} does not exist", nsjail_path.display());
+    if let Some(isolation) = &ayb_conf.isolation {
+        if OS != "linux" {
+            println!(
+                "Warning: nsjail isolation is only supported on Linux. Running without isolation on {OS}"
+            );
+            ayb_conf_for_server.isolation = None;
+        } else {
+            let nsjail_path = Path::new(&isolation.nsjail_path);
+            if !nsjail_path.exists() {
+                panic!("nsjail path {} does not exist", nsjail_path.display());
+            }
         }
+    } else {
+        println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
     }
 
     let server = HttpServer::new(move || {
