@@ -66,6 +66,7 @@ hosting_method = "Local"
 
 [cors]
 origin = "*"
+max_age = 86400
 ```
 
 You can also [set environment variables](#environment-variables) for any `ayb.toml` setting.

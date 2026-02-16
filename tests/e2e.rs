@@ -60,6 +60,7 @@ hosting_method = "Local"
 
 [cors]
 origin = "*"
+max_age = 86400
 
 "#;
     let cmd = ayb_assert_cmd!("default_server_config"; {});

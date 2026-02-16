@@ -21,6 +21,7 @@ pub struct AybConfigWeb {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigCors {
     pub origin: String,
+    pub max_age: Option<usize>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -141,6 +142,7 @@ pub fn default_server_config() -> AybConfig {
         },
         cors: AybConfigCors {
             origin: "*".to_string(),
+            max_age: Some(86400),
         },
         web: Some(AybConfigWeb {
             hosting_method: WebHostingMethod::Local,
