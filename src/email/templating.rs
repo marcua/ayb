@@ -66,7 +66,6 @@ mod tests {
             }),
             cors: AybConfigCors {
                 origin: "*".to_string(),
-                max_age: None,
             },
             snapshots: None,
             isolation: None,
@@ -108,7 +107,6 @@ mod tests {
             }),
             cors: AybConfigCors {
                 origin: "*".to_string(),
-                max_age: None,
             },
             snapshots: None,
             isolation: None,

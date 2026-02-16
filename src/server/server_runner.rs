@@ -110,11 +110,7 @@ fn build_cors(ayb_cors: AybConfigCors) -> Cors {
         cors = cors.allowed_origin(ayb_cors.origin.trim());
     }
 
-    if let Some(max_age) = ayb_cors.max_age {
-        cors = cors.max_age(max_age);
-    }
-
-    cors
+    cors.max_age(7200)
 }
 
 pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
