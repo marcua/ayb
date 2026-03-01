@@ -4,10 +4,6 @@ use crate::utils::email::{extract_token_from_emails, get_emails_for_recipient};
 use playwright::api::Page;
 use std::error::Error;
 
-// NOTE: Tests for OAuth scoped tokens (permission capping) are in oauth_flow.rs.
-// The test_oauth_flow test verifies that a read-only scoped token cannot write
-// to a database even when the user has read-write access.
-
 pub async fn test_token_management_flow(
     page: &Page,
     username: &str,
