@@ -4,10 +4,9 @@ use crate::utils::email::{extract_token_from_emails, get_emails_for_recipient};
 use playwright::api::Page;
 use std::error::Error;
 
-// TODO(marcua): Once the OAuth flow is implemented, add tests for scoped tokens
-// that reduce the access level a user would otherwise have (e.g., a read-only
-// token for a user with read-write access). This will exercise the
-// highest_query_access_level permission capping logic.
+// NOTE: Tests for OAuth scoped tokens (permission capping) are in oauth_flow.rs.
+// The test_oauth_flow test verifies that a read-only scoped token cannot write
+// to a database even when the user has read-write access.
 
 pub async fn test_token_management_flow(
     page: &Page,

@@ -1,3 +1,4 @@
+use crate::e2e_tests::FIRST_ENTITY_DB;
 use crate::utils::ayb::query;
 use std::collections::HashMap;
 
@@ -23,7 +24,7 @@ pub async fn test_oauth_permission_capping(
         config_path,
         first_entity_key,
         "CREATE TABLE IF NOT EXISTS oauth_test (id INTEGER PRIMARY KEY, name TEXT)",
-        super::FIRST_ENTITY_DB,
+        FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
@@ -32,7 +33,7 @@ pub async fn test_oauth_permission_capping(
         config_path,
         first_entity_key,
         "INSERT INTO oauth_test (name) VALUES ('test')",
-        super::FIRST_ENTITY_DB,
+        FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
@@ -42,7 +43,7 @@ pub async fn test_oauth_permission_capping(
         config_path,
         first_entity_key,
         "SELECT COUNT(*) FROM oauth_test",
-        super::FIRST_ENTITY_DB,
+        FIRST_ENTITY_DB,
         "table",
         "1",
     )?;
@@ -52,24 +53,28 @@ pub async fn test_oauth_permission_capping(
         config_path,
         first_entity_key,
         "DROP TABLE oauth_test",
-        super::FIRST_ENTITY_DB,
+        FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
 
     println!("OAuth permission capping test passed (basic verification)");
 
-    // Note: Full OAuth flow testing with scoped tokens requires browser interaction
-    // or a more complex test setup. The browser e2e tests cover the UI flow.
-    // The permission capping logic in permissions.rs is unit-testable, but
-    // the integration test for scoped tokens via OAuth requires the full flow.
+    // Note: Full OAuth flow testing with scoped tokens (including verification that
+    // a read-only scoped token cannot write) is in browser_e2e_tests/oauth_flow.rs.
+    // The browser test exercises the complete flow: authorization, token exchange,
+    // and permission capping verification.
 
     Ok(())
 }
 
-/// Test the OAuth token exchange endpoint directly
+/// Test the OAuth token exchange endpoint error handling.
+///
+/// This tests error cases for the token exchange endpoint. The happy path
+/// (successful token exchange) is tested in browser_e2e_tests/oauth_flow.rs,
+/// which can complete the full OAuth authorization flow to obtain a valid code.
 pub async fn test_oauth_token_exchange(server_url: &str) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Testing OAuth token exchange endpoint...");
+    println!("Testing OAuth token exchange endpoint (error cases)...");
 
     let client = reqwest::Client::new();
 
