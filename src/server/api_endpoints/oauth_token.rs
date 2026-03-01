@@ -3,7 +3,7 @@ use crate::error::AybError;
 use crate::hosted_db::QueryMode;
 use crate::http::structs::{OAuthErrorResponse, OAuthTokenRequest, OAuthTokenResponse};
 use crate::server::config::AybConfig;
-use crate::server::tokens::generate_scoped_api_token;
+use crate::server::tokens::{generate_api_token, APITokenScope};
 use crate::server::web_frontend::public_base_url;
 use actix_web::{post, web, HttpResponse, Result};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -106,11 +106,13 @@ pub async fn oauth_token(
     }
 
     // Create a new scoped API token
-    let (api_token, token_string) = match generate_scoped_api_token(
+    let (api_token, token_string) = match generate_api_token(
         auth_request.entity_id,
-        auth_request.database_id,
-        auth_request.query_permission_level,
-        auth_request.app_name.clone(),
+        Some(APITokenScope {
+            database_id: auth_request.database_id,
+            query_permission_level: auth_request.query_permission_level,
+            app_name: auth_request.app_name.clone(),
+        }),
     ) {
         Ok(result) => result,
         Err(err) => {

@@ -1,5 +1,5 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::{APIToken, InstantiatedEntity};
+use crate::ayb_db::models::APIToken;
 use crate::error::AybError;
 use crate::http::structs::AuthenticationDetails;
 use crate::server::config::AybConfigAuthentication;
@@ -47,30 +47,15 @@ fn api_key_controller() -> Result<PrefixedApiKeyController<OsRng, Sha256>, AybEr
         .finalize()?)
 }
 
-pub fn generate_api_token(entity: &InstantiatedEntity) -> Result<(APIToken, String), AybError> {
-    let controller = api_key_controller()?;
-    let (pak, hash) = controller.generate_key_and_hash();
-    Ok((
-        APIToken {
-            entity_id: entity.id,
-            short_token: pak.short_token().to_string(),
-            hash,
-            database_id: None,
-            query_permission_level: None,
-            app_name: None,
-            created_at: Some(chrono::Utc::now().naive_utc()),
-            expires_at: None,
-            revoked_at: None,
-        },
-        pak.to_string(),
-    ))
+pub struct APITokenScope {
+    pub database_id: i32,
+    pub query_permission_level: i16,
+    pub app_name: String,
 }
 
-pub fn generate_scoped_api_token(
+pub fn generate_api_token(
     entity_id: i32,
-    database_id: i32,
-    query_permission_level: i16,
-    app_name: String,
+    scope: Option<APITokenScope>,
 ) -> Result<(APIToken, String), AybError> {
     let controller = api_key_controller()?;
     let (pak, hash) = controller.generate_key_and_hash();
@@ -79,9 +64,9 @@ pub fn generate_scoped_api_token(
             entity_id,
             short_token: pak.short_token().to_string(),
             hash,
-            database_id: Some(database_id),
-            query_permission_level: Some(query_permission_level),
-            app_name: Some(app_name),
+            database_id: scope.as_ref().map(|s| s.database_id),
+            query_permission_level: scope.as_ref().map(|s| s.query_permission_level),
+            app_name: scope.map(|s| s.app_name),
             created_at: Some(chrono::Utc::now().naive_utc()),
             expires_at: None,
             revoked_at: None,
