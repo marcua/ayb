@@ -55,18 +55,15 @@ pub fn build_nsjail_command(
         .args(["--rlimit_as", "64"]) // 64 MB memory limit
         .args(["--time_limit", "0"]) // No time limit for daemon
         .args(["--rlimit_fsize", "75"]) // 75 MB file size limit
-        .args(["--rlimit_nofile", "32"]) // 32 files maximum
+        .args(["--rlimit_nofile", "10"]) // 10 files maximum
         .args(["--rlimit_nproc", "2"]); // 2 processes maximum
 
-    // Mount the database directory (not just the file) so that SQLite WAL mode
-    // files (-wal, -shm) are on the same filesystem as the database file.
+    // Map the database file
     let absolute_db_path = canonicalize(db_path)?;
     let db_file_name = pathbuf_to_file_name(&absolute_db_path)?;
-    let db_dir = pathbuf_to_parent(&absolute_db_path)?;
-    let tmp_db_dir = Path::new("/tmp/db");
-    let tmp_db_path = tmp_db_dir.join(&db_file_name);
-    let db_dir_mapping = format!("{}:{}", db_dir.display(), tmp_db_dir.display());
-    cmd.args(["--bindmount", &db_dir_mapping]);
+    let tmp_db_path = Path::new("/tmp").join(db_file_name);
+    let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
+    cmd.args(["--bindmount", &db_file_mapping]);
 
     // Map the query_daemon binary
     let ayb_path = current_exe()?;

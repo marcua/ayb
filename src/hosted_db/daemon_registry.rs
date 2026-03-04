@@ -112,32 +112,8 @@ impl DaemonRegistry {
         Ok(daemon_arc)
     }
 
-    /// Execute a query by getting/creating daemon, locking, and executing.
-    /// If the daemon has crashed, it is automatically respawned and the query retried once.
+    /// Execute a query by getting/creating daemon, locking, and executing
     pub async fn execute_query(
-        &self,
-        db_path: &PathBuf,
-        nsjail_path: Option<&Path>,
-        query: &str,
-        query_mode: QueryMode,
-    ) -> Result<QueryResult, AybError> {
-        let result = self
-            .execute_query_inner(db_path, nsjail_path, query, query_mode)
-            .await;
-
-        // If the query failed due to a daemon crash, respawn and retry once.
-        if is_daemon_crash(&result) {
-            self.remove_daemon(db_path).await?;
-            return self
-                .execute_query_inner(db_path, nsjail_path, query, query_mode)
-                .await;
-        }
-
-        result
-    }
-
-    /// Inner query execution: get or create daemon, check health, and run query.
-    async fn execute_query_inner(
         &self,
         db_path: &PathBuf,
         nsjail_path: Option<&Path>,
@@ -146,29 +122,8 @@ impl DaemonRegistry {
     ) -> Result<QueryResult, AybError> {
         let daemon_arc = self.get_or_create_daemon(db_path, nsjail_path).await?;
         let mut daemon = daemon_arc.lock().await;
-
-        // Check if the daemon process is still alive; if it has exited,
-        // drop the dead handle and respawn before executing the query.
-        if daemon.child.try_wait()?.is_some() {
-            drop(daemon);
-            self.remove_daemon(db_path).await?;
-            let daemon_arc = self.get_or_create_daemon(db_path, nsjail_path).await?;
-            let mut daemon = daemon_arc.lock().await;
-            let response = daemon.execute_query(query, query_mode).await?;
-            return parse_response(&response);
-        }
-
         let response = daemon.execute_query(query, query_mode).await?;
         parse_response(&response)
-    }
-
-    /// Remove a daemon from the registry without shutting it down
-    /// (used when the daemon has already crashed)
-    async fn remove_daemon(&self, db_path: &PathBuf) -> Result<(), AybError> {
-        let canonical_path = canonicalize(db_path)?;
-        let mut daemons = self.daemons.lock().await;
-        daemons.remove(&canonical_path);
-        Ok(())
     }
 
     /// Spawn a new daemon process for the given database
@@ -189,7 +144,7 @@ impl DaemonRegistry {
         let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
+            .stderr(Stdio::null())
             .spawn()?;
 
         let stdin = child.stdin.take().ok_or(AybError::Other {
@@ -230,17 +185,6 @@ impl DaemonRegistry {
                 daemon.shut_down().await;
             }
         }
-    }
-}
-
-/// Check if an error indicates the daemon process has crashed.
-/// Covers BrokenPipe (daemon died before write completed) and
-/// empty/invalid responses (daemon died after receiving the query).
-fn is_daemon_crash(result: &Result<QueryResult, AybError>) -> bool {
-    match result {
-        Err(AybError::Other { message }) if message.contains("BrokenPipe") => true,
-        Err(AybError::QueryError { message }) if message == "Invalid response: " => true,
-        _ => false,
     }
 }
 
