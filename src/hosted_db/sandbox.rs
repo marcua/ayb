@@ -39,7 +39,7 @@ pub fn build_nsjail_command(
 ) -> Result<tokio::process::Command, AybError> {
     let mut cmd = tokio::process::Command::new(nsjail);
 
-    cmd.arg("--quiet") // log warnings and above (not just fatal)
+    cmd.arg("--really_quiet") // log fatal messages only
         .arg("--iface_no_lo")
         .args(["--mode", "o"]) // run once
         .args(["--hostname", "ayb"])
