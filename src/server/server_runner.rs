@@ -149,6 +149,20 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
             if !nsjail_path.exists() {
                 panic!("nsjail path {} does not exist", nsjail_path.display());
             }
+            // Verify nsjail actually works (e.g., kernel supports required namespaces)
+            let test_result = std::process::Command::new(nsjail_path)
+                .args(["--really_quiet", "--mode", "o", "--", "/bin/true"])
+                .output();
+            match test_result {
+                Ok(output) if output.status.success() => {}
+                _ => {
+                    println!(
+                        "Warning: nsjail at {} exists but failed to run. Running without isolation",
+                        nsjail_path.display()
+                    );
+                    ayb_conf_for_server.isolation = None;
+                }
+            }
         }
     } else {
         println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
