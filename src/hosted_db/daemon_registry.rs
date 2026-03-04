@@ -127,6 +127,11 @@ impl DaemonRegistry {
 
         // If the query failed due to a daemon crash, respawn and retry once.
         if is_daemon_crash(&result) {
+            eprintln!(
+                "Daemon crash detected for {}, respawning: {:?}",
+                db_path.display(),
+                result.as_ref().err()
+            );
             self.remove_daemon(db_path).await?;
             return self
                 .execute_query_inner(db_path, nsjail_path, query, query_mode)
@@ -149,7 +154,11 @@ impl DaemonRegistry {
 
         // Check if the daemon process is still alive; if it has exited,
         // drop the dead handle and respawn before executing the query.
-        if daemon.child.try_wait()?.is_some() {
+        if let Some(exit_status) = daemon.child.try_wait()? {
+            eprintln!(
+                "Daemon for {} exited unexpectedly: {exit_status}",
+                db_path.display()
+            );
             drop(daemon);
             self.remove_daemon(db_path).await?;
             let daemon_arc = self.get_or_create_daemon(db_path, nsjail_path).await?;
