@@ -85,7 +85,7 @@ async fn complete_oauth_flow(
 
     let database_path = format!("{}/test.sqlite", username);
     page.select_option_builder("#database-select")
-        .values(&[database_path.as_str()])
+        .add_value(database_path.clone())
         .select_option()
         .await?;
 
@@ -377,7 +377,7 @@ pub async fn test_oauth_deny_flow(
 
     let database_path = format!("{}/test.sqlite", username);
     page.select_option_builder("#database-select")
-        .values(&[database_path.as_str()])
+        .add_value(database_path.clone())
         .select_option()
         .await?;
 
