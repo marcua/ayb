@@ -3,7 +3,9 @@
 /// This tests error cases for the token exchange endpoint. The happy path
 /// (successful token exchange) is tested in browser_e2e_tests/oauth_flow.rs,
 /// which can complete the full OAuth authorization flow to obtain a valid code.
-pub async fn test_oauth_token_exchange(server_url: &str) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn test_oauth_token_exchange_errors(
+    server_url: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Testing OAuth token exchange endpoint (error cases)...");
 
     let client = reqwest::Client::new();
