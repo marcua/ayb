@@ -152,7 +152,7 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     test_oauth_deny_flow(&page, &username, &base_url).await?;
 
     // Test token management UI (uses the OAuth read-only token for revocation testing)
-    test_token_management_flow(&page, &username, &base_url, Some(readonly_token)).await?;
+    test_token_management_flow(&page, &username, &base_url, readonly_token).await?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use std::error::Error;
 
 /// Test the token management UI flow.
 ///
-/// If `oauth_token` is provided, we expect 3 tokens in the UI:
+/// We expect 3 tokens in the UI:
 /// - 1 from initial registration (the browser session token)
 /// - 2 from OAuth flow (read-only and read-write scoped tokens)
 ///
@@ -13,8 +13,28 @@ pub async fn test_token_management_flow(
     page: &Page,
     username: &str,
     base_url: &str,
-    oauth_token: Option<String>,
+    oauth_token: String,
 ) -> Result<(), Box<dyn Error>> {
+    let client = reqwest::Client::new();
+    let database_path = format!("{}/test.sqlite", username);
+
+    // Verify the OAuth token works before we revoke it
+    let pre_revoke_response = client
+        .post(&format!("{}/v1/{}", base_url, database_path))
+        .header("Authorization", format!("Bearer {}", oauth_token))
+        .json(&serde_json::json!({
+            "query": "SELECT 1"
+        }))
+        .send()
+        .await?;
+
+    assert_eq!(
+        pre_revoke_response.status(),
+        200,
+        "OAuth token should work before revocation"
+    );
+    println!("Confirmed: OAuth token works before revocation");
+
     // Step 1: Navigate to the tokens page via the dropdown menu
     page.click_builder(&format!("a:has-text('{}')", username))
         .timeout(5000.0)
@@ -56,25 +76,19 @@ pub async fn test_token_management_flow(
     assert!(table_exists, "Token table should exist on the page");
 
     // Step 6: Count initial token rows and verify revoke buttons exist
-    // With OAuth tokens: 1 (registration) + 2 (OAuth) = 3 tokens
+    // 1 (registration) + 2 (OAuth) = 3 tokens
     let initial_rows = page.query_selector_all("table tbody tr").await?;
     let initial_count = initial_rows.len();
 
-    let expected_count = if oauth_token.is_some() { 3 } else { 1 };
-    assert_eq!(
-        initial_count, expected_count,
-        "Should have exactly {} tokens",
-        expected_count
-    );
+    assert_eq!(initial_count, 3, "Should have exactly 3 tokens");
 
     let revoke_buttons = page
         .query_selector_all("#tokens-table button:has-text('Revoke')")
         .await?;
     assert_eq!(
         revoke_buttons.len(),
-        expected_count,
-        "Should have exactly {} revoke buttons in the table",
-        expected_count
+        3,
+        "Should have exactly 3 revoke buttons in the table"
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_buttons", &[]).await?;
 
@@ -129,34 +143,29 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_reload", &[]).await?;
 
     // Step 8: Verify the revoked OAuth token no longer works
-    if let Some(token) = oauth_token {
-        let client = reqwest::Client::new();
-        let database_path = format!("{}/test.sqlite", username);
+    let response = client
+        .post(&format!("{}/v1/{}", base_url, database_path))
+        .header("Authorization", format!("Bearer {}", oauth_token))
+        .json(&serde_json::json!({
+            "query": "SELECT 1"
+        }))
+        .send()
+        .await?;
 
-        let response = client
-            .post(&format!("{}/v1/{}", base_url, database_path))
-            .header("Authorization", format!("Bearer {}", token))
-            .json(&serde_json::json!({
-                "query": "SELECT 1"
-            }))
-            .send()
-            .await?;
+    assert_ne!(
+        response.status(),
+        200,
+        "Revoked token should not be able to query database"
+    );
 
-        assert_ne!(
-            response.status(),
-            200,
-            "Revoked token should not be able to query database"
-        );
+    let error_body = response.text().await?;
+    assert!(
+        error_body.contains("revoked"),
+        "Error should mention token was revoked: {}",
+        error_body
+    );
 
-        let error_body = response.text().await?;
-        assert!(
-            error_body.contains("revoked"),
-            "Error should mention token was revoked: {}",
-            error_body
-        );
-
-        println!("Confirmed: revoked OAuth token no longer works");
-    }
+    println!("Confirmed: revoked OAuth token no longer works");
 
     // Step 9: Navigate back to profile
     page.click_builder(&format!("a:has-text('{}')", username))

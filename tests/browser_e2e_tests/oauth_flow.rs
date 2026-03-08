@@ -1,15 +1,14 @@
 use crate::utils::browser::BrowserHelpers;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use playwright::api::Page;
+use prefixed_api_key::rand::{self, Rng};
 use sha2::{Digest, Sha256};
 use std::error::Error;
 
-/// Generate a PKCE code verifier and challenge pair.
-/// Uses the same SHA256 + base64url approach as the server's verify_pkce function.
 fn generate_pkce() -> (String, String) {
     let verifier: String = (0..64)
         .map(|_| {
-            let idx = rand::random::<u8>() % 62;
+            let idx = rand::thread_rng().gen::<u8>() % 62;
             let c = if idx < 10 {
                 (b'0' + idx) as char
             } else if idx < 36 {
