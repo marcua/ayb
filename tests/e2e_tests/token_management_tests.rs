@@ -2,9 +2,6 @@ use crate::e2e_tests::FIRST_ENTITY_DB;
 use crate::utils::ayb::{list_tokens, query, revoke_token};
 use std::collections::{HashMap, HashSet};
 
-// Note: Scoped token permission capping tests are in browser_e2e_tests/oauth_flow.rs,
-// which tests the full OAuth flow including that read-only scoped tokens cannot write.
-
 /// Extract the short token from a full API key.
 /// Token format is: ayb_<short_token>_<secret>
 /// Returns just the <short_token> part (no prefix).

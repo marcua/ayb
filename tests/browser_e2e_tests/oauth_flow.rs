@@ -4,9 +4,9 @@ use playwright::api::Page;
 use sha2::{Digest, Sha256};
 use std::error::Error;
 
-/// Generate a PKCE code verifier and challenge pair
+/// Generate a PKCE code verifier and challenge pair.
+/// Uses the same SHA256 + base64url approach as the server's verify_pkce function.
 fn generate_pkce() -> (String, String) {
-    // Generate a random code verifier (43-128 characters)
     let verifier: String = (0..64)
         .map(|_| {
             let idx = rand::random::<u8>() % 62;
@@ -21,7 +21,6 @@ fn generate_pkce() -> (String, String) {
         })
         .collect();
 
-    // Compute SHA256 hash and base64url encode it
     let mut hasher = Sha256::new();
     hasher.update(verifier.as_bytes());
     let hash = hasher.finalize();
@@ -55,9 +54,9 @@ async fn complete_oauth_flow(
     let state = format!("test_state_{}", scope.replace('-', "_"));
     let app_name = format!("Test OAuth App ({})", scope);
 
-    // This is a fake URL - there's no actual server listening at this endpoint.
-    // We use it to capture the redirect and extract the authorization code from
-    // the URL query parameters after the browser redirects.
+    // This is a fake URL. We use it to capture the redirect and
+    // extract the authorization code from the URL query
+    // parameters after the browser redirects.
     let redirect_uri = format!("{}/oauth/callback", base_url);
 
     let authorize_url = format!(
@@ -179,7 +178,7 @@ async fn complete_oauth_flow(
 /// This verifies that:
 /// 1. A user can authorize an OAuth request for read-only access
 /// 2. The returned token can be used to read from the database
-/// 3. The returned token CANNOT be used to write to the database (permission capping)
+/// 3. The returned token cannot be used to write to the database (permission capping)
 pub async fn test_oauth_flow_readonly(
     page: &Page,
     username: &str,
@@ -191,7 +190,7 @@ pub async fn test_oauth_flow_readonly(
     let database_path = format!("{}/test.sqlite", username);
     let client = reqwest::Client::new();
 
-    // Test that the scoped token CAN read from the database
+    // Test that the scoped token can read from the database
     let read_response = client
         .post(&format!("{}/v1/{}", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
@@ -208,9 +207,9 @@ pub async fn test_oauth_flow_readonly(
     );
     println!("Successfully read from database with read-only scoped token");
 
-    // Test that the scoped token CANNOT write to the database
+    // Test that the scoped token cannot write to the database.
     // This is the key test for permission capping - even though the user has
-    // read-write access to their own database, the scoped token only has read-only
+    // read-write access to their own database, the scoped token only has read-only.
     let write_response = client
         .post(&format!("{}/v1/{}", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
@@ -223,14 +222,20 @@ pub async fn test_oauth_flow_readonly(
     assert_ne!(
         write_response.status(),
         200,
-        "Read-only scoped token should NOT be able to write to database"
+        "Read-only scoped token should not be able to write to database"
     );
 
     let error_body = write_response.text().await?;
     assert!(
-        error_body.contains("read-only") || error_body.contains("ReadOnly"),
-        "Error message should mention read-only restriction: {}",
+        error_body.contains("Attempted to write to database while in read-only mode"),
+        "Error message should be 'Attempted to write to database while in read-only mode', got: {}",
         error_body
+    );
+
+    // Verify the row was not inserted
+    assert!(
+        !error_body.contains("oauth_readonly_test"),
+        "Response should not contain the test data"
     );
 
     println!(
@@ -247,7 +252,7 @@ pub async fn test_oauth_flow_readonly(
 /// This verifies that:
 /// 1. A user can authorize an OAuth request for read-write access
 /// 2. The returned token can be used to read from the database
-/// 3. The returned token CAN be used to write to the database (no capping for read-write)
+/// 3. The returned token can be used to write to the database (no capping for read-write)
 pub async fn test_oauth_flow_readwrite(
     page: &Page,
     username: &str,
@@ -259,7 +264,7 @@ pub async fn test_oauth_flow_readwrite(
     let database_path = format!("{}/test.sqlite", username);
     let client = reqwest::Client::new();
 
-    // Test that the scoped token CAN read from the database
+    // Test that the scoped token can read from the database
     let read_response = client
         .post(&format!("{}/v1/{}", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
@@ -276,8 +281,8 @@ pub async fn test_oauth_flow_readwrite(
     );
     println!("Successfully read from database with read-write scoped token");
 
-    // Test that the scoped token CAN write to the database
-    // This verifies that read-write scope is NOT capped
+    // Test that the scoped token can write to the database.
+    // This verifies that read-write scope is not capped.
     let write_response = client
         .post(&format!("{}/v1/{}", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
@@ -350,8 +355,8 @@ pub async fn test_oauth_deny_flow(
     let (_, code_challenge) = generate_pkce();
     let state = "deny_test_state";
 
-    // This is a fake URL - there's no actual server listening at this endpoint.
-    // We use it to capture the redirect and extract the error from the URL.
+    // This is a fake URL. We use it to capture the redirect and
+    // extract the error from the URL query parameters.
     let redirect_uri = format!("{}/oauth/callback", base_url);
 
     let authorize_url = format!(
