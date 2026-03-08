@@ -1,43 +1,28 @@
-use crate::utils::ayb::{confirm, log_in};
 use crate::utils::browser::BrowserHelpers;
-use crate::utils::email::{extract_token_from_emails, get_emails_for_recipient};
 use playwright::api::Page;
 use std::error::Error;
 
+/// Test the token management UI flow.
+///
+/// If `oauth_token` is provided, we expect 3 tokens in the UI:
+/// - 1 from initial registration (the browser session token)
+/// - 2 from OAuth flow (read-only and read-write scoped tokens)
+///
+/// We revoke the OAuth read-only token and verify it no longer works.
 pub async fn test_token_management_flow(
     page: &Page,
     username: &str,
     base_url: &str,
-    test_type: &str,
+    oauth_token: Option<String>,
 ) -> Result<(), Box<dyn Error>> {
-    // Create an additional token via CLI so we have 2 tokens for revocation testing
-    let email = format!("{username}@example.com");
-    let emails_before = get_emails_for_recipient(test_type, &email)?;
-    log_in(
-        base_url,
-        username,
-        &format!("Check your email to finish logging in {username}"),
-    )?;
-    let emails_after = get_emails_for_recipient(test_type, &email)?;
-    assert!(
-        emails_after.len() > emails_before.len(),
-        "Should have received a new email after log_in"
-    );
-    let token = extract_token_from_emails(&[emails_after.last().unwrap().clone()])
-        .expect("Should be able to extract token from email");
-    confirm(base_url, &token, "Successfully authenticated")?;
-
     // Step 1: Navigate to the tokens page via the dropdown menu
-    // Click on the username dropdown to open the menu
     page.click_builder(&format!("a:has-text('{}')", username))
         .timeout(5000.0)
         .click()
         .await?;
 
-    // Take screenshot of the dropdown menu
     BrowserHelpers::screenshot_compare(page, "tokens_dropdown_menu", &[]).await?;
 
-    // Click on "Tokens" in the dropdown
     page.click_builder("a:has-text('Tokens')")
         .timeout(5000.0)
         .click()
@@ -51,7 +36,6 @@ pub async fn test_token_management_flow(
         page_url
     );
 
-    // Take screenshot of the tokens page
     BrowserHelpers::screenshot_compare(page, "tokens_page_initial", &[]).await?;
 
     // Step 3: Verify the page content
@@ -67,34 +51,35 @@ pub async fn test_token_management_flow(
         "Breadcrumbs should contain the username"
     );
 
-    // Step 5: Check if there's at least one token in the table
-    // (since we already have API keys from registration)
+    // Step 5: Check token table exists
     let table_exists = page.query_selector("table").await?.is_some();
     assert!(table_exists, "Token table should exist on the page");
 
     // Step 6: Count initial token rows and verify revoke buttons exist
-    // We expect exactly 2 tokens: one from initial registration, one created above
+    // With OAuth tokens: 1 (registration) + 2 (OAuth) = 3 tokens
     let initial_rows = page.query_selector_all("table tbody tr").await?;
     let initial_count = initial_rows.len();
+
+    let expected_count = if oauth_token.is_some() { 3 } else { 1 };
     assert_eq!(
-        initial_count, 2,
-        "Should have exactly 2 tokens (one from registration, one created above)"
+        initial_count, expected_count,
+        "Should have exactly {} tokens",
+        expected_count
     );
 
-    // Get all revoke buttons in the table (not including the modal's confirm button)
     let revoke_buttons = page
         .query_selector_all("#tokens-table button:has-text('Revoke')")
         .await?;
     assert_eq!(
         revoke_buttons.len(),
-        2,
-        "Should have exactly 2 revoke buttons in the table (one per token)"
+        expected_count,
+        "Should have exactly {} revoke buttons in the table",
+        expected_count
     );
-    BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_button", &[]).await?;
+    BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_buttons", &[]).await?;
 
-    // Click the first revoke button to open the confirmation modal
-    // We revoke the first token (the CLI-created one), not the browser session's token,
-    // so that the browser can still authenticate after page reload.
+    // Step 7: Revoke the first non-session token
+    // The session token is typically last, so we revoke the first one
     let first_button = revoke_buttons
         .first()
         .expect("Should have at least one button");
@@ -107,22 +92,18 @@ pub async fn test_token_management_flow(
         .wait_for_selector()
         .await?;
 
-    // Extra delay for modal animation to complete
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-    // Take screenshot of the confirmation modal
     BrowserHelpers::screenshot_compare(page, "tokens_revoke_modal", &[]).await?;
 
-    // Click the confirm button in the modal
+    // Click the confirm button
     page.click_builder("#confirm-revoke-btn")
         .timeout(5000.0)
         .click()
         .await?;
 
-    // Wait for the modal to close and the row to be replaced
     tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
-    // Take screenshot after revocation - row should show "revoked successfully" message
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_revoke", &[]).await?;
 
     // Verify the revocation message appears
@@ -132,7 +113,7 @@ pub async fn test_token_management_flow(
         "Should show revocation success message"
     );
 
-    // Reload the page and verify the revoked token is gone
+    // Reload and verify token count decreased
     page.reload_builder().reload().await?;
     page.wait_for_selector_builder("table")
         .timeout(5000.0)
@@ -147,7 +128,37 @@ pub async fn test_token_management_flow(
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_reload", &[]).await?;
 
-    // Step 7: Navigate back to profile to verify navigation works
+    // Step 8: Verify the revoked OAuth token no longer works
+    if let Some(token) = oauth_token {
+        let client = reqwest::Client::new();
+        let database_path = format!("{}/test.sqlite", username);
+
+        let response = client
+            .post(&format!("{}/v1/{}", base_url, database_path))
+            .header("Authorization", format!("Bearer {}", token))
+            .json(&serde_json::json!({
+                "query": "SELECT 1"
+            }))
+            .send()
+            .await?;
+
+        assert_ne!(
+            response.status(),
+            200,
+            "Revoked token should not be able to query database"
+        );
+
+        let error_body = response.text().await?;
+        assert!(
+            error_body.contains("revoked"),
+            "Error should mention token was revoked: {}",
+            error_body
+        );
+
+        println!("Confirmed: revoked OAuth token no longer works");
+    }
+
+    // Step 9: Navigate back to profile
     page.click_builder(&format!("a:has-text('{}')", username))
         .timeout(5000.0)
         .click()
@@ -158,7 +169,6 @@ pub async fn test_token_management_flow(
         .click()
         .await?;
 
-    // Verify we're back on the profile page
     let profile_url = page.url()?;
     assert!(
         profile_url.ends_with(&format!("/{}", username))
@@ -168,6 +178,8 @@ pub async fn test_token_management_flow(
     );
 
     BrowserHelpers::screenshot_compare(page, "tokens_navigation_complete", &[]).await?;
+
+    println!("Token management tests passed successfully");
 
     Ok(())
 }

@@ -5,8 +5,9 @@ mod e2e_tests;
 mod utils;
 
 use crate::browser_e2e_tests::{
-    test_create_and_query_database_flow, test_entity_profile_flow, test_permissions_flow,
-    test_registration_flow, test_snapshots_flow, test_token_management_flow,
+    test_create_and_query_database_flow, test_entity_profile_flow, test_oauth_deny_flow,
+    test_oauth_flow, test_permissions_flow, test_registration_flow, test_snapshots_flow,
+    test_token_management_flow,
 };
 use crate::e2e_tests::{
     test_create_and_query_db, test_entity_details_and_profile, test_health_check,
@@ -144,8 +145,14 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     // Test snapshots functionality
     test_snapshots_flow(&page, &username, &base_url).await?;
 
-    // Test token management UI
-    test_token_management_flow(&page, &username, &base_url, "browser_sqlite").await?;
+    // Test OAuth flow (creates scoped tokens for read-only and read-write access)
+    let (readonly_token, _readwrite_token) = test_oauth_flow(&page, &username, &base_url).await?;
+
+    // Test OAuth deny flow
+    test_oauth_deny_flow(&page, &username, &base_url).await?;
+
+    // Test token management UI (uses the OAuth read-only token for revocation testing)
+    test_token_management_flow(&page, &username, &base_url, Some(readonly_token)).await?;
 
     Ok(())
 }
