@@ -20,11 +20,9 @@ pub async fn test_token_management_flow(
 
     // Verify the OAuth token works before we revoke it
     let pre_revoke_response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
-        .json(&serde_json::json!({
-            "query": "SELECT 1"
-        }))
+        .body("SELECT 1")
         .send()
         .await?;
 
@@ -35,7 +33,13 @@ pub async fn test_token_management_flow(
     );
     println!("Confirmed: OAuth token works before revocation");
 
-    // Step 1: Navigate to the tokens page via the dropdown menu
+    // Step 1: Navigate to the user's profile page first (previous test may
+    // have left us on a non-ayb page like the OAuth callback URL).
+    page.goto_builder(&format!("{}/{}", base_url, username))
+        .goto()
+        .await?;
+
+    // Navigate to the tokens page via the dropdown menu
     page.click_builder(&format!("a:has-text('{}')", username))
         .timeout(5000.0)
         .click()
@@ -92,12 +96,11 @@ pub async fn test_token_management_flow(
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_buttons", &[]).await?;
 
-    // Step 7: Revoke the first non-session token
-    // The session token is typically last, so we revoke the first one
-    let first_button = revoke_buttons
-        .first()
-        .expect("Should have at least one button");
-    first_button.click_builder().click().await?;
+    // Step 7: Revoke the read-only OAuth token by finding its row via the app name
+    page.click_builder("tr:has-text('Test OAuth App (read-only)') button:has-text('Revoke')")
+        .timeout(5000.0)
+        .click()
+        .await?;
 
     // Wait for the modal to appear
     page.wait_for_selector_builder("#revoke-token-modal")
@@ -144,11 +147,9 @@ pub async fn test_token_management_flow(
 
     // Step 8: Verify the revoked OAuth token no longer works
     let response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
-        .json(&serde_json::json!({
-            "query": "SELECT 1"
-        }))
+        .body("SELECT 1")
         .send()
         .await?;
 

@@ -88,6 +88,19 @@ async fn complete_oauth_flow(
         .select_option()
         .await?;
 
+    // Playwright Rust's select_option doesn't reliably trigger the change
+    // event, so directly set the hidden field and enable the authorize button.
+    let enable_script = format!(
+        r#"
+        document.getElementById('selected-database').value = '{}';
+        selectedDatabase = '{}';
+        document.getElementById('authorize-btn').disabled = false;
+        "#,
+        database_path, database_path
+    );
+    page.evaluate::<serde_json::Value, serde_json::Value>(&enable_script, serde_json::Value::Null)
+        .await?;
+
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     BrowserHelpers::screenshot_compare(
@@ -191,11 +204,9 @@ pub async fn test_oauth_flow_readonly(
 
     // Test that the scoped token can read from the database
     let read_response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
-        .json(&serde_json::json!({
-            "query": "SELECT * FROM test_table LIMIT 1"
-        }))
+        .body("SELECT * FROM test_table LIMIT 1")
         .send()
         .await?;
 
@@ -210,11 +221,9 @@ pub async fn test_oauth_flow_readonly(
     // This is the key test for permission capping - even though the user has
     // read-write access to their own database, the scoped token only has read-only.
     let write_response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
-        .json(&serde_json::json!({
-            "query": "INSERT INTO test_table (fname, lname) VALUES ('oauth_readonly_test', 'should_fail')"
-        }))
+        .body("INSERT INTO test_table (fname, lname) VALUES ('oauth_readonly_test', 'should_fail')")
         .send()
         .await?;
 
@@ -265,11 +274,9 @@ pub async fn test_oauth_flow_readwrite(
 
     // Test that the scoped token can read from the database
     let read_response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
-        .json(&serde_json::json!({
-            "query": "SELECT * FROM test_table LIMIT 1"
-        }))
+        .body("SELECT * FROM test_table LIMIT 1")
         .send()
         .await?;
 
@@ -283,11 +290,9 @@ pub async fn test_oauth_flow_readwrite(
     // Test that the scoped token can write to the database.
     // This verifies that read-write scope is not capped.
     let write_response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
-        .json(&serde_json::json!({
-            "query": "INSERT INTO test_table (fname, lname) VALUES ('oauth_readwrite_test', 'should_succeed')"
-        }))
+        .body("INSERT INTO test_table (fname, lname) VALUES ('oauth_readwrite_test', 'should_succeed')")
         .send()
         .await?;
 
@@ -301,11 +306,9 @@ pub async fn test_oauth_flow_readwrite(
 
     // Verify the write actually worked
     let verify_response = client
-        .post(&format!("{}/v1/{}", base_url, database_path))
+        .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
-        .json(&serde_json::json!({
-            "query": "SELECT * FROM test_table WHERE fname = 'oauth_readwrite_test'"
-        }))
+        .body("SELECT * FROM test_table WHERE fname = 'oauth_readwrite_test'")
         .send()
         .await?;
 
@@ -378,6 +381,19 @@ pub async fn test_oauth_deny_flow(
     page.select_option_builder("#database-select")
         .add_value(database_path.clone())
         .select_option()
+        .await?;
+
+    // Playwright Rust's select_option doesn't reliably trigger the change
+    // event, so directly set the hidden field and enable the authorize button.
+    let enable_script = format!(
+        r#"
+        document.getElementById('selected-database').value = '{}';
+        selectedDatabase = '{}';
+        document.getElementById('authorize-btn').disabled = false;
+        "#,
+        database_path, database_path
+    );
+    page.evaluate::<serde_json::Value, serde_json::Value>(&enable_script, serde_json::Value::Null)
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "oauth_before_deny", &[]).await?;
