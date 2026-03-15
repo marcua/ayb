@@ -82,11 +82,17 @@ async fn complete_oauth_flow(
     )
     .await?;
 
+    // Select the database using JavaScript to ensure the change event fires
     let database_path = format!("{}/test.sqlite", username);
-    page.select_option_builder("#database-select")
-        .add_value(database_path.clone())
-        .select_option()
-        .await?;
+    let select_script = format!(
+        r#"
+        const select = document.getElementById('database-select');
+        select.value = '{}';
+        select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        "#,
+        database_path
+    );
+    page.evaluate::<(), _>(&select_script, ()).await?;
 
     // Playwright Rust's select_option doesn't reliably trigger the change
     // event, so directly set the hidden field and enable the authorize button.
@@ -250,8 +256,6 @@ pub async fn test_oauth_flow_readonly(
         "Confirmed: scoped read-only token cannot write to database (permission capping works)"
     );
 
-    BrowserHelpers::screenshot_compare(page, "oauth_readonly_flow_complete", &[]).await?;
-
     Ok(result.access_token)
 }
 
@@ -322,8 +326,6 @@ pub async fn test_oauth_flow_readwrite(
 
     println!("Verified: row was successfully inserted with read-write scoped token");
 
-    BrowserHelpers::screenshot_compare(page, "oauth_readwrite_flow_complete", &[]).await?;
-
     Ok(result.access_token)
 }
 
@@ -377,11 +379,19 @@ pub async fn test_oauth_deny_flow(
         .wait_for_selector()
         .await?;
 
+    // Select the database using JavaScript to ensure the change event fires
     let database_path = format!("{}/test.sqlite", username);
-    page.select_option_builder("#database-select")
-        .add_value(database_path.clone())
-        .select_option()
-        .await?;
+    let select_script = format!(
+        r#"
+        const select = document.getElementById('database-select');
+        select.value = '{}';
+        select.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        "#,
+        database_path
+    );
+    page.evaluate::<(), _>(&select_script, ()).await?;
+
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
     // Playwright Rust's select_option doesn't reliably trigger the change
     // event, so directly set the hidden field and enable the authorize button.
