@@ -25,6 +25,7 @@ tests/test-env
 tests/screenshots/*_current.png
 tests/screenshots/*_diff.png
 .aider*
+.claude/
 # Local AI plan tracking/context files
 plan.md
 
