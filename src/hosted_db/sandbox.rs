@@ -137,7 +137,7 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
     Ok(())
 }
 
-/// Build command for running the query daemon (always direct, no nsjail).
+/// Build command for running the query daemon.
 /// When isolation is enabled, the daemon receives an `--isolate` flag
 /// and applies its own sandbox restrictions at startup.
 pub fn build_daemon_command(
