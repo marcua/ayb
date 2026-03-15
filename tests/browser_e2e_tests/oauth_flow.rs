@@ -31,6 +31,7 @@ fn generate_pkce() -> (String, String) {
 /// Result of completing the OAuth authorization flow
 struct OAuthTokenResult {
     access_token: String,
+    #[allow(dead_code)]
     permission_level: String,
 }
 
@@ -92,7 +93,7 @@ async fn complete_oauth_flow(
         "#,
         database_path
     );
-    page.evaluate::<(), _>(&select_script, ()).await?;
+    page.evaluate::<(), ()>(&select_script, ()).await?;
 
     // Playwright Rust's select_option doesn't reliably trigger the change
     // event, so directly set the hidden field and enable the authorize button.
@@ -389,7 +390,7 @@ pub async fn test_oauth_deny_flow(
         "#,
         database_path
     );
-    page.evaluate::<(), _>(&select_script, ()).await?;
+    page.evaluate::<(), ()>(&select_script, ()).await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
