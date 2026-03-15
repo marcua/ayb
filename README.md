@@ -370,27 +370,32 @@ flag and sets
 to `0` in order to prevent users from corrupting the database or
 attaching to other databases on the filesystem.
 
-For further isolation, `ayb` can use [nsjail](https://nsjail.dev/)
-(only when running on Linux) to isolate each database's filesystem access
-and resources. When this form of isolation is enabled, `ayb` starts a
-persistent `nsjail`-managed daemon process for each database to execute
-queries in an isolated environment. We have not yet benchmarked the performance
-overhead of this approach.
+For further isolation, `ayb` uses the Linux kernel's
+[Landlock](https://landlock.io/) security module along with resource
+limits (`setrlimit`) to sandbox each database's query daemon process.
+This approach requires no root privileges, no external binaries, and
+works inside Docker containers without `--privileged`.
 
-To enable this deeper form of isolation on Linux, you must first build
-`nsjail`, which you can do through
-[scripts/build_nsjail.sh](scripts/build_nsjail.sh). Note that `nsjail`
-depends on a few other packages. If you run into issues building it,
-it might be helpful to see its
-[Dockerfile](https://github.com/google/nsjail/blob/master/Dockerfile)
-to get a sense of those requirements.
+When isolation is enabled, each query daemon applies the following
+protections to itself at startup:
 
-Once you have a path to the
-`nsjail` binary, add the following to your `ayb.toml`:
+* **Filesystem isolation** (Landlock): only the database file's
+  directory (read-write) and system shared libraries (read-only)
+  are accessible. All other filesystem paths are denied.
+* **Network isolation** (Landlock, kernel 6.7+): all TCP bind and
+  connect operations are denied.
+* **Memory limit**: 64 MB virtual memory (`RLIMIT_AS`).
+* **File size limit**: 75 MB max file size (`RLIMIT_FSIZE`).
+* **File descriptor limit**: 10 open files max (`RLIMIT_NOFILE`).
+* **Process limit**: 256 processes/threads (`RLIMIT_NPROC`), a
+  system-wide per-UID safety net against fork bombs. More advanced
+  per-process CPU limitation is future work.
+
+To enable isolation, add the following to your `ayb.toml`:
 
 ```toml
 [isolation]
-nsjail_path = "path/to/nsjail"
+enabled = true
 ```
 
 ## Docker
@@ -472,7 +477,7 @@ cargo test --verbose
 In order to mimic as close to a realistic environment as possible, the end-to-end tests mock out very little functionality. The `tests/set_up_e2e_env.sh` script, which has been used extensively in Ubuntu, does the following:
 * Sets up a Python virtual environment and installs requirements for various helpers.
 * Installs the requirements for a [MinIO](https://min.io/) server and then runs that server in the background (requires Docker) in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
-* Installs an `nsjail` binary to test `ayb`'s [isolation](#isolation) functionality.
+* Tests `ayb`'s [isolation](#isolation) functionality using the kernel's Landlock security module.
 
 ## FAQ
 

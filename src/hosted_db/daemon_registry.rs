@@ -1,10 +1,10 @@
 use crate::error::AybError;
-use crate::hosted_db::sandbox::{build_direct_command, build_nsjail_command};
+use crate::hosted_db::sandbox::build_daemon_command;
 use crate::hosted_db::{QueryMode, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::canonicalize;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
 use tokio::io::BufReader;
@@ -89,7 +89,7 @@ impl DaemonRegistry {
     async fn get_or_create_daemon(
         &self,
         db_path: &PathBuf,
-        nsjail_path: Option<&Path>,
+        isolate: bool,
     ) -> Result<Arc<Mutex<DaemonHandle>>, AybError> {
         // Canonicalize the path to ensure consistency
         let canonical_path = canonicalize(db_path)?;
@@ -104,7 +104,7 @@ impl DaemonRegistry {
         }
 
         // Spawn the daemon process while holding the lock
-        let daemon_handle = self.spawn_daemon(&canonical_path, nsjail_path).await?;
+        let daemon_handle = self.spawn_daemon(&canonical_path, isolate).await?;
         let daemon_arc = Arc::new(Mutex::new(daemon_handle));
 
         // Insert into registry
@@ -116,11 +116,11 @@ impl DaemonRegistry {
     pub async fn execute_query(
         &self,
         db_path: &PathBuf,
-        nsjail_path: Option<&Path>,
+        isolate: bool,
         query: &str,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        let daemon_arc = self.get_or_create_daemon(db_path, nsjail_path).await?;
+        let daemon_arc = self.get_or_create_daemon(db_path, isolate).await?;
         let mut daemon = daemon_arc.lock().await;
         let response = daemon.execute_query(query, query_mode).await?;
         parse_response(&response)
@@ -130,15 +130,9 @@ impl DaemonRegistry {
     async fn spawn_daemon(
         &self,
         db_path: &PathBuf,
-        nsjail_path: Option<&Path>,
+        isolate: bool,
     ) -> Result<DaemonHandle, AybError> {
-        let mut cmd = if let Some(nsjail) = nsjail_path {
-            // Spawn with nsjail isolation
-            build_nsjail_command(nsjail, db_path)?
-        } else {
-            // Spawn without isolation
-            build_direct_command(db_path)?
-        };
+        let mut cmd = build_daemon_command(db_path, isolate)?;
 
         // Spawn the process with piped stdin/stdout
         let mut child = cmd

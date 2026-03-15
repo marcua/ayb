@@ -63,7 +63,7 @@ impl AybConfigEmailBackends {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigIsolation {
-    pub nsjail_path: String,
+    pub enabled: bool,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

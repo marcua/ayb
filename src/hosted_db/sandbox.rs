@@ -1,90 +1,156 @@
-/* Retrieved and modified from
-  https://raw.githubusercontent.com/Defelo/sandkasten/83f629175d02ebc70fbb16b8b9e05663ea67ccc7/src/sandbox.rs
-  On December 6, 2023.
-  Original license:
-
-    MIT License
-
-    Copyright (c) 2023 Defelo
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-
 use crate::error::AybError;
-use crate::hosted_db::paths::{pathbuf_to_file_name, pathbuf_to_parent};
 use std::env::current_exe;
-use std::fs::canonicalize;
 use std::path::{Path, PathBuf};
 
-/// Build command for running daemon with nsjail isolation
-pub fn build_nsjail_command(
-    nsjail: &Path,
-    db_path: &PathBuf,
-) -> Result<tokio::process::Command, AybError> {
-    let mut cmd = tokio::process::Command::new(nsjail);
+use crate::hosted_db::paths::pathbuf_to_parent;
 
-    cmd.arg("--really_quiet") // log fatal messages only
-        .arg("--iface_no_lo")
-        .args(["--mode", "o"]) // run once
-        .args(["--hostname", "ayb"])
-        .args(["--bindmount_ro", "/lib:/lib"])
-        .args(["--bindmount_ro", "/lib64:/lib64"])
-        .args(["--bindmount_ro", "/usr:/usr"]);
-
-    // Set resource limits for the process. In the future, we will
-    // allow entities to control the resources they dedicate to
-    // different databases/queries.
-    cmd.args(["--mount", "none:/tmp:tmpfs:size=100000000"]) // ~95 MB tmpfs
-        .args(["--max_cpus", "1"]) // One CPU
-        .args(["--rlimit_as", "64"]) // 64 MB memory limit
-        .args(["--time_limit", "0"]) // No time limit for daemon
-        .args(["--rlimit_fsize", "75"]) // 75 MB file size limit
-        .args(["--rlimit_nofile", "10"]) // 10 files maximum
-        .args(["--rlimit_nproc", "2"]); // 2 processes maximum
-
-    // Map the database file
-    let absolute_db_path = canonicalize(db_path)?;
-    let db_file_name = pathbuf_to_file_name(&absolute_db_path)?;
-    let tmp_db_path = Path::new("/tmp").join(db_file_name);
-    let db_file_mapping = format!("{}:{}", absolute_db_path.display(), tmp_db_path.display());
-    cmd.args(["--bindmount", &db_file_mapping]);
-
-    // Map the query_daemon binary
-    let ayb_path = current_exe()?;
-    let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
-    cmd.args([
-        "--bindmount_ro",
-        &format!("{}:/tmp/ayb_query_daemon", query_daemon_path.display()),
-    ]);
-
-    // Run the daemon
-    cmd.arg("--").arg("/tmp/ayb_query_daemon").arg(tmp_db_path);
-
-    Ok(cmd)
+/// Apply Landlock filesystem and network restrictions, plus resource
+/// limits via setrlimit, to the current process. This is called by the
+/// query daemon at startup when isolation is enabled, so the daemon
+/// sandboxes itself before processing any queries.
+///
+/// Protections applied:
+/// - Filesystem: only the database file (read-write) and shared
+///   libraries (read-only) are accessible.
+/// - Network: all TCP bind/connect denied (on kernel 6.7+).
+/// - Memory: 64 MB virtual memory limit (RLIMIT_AS).
+/// - File size: 75 MB max file size (RLIMIT_FSIZE).
+/// - File descriptors: 10 max open files (RLIMIT_NOFILE).
+/// - Processes: 256 system-wide process limit (RLIMIT_NPROC).
+///   Note: this is a per-UID limit, not per-process. It acts as a
+///   safety net against fork bombs. More advanced per-process CPU
+///   limitation is future work.
+pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
+    apply_landlock_restrictions(db_path)?;
+    apply_resource_limits()?;
+    Ok(())
 }
 
-/// Build command for running daemon without isolation
-pub fn build_direct_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
+/// Apply Landlock filesystem and network restrictions.
+fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
+    use landlock::{
+        path_beneath_rules, Access, AccessFs, AccessNet, Ruleset, RulesetAttr, RulesetCreatedAttr,
+        RulesetStatus, ABI,
+    };
+
+    // Use the highest ABI we can, with best-effort degradation.
+    let abi = ABI::V5;
+
+    let access_all = AccessFs::from_all(abi);
+    let access_read = AccessFs::from_read(abi);
+
+    let mut ruleset =
+        Ruleset::default()
+            .handle_access(access_all)
+            .map_err(|e| AybError::Other {
+                message: format!("Landlock: failed to handle filesystem access: {e}"),
+            })?;
+
+    // Handle network access if supported (ABI v4+, kernel 6.7+).
+    // On older kernels, AccessNet::from_all() returns empty flags and
+    // handle_access would error, so we skip it gracefully.
+    let access_net = AccessNet::from_all(abi);
+    if !access_net.is_empty() {
+        ruleset = ruleset
+            .handle_access(access_net)
+            .map_err(|e| AybError::Other {
+                message: format!("Landlock: failed to handle network access: {e}"),
+            })?;
+    }
+
+    let mut ruleset_created = ruleset.create().map_err(|e| AybError::Other {
+        message: format!("Landlock: failed to create ruleset: {e}"),
+    })?;
+
+    // Allow read-only access to shared libraries and system paths.
+    let read_only_paths: Vec<&str> = vec!["/lib", "/lib64", "/usr"];
+    let existing_read_only: Vec<&str> = read_only_paths
+        .into_iter()
+        .filter(|p| Path::new(p).exists())
+        .collect();
+
+    if !existing_read_only.is_empty() {
+        ruleset_created = ruleset_created
+            .add_rules(path_beneath_rules(existing_read_only, access_read))
+            .map_err(|e| AybError::Other {
+                message: format!("Landlock: failed to add read-only rules: {e}"),
+            })?;
+    }
+
+    // Allow read-write access to the database file's parent directory.
+    // SQLite needs access to the directory for journal/WAL files.
+    let db_dir = db_path.parent().ok_or(AybError::Other {
+        message: format!(
+            "Cannot determine parent directory of database: {}",
+            db_path.display()
+        ),
+    })?;
+    ruleset_created = ruleset_created
+        .add_rules(path_beneath_rules(&[db_dir], access_all))
+        .map_err(|e| AybError::Other {
+            message: format!("Landlock: failed to add database directory rule: {e}"),
+        })?;
+
+    // No network rules added = all TCP bind/connect denied (if network
+    // access was handled above).
+
+    let status = ruleset_created
+        .restrict_self()
+        .map_err(|e| AybError::Other {
+            message: format!("Landlock: failed to restrict self: {e}"),
+        })?;
+
+    if status.ruleset == RulesetStatus::NotEnforced {
+        eprintln!(
+            "Warning: Landlock is not enforced on this kernel. \
+             Running without filesystem/network isolation."
+        );
+    }
+
+    Ok(())
+}
+
+/// Apply resource limits via setrlimit.
+fn apply_resource_limits() -> Result<(), AybError> {
+    set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?; // 64 MB memory
+    set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?; // 75 MB file size
+    set_rlimit(libc::RLIMIT_NOFILE, 10)?; // 10 file descriptors
+    set_rlimit(libc::RLIMIT_NPROC, 256)?; // 256 processes (per-UID safety net)
+    Ok(())
+}
+
+fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), AybError> {
+    let rlim = libc::rlimit {
+        rlim_cur: limit,
+        rlim_max: limit,
+    };
+    let ret = unsafe { libc::setrlimit(resource, &rlim) };
+    if ret != 0 {
+        return Err(AybError::Other {
+            message: format!(
+                "Failed to set resource limit {}: {}",
+                resource,
+                std::io::Error::last_os_error()
+            ),
+        });
+    }
+    Ok(())
+}
+
+/// Build command for running the query daemon (always direct, no nsjail).
+/// When isolation is enabled, the daemon receives an `--isolate` flag
+/// and applies its own sandbox restrictions at startup.
+pub fn build_daemon_command(
+    db_path: &PathBuf,
+    isolate: bool,
+) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
+    if isolate {
+        cmd.arg("--isolate");
+    }
     cmd.arg(db_path);
 
     Ok(cmd)

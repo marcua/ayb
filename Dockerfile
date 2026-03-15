@@ -8,21 +8,9 @@ RUN apt update
 RUN apt-get install -y \
     # ayb requirements
     libssl-dev \
-    # nsjail requirements
-    autoconf \
-    bison \
-    flex \
     gcc \
     g++ \
-    git \
-    libprotobuf-dev \
-    libnl-route-3-dev \
-    libtool \
-    make \
-    pkg-config \
-    protobuf-compiler
-
-RUN git clone https://github.com/google/nsjail.git nsjail-checkout && cd nsjail-checkout && make && mv nsjail .. && cd .. && rm -rf nsjail-checkout
+    pkg-config
 
 COPY . /ayb
 
@@ -38,7 +26,6 @@ RUN apt-get install -y libssl-dev ca-certificates
 
 COPY --from=builder /ayb/target/release/ayb /bin
 COPY --from=builder /ayb/target/release/ayb_query_daemon /bin
-COPY --from=builder /nsjail /bin
 
 EXPOSE 5433
 

@@ -70,7 +70,7 @@ token_expiration_seconds = 3600
 origin = "*"
 
 [isolation]
-nsjail_path = "tests/nsjail"
+enabled = true
 
 [snapshots]
 sqlite_method = "Vacuum"

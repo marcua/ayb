@@ -139,15 +139,15 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
     if let Some(isolation) = &ayb_conf.isolation {
-        if OS != "linux" {
-            println!(
-                "Warning: nsjail isolation is only supported on Linux. Running without isolation on {OS}"
-            );
-            ayb_conf_for_server.isolation = None;
-        } else {
-            let nsjail_path = Path::new(&isolation.nsjail_path);
-            if !nsjail_path.exists() {
-                panic!("nsjail path {} does not exist", nsjail_path.display());
+        if isolation.enabled {
+            if OS != "linux" {
+                println!(
+                    "Warning: Landlock isolation is only supported on Linux. Running without isolation on {OS}"
+                );
+                ayb_conf_for_server.isolation =
+                    Some(crate::server::config::AybConfigIsolation { enabled: false });
+            } else {
+                println!("Isolation enabled: query daemons will use Landlock and resource limits.");
             }
         }
     } else {

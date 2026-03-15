@@ -1,6 +1,6 @@
 pub mod daemon_registry;
 pub mod paths;
-mod sandbox;
+pub mod sandbox;
 pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
