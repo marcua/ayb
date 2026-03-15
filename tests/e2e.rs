@@ -146,14 +146,13 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     test_snapshots_flow(&page, &username, &base_url).await?;
 
     // Test OAuth flow (creates scoped tokens for read-only and read-write access)
-    let (_readonly_token, readwrite_token) = test_oauth_flow(&page, &username, &base_url).await?;
+    let (readonly_token, _readwrite_token) = test_oauth_flow(&page, &username, &base_url).await?;
 
     // Test OAuth deny flow
     test_oauth_deny_flow(&page, &username, &base_url).await?;
 
-    // Test token management UI. We revoke the read-write token since it appears
-    // first in the UI (tokens are displayed newest-first, and read-write was created last).
-    test_token_management_flow(&page, &username, &base_url, readwrite_token).await?;
+    // Test token management UI (uses the OAuth read-only token for revocation testing)
+    test_token_management_flow(&page, &username, &base_url, readonly_token).await?;
 
     Ok(())
 }

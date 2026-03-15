@@ -96,8 +96,8 @@ pub async fn test_token_management_flow(
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_buttons", &[]).await?;
 
-    // Step 7: Revoke the read-write OAuth token by finding its row via the app name
-    page.click_builder("tr:has-text('Test OAuth App (read-write)') button:has-text('Revoke')")
+    // Step 7: Revoke the read-only OAuth token by finding its row via the app name
+    page.click_builder("tr:has-text('Test OAuth App (read-only)') button:has-text('Revoke')")
         .timeout(5000.0)
         .click()
         .await?;

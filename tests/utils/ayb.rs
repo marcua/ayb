@@ -92,7 +92,6 @@ pub fn register(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn log_in(
     server_url: &str,
     username: &str,
@@ -104,7 +103,6 @@ pub fn log_in(
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn confirm(
     server_url: &str,
     token: &str,
