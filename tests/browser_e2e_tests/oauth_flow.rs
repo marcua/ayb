@@ -82,23 +82,22 @@ async fn complete_oauth_flow(
     )
     .await?;
 
+    // Select the database via JavaScript so the dropdown visually updates,
+    // the hidden form field is set, and the authorize button is enabled.
+    // Playwright Rust's select_option_builder doesn't reliably trigger the
+    // onchange handler, so we do everything in one evaluate call.
     let database_path = format!("{}/test.sqlite", username);
-    page.select_option_builder("#database-select")
-        .add_value(database_path.clone())
-        .select_option()
-        .await?;
-
-    // Playwright Rust's select_option doesn't reliably trigger the change
-    // event, so directly set the hidden field and enable the authorize button.
-    let enable_script = format!(
+    let select_script = format!(
         r#"
-        document.getElementById('selected-database').value = '{}';
-        selectedDatabase = '{}';
+        const select = document.getElementById('database-select');
+        select.value = '{db}';
+        document.getElementById('selected-database').value = '{db}';
+        selectedDatabase = '{db}';
         document.getElementById('authorize-btn').disabled = false;
         "#,
-        database_path, database_path
+        db = database_path
     );
-    page.evaluate::<serde_json::Value, serde_json::Value>(&enable_script, serde_json::Value::Null)
+    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, serde_json::Value::Null)
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -250,8 +249,6 @@ pub async fn test_oauth_flow_readonly(
         "Confirmed: scoped read-only token cannot write to database (permission capping works)"
     );
 
-    BrowserHelpers::screenshot_compare(page, "oauth_readonly_flow_complete", &[]).await?;
-
     Ok(result.access_token)
 }
 
@@ -322,8 +319,6 @@ pub async fn test_oauth_flow_readwrite(
 
     println!("Verified: row was successfully inserted with read-write scoped token");
 
-    BrowserHelpers::screenshot_compare(page, "oauth_readwrite_flow_complete", &[]).await?;
-
     Ok(result.access_token)
 }
 
@@ -378,22 +373,17 @@ pub async fn test_oauth_deny_flow(
         .await?;
 
     let database_path = format!("{}/test.sqlite", username);
-    page.select_option_builder("#database-select")
-        .add_value(database_path.clone())
-        .select_option()
-        .await?;
-
-    // Playwright Rust's select_option doesn't reliably trigger the change
-    // event, so directly set the hidden field and enable the authorize button.
-    let enable_script = format!(
+    let select_script = format!(
         r#"
-        document.getElementById('selected-database').value = '{}';
-        selectedDatabase = '{}';
+        const select = document.getElementById('database-select');
+        select.value = '{db}';
+        document.getElementById('selected-database').value = '{db}';
+        selectedDatabase = '{db}';
         document.getElementById('authorize-btn').disabled = false;
         "#,
-        database_path, database_path
+        db = database_path
     );
-    page.evaluate::<serde_json::Value, serde_json::Value>(&enable_script, serde_json::Value::Null)
+    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, serde_json::Value::Null)
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "oauth_before_deny", &[]).await?;

@@ -145,7 +145,9 @@ pub async fn test_token_management_flow(
     );
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_reload", &[]).await?;
 
-    // Step 8: Verify the revoked OAuth token no longer works
+    // Step 8: Verify the revoked OAuth token no longer works.
+    // Brief pause to avoid transient connection errors during snapshot cycles.
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let response = client
         .post(&format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
