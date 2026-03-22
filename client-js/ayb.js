@@ -7,24 +7,29 @@
  *
  * On page load, check for a returning user or OAuth callback:
  *
+ *   const OAUTH_OPTIONS = {
+ *     appName: 'My App',
+ *     queryPermissionLevel: 'read-write',   // 'read-only' or 'read-write'
+ *   };
  *   const STORAGE_KEY = 'ayb_MyApp';
  *   const params = new URLSearchParams(window.location.search);
  *   const saved = localStorage.getItem(STORAGE_KEY);
  *   let ayb = null;
  *
  *   if (params.has('code') || params.has('error')) {
- *     // Returning from OAuth: read serverUrl from sessionStorage
+ *     // Returning from OAuth: the authorize() call stored the server URL
+ *     // in sessionStorage before redirecting away (sessionStorage survives
+ *     // same-tab navigations but is cleared when the tab closes, so PKCE
+ *     // secrets don't linger).
  *     ayb = new AybOAuth({
- *       appName: 'My App',
- *       queryPermissionLevel: 'read-write',   // 'read-only' or 'read-write'
+ *       ...OAUTH_OPTIONS,
  *       serverUrl: sessionStorage.getItem('ayb_oauth_server'),
  *     });
  *     await ayb.handleCallback();
  *   } else if (saved) {
  *     // Returning user: restore saved connection
  *     ayb = new AybOAuth({
- *       appName: 'My App',
- *       queryPermissionLevel: 'read-write',
+ *       ...OAUTH_OPTIONS,
  *       serverUrl: JSON.parse(saved).baseUrl,
  *     });
  *     ayb.loadConfig();
@@ -198,11 +203,20 @@ class AybClient {
      * Multiple applications can share a single database without
      * migration conflicts.
      *
-     * Migrations are run in order. Each migration is a SQL string.
+     * Versioning: each migration's version is its 1-based index in the
+     * array (first migration = version 1, second = version 2, etc.).
+     * The _ayb_migrations table records which versions have been applied.
+     * On each call we fetch MAX(version) to find out how far we've gotten,
+     * then run migrations[maxVersion] through migrations[length-1].
+     *
+     * IMPORTANT: the migrations array must be append-only once deployed.
+     * Never reorder, edit, or remove entries that have already run against
+     * a live database -- only add new entries at the end.
+     *
      * Already-applied migrations are skipped. Idempotent errors
      * (duplicate column, table already exists) are ignored.
      *
-     * @param {string[]} migrations - Array of SQL migration statements
+     * @param {string[]} migrations - Append-only array of SQL migration statements
      *
      * @example
      *   await db.runMigrations([
@@ -225,7 +239,10 @@ class AybClient {
             PRIMARY KEY (app_id, version)
         )`);
 
-        // Get current version for this app
+        // Get the highest version number applied so far for this app.
+        // The query returns a single row with a single column: the MAX
+        // value, or null if no rows match. parseInt(null) is NaN, so
+        // the || 0 fallback handles the fresh-database case.
         const result = await this.query(
             `SELECT MAX(version) FROM _ayb_migrations WHERE app_id = '${appId}'`
         );
@@ -300,8 +317,19 @@ class AybClient {
     // ---- Static Helpers ----
 
     /**
-     * Escape a string for safe inclusion in SQL queries.
-     * Replaces single quotes with doubled single quotes.
+     * Escape a string for safe inclusion in a single-quoted SQL literal.
+     *
+     * This is appropriate for SQLite string literals: it doubles every
+     * single-quote so that the value cannot break out of '...'.  It does
+     * NOT protect against injection in other SQL contexts (e.g. outside
+     * quotes, inside LIKE patterns, or in identifiers).
+     *
+     * Always wrap the result in single quotes:
+     *   `WHERE name = '${AybClient.escapeSQL(input)}'`
+     *
+     * Never interpolate the result without surrounding quotes -- that
+     * would allow numeric or keyword injection:
+     *   // UNSAFE: `WHERE id = ${AybClient.escapeSQL(input)}`
      *
      * @param {*} str - Value to escape (null/undefined become empty string)
      * @returns {string}
