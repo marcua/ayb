@@ -8,9 +8,25 @@
 <div class="bg-white rounded-lg shadow-sm p-6">
     <h1 class="text-2xl font-bold mb-6">Success</h1>
     <p class="text-sm text-muted-foreground mb-6">Confirmation complete. You are now logged in.</p>
-    <a href="/{{ entity }}"
+    <a id="continue-link" href="/{{ entity }}"
        class="uk-btn uk-btn-primary w-full">
-                Go to Your Profile
+                Continue
     </a>
 </div>
+<!-- Tera's HTML auto-escaping converts / to &#x2F; in template output.
+     Browsers don't decode HTML entities inside <script> tags, so we store
+     the value in a data attribute on a hidden div (where entities are decoded)
+     and read it via JavaScript. -->
+<div id="default-redirect" data-url="/{{ entity }}" hidden></div>
+<script>
+    (function() {
+        var next = localStorage.getItem('ayb_login_next');
+        if (next) {
+            localStorage.removeItem('ayb_login_next');
+            window.location.href = next;
+        } else {
+            window.location.href = document.getElementById('default-redirect').getAttribute('data-url');
+        }
+    })();
+</script>
 {% endblock %}

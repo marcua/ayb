@@ -7,6 +7,7 @@ mod list_database_permissions;
 mod list_snapshots;
 mod list_tokens;
 mod log_in;
+mod oauth_token;
 mod query;
 mod register;
 mod restore_snapshot;
@@ -24,6 +25,7 @@ pub use list_database_permissions::list_database_permissions as list_database_pe
 pub use list_snapshots::list_snapshots as list_snapshots_endpoint;
 pub use list_tokens::list_tokens as list_tokens_endpoint;
 pub use log_in::log_in as log_in_endpoint;
+pub use oauth_token::oauth_token as oauth_token_endpoint;
 pub use query::query as query_endpoint;
 pub use register::register as register_endpoint;
 pub use restore_snapshot::restore_snapshot as restore_snapshot_endpoint;
