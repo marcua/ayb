@@ -189,6 +189,60 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 
 The default configuration (with `web.hosting_method` set to `Local`) enables it automatically, though you can remove the `web` section from your configuration if you only want an API server.
 
+### JavaScript client library
+
+`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE for secure database access, automatic migrations, and query execution.
+
+**Include it:**
+
+```html
+<!-- Script tag (browser globals) -->
+<script src="ayb.js"></script>
+
+<!-- Or install from npm -->
+npm install @ayb/client
+```
+
+```js
+// ES module
+import { AybOAuth } from '@ayb/client';
+
+// CommonJS
+const { AybOAuth } = require('@ayb/client');
+```
+
+**OAuth flow (recommended):**
+
+```js
+const ayb = new AybOAuth({
+  appName: 'My App',
+  queryPermissionLevel: 'read-write',
+  serverUrl: 'https://thedata.zone',
+});
+
+// First-time user: redirect to authorize
+await ayb.authorize();
+
+// On callback page load: exchange code for token
+await ayb.handleCallback();
+
+// Run migrations and query
+await ayb.runMigrations([
+  'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
+]);
+const todos = await ayb.queryObjects('SELECT * FROM todos');
+```
+
+**Manual token auth:**
+
+```js
+const db = new AybClient({ appId: 'my-app' });
+db.saveConfig('https://host/v1/entity/database', 'ayb_xxx_yyy');
+const rows = await db.queryObjects('SELECT * FROM todos');
+```
+
+TypeScript declarations are included for editor autocomplete and type checking. See [`client-js/ayb.js`](client-js/ayb.js) for full API documentation.
+
 ### Email Configuration
 
 `ayb` supports multiple email backends for sending registration and login emails. A standard SMTP configuration can be used in production settings, and a file-based log can also be configured to help with development and testing. At least one of the backends must be configured for `ayb` to start.

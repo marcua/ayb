@@ -1,6 +1,9 @@
 /**
  * ayb.js - Client library for building apps on ayb (https://github.com/marcua/ayb)
  *
+ * NOTE: When changing public API, regenerate ayb.d.ts:
+ *   cd client-js && npm run generate-types
+ *
  * Include via <script src="ayb.js"></script>. Provides AybClient and AybOAuth.
  *
  * --- OAuth flow (recommended) ---
@@ -67,13 +70,31 @@
  *   // On next page load: db.loadConfig() restores the saved connection.
  */
 
+/**
+ * @typedef {Object} AybClientOptions
+ * @property {string} appId - Application identifier, used to scope
+ *   localStorage keys and migration state. Required.
+ * @property {string} [storageKey] - localStorage key prefix.
+ *   Defaults to 'ayb_<appId>'.
+ */
+
+/**
+ * @typedef {Object} ConnectionInfo
+ * @property {string} baseUrl - Server origin URL
+ * @property {string} entity - Entity (user/org) slug
+ * @property {string} database - Database slug
+ * @property {string} databaseUrl - Full database API URL
+ */
+
+/**
+ * @typedef {Object} QueryResult
+ * @property {string[]} fields - Column names
+ * @property {(string|null)[][]} rows - Row data
+ */
+
 class AybClient {
     /**
-     * @param {Object} [options]
-     * @param {string} options.appId - Application identifier, used to scope
-     *   localStorage keys and migration state. Required.
-     * @param {string} [options.storageKey] - localStorage key prefix.
-     *   Defaults to 'ayb_<appId>'.
+     * @param {AybClientOptions} [options]
      */
     constructor(options = {}) {
         if (!options.appId) throw new Error('appId is required');
@@ -129,7 +150,7 @@ class AybClient {
 
     /**
      * Get information about the current connection.
-     * @returns {Object|null} Connection info or null if not connected.
+     * @returns {ConnectionInfo|null} Connection info or null if not connected.
      */
     getConnectionInfo() {
         if (!this._config) return null;
@@ -146,7 +167,7 @@ class AybClient {
     /**
      * Execute a SQL query and return the raw response.
      * @param {string} sql - SQL query string
-     * @returns {Promise<{fields: string[], rows: (string|null)[][]}>}
+     * @returns {Promise<QueryResult>}
      */
     async query(sql) {
         if (!this._config) {
@@ -178,7 +199,7 @@ class AybClient {
      * Each object has keys matching the column names from the query.
      *
      * @param {string} sql - SQL query string
-     * @returns {Promise<Object[]>} Array of row objects
+     * @returns {Promise<Record<string, string|null>[]>} Array of row objects
      *
      * @example
      *   const todos = await db.queryObjects('SELECT id, title, done FROM todos');
@@ -275,7 +296,6 @@ class AybClient {
      * Throws if no saved config is found or if the connection fails.
      *
      * @param {string[]} [migrations] - Optional migrations to run after connecting
-     * @returns {Promise<void>}
      */
     async connect(migrations) {
         if (!this.loadConfig()) {
@@ -294,7 +314,7 @@ class AybClient {
      * Only retries on network errors (fetch throwing), not on HTTP error responses.
      *
      * @param {string} url
-     * @param {Object} options - fetch options
+     * @param {RequestInit} options - fetch options
      * @param {number} [maxRetries=4]
      * @returns {Promise<Response>}
      */
@@ -347,7 +367,7 @@ class AybClient {
      * Parse a database URL into its components.
      *
      * @param {string} url - Database URL
-     * @returns {{baseUrl: string, entity: string, database: string}}
+     * @returns {{baseUrl: string, entity: string, database: string}} Parsed URL components
      */
     static parseDatabaseUrl(url) {
         const urlObj = new URL(url);
@@ -363,15 +383,29 @@ class AybClient {
 }
 
 
+/**
+ * @typedef {Object} AybOAuthOptions
+ * @property {string} appName - Display name shown during authorization.
+ *   Also used as the appId for config/migration scoping unless overridden.
+ * @property {'read-only'|'read-write'} queryPermissionLevel - Permission level to request
+ * @property {string} serverUrl - The ayb server URL (e.g. 'https://thedata.zone')
+ * @property {string} [appId] - Override appId (defaults to appName)
+ * @property {string} [storageKey] - Override localStorage key prefix
+ */
+
+/**
+ * @typedef {Object} ServerSelectionModalOptions
+ * @property {string} appName - Display name shown during authorization
+ * @property {'read-only'|'read-write'} queryPermissionLevel - Permission level to request
+ * @property {string[]} [serverUrls] - Server URLs for the dropdown.
+ *   Defaults to ['https://thedata.zone'].
+ * @property {string} [appId] - Override appId (defaults to appName)
+ * @property {string} [storageKey] - Override localStorage key prefix
+ */
+
 class AybOAuth extends AybClient {
     /**
-     * @param {Object} options
-     * @param {string} options.appName - Display name shown during authorization.
-     *   Also used as the appId for config/migration scoping unless overridden.
-     * @param {string} options.queryPermissionLevel - 'read-only' or 'read-write'
-     * @param {string} options.serverUrl - The ayb server URL (e.g. 'https://thedata.zone')
-     * @param {string} [options.appId] - Override appId (defaults to appName)
-     * @param {string} [options.storageKey] - Override localStorage key prefix
+     * @param {AybOAuthOptions} options
      */
     constructor(options) {
         if (!options.appName) throw new Error('appName is required');
@@ -401,7 +435,7 @@ class AybOAuth extends AybClient {
 
     /**
      * Get connection info including OAuth-specific metadata.
-     * @returns {Object|null}
+     * @returns {(ConnectionInfo & {database: string, queryPermissionLevel: string})|null}
      */
     getConnectionInfo() {
         const base = super.getConnectionInfo();
@@ -413,8 +447,7 @@ class AybOAuth extends AybClient {
     /**
      * Start the OAuth authorization flow. Redirects the browser.
      *
-     * @param {Object} [options]
-     * @param {string} [options.callbackPath] - Path for callback. Defaults to current path.
+     * @param {{callbackPath?: string}} [options] - Authorization options
      */
     async authorize(options = {}) {
         const codeVerifier = this._generateCodeVerifier();
@@ -529,13 +562,7 @@ class AybOAuth extends AybClient {
      * option for entering a custom URL. On Connect, constructs an AybOAuth
      * instance with the selected server and calls authorize().
      *
-     * @param {Object} options
-     * @param {string} options.appName - Display name shown during authorization
-     * @param {string} options.queryPermissionLevel - 'read-only' or 'read-write'
-     * @param {string[]} [options.serverUrls] - Server URLs for the dropdown.
-     *   Defaults to ['https://thedata.zone'].
-     * @param {string} [options.appId] - Override appId (defaults to appName)
-     * @param {string} [options.storageKey] - Override localStorage key prefix
+     * @param {ServerSelectionModalOptions} options
      */
     static createServerSelectionModal(options) {
         const serverUrls = options.serverUrls && options.serverUrls.length > 0
@@ -644,27 +671,39 @@ class AybOAuth extends AybClient {
 
     // ---- Private helpers ----
 
+    /**
+     * @param {{database: string, queryPermissionLevel: string}} meta
+     */
     _saveMeta(meta) {
         localStorage.setItem(`${this.storageKey}_meta`, JSON.stringify(meta));
     }
 
+    /**
+     * @returns {{database?: string, queryPermissionLevel?: string}}
+     */
     _loadMeta() {
         const saved = localStorage.getItem(`${this.storageKey}_meta`);
         return saved ? JSON.parse(saved) : {};
     }
 
+    /** @returns {string} */
     _generateCodeVerifier() {
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
         return this._base64UrlEncode(array);
     }
 
+    /** @returns {string} */
     _generateState() {
         const array = new Uint8Array(16);
         crypto.getRandomValues(array);
         return this._base64UrlEncode(array);
     }
 
+    /**
+     * @param {string} str
+     * @returns {Promise<string>}
+     */
     async _sha256(str) {
         const encoder = new TextEncoder();
         const data = encoder.encode(str);
@@ -672,6 +711,10 @@ class AybOAuth extends AybClient {
         return this._base64UrlEncode(new Uint8Array(hash));
     }
 
+    /**
+     * @param {Uint8Array} array
+     * @returns {string}
+     */
     _base64UrlEncode(array) {
         return btoa(String.fromCharCode(...array))
             .replace(/\+/g, '-')
