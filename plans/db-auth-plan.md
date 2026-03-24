@@ -917,8 +917,6 @@ Items explicitly deferred from this implementation:
 
 ### Completed: Scoped Tokens (Phase 1 & 3)
 
-The following has been implemented:
-
 - [x] **Database Migration** (Phase 1.1): Added scope columns to `api_token` table
   - `database_id`, `query_permission_level`, `app_name`, `created_at`, `expires_at`, `revoked_at`
 
@@ -946,16 +944,33 @@ The following has been implemented:
 
 - [x] **Tests**: Added token tests to e2e test suite
 
-### Pending: OAuth Flow (Phase 2)
+### Completed: OAuth Flow (Phase 2)
 
-The OAuth authorization flow has not been implemented yet:
+- [x] **Database Migration** (Phase 2.1): `oauth_authorization_request` table
+  - `migrations/sqlite/2026020101_oauth_authorization.sql`
+  - `migrations/postgres/2026020101_oauth_authorization.sql`
 
-- [ ] `oauth_authorization_request` table migration
-- [ ] `/oauth/authorize` redirect endpoint
-- [ ] Authorization consent UI
-- [ ] `/v1/oauth/token` exchange endpoint
-- [ ] PKCE validation
-- [ ] Client-side library
-- [ ] Add tests for scoped tokens that reduce the access level a user would otherwise
-      have (e.g., a read-only token for a user with read-write access). This will
-      exercise the `highest_query_access_level` permission capping logic.
+- [x] **Authorization Consent UI** (Phase 2.3):
+  - `GET /oauth/authorize` - Shows consent page with app name, permission level, database picker
+  - `POST /oauth/authorize` - Processes authorization (creates code + redirects) or denial
+  - Template: `src/server/ui_endpoints/templates/oauth_authorize.html`
+  - Error template: `src/server/ui_endpoints/templates/oauth_error.html`
+  - Redirects to login with `next` parameter when unauthenticated
+  - Database creation inline via `create_database_fields.html` partial
+
+- [x] **Token Exchange Endpoint** (Phase 2.2):
+  - `POST /v1/oauth/token` - Exchanges authorization code for scoped API token
+  - PKCE validation (S256 only)
+  - Code expiration and single-use enforcement
+  - Redirect URI verification
+  - Implementation: `src/server/api_endpoints/oauth_token.rs`
+
+- [x] **Client-Side Library**:
+  - `client-js/ayb.js` - `AybClient` (manual token auth) and `AybOAuth` (PKCE OAuth flow)
+  - Server selection modal, migration system, query helpers
+  - Browser `<script>` tag and CommonJS module support
+
+- [x] **Tests**:
+  - API tests for token exchange error cases: `tests/e2e_tests/oauth_tests.rs`
+  - Browser tests for full OAuth flow (read-only and read-write scopes, deny): `tests/browser_e2e_tests/oauth_flow.rs`
+  - Scoped token permission capping tested via OAuth flow (tokens reduce access level)
