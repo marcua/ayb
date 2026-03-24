@@ -26,6 +26,6 @@
     "ayb.d.ts"
   ],
   "scripts": {
-    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && node strip-dts-noise.js"
+    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && node -e \"let s=require('fs').readFileSync('ayb.d.ts','utf8');s=s.replace(/\\/\\*\\*(?:[^*]|\\*(?!\\/))*\\*\\/\\n?/g,'');require('fs').writeFileSync('ayb.d.ts',s)\""
   }
 }
