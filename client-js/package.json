@@ -26,6 +26,6 @@
     "ayb.d.ts"
   ],
   "scripts": {
-    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js"
+    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && node strip-dts-noise.js"
   }
 }

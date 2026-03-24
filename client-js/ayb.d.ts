@@ -84,96 +84,6 @@ export type ServerSelectionModalOptions = {
      */
     storageKey?: string;
 };
-/**
- * ayb.js - Client library for building apps on ayb (https://github.com/marcua/ayb)
- *
- * NOTE: When changing public API, regenerate ayb.d.ts:
- *   cd client-js && npm run generate-types
- *
- * Include via <script src="ayb.js"></script>. Provides AybClient and AybOAuth.
- *
- * --- OAuth flow (recommended) ---
- *
- * On page load, check for a returning user or OAuth callback:
- *
- *   const OAUTH_OPTIONS = {
- *     appName: 'My App',
- *     queryPermissionLevel: 'read-write',   // 'read-only' or 'read-write'
- *   };
- *   const STORAGE_KEY = 'ayb_MyApp';
- *   const params = new URLSearchParams(window.location.search);
- *   const saved = localStorage.getItem(STORAGE_KEY);
- *   let ayb = null;
- *
- *   if (params.has('code') || params.has('error')) {
- *     // Returning from OAuth: the authorize() call stored the server URL
- *     // in sessionStorage before redirecting away (sessionStorage survives
- *     // same-tab navigations but is cleared when the tab closes, so PKCE
- *     // secrets don't linger).
- *     ayb = new AybOAuth({
- *       ...OAUTH_OPTIONS,
- *       serverUrl: sessionStorage.getItem('ayb_oauth_server'),
- *     });
- *     await ayb.handleCallback();
- *   } else if (saved) {
- *     // Returning user: restore saved connection
- *     ayb = new AybOAuth({
- *       ...OAUTH_OPTIONS,
- *       serverUrl: JSON.parse(saved).baseUrl,
- *     });
- *     ayb.loadConfig();
- *   }
- *
- * If authenticated, run migrations and query:
- *
- *   if (ayb && ayb.isAuthenticated()) {
- *     await ayb.runMigrations([
- *       'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
- *     ]);
- *     const todos = await ayb.queryObjects('SELECT * FROM todos');
- *   }
- *
- * For first-time users, show a server selection modal:
- *
- *   connectButton.onclick = () => {
- *     AybOAuth.createServerSelectionModal({
- *       appName: 'My App',
- *       queryPermissionLevel: 'read-write',
- *       serverUrls: ['https://thedata.zone'],  // optional, this is the default
- *     });
- *   };
- *
- * To disconnect:
- *
- *   ayb.disconnect();
- *
- * --- Manual token auth ---
- *
- *   const db = new AybClient({ appId: 'my-app' });
- *   db.saveConfig('https://host/v1/entity/database', 'ayb_xxx_yyy');
- *   await db.runMigrations([...]);
- *   const rows = await db.queryObjects('SELECT * FROM todos');
- *   // On next page load: db.loadConfig() restores the saved connection.
- */
-/**
- * @typedef {Object} AybClientOptions
- * @property {string} appId - Application identifier, used to scope
- *   localStorage keys and migration state. Required.
- * @property {string} [storageKey] - localStorage key prefix.
- *   Defaults to 'ayb_<appId>'.
- */
-/**
- * @typedef {Object} ConnectionInfo
- * @property {string} baseUrl - Server origin URL
- * @property {string} entity - Entity (user/org) slug
- * @property {string} database - Database slug
- * @property {string} databaseUrl - Full database API URL
- */
-/**
- * @typedef {Object} QueryResult
- * @property {string[]} fields - Column names
- * @property {(string|null)[][]} rows - Row data
- */
 export class AybClient {
     /**
      * Escape a string for safe inclusion in a single-quoted SQL literal.
@@ -312,24 +222,6 @@ export class AybClient {
      */
     _fetchWithRetry(url: string, options: RequestInit, maxRetries?: number): Promise<Response>;
 }
-/**
- * @typedef {Object} AybOAuthOptions
- * @property {string} appName - Display name shown during authorization.
- *   Also used as the appId for config/migration scoping unless overridden.
- * @property {'read-only'|'read-write'} queryPermissionLevel - Permission level to request
- * @property {string} serverUrl - The ayb server URL (e.g. 'https://thedata.zone')
- * @property {string} [appId] - Override appId (defaults to appName)
- * @property {string} [storageKey] - Override localStorage key prefix
- */
-/**
- * @typedef {Object} ServerSelectionModalOptions
- * @property {string} appName - Display name shown during authorization
- * @property {'read-only'|'read-write'} queryPermissionLevel - Permission level to request
- * @property {string[]} [serverUrls] - Server URLs for the dropdown.
- *   Defaults to ['https://thedata.zone'].
- * @property {string} [appId] - Override appId (defaults to appName)
- * @property {string} [storageKey] - Override localStorage key prefix
- */
 export class AybOAuth extends AybClient {
     /**
      * Show a server selection modal and start the OAuth flow.
