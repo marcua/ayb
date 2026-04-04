@@ -70,29 +70,14 @@
  *   // On next page load: db.loadConfig() restores the saved connection.
  */
 
-/**
- * @typedef {Object} AybClientOptions
- * @property {string} appId - Application identifier, used to scope
- *   localStorage keys and migration state. Required.
- * @property {string} [storageKey] - localStorage key prefix.
- *   Defaults to 'ayb_<appId>'.
- */
-
-/**
- * @typedef {Object} ConnectionInfo
- * @property {string} baseUrl - Server origin URL
- * @property {string} entity - Entity (user/org) slug
- * @property {string} database - Database slug
- * @property {string} databaseUrl - Full database API URL
- */
-
-/**
- * @typedef {Object} QueryResult
- * @property {string[]} fields - Column names
- * @property {(string|null)[][]} rows - Row data
- */
-
 class AybClient {
+    /**
+     * @typedef {Object} AybClientOptions
+     * @property {string} appId - Application identifier, used to scope
+     *   localStorage keys and migration state. Required.
+     * @property {string} [storageKey] - localStorage key prefix.
+     *   Defaults to 'ayb_<appId>'.
+     */
     /**
      * @param {AybClientOptions} [options]
      */
@@ -134,9 +119,9 @@ class AybClient {
     }
 
     /**
-     * Clear stored config and disconnect.
+     * Disconnect and clear stored config.
      */
-    clearConfig() {
+    disconnect() {
         this._config = null;
         localStorage.removeItem(this.storageKey);
     }
@@ -148,6 +133,13 @@ class AybClient {
         return !!this._config;
     }
 
+    /**
+     * @typedef {Object} ConnectionInfo
+     * @property {string} baseUrl - Server origin URL
+     * @property {string} entity - Entity (user/org) slug
+     * @property {string} database - Database slug
+     * @property {string} databaseUrl - Full database API URL
+     */
     /**
      * Get information about the current connection.
      * @returns {ConnectionInfo|null} Connection info or null if not connected.
@@ -165,11 +157,17 @@ class AybClient {
     // ---- Query ----
 
     /**
+     * @typedef {Object} QueryResult
+     * @property {string[]} fields - Column names
+     * @property {(string|null)[][]} rows - Row data
+     */
+    /**
      * Execute a SQL query and return the raw response.
      * @param {string} sql - SQL query string
+     * @param {number} [maxRetries=0] - Max network retries (0 = no retry)
      * @returns {Promise<QueryResult>}
      */
-    async query(sql) {
+    async query(sql, maxRetries = 0) {
         if (!this._config) {
             throw new Error('Not connected. Call saveConfig() or loadConfig() first.');
         }
@@ -184,7 +182,7 @@ class AybClient {
                 'Content-Type': 'text/plain'
             },
             body: sql
-        });
+        }, maxRetries);
 
         if (!response.ok) {
             const text = await response.text();
@@ -269,10 +267,11 @@ class AybClient {
         );
         let currentVersion = parseInt(result.rows?.[0]?.[0], 10) || 0;
 
-        // Auto-repair corrupted state
         if (currentVersion > migrations.length) {
-            await this.query(`DELETE FROM _ayb_migrations WHERE app_id = '${appId}'`);
-            currentVersion = 0;
+            throw new Error(
+                `Migration state corrupted for app '${this.appId}': database has version ${currentVersion} ` +
+                `but only ${migrations.length} migration(s) provided. Did you remove migrations from the list?`
+            );
         }
 
         // Run pending migrations
@@ -315,10 +314,10 @@ class AybClient {
      *
      * @param {string} url
      * @param {RequestInit} options - fetch options
-     * @param {number} [maxRetries=4]
+     * @param {number} [maxRetries=0]
      * @returns {Promise<Response>}
      */
-    async _fetchWithRetry(url, options, maxRetries = 4) {
+    async _fetchWithRetry(url, options, maxRetries = 0) {
         let lastError;
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
@@ -552,7 +551,7 @@ class AybOAuth extends AybClient {
      * Disconnect and clear all stored credentials.
      */
     disconnect() {
-        this.clearConfig();
+        super.disconnect();
         localStorage.removeItem(`${this.storageKey}_meta`);
     }
 

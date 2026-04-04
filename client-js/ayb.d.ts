@@ -1,17 +1,3 @@
-export type AybClientOptions = {
-    appId: string;
-    storageKey?: string;
-};
-export type ConnectionInfo = {
-    baseUrl: string;
-    entity: string;
-    database: string;
-    databaseUrl: string;
-};
-export type QueryResult = {
-    fields: string[];
-    rows: (string | null)[][];
-};
 export type AybOAuthOptions = {
     appName: string;
     queryPermissionLevel: "read-only" | "read-write";
@@ -33,16 +19,27 @@ export class AybClient {
         entity: string;
         database: string;
     };
-    constructor(options?: AybClientOptions);
+    constructor(options?: {
+        appId: string;
+        storageKey?: string;
+    });
     appId: string;
     storageKey: string;
     _config: any;
     loadConfig(): boolean;
     saveConfig(url: string, token: string): void;
-    clearConfig(): void;
+    disconnect(): void;
     isConnected(): boolean;
-    getConnectionInfo(): ConnectionInfo | null;
-    query(sql: string): Promise<QueryResult>;
+    getConnectionInfo(): {
+        baseUrl: string;
+        entity: string;
+        database: string;
+        databaseUrl: string;
+    } | null;
+    query(sql: string, maxRetries?: number): Promise<{
+        fields: string[];
+        rows: (string | null)[][];
+    }>;
     queryObjects(sql: string): Promise<Record<string, string | null>[]>;
     runMigrations(migrations: string[]): Promise<void>;
     connect(migrations?: string[]): Promise<void>;
@@ -55,7 +52,12 @@ export class AybOAuth extends AybClient {
     appName: string;
     queryPermissionLevel: "read-only" | "read-write";
     isAuthenticated(): boolean;
-    getConnectionInfo(): (ConnectionInfo & {
+    getConnectionInfo(): ({
+        baseUrl: string;
+        entity: string;
+        database: string;
+        databaseUrl: string;
+    } & {
         database: string;
         queryPermissionLevel: string;
     }) | null;
@@ -63,7 +65,6 @@ export class AybOAuth extends AybClient {
         callbackPath?: string;
     }): Promise<void>;
     handleCallback(): Promise<boolean>;
-    disconnect(): void;
     _saveMeta(meta: {
         database: string;
         queryPermissionLevel: string;
