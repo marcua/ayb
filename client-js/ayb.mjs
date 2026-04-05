@@ -2,5 +2,5 @@
 // NOTE: When changing public API in ayb.js, regenerate ayb.d.ts (see package.json "types" script).
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { AybClient, AybOAuth, runMigrations } = require('./ayb.js');
-export { AybClient, AybOAuth, runMigrations };
+const { AybClient, AybOAuth, restoreOAuth, createServerSelectionModal, runMigrations } = require('./ayb.js');
+export { AybClient, AybOAuth, restoreOAuth, createServerSelectionModal, runMigrations };

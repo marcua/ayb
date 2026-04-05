@@ -4,58 +4,30 @@
  * NOTE: When changing public API, regenerate ayb.d.ts:
  *   cd client-js && npm run generate-types
  *
- * Include via <script src="ayb.js"></script>. Provides AybClient and AybOAuth.
+ * Include via <script src="ayb.js"></script>. Provides AybClient, AybOAuth,
+ * and convenience functions: restoreOAuth, createServerSelectionModal, runMigrations.
  *
  * --- OAuth flow (recommended) ---
  *
- * On page load, check for a returning user or OAuth callback:
- *
- *   const OAUTH_OPTIONS = {
+ *   const ayb = await restoreOAuth({
  *     appName: 'My App',
- *     queryPermissionLevel: 'read-write',   // 'read-only' or 'read-write'
- *   };
- *   const STORAGE_KEY = 'ayb_MyApp';
- *   const params = new URLSearchParams(window.location.search);
- *   const saved = localStorage.getItem(STORAGE_KEY);
- *   let ayb = null;
+ *     queryPermissionLevel: 'read-write',
+ *   });
  *
- *   if (params.has('code') || params.has('error')) {
- *     // Returning from OAuth: the authorize() call stored the server URL
- *     // in sessionStorage before redirecting away (sessionStorage survives
- *     // same-tab navigations but is cleared when the tab closes, so PKCE
- *     // secrets don't linger).
- *     ayb = new AybOAuth({
- *       ...OAUTH_OPTIONS,
- *       serverUrl: sessionStorage.getItem('ayb_oauth_server'),
- *     });
- *     await ayb.handleCallback();
- *   } else if (saved) {
- *     // Returning user: restore saved connection
- *     ayb = new AybOAuth({
- *       ...OAUTH_OPTIONS,
- *       serverUrl: JSON.parse(saved).baseUrl,
- *     });
- *     ayb.loadConfig();
- *   }
- *
- * If authenticated, run migrations and query:
- *
- *   if (ayb && ayb.isAuthenticated()) {
+ *   if (ayb && ayb.isConnected()) {
  *     await runMigrations(ayb, 'My App', [
  *       'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
  *     ]);
  *     const todos = await ayb.queryObjects('SELECT * FROM todos');
+ *   } else {
+ *     // First-time user: show server selection modal
+ *     connectButton.onclick = () => {
+ *       createServerSelectionModal({
+ *         appName: 'My App',
+ *         queryPermissionLevel: 'read-write',
+ *       });
+ *     };
  *   }
- *
- * For first-time users, show a server selection modal:
- *
- *   connectButton.onclick = () => {
- *     AybOAuth.createServerSelectionModal({
- *       appName: 'My App',
- *       queryPermissionLevel: 'read-write',
- *       serverUrls: ['https://thedata.zone'],  // optional, this is the default
- *     });
- *   };
  *
  * To disconnect:
  *
@@ -302,16 +274,6 @@ class AybClient {
  * @property {string} [storageKey] - Override localStorage key prefix
  */
 
-/**
- * @typedef {Object} ServerSelectionModalOptions
- * @property {string} appName - Display name shown during authorization
- * @property {'read-only'|'read-write'} queryPermissionLevel - Permission level to request
- * @property {string[]} [serverUrls] - Server URLs for the dropdown.
- *   Defaults to ['https://thedata.zone'].
- * @property {string} [appId] - Override appId (defaults to appName)
- * @property {string} [storageKey] - Override localStorage key prefix
- */
-
 class AybOAuth extends AybClient {
     /**
      * @param {AybOAuthOptions} options
@@ -335,22 +297,13 @@ class AybOAuth extends AybClient {
     }
 
     /**
-     * Check if we have valid stored credentials.
-     * @returns {boolean}
-     */
-    isAuthenticated() {
-        return this.isConnected();
-    }
-
-    /**
-     * Get connection info including OAuth-specific metadata.
-     * @returns {(ConnectionInfo & {database: string, queryPermissionLevel: string})|null}
+     * Get connection info including the granted permission level.
+     * @returns {(ConnectionInfo & {queryPermissionLevel?: string})|null}
      */
     getConnectionInfo() {
         const base = super.getConnectionInfo();
         if (!base) return null;
-        const meta = this._loadMeta();
-        return { ...base, ...meta };
+        return { ...base, queryPermissionLevel: this._config.queryPermissionLevel };
     }
 
     /**
@@ -437,16 +390,9 @@ class AybOAuth extends AybClient {
 
         const tokenData = await response.json();
 
-        // Store config in unified format
-        const parsed = AybClient.parseDatabaseUrl(tokenData.database_url);
-        this._config = { ...parsed, token: tokenData.access_token };
+        this.saveConfig(tokenData.database_url, tokenData.access_token);
+        this._config.queryPermissionLevel = tokenData.query_permission_level;
         localStorage.setItem(this.storageKey, JSON.stringify(this._config));
-
-        // Store OAuth-specific metadata separately
-        this._saveMeta({
-            database: tokenData.database,
-            queryPermissionLevel: tokenData.query_permission_level
-        });
 
         // Clean up
         sessionStorage.removeItem('ayb_pkce_verifier');
@@ -457,143 +403,7 @@ class AybOAuth extends AybClient {
         return true;
     }
 
-    /**
-     * Disconnect and clear all stored credentials.
-     */
-    disconnect() {
-        super.disconnect();
-        localStorage.removeItem(`${this.storageKey}_meta`);
-    }
-
-    /**
-     * Show a server selection modal and start the OAuth flow.
-     * Creates a <dialog> with a dropdown of server URLs and an "Other..."
-     * option for entering a custom URL. On Connect, constructs an AybOAuth
-     * instance with the selected server and calls authorize().
-     *
-     * @param {ServerSelectionModalOptions} options
-     */
-    static createServerSelectionModal(options) {
-        const serverUrls = options.serverUrls && options.serverUrls.length > 0
-            ? options.serverUrls
-            : ['https://thedata.zone'];
-
-        const dialog = document.createElement('dialog');
-        dialog.style.cssText = 'border: 1px solid #ccc; border-radius: 8px; padding: 24px; max-width: 400px; width: 90%; font-family: system-ui, sans-serif;';
-
-        const title = document.createElement('h3');
-        title.textContent = 'Connect a database';
-        title.style.cssText = 'margin: 0 0 4px 0; font-size: 18px;';
-
-        const subtitle = document.createElement('p');
-        subtitle.textContent = "Pick a server and database on which we'll store your data.";
-        subtitle.style.cssText = 'margin: 0 0 16px 0; font-size: 14px; color: #666;';
-
-        const label = document.createElement('label');
-        label.textContent = 'Server';
-        label.style.cssText = 'display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px;';
-
-        const select = document.createElement('select');
-        select.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; margin-bottom: 12px;';
-
-        serverUrls.forEach(url => {
-            const opt = document.createElement('option');
-            opt.value = url;
-            opt.textContent = url;
-            select.appendChild(opt);
-        });
-
-        const otherOpt = document.createElement('option');
-        otherOpt.value = '__other__';
-        otherOpt.textContent = 'Other...';
-        select.appendChild(otherOpt);
-
-        const customInput = document.createElement('input');
-        customInput.type = 'text';
-        customInput.placeholder = 'https://your-server.example.com';
-        customInput.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; display: none;';
-
-        const btnRow = document.createElement('div');
-        btnRow.style.cssText = 'display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;';
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.type = 'button';
-        cancelBtn.style.cssText = 'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-size: 14px;';
-
-        const connectBtn = document.createElement('button');
-        connectBtn.textContent = 'Connect';
-        connectBtn.type = 'button';
-        connectBtn.style.cssText = 'padding: 8px 16px; border: none; border-radius: 4px; background: #2563eb; color: white; cursor: pointer; font-size: 14px;';
-
-        function getSelectedUrl() {
-            if (select.value === '__other__') {
-                return customInput.value.trim();
-            }
-            return select.value;
-        }
-
-        function updateConnectState() {
-            connectBtn.disabled = !getSelectedUrl();
-            connectBtn.style.opacity = connectBtn.disabled ? '0.5' : '1';
-        }
-
-        select.addEventListener('change', () => {
-            customInput.style.display = select.value === '__other__' ? 'block' : 'none';
-            updateConnectState();
-        });
-
-        customInput.addEventListener('input', updateConnectState);
-
-        cancelBtn.addEventListener('click', () => {
-            dialog.close();
-            dialog.remove();
-        });
-
-        connectBtn.addEventListener('click', () => {
-            const serverUrl = getSelectedUrl();
-            if (!serverUrl) return;
-
-            const ayb = new AybOAuth({
-                appName: options.appName,
-                queryPermissionLevel: options.queryPermissionLevel,
-                serverUrl: serverUrl,
-                appId: options.appId,
-                storageKey: options.storageKey,
-            });
-            ayb.authorize();
-        });
-
-        dialog.appendChild(title);
-        dialog.appendChild(subtitle);
-        dialog.appendChild(label);
-        dialog.appendChild(select);
-        dialog.appendChild(customInput);
-        btnRow.appendChild(cancelBtn);
-        btnRow.appendChild(connectBtn);
-        dialog.appendChild(btnRow);
-
-        document.body.appendChild(dialog);
-        dialog.showModal();
-        updateConnectState();
-    }
-
     // ---- Private helpers ----
-
-    /**
-     * @param {{database: string, queryPermissionLevel: string}} meta
-     */
-    _saveMeta(meta) {
-        localStorage.setItem(`${this.storageKey}_meta`, JSON.stringify(meta));
-    }
-
-    /**
-     * @returns {{database?: string, queryPermissionLevel?: string}}
-     */
-    _loadMeta() {
-        const saved = localStorage.getItem(`${this.storageKey}_meta`);
-        return saved ? JSON.parse(saved) : {};
-    }
 
     /** @returns {string} */
     _generateCodeVerifier() {
@@ -640,6 +450,163 @@ class AybOAuth extends AybClient {
     }
 }
 
+
+// ---- Convenience functions ----
+
+/**
+ * Check for an existing OAuth session or in-progress callback.
+ * Returns a connected AybOAuth instance if found, null otherwise.
+ *
+ * @param {AybOAuthOptions} options - Same options as AybOAuth constructor
+ *   (serverUrl is only required when there's no saved session or callback)
+ * @returns {Promise<AybOAuth|null>}
+ */
+async function restoreOAuth(options) {
+    const storageKey = options.storageKey || `ayb_${options.appId || options.appName}`;
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('code') || params.has('error')) {
+        const ayb = new AybOAuth({
+            ...options,
+            serverUrl: options.serverUrl || sessionStorage.getItem('ayb_oauth_server'),
+        });
+        await ayb.handleCallback();
+        return ayb;
+    }
+
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+        const ayb = new AybOAuth({
+            ...options,
+            serverUrl: options.serverUrl || JSON.parse(saved).baseUrl,
+        });
+        ayb.loadConfig();
+        return ayb;
+    }
+
+    return null;
+}
+
+/**
+ * @typedef {Object} ServerSelectionModalOptions
+ * @property {string} appName - Display name shown during authorization
+ * @property {'read-only'|'read-write'} queryPermissionLevel - Permission level to request
+ * @property {string[]} [serverUrls] - Server URLs for the dropdown.
+ *   Defaults to ['https://thedata.zone'].
+ * @property {string} [appId] - Override appId (defaults to appName)
+ * @property {string} [storageKey] - Override localStorage key prefix
+ */
+/**
+ * Show a server selection modal and start the OAuth flow.
+ * Creates a <dialog> with a dropdown of server URLs and an "Other..."
+ * option for entering a custom URL.
+ *
+ * @param {ServerSelectionModalOptions} options
+ */
+function createServerSelectionModal(options) {
+    const serverUrls = options.serverUrls && options.serverUrls.length > 0
+        ? options.serverUrls
+        : ['https://thedata.zone'];
+
+    const dialog = document.createElement('dialog');
+    dialog.style.cssText = 'border: 1px solid #ccc; border-radius: 8px; padding: 24px; max-width: 400px; width: 90%; font-family: system-ui, sans-serif;';
+
+    const title = document.createElement('h3');
+    title.textContent = 'Connect a database';
+    title.style.cssText = 'margin: 0 0 4px 0; font-size: 18px;';
+
+    const subtitle = document.createElement('p');
+    subtitle.textContent = "Pick a server and database on which we'll store your data.";
+    subtitle.style.cssText = 'margin: 0 0 16px 0; font-size: 14px; color: #666;';
+
+    const label = document.createElement('label');
+    label.textContent = 'Server';
+    label.style.cssText = 'display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px;';
+
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; margin-bottom: 12px;';
+
+    serverUrls.forEach(url => {
+        const opt = document.createElement('option');
+        opt.value = url;
+        opt.textContent = url;
+        select.appendChild(opt);
+    });
+
+    const otherOpt = document.createElement('option');
+    otherOpt.value = '__other__';
+    otherOpt.textContent = 'Other...';
+    select.appendChild(otherOpt);
+
+    const customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.placeholder = 'https://your-server.example.com';
+    customInput.style.cssText = 'width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; display: none;';
+
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.type = 'button';
+    cancelBtn.style.cssText = 'padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-size: 14px;';
+
+    const connectBtn = document.createElement('button');
+    connectBtn.textContent = 'Connect';
+    connectBtn.type = 'button';
+    connectBtn.style.cssText = 'padding: 8px 16px; border: none; border-radius: 4px; background: #2563eb; color: white; cursor: pointer; font-size: 14px;';
+
+    function getSelectedUrl() {
+        if (select.value === '__other__') {
+            return customInput.value.trim();
+        }
+        return select.value;
+    }
+
+    function updateConnectState() {
+        connectBtn.disabled = !getSelectedUrl();
+        connectBtn.style.opacity = connectBtn.disabled ? '0.5' : '1';
+    }
+
+    select.addEventListener('change', () => {
+        customInput.style.display = select.value === '__other__' ? 'block' : 'none';
+        updateConnectState();
+    });
+
+    customInput.addEventListener('input', updateConnectState);
+
+    cancelBtn.addEventListener('click', () => {
+        dialog.close();
+        dialog.remove();
+    });
+
+    connectBtn.addEventListener('click', () => {
+        const serverUrl = getSelectedUrl();
+        if (!serverUrl) return;
+
+        const ayb = new AybOAuth({
+            appName: options.appName,
+            queryPermissionLevel: options.queryPermissionLevel,
+            serverUrl: serverUrl,
+            appId: options.appId,
+            storageKey: options.storageKey,
+        });
+        ayb.authorize();
+    });
+
+    dialog.appendChild(title);
+    dialog.appendChild(subtitle);
+    dialog.appendChild(label);
+    dialog.appendChild(select);
+    dialog.appendChild(customInput);
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(connectBtn);
+    dialog.appendChild(btnRow);
+
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    updateConnectState();
+}
 
 /**
  * Run database migrations scoped by appId. Multiple apps can share a
@@ -709,10 +676,12 @@ async function runMigrations(client, appId, migrations) {
 
 // Export for different module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AybClient, AybOAuth, runMigrations };
+    module.exports = { AybClient, AybOAuth, restoreOAuth, createServerSelectionModal, runMigrations };
 }
 if (typeof window !== 'undefined') {
     window.AybClient = AybClient;
     window.AybOAuth = AybOAuth;
+    window.restoreOAuth = restoreOAuth;
+    window.createServerSelectionModal = createServerSelectionModal;
     window.runMigrations = runMigrations;
 }

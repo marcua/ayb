@@ -205,32 +205,31 @@ npm install @ayb/client
 
 ```js
 // ES module
-import { AybOAuth, runMigrations } from '@ayb/client';
+import { restoreOAuth, createServerSelectionModal, runMigrations } from '@ayb/client';
 
 // CommonJS
-const { AybOAuth, runMigrations } = require('@ayb/client');
+const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@ayb/client');
 ```
 
 **OAuth flow (recommended):**
 
 ```js
-const ayb = new AybOAuth({
+const ayb = await restoreOAuth({
   appName: 'My App',
   queryPermissionLevel: 'read-write',
-  serverUrl: 'https://thedata.zone',
 });
 
-// First-time user: redirect to authorize
-await ayb.authorize();
-
-// On callback page load: exchange code for token
-await ayb.handleCallback();
-
-// Run migrations and query
-await runMigrations(ayb, 'My App', [
-  'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
-]);
-const todos = await ayb.queryObjects('SELECT * FROM todos');
+if (ayb && ayb.isConnected()) {
+  await runMigrations(ayb, 'My App', [
+    'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
+  ]);
+  const todos = await ayb.queryObjects('SELECT * FROM todos');
+} else {
+  connectButton.onclick = () => createServerSelectionModal({
+    appName: 'My App',
+    queryPermissionLevel: 'read-write',
+  });
+}
 ```
 
 **Manual token auth:**
