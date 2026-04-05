@@ -191,7 +191,7 @@ The default configuration (with `web.hosting_method` set to `Local`) enables it 
 
 ### JavaScript client library
 
-`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE for secure database access, automatic migrations, and query execution.
+`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE for secure database access and query execution.
 
 **Include it:**
 
@@ -205,10 +205,10 @@ npm install @ayb/client
 
 ```js
 // ES module
-import { AybOAuth } from '@ayb/client';
+import { AybOAuth, runMigrations } from '@ayb/client';
 
 // CommonJS
-const { AybOAuth } = require('@ayb/client');
+const { AybOAuth, runMigrations } = require('@ayb/client');
 ```
 
 **OAuth flow (recommended):**
@@ -227,7 +227,7 @@ await ayb.authorize();
 await ayb.handleCallback();
 
 // Run migrations and query
-await ayb.runMigrations([
+await runMigrations(ayb, 'My App', [
   'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
 ]);
 const todos = await ayb.queryObjects('SELECT * FROM todos');

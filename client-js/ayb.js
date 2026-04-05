@@ -41,7 +41,7 @@
  * If authenticated, run migrations and query:
  *
  *   if (ayb && ayb.isAuthenticated()) {
- *     await ayb.runMigrations([
+ *     await runMigrations(ayb, 'My App', [
  *       'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
  *     ]);
  *     const todos = await ayb.queryObjects('SELECT * FROM todos');
@@ -65,7 +65,7 @@
  *
  *   const db = new AybClient({ appId: 'my-app' });
  *   db.saveConfig('https://host/v1/entity/database', 'ayb_xxx_yyy');
- *   await db.runMigrations([...]);
+ *   await runMigrations(db, 'my-app', [...]);
  *   const rows = await db.queryObjects('SELECT * FROM todos');
  *   // On next page load: db.loadConfig() restores the saved connection.
  */
@@ -213,96 +213,6 @@ class AybClient {
             });
             return obj;
         });
-    }
-
-    // ---- Migrations ----
-
-    /**
-     * Run database migrations, scoped by this client's appId.
-     * Multiple applications can share a single database without
-     * migration conflicts.
-     *
-     * Versioning: each migration's version is its 1-based index in the
-     * array (first migration = version 1, second = version 2, etc.).
-     * The _ayb_migrations table records which versions have been applied.
-     * On each call we fetch MAX(version) to find out how far we've gotten,
-     * then run migrations[maxVersion] through migrations[length-1].
-     *
-     * IMPORTANT: the migrations array must be append-only once deployed.
-     * Never reorder, edit, or remove entries that have already run against
-     * a live database -- only add new entries at the end.
-     *
-     * Already-applied migrations are skipped. Idempotent errors
-     * (duplicate column, table already exists) are ignored.
-     *
-     * @param {string[]} migrations - Append-only array of SQL migration statements
-     *
-     * @example
-     *   await db.runMigrations([
-     *     `CREATE TABLE IF NOT EXISTS todos (
-     *       id INTEGER PRIMARY KEY AUTOINCREMENT,
-     *       title TEXT NOT NULL,
-     *       done INTEGER DEFAULT 0
-     *     )`,
-     *     `ALTER TABLE todos ADD COLUMN position INTEGER DEFAULT 0`
-     *   ]);
-     */
-    async runMigrations(migrations) {
-        const appId = AybClient.escapeSQL(this.appId);
-
-        // Create migrations table (shared across all apps)
-        await this.query(`CREATE TABLE IF NOT EXISTS _ayb_migrations (
-            app_id TEXT NOT NULL,
-            version INTEGER NOT NULL,
-            applied_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (app_id, version)
-        )`);
-
-        // Get the highest version number applied so far for this app.
-        // The query returns a single row with a single column: the MAX
-        // value, or null if no rows match. parseInt(null) is NaN, so
-        // the || 0 fallback handles the fresh-database case.
-        const result = await this.query(
-            `SELECT MAX(version) FROM _ayb_migrations WHERE app_id = '${appId}'`
-        );
-        let currentVersion = parseInt(result.rows?.[0]?.[0], 10) || 0;
-
-        if (currentVersion > migrations.length) {
-            throw new Error(
-                `Migration state corrupted for app '${this.appId}': database has version ${currentVersion} ` +
-                `but only ${migrations.length} migration(s) provided. Did you remove migrations from the list?`
-            );
-        }
-
-        // Run pending migrations
-        for (let i = currentVersion; i < migrations.length; i++) {
-            try {
-                await this.query(migrations[i]);
-            } catch (e) {
-                const msg = e.message.toLowerCase();
-                if (!msg.includes('duplicate column') && !msg.includes('already exists')) {
-                    throw e;
-                }
-            }
-            await this.query(
-                `INSERT OR REPLACE INTO _ayb_migrations (app_id, version) VALUES ('${appId}', ${i + 1})`
-            );
-        }
-    }
-
-    /**
-     * Load config from localStorage and optionally run migrations.
-     * Throws if no saved config is found or if the connection fails.
-     *
-     * @param {string[]} [migrations] - Optional migrations to run after connecting
-     */
-    async connect(migrations) {
-        if (!this.loadConfig()) {
-            throw new Error('No saved configuration found. Call saveConfig() first.');
-        }
-        if (migrations && migrations.length > 0) {
-            await this.runMigrations(migrations);
-        }
     }
 
     // ---- Network ----
@@ -731,11 +641,78 @@ class AybOAuth extends AybClient {
 }
 
 
+/**
+ * Run database migrations scoped by appId. Multiple apps can share a
+ * database without conflicts.
+ *
+ * Versioning: each migration's version is its 1-based index in the
+ * array. The _ayb_migrations table records which versions have been
+ * applied. Already-applied migrations are skipped.
+ *
+ * IMPORTANT: the migrations array must be append-only once deployed.
+ *
+ * @param {AybClient} client - Connected AybClient or AybOAuth instance
+ * @param {string} appId - Identifier scoping this app's migrations
+ * @param {string[]} migrations - Append-only array of SQL statements
+ *
+ * @example
+ *   await runMigrations(db, 'my-app', [
+ *     `CREATE TABLE IF NOT EXISTS todos (
+ *       id INTEGER PRIMARY KEY AUTOINCREMENT,
+ *       title TEXT NOT NULL,
+ *       done INTEGER DEFAULT 0
+ *     )`,
+ *     `ALTER TABLE todos ADD COLUMN position INTEGER DEFAULT 0`
+ *   ]);
+ */
+async function runMigrations(client, appId, migrations) {
+    const escapedAppId = AybClient.escapeSQL(appId);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS _ayb_migrations (
+        app_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        applied_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (app_id, version)
+    )`);
+
+    // Get the highest version number applied so far for this app.
+    // The query returns a single row with a single column: the MAX
+    // value, or null if no rows match. parseInt(null) is NaN, so
+    // the || 0 fallback handles the fresh-database case.
+    const result = await client.query(
+        `SELECT MAX(version) FROM _ayb_migrations WHERE app_id = '${escapedAppId}'`
+    );
+    const currentVersion = parseInt(result.rows?.[0]?.[0], 10) || 0;
+
+    if (currentVersion > migrations.length) {
+        throw new Error(
+            `Migration state corrupted for app '${appId}': database has version ${currentVersion} ` +
+            `but only ${migrations.length} migration(s) provided. Did you remove migrations from the list?`
+        );
+    }
+
+    for (let i = currentVersion; i < migrations.length; i++) {
+        try {
+            await client.query(migrations[i]);
+        } catch (e) {
+            const msg = e.message.toLowerCase();
+            if (!msg.includes('duplicate column') && !msg.includes('already exists')) {
+                throw e;
+            }
+        }
+        await client.query(
+            `INSERT OR REPLACE INTO _ayb_migrations (app_id, version) VALUES ('${escapedAppId}', ${i + 1})`
+        );
+    }
+}
+
+
 // Export for different module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AybClient, AybOAuth };
+    module.exports = { AybClient, AybOAuth, runMigrations };
 }
 if (typeof window !== 'undefined') {
     window.AybClient = AybClient;
     window.AybOAuth = AybOAuth;
+    window.runMigrations = runMigrations;
 }

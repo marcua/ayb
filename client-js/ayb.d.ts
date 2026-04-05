@@ -41,8 +41,6 @@ export class AybClient {
         rows: (string | null)[][];
     }>;
     queryObjects(sql: string): Promise<Record<string, string | null>[]>;
-    runMigrations(migrations: string[]): Promise<void>;
-    connect(migrations?: string[]): Promise<void>;
     _fetchWithRetry(url: string, options: RequestInit, maxRetries?: number): Promise<Response>;
 }
 export class AybOAuth extends AybClient {
@@ -78,3 +76,4 @@ export class AybOAuth extends AybClient {
     _base64UrlEncode(array: Uint8Array): string;
     _cleanUrl(): void;
 }
+export function runMigrations(client: AybClient, appId: string, migrations: string[]): Promise<void>;
