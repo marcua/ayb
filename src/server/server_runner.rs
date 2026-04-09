@@ -45,7 +45,23 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
             .service(api_endpoints::revoke_token_endpoint),
     );
 
-    // Only add UI routes if web frontend is configured for local serving
+    // Only add UI routes if web frontend is configured for local serving.
+    //
+    // CSRF note: the cookie-authenticated UI endpoints below rely on the
+    // `auth` cookie's `SameSite=Lax` attribute (set in
+    // `ui_endpoints/auth.rs`) as their sole CSRF defense. This works because
+    // every state-changing UI endpoint uses a non-safe HTTP method
+    // (POST/DELETE/PATCH), and browsers do not send `SameSite=Lax` cookies
+    // on cross-origin non-safe-method requests. All GET handlers here are
+    // read-only, so `Lax` still delivers the cookie on cross-origin safe-
+    // method navigations (required for `GET /oauth/authorize` from external
+    // OAuth clients) without opening a CSRF hole.
+    //
+    // TODO(marcua): if a state-changing GET endpoint is ever added below, or
+    // if the UI starts accepting state-changing requests via methods other
+    // than cookie-authenticated non-safe methods, add explicit CSRF tokens
+    // (e.g. a double-submit cookie or a per-session token embedded in forms)
+    // — `SameSite=Lax` alone will not cover those cases.
     if let Some(web_config) = &ayb_config.web {
         if web_config.hosting_method == WebHostingMethod::Local {
             cfg.service(ui_endpoints::log_in_endpoint)
