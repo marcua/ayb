@@ -57,7 +57,7 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     // method navigations (required for `GET /oauth/authorize` from external
     // OAuth clients) without opening a CSRF hole.
     //
-    // TODO(csrf): if a state-changing GET endpoint is ever added below, or
+    // TODO(marcua): if a state-changing GET endpoint is ever added below, or
     // if the UI starts accepting state-changing requests via methods other
     // than cookie-authenticated non-safe methods, add explicit CSRF tokens
     // (e.g. a double-submit cookie or a per-session token embedded in forms)
