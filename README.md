@@ -200,15 +200,15 @@ The default configuration (with `web.hosting_method` set to `Local`) enables it 
 <script src="ayb.js"></script>
 
 <!-- Or install from npm -->
-npm install @ayb/client
+npm install @aybdb/client
 ```
 
 ```js
 // ES module
-import { restoreOAuth, createServerSelectionModal, runMigrations } from '@ayb/client';
+import { restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
 
 // CommonJS
-const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@ayb/client');
+const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
 ```
 
 **OAuth flow (recommended):**
