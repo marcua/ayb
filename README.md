@@ -191,7 +191,7 @@ The default configuration (with `web.hosting_method` set to `Local`) enables it 
 
 ### JavaScript client library
 
-`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE and provides convenience utilities for running migrations and a reusable modal-based UI for initiating an OAuth flow from your application.
+`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE. It also provides convenience utilities for running migrations and a reusable modal-based UI for initiating an OAuth flow from your application.
 
 **Include it:**
 

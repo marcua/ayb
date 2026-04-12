@@ -7,9 +7,9 @@
  * Include via <script src="ayb.js"></script>. Provides AybClient, AybOAuth,
  * and convenience functions: restoreOAuth, createServerSelectionModal, runMigrations.
  *
- * Supports OAuth 2.0 with PKCE and provides convenience utilities for running
- * migrations and a reusable modal-based UI for initiating an OAuth flow from
- * your application.
+ * Supports OAuth 2.0 with PKCE. It also provides convenience utilities for
+ * running migrations and a reusable modal-based UI for initiating an OAuth
+ * flow from your application.
  *
  * --- OAuth flow (recommended) ---
  *
