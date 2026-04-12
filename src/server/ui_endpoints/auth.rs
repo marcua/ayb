@@ -3,7 +3,7 @@ use crate::server::utils::get_optional_header;
 use crate::server::web_frontend::local_base_url;
 use actix_web::{http::header, HttpRequest, HttpResponse};
 
-pub const COOKIE_FOR_LOGOUT: &str = "auth=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0";
+pub const COOKIE_FOR_LOGOUT: &str = "auth=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
 
 pub fn authentication_details(req: &HttpRequest) -> Option<APIToken> {
     // Get auth token from cookie if present
@@ -28,7 +28,7 @@ pub fn authentication_details(req: &HttpRequest) -> Option<APIToken> {
 
 pub fn cookie_for_token(token: &APIToken) -> String {
     format!(
-        "auth={}:{}; Path=/; HttpOnly; Secure; SameSite=Strict",
+        "auth={}:{}; Path=/; HttpOnly; Secure; SameSite=Lax",
         token.entity, token.token
     )
 }
