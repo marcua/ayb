@@ -7,26 +7,28 @@
  * Include via <script src="ayb.js"></script>. Provides AybClient, AybOAuth,
  * and convenience functions: restoreOAuth, createServerSelectionModal, runMigrations.
  *
+ * Supports OAuth 2.0 with PKCE and provides convenience utilities for running
+ * migrations and a reusable modal-based UI for initiating an OAuth flow from
+ * your application.
+ *
  * --- OAuth flow (recommended) ---
  *
- *   const ayb = await restoreOAuth({
+ *   const permissionRequest = {
  *     appName: 'My App',
- *     queryPermissionLevel: 'read-write',
- *   });
+ *     queryPermissionLevel: 'read-write',  // or 'read-only'
+ *   };
+ *
+ *   const ayb = await restoreOAuth(permissionRequest);
  *
  *   if (ayb && ayb.isConnected()) {
  *     await runMigrations(ayb, 'My App', [
  *       'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
+ *       'ALTER TABLE todos ADD COLUMN position INTEGER DEFAULT 0',
  *     ]);
  *     const todos = await ayb.queryObjects('SELECT * FROM todos');
  *   } else {
  *     // First-time user: show server selection modal
- *     connectButton.onclick = () => {
- *       createServerSelectionModal({
- *         appName: 'My App',
- *         queryPermissionLevel: 'read-write',
- *       });
- *     };
+ *     connectButton.onclick = () => createServerSelectionModal(permissionRequest);
  *   }
  *
  * To disconnect:
@@ -36,7 +38,8 @@
  * --- Manual token auth ---
  *
  *   const db = new AybClient({ appId: 'my-app' });
- *   db.saveConfig('https://host/v1/entity/database', 'ayb_xxx_yyy');
+ *   const token = 'ayb_xxx_yyy';
+ *   db.saveConfig('https://host/v1/entity/database', token);
  *   await runMigrations(db, 'my-app', [...]);
  *   const rows = await db.queryObjects('SELECT * FROM todos');
  *   // On next page load: db.loadConfig() restores the saved connection.

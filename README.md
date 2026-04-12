@@ -191,7 +191,7 @@ The default configuration (with `web.hosting_method` set to `Local`) enables it 
 
 ### JavaScript client library
 
-`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE for secure database access and query execution.
+`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE and provides convenience utilities for running migrations and a reusable modal-based UI for initiating an OAuth flow from your application.
 
 **Include it:**
 
@@ -214,21 +214,21 @@ const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@ay
 **OAuth flow (recommended):**
 
 ```js
-const ayb = await restoreOAuth({
+const permissionRequest = {
   appName: 'My App',
-  queryPermissionLevel: 'read-write',
-});
+  queryPermissionLevel: 'read-write',  // or 'read-only'
+};
+
+const ayb = await restoreOAuth(permissionRequest);
 
 if (ayb && ayb.isConnected()) {
   await runMigrations(ayb, 'My App', [
     'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
+    'ALTER TABLE todos ADD COLUMN position INTEGER DEFAULT 0',
   ]);
   const todos = await ayb.queryObjects('SELECT * FROM todos');
 } else {
-  connectButton.onclick = () => createServerSelectionModal({
-    appName: 'My App',
-    queryPermissionLevel: 'read-write',
-  });
+  connectButton.onclick = () => createServerSelectionModal(permissionRequest);
 }
 ```
 
@@ -236,11 +236,10 @@ if (ayb && ayb.isConnected()) {
 
 ```js
 const db = new AybClient({ appId: 'my-app' });
-db.saveConfig('https://host/v1/entity/database', 'ayb_xxx_yyy');
+const token = 'ayb_xxx_yyy';
+db.saveConfig('https://host/v1/entity/database', token);
 const rows = await db.queryObjects('SELECT * FROM todos');
 ```
-
-TypeScript declarations are included for editor autocomplete and type checking. See [`client-js/ayb.js`](client-js/ayb.js) for full API documentation.
 
 ### Email Configuration
 
