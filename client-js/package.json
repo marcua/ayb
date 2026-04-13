@@ -8,7 +8,7 @@
     "url": "https://github.com/marcua/ayb",
     "directory": "client-js"
   },
-  "homepage": "https://github.com/marcua/ayb/tree/main/client-js",
+  "homepage": "https://github.com/marcua/ayb",
   "keywords": ["ayb", "database", "sqlite", "oauth", "client"],
   "main": "ayb.js",
   "module": "ayb.mjs",
