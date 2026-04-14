@@ -1,0 +1,31 @@
+{
+  "name": "@aybdb/client",
+  "version": "0.1.0",
+  "description": "Client library for building browser apps on ayb databases",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marcua/ayb",
+    "directory": "client-js"
+  },
+  "homepage": "https://github.com/marcua/ayb",
+  "keywords": ["ayb", "database", "sqlite", "oauth", "client"],
+  "main": "ayb.js",
+  "module": "ayb.mjs",
+  "types": "ayb.d.ts",
+  "exports": {
+    ".": {
+      "import": "./ayb.mjs",
+      "require": "./ayb.js",
+      "default": "./ayb.js"
+    }
+  },
+  "files": [
+    "ayb.js",
+    "ayb.mjs",
+    "ayb.d.ts"
+  ],
+  "scripts": {
+    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && sed -i '/^[[:space:]]*\\/\\*\\*/,/\\*\\//d' ayb.d.ts"
+  }
+}
