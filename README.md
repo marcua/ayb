@@ -196,8 +196,8 @@ The default configuration (with `web.hosting_method` set to `Local`) enables it 
 **Include it:**
 
 ```html
-<!-- Script tag (browser globals) -->
-<script src="ayb.js"></script>
+<!-- CDN (always serves the latest version, minified automatically) -->
+<script src="https://cdn.jsdelivr.net/npm/@aybdb/client/ayb.min.js"></script>
 
 <!-- Or install from npm -->
 npm install @aybdb/client
