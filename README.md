@@ -428,8 +428,8 @@ limits (`setrlimit`) to sandbox each database's query daemon process.
 This approach requires no root privileges, no external binaries, and
 works inside Docker containers without `--privileged`.
 
-When isolation is enabled, each query daemon applies the following
-protections to itself at startup:
+Isolation is always on and cannot be disabled. Each query daemon
+applies the following protections to itself at startup:
 
 * **Filesystem isolation** (Landlock): only the database file's
   directory (read-write) and system shared libraries (read-only)
@@ -442,12 +442,13 @@ protections to itself at startup:
 
 Per-process CPU/thread limitation is future work.
 
-To enable isolation, add the following to your `ayb.toml`:
-
-```toml
-[isolation]
-enabled = true
-```
+If Landlock cannot be enforced — running on a non-Linux platform, a
+Linux kernel older than 5.13, or an environment where Landlock returns
+`NotEnforced` — the daemon will print a loud warning to stderr at
+startup and continue running without filesystem/network isolation. **Do
+not run multi-tenant workloads in that configuration.** On Linux 5.13
+through 6.6, filesystem isolation is applied but network restrictions
+are not (Landlock gained network support in kernel 6.7).
 
 ## Docker
 

@@ -6,10 +6,10 @@ use crate::hosted_db::paths::pathbuf_to_parent;
 
 /// Apply Landlock filesystem and network restrictions, plus resource
 /// limits via setrlimit, to the current process. This is called by the
-/// query daemon at startup when isolation is enabled, so the daemon
-/// sandboxes itself before processing any queries.
+/// query daemon at startup, so the daemon sandboxes itself before
+/// processing any queries.
 ///
-/// Protections applied:
+/// On Linux with Landlock enforced (kernel 5.13+):
 /// - Filesystem: only the database file (read-write) and shared
 ///   libraries (read-only) are accessible.
 /// - Network: all TCP bind/connect denied (on kernel 6.7+).
@@ -17,14 +17,39 @@ use crate::hosted_db::paths::pathbuf_to_parent;
 /// - File size: 75 MB max file size (RLIMIT_FSIZE).
 /// - File descriptors: 10 max open files (RLIMIT_NOFILE).
 ///
+/// On any other platform or older Linux kernel, a loud warning is
+/// printed at startup and the daemon runs without isolation.
+///
 /// Per-process CPU/thread limitation is future work.
 pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
-    apply_landlock_restrictions(db_path)?;
-    apply_resource_limits()?;
+    #[cfg(target_os = "linux")]
+    {
+        apply_landlock_restrictions(db_path)?;
+        apply_resource_limits()?;
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = db_path;
+        print_unsandboxed_warning("Landlock is unavailable on this non-Linux platform");
+    }
     Ok(())
 }
 
+/// Print a loud, multi-line warning to stderr when the daemon cannot
+/// enforce isolation. Meant to be visible in both terminals and log
+/// aggregators. Do not run multi-tenant workloads when this fires.
+pub(crate) fn print_unsandboxed_warning(reason: &str) {
+    eprintln!("======================================================================");
+    eprintln!("WARNING: ayb query daemon is running WITHOUT isolation.");
+    eprintln!("Reason: {reason}");
+    eprintln!("Filesystem and network access are NOT restricted for this daemon.");
+    eprintln!("Do NOT run multi-tenant workloads in this configuration.");
+    eprintln!("See https://github.com/marcua/ayb#isolation for details.");
+    eprintln!("======================================================================");
+}
+
 /// Apply Landlock filesystem and network restrictions.
+#[cfg(target_os = "linux")]
 fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     use landlock::{
         path_beneath_rules, Access, AccessFs, AccessNet, Ruleset, RulesetAttr, RulesetCreatedAttr,
@@ -48,7 +73,8 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     // On older kernels, AccessNet::from_all() returns empty flags and
     // handle_access would error, so we skip it gracefully.
     let access_net = AccessNet::from_all(abi);
-    if !access_net.is_empty() {
+    let network_supported = !access_net.is_empty();
+    if network_supported {
         ruleset = ruleset
             .handle_access(access_net)
             .map_err(|e| AybError::Other {
@@ -99,9 +125,11 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
         })?;
 
     if status.ruleset == RulesetStatus::NotEnforced {
+        print_unsandboxed_warning("Landlock is not enforced on this kernel (requires Linux 5.13+)");
+    } else if !network_supported {
         eprintln!(
-            "Warning: Landlock is not enforced on this kernel. \
-             Running without filesystem/network isolation."
+            "Note: Landlock network isolation unavailable on this kernel \
+             (requires Linux 6.7+). Filesystem isolation is active."
         );
     }
 
@@ -109,6 +137,7 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
 }
 
 /// Apply resource limits via setrlimit.
+#[cfg(target_os = "linux")]
 fn apply_resource_limits() -> Result<(), AybError> {
     set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?; // 64 MB memory
     set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?; // 75 MB file size
@@ -116,6 +145,7 @@ fn apply_resource_limits() -> Result<(), AybError> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), AybError> {
     let rlim = libc::rlimit {
         rlim_cur: limit,
@@ -134,20 +164,13 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
     Ok(())
 }
 
-/// Build command for running the query daemon.
-/// When isolation is enabled, the daemon receives an `--isolate` flag
-/// and applies its own sandbox restrictions at startup.
-pub fn build_daemon_command(
-    db_path: &PathBuf,
-    isolate: bool,
-) -> Result<tokio::process::Command, AybError> {
+/// Build command for running the query daemon. The daemon always
+/// sandboxes itself at startup via `apply_sandbox`.
+pub fn build_daemon_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
-    if isolate {
-        cmd.arg("--isolate");
-    }
     cmd.arg(db_path);
 
     Ok(cmd)

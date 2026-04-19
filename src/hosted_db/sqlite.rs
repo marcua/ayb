@@ -1,7 +1,6 @@
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::{QueryMode, QueryResult};
-use crate::server::config::AybConfigIsolation;
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
@@ -94,16 +93,14 @@ pub fn query_sqlite(
     })
 }
 
-/// Run `query` against the database at `path`, either with or without isolation.
-pub async fn potentially_isolated_sqlite_query(
+/// Run `query` against the database at `path` via the sandboxed query
+/// daemon. The daemon applies Landlock + setrlimit isolation to itself
+/// at startup; see `src/hosted_db/sandbox.rs`.
+pub async fn run_sqlite_query(
     daemon_registry: &DaemonRegistry,
     path: &PathBuf,
     query: &str,
-    isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    let isolate = isolation.as_ref().is_some_and(|i| i.enabled);
-    daemon_registry
-        .execute_query(path, isolate, query, query_mode)
-        .await
+    daemon_registry.execute_query(path, query, query_mode).await
 }

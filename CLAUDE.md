@@ -122,8 +122,11 @@ Server configuration uses TOML format (`ayb.toml`) with sections for:
 - Authentication (fernet key, token expiration)
 - Email (SMTP configuration)
 - Snapshots (S3 configuration and scheduling)
-- Isolation (enabled flag)
 - CORS settings
+
+Isolation (Landlock + setrlimit) is always on for query daemons on
+Linux; no configuration required. On non-Linux or pre-5.13 kernels the
+daemon logs a loud warning and runs unsandboxed.
 
 ## Key Development Patterns
 

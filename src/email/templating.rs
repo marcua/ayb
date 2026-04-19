@@ -68,7 +68,6 @@ mod tests {
                 origin: "*".to_string(),
             },
             snapshots: None,
-            isolation: None,
         };
 
         let web_details = WebFrontendDetails::load(config).await.unwrap();
@@ -109,7 +108,6 @@ mod tests {
                 origin: "*".to_string(),
             },
             snapshots: None,
-            isolation: None,
         };
 
         let web_details = WebFrontendDetails::load(config).await.unwrap();

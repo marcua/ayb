@@ -16,34 +16,32 @@ struct QueryRequest {
 /// against a database and returns results in QueryResult format.
 ///
 /// Usage:
-/// $ ayb_query_daemon [--isolate] <database.sqlite>
+/// $ ayb_query_daemon <database.sqlite>
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
 /// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
-/// When `--isolate` is passed, the daemon applies Landlock filesystem
-/// and network restrictions plus resource limits (setrlimit) to itself
-/// before processing any queries. See src/hosted_db/sandbox.rs.
+/// The daemon always applies Landlock filesystem and network restrictions
+/// plus resource limits (setrlimit) to itself before processing any
+/// queries. On platforms or kernels where Landlock is unavailable, a
+/// loud warning is printed to stderr and the daemon runs without
+/// isolation. See src/hosted_db/sandbox.rs.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
+    let db_file = parse_args(&args)?;
 
-    let (isolate, db_file) = parse_args(&args)?;
-
-    if isolate {
-        apply_sandbox(&db_file)?;
-    }
+    apply_sandbox(&db_file)?;
 
     run(db_file)
 }
 
-fn parse_args(args: &[String]) -> Result<(bool, PathBuf), Box<dyn std::error::Error>> {
+fn parse_args(args: &[String]) -> Result<PathBuf, Box<dyn std::error::Error>> {
     match args.len() {
-        2 => Ok((false, PathBuf::from(&args[1]))),
-        3 if args[1] == "--isolate" => Ok((true, PathBuf::from(&args[2]))),
+        2 => Ok(PathBuf::from(&args[1])),
         _ => {
-            eprintln!("Usage: ayb_query_daemon [--isolate] <database.sqlite>");
+            eprintln!("Usage: ayb_query_daemon <database.sqlite>");
             std::process::exit(1);
         }
     }

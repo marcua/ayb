@@ -89,7 +89,6 @@ impl DaemonRegistry {
     async fn get_or_create_daemon(
         &self,
         db_path: &PathBuf,
-        isolate: bool,
     ) -> Result<Arc<Mutex<DaemonHandle>>, AybError> {
         // Canonicalize the path to ensure consistency
         let canonical_path = canonicalize(db_path)?;
@@ -104,7 +103,7 @@ impl DaemonRegistry {
         }
 
         // Spawn the daemon process while holding the lock
-        let daemon_handle = self.spawn_daemon(&canonical_path, isolate).await?;
+        let daemon_handle = self.spawn_daemon(&canonical_path).await?;
         let daemon_arc = Arc::new(Mutex::new(daemon_handle));
 
         // Insert into registry
@@ -116,23 +115,18 @@ impl DaemonRegistry {
     pub async fn execute_query(
         &self,
         db_path: &PathBuf,
-        isolate: bool,
         query: &str,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        let daemon_arc = self.get_or_create_daemon(db_path, isolate).await?;
+        let daemon_arc = self.get_or_create_daemon(db_path).await?;
         let mut daemon = daemon_arc.lock().await;
         let response = daemon.execute_query(query, query_mode).await?;
         parse_response(&response)
     }
 
     /// Spawn a new daemon process for the given database
-    async fn spawn_daemon(
-        &self,
-        db_path: &PathBuf,
-        isolate: bool,
-    ) -> Result<DaemonHandle, AybError> {
-        let mut cmd = build_daemon_command(db_path, isolate)?;
+    async fn spawn_daemon(&self, db_path: &PathBuf) -> Result<DaemonHandle, AybError> {
+        let mut cmd = build_daemon_command(db_path)?;
 
         // Spawn the process with piped stdin/stdout
         let mut child = cmd

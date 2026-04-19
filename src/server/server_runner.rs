@@ -15,7 +15,6 @@ use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
-use std::env::consts::OS;
 use std::fs;
 use std::path::Path;
 
@@ -137,7 +136,7 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
 
     let ayb_conf = read_config(config_path)
         .unwrap_or_else(|e| panic!("unable to read ayb.toml configuration file: {e}"));
-    let mut ayb_conf_for_server = ayb_conf.clone();
+    let ayb_conf_for_server = ayb_conf.clone();
     fs::create_dir_all(&ayb_conf.data_path).expect("unable to create data directory");
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
         .await
@@ -157,21 +156,6 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         .expect("unable to start periodic snapshot scheduler");
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
-    if let Some(isolation) = &ayb_conf.isolation {
-        if isolation.enabled {
-            if OS != "linux" {
-                println!(
-                    "Warning: Landlock isolation is only supported on Linux. Running without isolation on {OS}"
-                );
-                ayb_conf_for_server.isolation =
-                    Some(crate::server::config::AybConfigIsolation { enabled: false });
-            } else {
-                println!("Isolation enabled: query daemons will use Landlock and resource limits.");
-            }
-        }
-    } else {
-        println!("Note: Server is running without full isolation. Read more about isolating users from one-another: https://github.com/marcua/ayb/#isolation");
-    }
 
     let server = HttpServer::new(move || {
         let cors = build_cors(ayb_conf.cors.clone());
