@@ -20,7 +20,8 @@ use crate::hosted_db::paths::pathbuf_to_parent;
 /// On any other platform or older Linux kernel, a loud warning is
 /// printed at startup and the daemon runs without isolation.
 ///
-/// Per-process CPU/thread limitation is future work.
+/// Configurable per-database limits and per-process CPU/thread
+/// limitation is future work.
 pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
     #[cfg(target_os = "linux")]
     {

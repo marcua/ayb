@@ -440,7 +440,7 @@ applies the following protections to itself at startup:
 * **File size limit**: 75 MB max file size (`RLIMIT_FSIZE`).
 * **File descriptor limit**: 10 open files max (`RLIMIT_NOFILE`).
 
-Per-process CPU/thread limitation is future work.
+Configurable per-database limits and per-process CPU/thread limitation is future work.
 
 If Landlock cannot be enforced — running on a non-Linux platform, a
 Linux kernel older than 5.13, or an environment where Landlock returns
