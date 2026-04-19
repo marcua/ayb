@@ -16,10 +16,8 @@ use crate::hosted_db::paths::pathbuf_to_parent;
 /// - Memory: 64 MB virtual memory limit (RLIMIT_AS).
 /// - File size: 75 MB max file size (RLIMIT_FSIZE).
 /// - File descriptors: 10 max open files (RLIMIT_NOFILE).
-/// - Processes: 256 system-wide process limit (RLIMIT_NPROC).
-///   Note: this is a per-UID limit, not per-process. It acts as a
-///   safety net against fork bombs. More advanced per-process CPU
-///   limitation is future work.
+///
+/// Per-process CPU/thread limitation is future work.
 pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
     apply_landlock_restrictions(db_path)?;
     apply_resource_limits()?;
@@ -115,7 +113,6 @@ fn apply_resource_limits() -> Result<(), AybError> {
     set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?; // 64 MB memory
     set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?; // 75 MB file size
     set_rlimit(libc::RLIMIT_NOFILE, 10)?; // 10 file descriptors
-    set_rlimit(libc::RLIMIT_NPROC, 256)?; // 256 processes (per-UID safety net)
     Ok(())
 }
 

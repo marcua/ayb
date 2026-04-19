@@ -439,9 +439,8 @@ protections to itself at startup:
 * **Memory limit**: 64 MB virtual memory (`RLIMIT_AS`).
 * **File size limit**: 75 MB max file size (`RLIMIT_FSIZE`).
 * **File descriptor limit**: 10 open files max (`RLIMIT_NOFILE`).
-* **Process limit**: 256 processes/threads (`RLIMIT_NPROC`), a
-  system-wide per-UID safety net against fork bombs. More advanced
-  per-process CPU limitation is future work.
+
+Per-process CPU/thread limitation is future work.
 
 To enable isolation, add the following to your `ayb.toml`:
 
