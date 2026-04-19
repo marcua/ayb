@@ -39,7 +39,7 @@ pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
 /// Print a loud, multi-line warning to stderr when the daemon cannot
 /// enforce isolation. Meant to be visible in both terminals and log
 /// aggregators. Do not run multi-tenant workloads when this fires.
-pub(crate) fn print_unsandboxed_warning(reason: &str) {
+pub fn print_unsandboxed_warning(reason: &str) {
     eprintln!("======================================================================");
     eprintln!("WARNING: ayb query daemon is running WITHOUT isolation.");
     eprintln!("Reason: {reason}");
@@ -165,8 +165,7 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
     Ok(())
 }
 
-/// Build command for running the query daemon. The daemon always
-/// sandboxes itself at startup via `apply_sandbox`.
+/// Build command for running the query daemon.
 pub fn build_daemon_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");

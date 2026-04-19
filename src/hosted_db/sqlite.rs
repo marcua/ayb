@@ -94,8 +94,7 @@ pub fn query_sqlite(
 }
 
 /// Run `query` against the database at `path` via the sandboxed query
-/// daemon. The daemon applies Landlock + setrlimit isolation to itself
-/// at startup; see `src/hosted_db/sandbox.rs`.
+/// daemon.
 pub async fn run_sqlite_query(
     daemon_registry: &DaemonRegistry,
     path: &PathBuf,
