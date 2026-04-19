@@ -121,7 +121,10 @@ async fn entity_validator(
 }
 
 fn build_cors(ayb_cors: AybConfigCors) -> Cors {
-    let mut cors = Cors::default().allow_any_header().allow_any_method();
+    let mut cors = Cors::default()
+        .allow_any_header()
+        .allow_any_method()
+        .max_age(7200);
 
     if ayb_cors.origin.trim() == "*" {
         cors = cors.allow_any_origin()
@@ -129,7 +132,6 @@ fn build_cors(ayb_cors: AybConfigCors) -> Cors {
         cors = cors.allowed_origin(ayb_cors.origin.trim());
     }
 
-    cors = cors.max_age(7200);
     cors
 }
 
