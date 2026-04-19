@@ -1,7 +1,9 @@
 use crate::ayb_db::models::{
     APIToken, APITokenWithDatabase, AuthenticationMethod, Database, DatabasePermission, Entity,
     EntityDatabasePermission, EntityDatabaseSharingLevel, InstantiatedAuthenticationMethod,
-    InstantiatedDatabase, InstantiatedEntity, PartialDatabase, PartialEntity,
+    InstantiatedDatabase, InstantiatedEntity, NewOAuthAuthorizationRequest,
+    OAuthAuthorizationRequest, OAuthAuthorizationRequestWithDatabase, PartialDatabase,
+    PartialEntity,
 };
 use crate::error::AybError;
 use async_trait::async_trait;
@@ -85,6 +87,15 @@ pub trait AybDb: DynClone + Send + Sync {
         entity: &InstantiatedEntity,
         short_token: &str,
     ) -> Result<(), AybError>;
+    async fn create_oauth_authorization_request(
+        &self,
+        request: &NewOAuthAuthorizationRequest,
+    ) -> Result<OAuthAuthorizationRequest, AybError>;
+    async fn get_oauth_authorization_request(
+        &self,
+        code: &str,
+    ) -> Result<OAuthAuthorizationRequestWithDatabase, AybError>;
+    async fn mark_oauth_authorization_request_used(&self, code: &str) -> Result<(), AybError>;
 }
 
 clone_trait_object!(AybDb);
@@ -641,6 +652,104 @@ WHERE short_token = $1 AND entity_id = $2 AND revoked_at IS NULL
 
                 Ok(())
             }
+
+            async fn create_oauth_authorization_request(
+                &self,
+                request: &NewOAuthAuthorizationRequest,
+            ) -> Result<OAuthAuthorizationRequest, AybError> {
+                let auth_request: OAuthAuthorizationRequest = sqlx::query_as(
+                    r#"
+INSERT INTO oauth_authorization_request (
+    code, entity_id, code_challenge, redirect_uri, app_name,
+    requested_query_permission_level, state, database_id,
+    query_permission_level, expires_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING code, entity_id, code_challenge, redirect_uri, app_name,
+    requested_query_permission_level, state, database_id,
+    query_permission_level, created_at, expires_at, used_at
+                    "#,
+                )
+                .bind(&request.code)
+                .bind(request.entity_id)
+                .bind(&request.code_challenge)
+                .bind(&request.redirect_uri)
+                .bind(&request.app_name)
+                .bind(request.requested_query_permission_level)
+                .bind(&request.state)
+                .bind(request.database_id)
+                .bind(request.query_permission_level)
+                .bind(request.expires_at)
+                .fetch_one(&self.pool)
+                .await?;
+
+                Ok(auth_request)
+            }
+
+            async fn get_oauth_authorization_request(
+                &self,
+                code: &str,
+            ) -> Result<OAuthAuthorizationRequestWithDatabase, AybError> {
+                let auth_request: OAuthAuthorizationRequestWithDatabase = sqlx::query_as(
+                    r#"
+SELECT oauth_authorization_request.code,
+    oauth_authorization_request.entity_id,
+    oauth_authorization_request.code_challenge,
+    oauth_authorization_request.redirect_uri,
+    oauth_authorization_request.app_name,
+    oauth_authorization_request.requested_query_permission_level,
+    oauth_authorization_request.state,
+    oauth_authorization_request.database_id,
+    oauth_authorization_request.query_permission_level,
+    oauth_authorization_request.created_at,
+    oauth_authorization_request.expires_at,
+    oauth_authorization_request.used_at,
+    database.slug as database_slug,
+    entity.slug as entity_slug
+FROM oauth_authorization_request
+JOIN database ON oauth_authorization_request.database_id = database.id
+JOIN entity ON database.entity_id = entity.id
+WHERE oauth_authorization_request.code = $1
+                    "#,
+                )
+                .bind(code)
+                .fetch_one(&self.pool)
+                .await
+                .or_else(|err| match err {
+                    sqlx::Error::RowNotFound => Err(AybError::RecordNotFound {
+                        id: code.into(),
+                        record_type: "oauth_authorization_request".into(),
+                    }),
+                    _ => Err(AybError::from(err)),
+                })?;
+
+                Ok(auth_request)
+            }
+
+            async fn mark_oauth_authorization_request_used(
+                &self,
+                code: &str,
+            ) -> Result<(), AybError> {
+                let result = sqlx::query(
+                    r#"
+UPDATE oauth_authorization_request
+SET used_at = CURRENT_TIMESTAMP
+WHERE code = $1 AND used_at IS NULL
+                    "#,
+                )
+                .bind(code)
+                .execute(&self.pool)
+                .await?;
+
+                if result.rows_affected() == 0 {
+                    return Err(AybError::InvalidToken {
+                        message: "Authorization code has already been used or does not exist".into(),
+                    });
+                }
+
+                Ok(())
+            }
+
         }
     };
 }

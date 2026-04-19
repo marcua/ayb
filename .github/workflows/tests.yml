@@ -51,7 +51,7 @@ jobs:
       run: cargo clippy -- -D warnings
 
     - name: Install nsjail requirements
-      run: sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
+      run: sudo apt-get update && sudo apt-get install -y libprotobuf-dev protobuf-compiler libnl-route-3-dev
 
     - name: Cache Python environment
       uses: actions/cache@v5
@@ -76,7 +76,7 @@ jobs:
 
     - name: Upload screenshots on failure
       if: failure()
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: test-screenshots-${{ github.run_id }}
         path: tests/screenshots/

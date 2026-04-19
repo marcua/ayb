@@ -6,15 +6,17 @@ pub mod sqlite;
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;
+use crate::from_str;
 use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
 use crate::server::config::AybConfigIsolation;
 use crate::try_from_i16;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::vec::Vec;
 
-#[derive(Serialize, Debug, Deserialize)]
+#[derive(Serialize, Debug, Deserialize, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(i16)]
 pub enum QueryMode {
     ReadOnly = 0,
@@ -25,6 +27,25 @@ try_from_i16!(QueryMode, {
     0 => QueryMode::ReadOnly,
     1 => QueryMode::ReadWrite
 });
+
+from_str!(QueryMode, {
+    "read-only" => QueryMode::ReadOnly,
+    "read-write" => QueryMode::ReadWrite
+});
+
+impl QueryMode {
+    pub fn to_str(&self) -> &str {
+        match self {
+            QueryMode::ReadOnly => "read-only",
+            QueryMode::ReadWrite => "read-write",
+        }
+    }
+
+    /// Returns true if this access level is sufficient for the requested level.
+    pub fn permits(&self, requested: QueryMode) -> bool {
+        *self >= requested
+    }
+}
 
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {

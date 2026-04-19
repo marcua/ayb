@@ -1,0 +1,180 @@
+{% extends "base_content.html" %}
+
+{% block title %}Authorize {{ app_name }}{% endblock %}
+
+{% block page_content %}
+<div class="max-w-screen-xl mx-auto px-6">
+    <div class="max-w-lg mx-auto">
+        <h3 class="text-lg font-medium mb-2">Authorize application</h3>
+        <p class="text-muted-foreground mb-4">
+            <strong class="text-primary">{{ app_name }}</strong> is requesting <strong>{{ requested_scope }}</strong> access to one of your databases.
+        </p>
+
+        <form method="POST" action="/oauth/authorize" id="oauth-form" class="space-y-6">
+            <!-- Hidden fields to preserve OAuth state -->
+            <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
+            <input type="hidden" name="state" value="{{ state }}">
+            <input type="hidden" name="code_challenge" value="{{ code_challenge }}">
+            <input type="hidden" name="app_name" value="{{ app_name }}">
+            <input type="hidden" name="requested_scope" value="{{ requested_scope }}">
+            <input type="hidden" id="selected-database" name="database" value="">
+
+            <!-- Database selection -->
+            <div class="uk-card uk-card-default">
+                <div class="uk-card-header">
+                    <h4 class="uk-card-title">Database</h4>
+                </div>
+                <div class="uk-card-body">
+                    <select id="database-select" class="uk-select w-full" onchange="onDatabaseChange(this)">
+                        <option value="" disabled selected>Select a database</option>
+                        {% for db in databases %}
+                        <option value="{{ entity }}/{{ db.slug }}">{{ entity }}/{{ db.slug }}</option>
+                        {% endfor %}
+                        <option value="__create_new__">+ Create new database</option>
+                    </select>
+
+                    <!-- Create database form (hidden by default) -->
+                    <div id="create-database-form" class="mt-4" hidden>
+                        <div class="border-t pt-4">
+                            <div id="create-form-inputs">
+                                <h5 class="text-sm font-medium mb-3">Create a new database</h5>
+                                {% include "create_database_fields.html" %}
+                                <div>
+                                    <button type="button" id="create-database-submit" class="uk-btn uk-btn-primary uk-btn-sm" disabled
+                                            onclick="createDatabase()">
+                                        Create database
+                                    </button>
+                                </div>
+                                <div id="create-database-error" class="mt-2"></div>
+                            </div>
+                            <div id="create-database-success" class="mt-2" hidden>
+                                <div class="uk-alert uk-alert-success" data-uk-alert="">
+                                    <div class="uk-alert-title">Success</div>
+                                    <p>Database created! You can now authorize.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex space-x-3">
+                <button type="submit" name="action" value="deny"
+                        class="uk-btn uk-btn-default flex-1">
+                    Deny
+                </button>
+                <button type="submit" name="action" value="authorize"
+                        id="authorize-btn"
+                        class="uk-btn uk-btn-primary flex-1"
+                        disabled>
+                    Authorize
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let selectedDatabase = '';
+    let creatingDatabase = false;
+
+    function onDatabaseChange(select) {
+        const value = select.value;
+        const createForm = document.getElementById('create-database-form');
+        const successMsg = document.getElementById('create-database-success');
+
+        if (value === '__create_new__') {
+            createForm.hidden = false;
+            successMsg.hidden = true;
+            selectedDatabase = '';
+            document.getElementById('selected-database').value = '';
+            updateAuthorizeButton();
+        } else {
+            createForm.hidden = true;
+            selectedDatabase = value;
+            document.getElementById('selected-database').value = value;
+            updateAuthorizeButton();
+        }
+    }
+
+    function updateAuthorizeButton() {
+        const authorizeBtn = document.getElementById('authorize-btn');
+        authorizeBtn.disabled = !selectedDatabase;
+    }
+
+    async function createDatabase() {
+        const slug = document.getElementById('database-slug').value.trim();
+        const publicSharingLevel = document.getElementById('public-sharing-level').value;
+        const createBtn = document.getElementById('create-database-submit');
+        const errorDiv = document.getElementById('create-database-error');
+        const successDiv = document.getElementById('create-database-success');
+        const select = document.getElementById('database-select');
+
+        if (!slug) return;
+
+        creatingDatabase = true;
+        createBtn.disabled = true;
+        createBtn.textContent = 'Creating...';
+        errorDiv.innerHTML = '';
+        successDiv.hidden = true;
+
+        try {
+            const params = new URLSearchParams();
+            params.append('database_slug', slug);
+            params.append('public_sharing_level', publicSharingLevel);
+
+            const response = await fetch('/{{ entity }}/create_database', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params
+            });
+
+            if (response.ok) {
+                // Database created successfully
+                const newDbPath = '{{ entity }}/' + slug;
+
+                // Add the new database to the dropdown
+                const newOption = document.createElement('option');
+                newOption.value = newDbPath;
+                newOption.textContent = newDbPath;
+                // Insert before the "Create new database" option
+                const createOption = select.querySelector('option[value="__create_new__"]');
+                select.insertBefore(newOption, createOption);
+
+                // Select the newly created database
+                select.value = newDbPath;
+                selectedDatabase = newDbPath;
+                document.getElementById('selected-database').value = newDbPath;
+
+                // Hide form inputs and show success message
+                document.getElementById('create-form-inputs').hidden = true;
+                successDiv.hidden = false;
+                updateAuthorizeButton();
+            } else {
+                const text = await response.text();
+                errorDiv.innerHTML = `<div class="uk-alert uk-alert-destructive text-sm">${text || 'Failed to create database'}</div>`;
+            }
+        } catch (err) {
+            errorDiv.innerHTML = `<div class="uk-alert uk-alert-destructive text-sm">Error: ${err.message}</div>`;
+        } finally {
+            creatingDatabase = false;
+            createBtn.disabled = document.getElementById('database-slug').value.trim() === '';
+            createBtn.textContent = 'Create database';
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateAuthorizeButton();
+        // Enable/disable create button based on slug input
+        const databaseSlug = document.getElementById('database-slug');
+        const submitButton = document.getElementById('create-database-submit');
+        databaseSlug.addEventListener('input', function() {
+            submitButton.disabled = this.value.trim() === '' || creatingDatabase;
+        });
+    });
+</script>
+{% endblock %}

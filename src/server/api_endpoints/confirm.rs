@@ -67,7 +67,7 @@ async fn confirm(
             .await?;
     }
 
-    let (api_token, token_string) = generate_api_token(&created_entity)?;
+    let (api_token, token_string) = generate_api_token(created_entity.id, None)?;
     let _ = ayb_db.create_api_token(&api_token).await?;
     let returned_token = APIAPIToken {
         entity: created_entity.slug,
