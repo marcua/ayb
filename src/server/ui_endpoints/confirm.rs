@@ -16,7 +16,6 @@ pub async fn confirm(
         Ok(api_token) => {
             let mut context = tera::Context::new();
             context.insert("entity", &api_token.entity);
-            context.insert("redirect", &format!("/{}", api_token.entity));
             Ok(HttpResponse::Ok()
                 .content_type("text/html; charset=utf-8")
                 .append_header(("Set-Cookie", cookie_for_token(&api_token)))

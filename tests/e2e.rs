@@ -5,12 +5,14 @@ mod e2e_tests;
 mod utils;
 
 use crate::browser_e2e_tests::{
-    test_create_and_query_database_flow, test_entity_profile_flow, test_permissions_flow,
-    test_registration_flow, test_snapshots_flow, test_token_management_flow,
+    test_create_and_query_database_flow, test_entity_profile_flow, test_oauth_deny_flow,
+    test_oauth_flow, test_permissions_flow, test_registration_flow, test_snapshots_flow,
+    test_token_management_flow,
 };
 use crate::e2e_tests::{
-    test_create_and_query_db, test_entity_details_and_profile, test_health_check, test_permissions,
-    test_registration, test_snapshots, test_token_management,
+    test_create_and_query_db, test_entity_details_and_profile, test_health_check,
+    test_oauth_token_exchange_errors, test_permissions, test_registration, test_snapshots,
+    test_token_management,
 };
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
@@ -96,6 +98,7 @@ async fn client_server_integration(
     test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
     test_token_management(&config_path, &api_keys)?;
+    test_oauth_token_exchange_errors(server_url).await?;
 
     Ok(())
 }
@@ -142,8 +145,14 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     // Test snapshots functionality
     test_snapshots_flow(&page, &username, &base_url).await?;
 
-    // Test token management UI
-    test_token_management_flow(&page, &username, &base_url, "browser_sqlite").await?;
+    // Test OAuth flow (creates scoped tokens for read-only and read-write access)
+    let (readonly_token, _readwrite_token) = test_oauth_flow(&page, &username, &base_url).await?;
+
+    // Test OAuth deny flow
+    test_oauth_deny_flow(&page, &username, &base_url).await?;
+
+    // Test token management UI (uses the OAuth read-only token for revocation testing)
+    test_token_management_flow(&page, &username, &base_url, readonly_token).await?;
 
     Ok(())
 }

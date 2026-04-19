@@ -189,6 +189,58 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 
 The default configuration (with `web.hosting_method` set to `Local`) enables it automatically, though you can remove the `web` section from your configuration if you only want an API server.
 
+### JavaScript client library
+
+`ayb` includes a zero-dependency JavaScript client library (`client-js/ayb.js`) for building browser apps that connect to ayb databases. It supports OAuth 2.0 with PKCE. It also provides convenience utilities for running migrations and a reusable modal-based UI for initiating an OAuth flow from your application.
+
+**Include it:**
+
+```html
+<!-- CDN (always serves the latest version, minified automatically) -->
+<script src="https://cdn.jsdelivr.net/npm/@aybdb/client/ayb.min.js"></script>
+
+<!-- Or install from npm -->
+npm install @aybdb/client
+```
+
+```js
+// ES module
+import { restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
+
+// CommonJS
+const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
+```
+
+**OAuth flow (recommended):**
+
+```js
+const permissionRequest = {
+  appName: 'My App',
+  queryPermissionLevel: 'read-write',  // or 'read-only'
+};
+
+const ayb = await restoreOAuth(permissionRequest);
+
+if (ayb && ayb.isConnected()) {
+  await runMigrations(ayb, 'My App', [
+    'CREATE TABLE IF NOT EXISTS todos (id INTEGER PRIMARY KEY, title TEXT, done INTEGER DEFAULT 0)',
+    'ALTER TABLE todos ADD COLUMN position INTEGER DEFAULT 0',
+  ]);
+  const todos = await ayb.queryObjects('SELECT * FROM todos');
+} else {
+  connectButton.onclick = () => createServerSelectionModal(permissionRequest);
+}
+```
+
+**Manual token auth:**
+
+```js
+const db = new AybClient({ appId: 'my-app' });
+const token = 'ayb_xxx_yyy';
+db.saveConfig('https://host/v1/entity/database', token);
+const rows = await db.queryObjects('SELECT * FROM todos');
+```
+
 ### Email Configuration
 
 `ayb` supports multiple email backends for sending registration and login emails. A standard SMTP configuration can be used in production settings, and a file-based log can also be configured to help with development and testing. At least one of the backends must be configured for `ayb` to start.
@@ -520,8 +572,20 @@ Here's a rough roadmap for the project, with items near the top of the list more
 This project has a roadmap and features are added and tested in a certain order. I'm adding a little friction in requiring a discussion/design document for features before submitting a pull request to ensure that I can focus my attention on well-motivated, well-sequenced, and well-understood functionality.
 
 ## Notes on releasing
+
+### Rust crate
 As we are in the early days of `ayb`, we largely do patch releases (e.g., v0.1.7 -> v0.1.8). We use [cargo-release](https://crates.io/crates/cargo-release) for this.
 
 To install `cargo-release`, run `cargo install cargo-release`.
 
 To perform a patch release, ensure you are on `main` and run `cargo release patch`.
+
+### JavaScript client (`@aybdb/client`)
+The JavaScript client is published to npm from the `client-js/` directory. To publish:
+
+```bash
+cd client-js
+npm version patch  # or minor/major
+npm run generate-types  # regenerate ayb.d.ts if the public API changed
+npm publish --access public
+```
