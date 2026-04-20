@@ -4,6 +4,94 @@ use std::path::{Path, PathBuf};
 
 use crate::hosted_db::paths::pathbuf_to_parent;
 
+/// Isolation capabilities available on the current host, determined at
+/// server startup. The server prints a single status line based on this
+/// so operators know what protection they actually have.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IsolationStatus {
+    /// Linux 6.7+: Landlock filesystem + network + setrlimit.
+    Full,
+    /// Linux 5.13–6.6: Landlock filesystem + setrlimit (no network).
+    FilesystemOnly,
+    /// Linux < 5.13: only setrlimit is enforced.
+    RlimitOnly,
+    /// Non-Linux: no isolation enforced at all.
+    None,
+}
+
+/// Detect what isolation capabilities this host supports. Called once
+/// at server startup so warnings are unified and appear in one place.
+pub fn detect_isolation_status() -> IsolationStatus {
+    #[cfg(not(target_os = "linux"))]
+    {
+        IsolationStatus::None
+    }
+    #[cfg(target_os = "linux")]
+    {
+        match kernel_version() {
+            Some((major, minor)) if (major, minor) >= (6, 7) => IsolationStatus::Full,
+            Some((major, minor)) if (major, minor) >= (5, 13) => IsolationStatus::FilesystemOnly,
+            _ => IsolationStatus::RlimitOnly,
+        }
+    }
+}
+
+/// Parse the running kernel's `major.minor` version from
+/// `/proc/sys/kernel/osrelease`. Returns None if the file is missing
+/// or unparseable.
+#[cfg(target_os = "linux")]
+fn kernel_version() -> Option<(u32, u32)> {
+    let release = std::fs::read_to_string("/proc/sys/kernel/osrelease").ok()?;
+    let mut parts = release.trim().split(['.', '-']);
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    Some((major, minor))
+}
+
+/// Print the isolation status once at server startup. Full isolation
+/// gets a short informational line; any degradation gets a loud,
+/// uniform banner so operators see exactly what is and isn't enforced.
+pub fn print_isolation_status(status: IsolationStatus) {
+    match status {
+        IsolationStatus::Full => {
+            println!(
+                "Isolation: Landlock (filesystem + network) + setrlimit active on query daemons."
+            );
+        }
+        IsolationStatus::FilesystemOnly => {
+            print_warning_banner(&[
+                "Landlock network isolation unavailable (requires Linux 6.7+).",
+                "Filesystem isolation and resource limits ARE active.",
+                "Network access from query daemons is NOT restricted.",
+            ]);
+        }
+        IsolationStatus::RlimitOnly => {
+            print_warning_banner(&[
+                "Landlock unavailable on this kernel (requires Linux 5.13+).",
+                "Only setrlimit resource limits are enforced.",
+                "Filesystem and network access are NOT restricted.",
+            ]);
+        }
+        IsolationStatus::None => {
+            print_warning_banner(&[
+                "Landlock is unavailable on this non-Linux platform.",
+                "No filesystem, network, or resource limits are enforced.",
+            ]);
+        }
+    }
+}
+
+fn print_warning_banner(details: &[&str]) {
+    eprintln!("======================================================================");
+    eprintln!("WARNING: ayb query daemons are running with degraded isolation.");
+    for line in details {
+        eprintln!("{line}");
+    }
+    eprintln!("Do NOT run multi-tenant workloads in this configuration.");
+    eprintln!("See https://github.com/marcua/ayb#isolation for details.");
+    eprintln!("======================================================================");
+}
+
 /// Apply Landlock filesystem and network restrictions, plus resource
 /// limits via setrlimit, to the current process. This is called by the
 /// query daemon at startup, so the daemon sandboxes itself before
@@ -17,8 +105,9 @@ use crate::hosted_db::paths::pathbuf_to_parent;
 /// - File size: 75 MB max file size (RLIMIT_FSIZE).
 /// - File descriptors: 10 max open files (RLIMIT_NOFILE).
 ///
-/// On any other platform or older Linux kernel, a loud warning is
-/// printed at startup and the daemon runs without isolation.
+/// On any other platform or older Linux kernel, the daemon runs
+/// without isolation. The server prints a unified warning at startup
+/// in that case; the daemon itself stays silent.
 ///
 /// Configurable per-database limits and per-process CPU/thread
 /// limitation is future work.
@@ -31,22 +120,8 @@ pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
     #[cfg(not(target_os = "linux"))]
     {
         let _ = db_path;
-        print_unsandboxed_warning("Landlock is unavailable on this non-Linux platform");
     }
     Ok(())
-}
-
-/// Print a loud, multi-line warning to stderr when the daemon cannot
-/// enforce isolation. Meant to be visible in both terminals and log
-/// aggregators. Do not run multi-tenant workloads when this fires.
-pub fn print_unsandboxed_warning(reason: &str) {
-    eprintln!("======================================================================");
-    eprintln!("WARNING: ayb query daemon is running WITHOUT isolation.");
-    eprintln!("Reason: {reason}");
-    eprintln!("Filesystem and network access are NOT restricted for this daemon.");
-    eprintln!("Do NOT run multi-tenant workloads in this configuration.");
-    eprintln!("See https://github.com/marcua/ayb#isolation for details.");
-    eprintln!("======================================================================");
 }
 
 /// Apply Landlock filesystem and network restrictions.
@@ -54,7 +129,7 @@ pub fn print_unsandboxed_warning(reason: &str) {
 fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     use landlock::{
         path_beneath_rules, Access, AccessFs, AccessNet, Ruleset, RulesetAttr, RulesetCreatedAttr,
-        RulesetStatus, ABI,
+        ABI,
     };
 
     // Use the highest ABI we can, with best-effort degradation.
@@ -74,8 +149,7 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     // On older kernels, AccessNet::from_all() returns empty flags and
     // handle_access would error, so we skip it gracefully.
     let access_net = AccessNet::from_all(abi);
-    let network_supported = !access_net.is_empty();
-    if network_supported {
+    if !access_net.is_empty() {
         ruleset = ruleset
             .handle_access(access_net)
             .map_err(|e| AybError::Other {
@@ -119,20 +193,14 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     // No network rules added = all TCP bind/connect denied (if network
     // access was handled above).
 
-    let status = ruleset_created
+    // The server has already printed an isolation-status banner based
+    // on the kernel version, so the daemon does not print anything
+    // here even if the ruleset ends up NotEnforced.
+    let _ = ruleset_created
         .restrict_self()
         .map_err(|e| AybError::Other {
             message: format!("Landlock: failed to restrict self: {e}"),
         })?;
-
-    if status.ruleset == RulesetStatus::NotEnforced {
-        print_unsandboxed_warning("Landlock is not enforced on this kernel (requires Linux 5.13+)");
-    } else if !network_supported {
-        eprintln!(
-            "Note: Landlock network isolation unavailable on this kernel \
-             (requires Linux 6.7+). Filesystem isolation is active."
-        );
-    }
 
     Ok(())
 }

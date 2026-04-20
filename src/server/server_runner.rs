@@ -156,7 +156,9 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         .expect("unable to start periodic snapshot scheduler");
 
     println!("Starting server {}:{}...", ayb_conf.host, ayb_conf.port);
-    check_isolation_support();
+    crate::hosted_db::sandbox::print_isolation_status(
+        crate::hosted_db::sandbox::detect_isolation_status(),
+    );
 
     let server = HttpServer::new(move || {
         let cors = build_cors(ayb_conf.cors.clone());
@@ -186,17 +188,4 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
     });
 
     server.await
-}
-
-fn check_isolation_support() {
-    #[cfg(not(target_os = "linux"))]
-    {
-        crate::hosted_db::sandbox::print_unsandboxed_warning(
-            "Landlock is unavailable on this non-Linux platform",
-        );
-    }
-    #[cfg(target_os = "linux")]
-    {
-        println!("Query daemons will apply Landlock + setrlimit isolation at startup.");
-    }
 }
