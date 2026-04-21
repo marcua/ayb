@@ -12,7 +12,7 @@ pub enum IsolationStatus {
     /// Linux 6.7+: Landlock filesystem + network + setrlimit.
     Full,
     /// Linux 5.13–6.6: Landlock filesystem + setrlimit (no network).
-    FilesystemOnly,
+    FilesystemAndRlimitOnly,
     /// Linux < 5.13: only setrlimit is enforced.
     RlimitOnly,
     /// Non-Linux: no isolation enforced at all.
@@ -30,7 +30,9 @@ pub fn detect_isolation_status() -> IsolationStatus {
     {
         match kernel_version() {
             Some((major, minor)) if (major, minor) >= (6, 7) => IsolationStatus::Full,
-            Some((major, minor)) if (major, minor) >= (5, 13) => IsolationStatus::FilesystemOnly,
+            Some((major, minor)) if (major, minor) >= (5, 13) => {
+                IsolationStatus::FilesystemAndRlimitOnly
+            }
             _ => IsolationStatus::RlimitOnly,
         }
     }
@@ -58,7 +60,7 @@ pub fn print_isolation_status(status: IsolationStatus) {
                 "Isolation: Landlock (filesystem + network) + setrlimit active on query daemons."
             );
         }
-        IsolationStatus::FilesystemOnly => {
+        IsolationStatus::FilesystemAndRlimitOnly => {
             print_warning_banner(&[
                 "Landlock network isolation unavailable (requires Linux 6.7+).",
                 "Filesystem isolation and resource limits ARE active.",
@@ -111,15 +113,12 @@ fn print_warning_banner(details: &[&str]) {
 ///
 /// Configurable per-database limits and per-process CPU/thread
 /// limitation is future work.
+#[cfg_attr(not(target_os = "linux"), allow(unused_variables))]
 pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
     #[cfg(target_os = "linux")]
     {
         apply_landlock_restrictions(db_path)?;
         apply_resource_limits()?;
-    }
-    #[cfg(not(target_os = "linux"))]
-    {
-        let _ = db_path;
     }
     Ok(())
 }
