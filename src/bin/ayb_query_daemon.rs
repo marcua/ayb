@@ -34,6 +34,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     apply_sandbox(&db_file)?;
 
+    // Temporary: verify Landlock blocks access outside the sandbox.
+    // This should fail on Linux CI (Permission denied) and pass on macOS.
+    // Revert after confirming.
+    std::fs::read_to_string("/etc/hostname")
+        .expect("TEST FAILURE: was able to read /etc/hostname after sandboxing");
+
     run(db_file)
 }
 
