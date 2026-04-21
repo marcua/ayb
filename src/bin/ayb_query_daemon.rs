@@ -35,10 +35,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     apply_sandbox(&db_file)?;
 
     // Temporary: verify Landlock blocks access outside the sandbox.
-    // This should fail on Linux CI (Permission denied) and pass on macOS.
-    // Revert after confirming.
-    std::fs::read_to_string("/etc/hostname")
-        .expect("TEST FAILURE: was able to read /etc/hostname after sandboxing");
+    // On Linux with Landlock enforced, this read returns
+    // PermissionDenied and we panic — proving the sandbox is active.
+    // On macOS (no Landlock), the read succeeds and the daemon
+    // continues normally. Revert after confirming.
+    match std::fs::read_to_string("/etc/hostname") {
+        Ok(_) => eprintln!("SANDBOX TEST: /etc/hostname was readable (no Landlock on this host)"),
+        Err(e) => panic!("SANDBOX TEST: Landlock blocked /etc/hostname read as expected: {e}"),
+    }
 
     run(db_file)
 }
