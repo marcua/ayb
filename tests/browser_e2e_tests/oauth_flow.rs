@@ -31,7 +31,6 @@ fn generate_pkce() -> (String, String) {
 /// Result of completing the OAuth authorization flow
 struct OAuthTokenResult {
     access_token: String,
-    permission_level: String,
 }
 
 /// Complete the OAuth authorization flow and exchange for a token.
@@ -178,10 +177,7 @@ async fn complete_oauth_flow(
 
     println!("Received scoped token with {} permission", permission_level);
 
-    Ok(OAuthTokenResult {
-        access_token,
-        permission_level,
-    })
+    Ok(OAuthTokenResult { access_token })
 }
 
 /// Test the OAuth flow with a read-only scoped token.
