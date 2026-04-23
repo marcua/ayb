@@ -40,10 +40,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // we panic with "SANDBOX TEST: Landlock blocked ...". macOS has
     // no sandbox, so the second read also succeeds. Revert after
     // confirming both platforms.
-    std::fs::read_to_string("/etc/passwd").expect(
-        "SANDBOX TEST (pre-sandbox): /etc/passwd was unreadable before sandboxing — test is broken",
-    );
-    eprintln!("SANDBOX TEST: /etc/passwd readable before sandboxing (as expected)");
+    match std::fs::read_to_string("/etc/passwd") {
+        Ok(_) => eprintln!(
+            "SANDBOX TEST: /etc/passwd readable before sandboxing (as expected)"
+        ),
+        Err(e) => panic!(
+            "SANDBOX TEST (pre-sandbox): /etc/passwd unreadable before sandboxing — test is broken: {e}"
+        ),
+    }
 
     apply_sandbox(&db_file)?;
 
