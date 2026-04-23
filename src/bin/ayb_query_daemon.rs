@@ -43,6 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::read_to_string("/etc/passwd").expect(
         "SANDBOX TEST (pre-sandbox): /etc/passwd was unreadable before sandboxing — test is broken",
     );
+    eprintln!("SANDBOX TEST: /etc/passwd readable before sandboxing (as expected)");
 
     apply_sandbox(&db_file)?;
 
