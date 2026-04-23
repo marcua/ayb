@@ -32,17 +32,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     let db_file = parse_args(&args)?;
 
+    // Temporary: prove the sandbox blocks what would otherwise work.
+    // Read /etc/passwd BEFORE sandboxing — if this fails, the test
+    // itself is broken (file should exist on Linux and macOS), so we
+    // panic. Then apply the sandbox and read the same file again:
+    // Landlock-enforced Linux should now return PermissionDenied and
+    // we panic with "SANDBOX TEST: Landlock blocked ...". macOS has
+    // no sandbox, so the second read also succeeds. Revert after
+    // confirming both platforms.
+    std::fs::read_to_string("/etc/passwd").expect(
+        "SANDBOX TEST (pre-sandbox): /etc/passwd was unreadable before sandboxing — test is broken",
+    );
+
     apply_sandbox(&db_file)?;
 
-    // Temporary: verify Landlock blocks access outside the sandbox.
-    // /etc/passwd exists on both Linux and macOS. On Linux with
-    // Landlock enforced, the read returns PermissionDenied and we
-    // panic — proving the sandbox is active. On macOS (no Landlock),
-    // the read succeeds and the daemon continues normally.
-    // Revert after confirming.
     match std::fs::read_to_string("/etc/passwd") {
-        Ok(_) => eprintln!("SANDBOX TEST: /etc/passwd was readable (no Landlock on this host)"),
-        Err(e) => panic!("SANDBOX TEST: Landlock blocked /etc/passwd read as expected: {e}"),
+        Ok(_) => eprintln!(
+            "SANDBOX TEST: /etc/passwd still readable after sandboxing (no Landlock on this host)"
+        ),
+        Err(e) => panic!(
+            "SANDBOX TEST: Landlock blocked /etc/passwd read after sandboxing as expected: {e}"
+        ),
     }
 
     run(db_file)
