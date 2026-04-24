@@ -1,14 +1,13 @@
 pub mod daemon_registry;
 pub mod paths;
-mod sandbox;
+pub mod sandbox;
 pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::from_str;
-use crate::hosted_db::sqlite::potentially_isolated_sqlite_query;
-use crate::server::config::AybConfigIsolation;
+use crate::hosted_db::sqlite::run_sqlite_query;
 use crate::try_from_i16;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
@@ -83,18 +82,10 @@ pub async fn run_query(
     path: &PathBuf,
     query: &str,
     db_type: &DBType,
-    isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     match db_type {
-        DBType::Sqlite => Ok(potentially_isolated_sqlite_query(
-            daemon_registry,
-            path,
-            query,
-            isolation,
-            query_mode,
-        )
-        .await?),
+        DBType::Sqlite => Ok(run_sqlite_query(daemon_registry, path, query, query_mode).await?),
         _ => Err(AybError::Other {
             message: "Unsupported DB type".to_string(),
         }),

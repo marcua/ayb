@@ -69,9 +69,6 @@ token_expiration_seconds = 3600
 [cors]
 origin = "*"
 
-[isolation]
-nsjail_path = "tests/nsjail"
-
 [snapshots]
 sqlite_method = "Vacuum"
 access_key_id = "minioadmin"

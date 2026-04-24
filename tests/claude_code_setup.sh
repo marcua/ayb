@@ -17,11 +17,6 @@ sudo -E apt-get update
 echo "Installing required packages..."
 sudo -E apt-get install -y \
     postgresql \
-    flex \
-    bison \
-    libprotobuf-dev \
-    protobuf-compiler \
-    libnl-route-3-dev \
     wget \
     curl
 

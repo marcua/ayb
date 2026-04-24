@@ -52,7 +52,7 @@ make test TEST=client_server_integration_sqlite
 # The test setup script installs:
 # - Python virtual environment with awscli
 # - MinIO for S3-compatible storage testing
-# - nsjail binary for isolation testing
+# - Landlock isolation testing (requires Linux kernel 5.13+)
 ```
 
 If tests fail with S3 errors, run `tests/run_minio.sh` and try again.
@@ -97,7 +97,7 @@ src/
 
 **Hosted Database (`src/hosted_db/`)**
 - SQLite query execution with safety constraints
-- nsjail sandboxing for multi-tenant isolation (Linux only)
+- Landlock + setrlimit sandboxing for multi-tenant isolation (Linux only)
 - Database file organization and path management
 
 **Client (`src/client/`)**
@@ -113,7 +113,7 @@ src/
 - **CLI**: clap for argument parsing
 - **Async**: tokio runtime
 - **Backup**: S3-compatible storage with zstd compression
-- **Isolation**: nsjail for sandboxed query execution
+- **Isolation**: Landlock + setrlimit for sandboxed query execution
 
 ## Configuration
 
@@ -122,15 +122,18 @@ Server configuration uses TOML format (`ayb.toml`) with sections for:
 - Authentication (fernet key, token expiration)
 - Email (SMTP configuration)
 - Snapshots (S3 configuration and scheduling)
-- Isolation (nsjail path)
 - CORS settings
+
+Isolation (Landlock + setrlimit) is always on for query daemons on
+Linux; no configuration required. On non-Linux or pre-5.13 kernels the
+daemon logs a loud warning and runs unsandboxed.
 
 ## Key Development Patterns
 
 ### Multi-Tenancy
 - Entities represent users and organizations
 - Permissions are granular: no-access, read-only, read-write, manager
-- Database isolation via nsjail sandboxing and SQLite safety constraints
+- Database isolation via Landlock sandboxing, setrlimit, and SQLite safety constraints
 
 ### Error Handling
 - Uses Tera templates for consistent error snippet formatting

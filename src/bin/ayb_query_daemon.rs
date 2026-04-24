@@ -1,3 +1,4 @@
+use ayb::hosted_db::sandbox::apply_sandbox;
 use ayb::hosted_db::sqlite::query_sqlite;
 use ayb::hosted_db::QueryMode;
 use serde::{Deserialize, Serialize};
@@ -15,25 +16,36 @@ struct QueryRequest {
 /// against a database and returns results in QueryResult format.
 ///
 /// Usage:
-/// $ ayb_query_daemon database.sqlite
+/// $ ayb_query_daemon <database.sqlite>
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
 /// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
-/// This command can be run inside a sandbox that isolates
-/// parallel invocations from accessing each other's data, memory,
-/// and resources. That sandbox can be found in src/hosted_db/sandbox.rs.
+/// At startup the daemon applies as much sandboxing as the host
+/// supports (Landlock filesystem/network restrictions, setrlimit
+/// resource limits) before processing any queries. The ayb server
+/// detects the host's isolation capabilities at startup and prints
+/// a prominent warning about any elements it cannot enforce.
+/// See src/hosted_db/sandbox.rs.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: ayb_query_daemon <database.sqlite>");
-        std::process::exit(1);
-    }
+    let db_file = parse_args(&args)?;
 
-    let db_file = PathBuf::from(&args[1]);
+    apply_sandbox(&db_file)?;
+
     run(db_file)
+}
+
+fn parse_args(args: &[String]) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    match args.len() {
+        2 => Ok(PathBuf::from(&args[1])),
+        _ => {
+            eprintln!("Usage: ayb_query_daemon <database.sqlite>");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {

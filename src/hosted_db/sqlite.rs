@@ -1,12 +1,11 @@
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::{QueryMode, QueryResult};
-use crate::server::config::AybConfigIsolation;
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// `allow_unsafe` disables features that prevent abuse but also
 /// prevent backups/snapshots. The only known use case in the codebase
@@ -94,16 +93,13 @@ pub fn query_sqlite(
     })
 }
 
-/// Run `query` against the database at `path`, either with or without isolation.
-pub async fn potentially_isolated_sqlite_query(
+/// Run `query` against the database at `path` via the sandboxed query
+/// daemon.
+pub async fn run_sqlite_query(
     daemon_registry: &DaemonRegistry,
     path: &PathBuf,
     query: &str,
-    isolation: &Option<AybConfigIsolation>,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    let nsjail_path = isolation.as_ref().map(|i| Path::new(&i.nsjail_path));
-    daemon_registry
-        .execute_query(path, nsjail_path, query, query_mode)
-        .await
+    daemon_registry.execute_query(path, query, query_mode).await
 }

@@ -62,11 +62,6 @@ impl AybConfigEmailBackends {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AybConfigIsolation {
-    pub nsjail_path: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub enum SqliteSnapshotMethod {
     Backup,
     Vacuum,
@@ -107,7 +102,6 @@ pub struct AybConfig {
     pub email: AybConfigEmailBackends,
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
-    pub isolation: Option<AybConfigIsolation>,
     pub snapshots: Option<AybConfigSnapshots>,
 }
 
@@ -146,7 +140,6 @@ pub fn default_server_config() -> AybConfig {
             hosting_method: WebHostingMethod::Local,
             base_url: None,
         }),
-        isolation: None,
         snapshots: None,
     }
 }
