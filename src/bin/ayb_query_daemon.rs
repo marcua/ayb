@@ -23,11 +23,12 @@ struct QueryRequest {
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
-/// The daemon always applies Landlock filesystem and network restrictions
-/// plus resource limits (setrlimit) to itself before processing any
-/// queries. On platforms or kernels where Landlock is unavailable, a
-/// loud warning is printed to stderr and the daemon runs without
-/// isolation. See src/hosted_db/sandbox.rs.
+/// At startup the daemon applies as much sandboxing as the host
+/// supports (Landlock filesystem/network restrictions, setrlimit
+/// resource limits) before processing any queries. The ayb server
+/// detects the host's isolation capabilities at startup and prints
+/// a prominent warning about any elements it cannot enforce.
+/// See src/hosted_db/sandbox.rs.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     let db_file = parse_args(&args)?;
