@@ -42,7 +42,7 @@ toml = { version = "1.0.6" }
 tokio = { version = "1.49.0", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.15.1", features = ["signal"]}
 prefixed-api-key = { version = "0.3.0", features = ["sha2"]}
-sha2 = { version = "0.10.9" }
+sha2 = { version = "0.11.0" }
 subtle = { version = "2.6.1" }
 base64 = { version = "0.22.1" }
 prettytable-rs = { version = "0.10.0"}
