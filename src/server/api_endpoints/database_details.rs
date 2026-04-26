@@ -59,6 +59,6 @@ pub async fn database_details(
             ),
             None => format!("Database {entity_slug}/{database_slug} is not accessible"),
         };
-        Err(AybError::Other { message })
+        Err(AybError::Unauthorized { message })
     }
 }
