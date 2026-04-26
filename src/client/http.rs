@@ -6,8 +6,10 @@ use crate::http::structs::{
     SnapshotList, TokenList,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use reqwest::multipart;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
+use std::path::Path;
 
 pub struct AybClient {
     pub base_url: String,
@@ -101,6 +103,7 @@ impl AybClient {
         database: &str,
         db_type: &DBType,
         public_sharing_level: &PublicSharingLevel,
+        seed_file: Option<&Path>,
     ) -> Result<Database, AybError> {
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -113,14 +116,73 @@ impl AybClient {
         );
         self.add_bearer_token(&mut headers)?;
 
+        let form = if let Some(file_path) = seed_file {
+            let bytes = tokio::fs::read(file_path)
+                .await
+                .map_err(|err| AybError::Other {
+                    message: format!("Unable to read seed file {}: {err}", file_path.display()),
+                })?;
+            let file_name = file_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(database)
+                .to_string();
+            let part = multipart::Part::bytes(bytes).file_name(file_name);
+            multipart::Form::new().part("database", part)
+        } else {
+            multipart::Form::new()
+        };
+
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{entity}/{database}/create")))
             .headers(headers)
+            .multipart(form)
             .send()
             .await?;
 
         self.handle_response(response, reqwest::StatusCode::CREATED)
             .await
+    }
+
+    /// Streams a downloaded copy of the database into `output_path`.
+    /// The server produces a transactionally consistent file via
+    /// `VACUUM INTO`.
+    pub async fn export_database(
+        &self,
+        entity: &str,
+        database: &str,
+        output_path: &Path,
+    ) -> Result<(), AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers)?;
+
+        let response = reqwest::Client::new()
+            .get(self.make_url(format!("{entity}/{database}/export")))
+            .headers(headers)
+            .send()
+            .await?;
+
+        let status = response.status();
+        if status != reqwest::StatusCode::OK {
+            return response
+                .json::<AybError>()
+                .await
+                .map(Err)
+                .map_err(|error| AybError::Other {
+                    message: format!(
+                        "Unable to parse error response: {error:#?}, response code: {status}"
+                    ),
+                })?;
+        }
+
+        let mut file = tokio::fs::File::create(output_path).await?;
+        use tokio::io::AsyncWriteExt;
+        let mut response = response;
+        while let Some(bytes) = response.chunk().await? {
+            file.write_all(&bytes).await?;
+        }
+        file.flush().await?;
+        Ok(())
     }
 
     pub async fn list_snapshots(

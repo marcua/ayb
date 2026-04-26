@@ -5,9 +5,18 @@
 {% block page_content %}
 <div class="max-w-screen-xl mx-auto px-6">
     <div class="max-w-screen-xl mx-auto">
-        <div class="breadcrumbs mb-4">
-            <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> /
-            <span class="font-semibold">{{ database }}</span> ({{ database_type }})
+        <div class="breadcrumbs mb-4 flex justify-between items-center">
+            <div>
+                <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> /
+                <span class="font-semibold">{{ database }}</span> ({{ database_type }})
+            </div>
+            {% if highest_query_access_level %}
+            <a href="/{{ entity }}/{{ database }}/export"
+               class="uk-btn uk-btn-default uk-btn-sm"
+               download="{{ database }}">
+                <uk-icon icon="download" class="mr-1"></uk-icon> Download
+            </a>
+            {% endif %}
         </div>
         <ul data-uk-tab class="mb-6" id="database-tabs">
             <li><a class="px-4 pb-3 pt-2" href="#query">Query</a></li>

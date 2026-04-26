@@ -1,5 +1,6 @@
 mod create_and_query_db_tests;
 mod entity_details_and_profile_tests;
+mod export_import_tests;
 mod health_check_tests;
 mod oauth_tests;
 mod permissions_tests;
@@ -9,6 +10,7 @@ mod token_management_tests;
 
 pub use create_and_query_db_tests::test_create_and_query_db;
 pub use entity_details_and_profile_tests::test_entity_details_and_profile;
+pub use export_import_tests::test_export_and_import;
 pub use health_check_tests::test_health_check;
 pub use oauth_tests::test_oauth_token_exchange_errors;
 pub use permissions_tests::test_permissions;

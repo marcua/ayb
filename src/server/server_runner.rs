@@ -10,6 +10,7 @@ use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
 use crate::server::{api_endpoints, ui_endpoints};
 use actix_cors::Cors;
+use actix_multipart::form::MultipartFormConfig;
 use actix_web::dev::ServiceRequest;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
@@ -32,6 +33,7 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
             .wrap(HttpAuthentication::bearer(entity_validator))
             .service(api_endpoints::create_database_endpoint)
             .service(api_endpoints::database_details_endpoint)
+            .service(api_endpoints::export_endpoint)
             .service(api_endpoints::update_database_endpoint)
             .service(api_endpoints::query_endpoint)
             .service(api_endpoints::entity_details_endpoint)
@@ -75,6 +77,7 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
                 .service(ui_endpoints::oauth_authorize_submit_endpoint)
                 .service(ui_endpoints::entity_details_endpoint)
                 .service(ui_endpoints::create_database_endpoint)
+                .service(ui_endpoints::export_endpoint)
                 .service(ui_endpoints::update_profile_endpoint)
                 .service(ui_endpoints::database_endpoint)
                 .service(ui_endpoints::query_endpoint)
@@ -163,6 +166,13 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         crate::hosted_db::sandbox::detect_isolation_status(),
     );
 
+    // Cap database upload size at 4 GiB. Most embedded SQLite
+    // databases are far smaller; this is an upper bound to avoid
+    // unbounded resource use rather than a typical-case limit.
+    let multipart_config = MultipartFormConfig::default()
+        .total_limit(4 * 1024 * 1024 * 1024)
+        .memory_limit(2 * 1024 * 1024);
+
     let server = HttpServer::new(move || {
         let cors = build_cors(ayb_conf.cors.clone());
 
@@ -175,6 +185,7 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
             .app_data(web::Data::new(email_backends.clone()))
             .app_data(web::Data::new(daemon_registry.clone()))
+            .app_data(multipart_config.clone())
             .configure(|cfg| config(cfg, &ayb_conf_for_server.clone()))
     })
     .bind((ayb_conf.host, ayb_conf.port))?

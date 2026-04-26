@@ -11,6 +11,16 @@
 </div>
 
 <div class="mb-4">
+    <label for="database-file" class="block text-sm font-medium mb-1">Initial contents (optional)</label>
+    <input
+        type="file"
+        id="database-file"
+        name="database"
+        class="p-2 border rounded focus:border-blue-500 w-full">
+    <p class="text-xs text-muted-foreground mt-1">Upload an existing SQLite file to seed the database, or leave blank to start empty.</p>
+</div>
+
+<div class="mb-4">
     <label class="block text-sm font-medium mb-1">Public sharing level</label>
     <div class="uk-btn-group" data-uk-button-radio>
         <button

@@ -1,3 +1,4 @@
+use actix_multipart;
 use actix_web;
 use derive_more::Error;
 use fernet;
@@ -188,6 +189,14 @@ impl From<tokio_cron_scheduler::JobSchedulerError> for AybError {
     fn from(cause: tokio_cron_scheduler::JobSchedulerError) -> Self {
         AybError::SnapshotError {
             message: format!("Unable to schedule snapshots: {cause:?}"),
+        }
+    }
+}
+
+impl From<actix_multipart::MultipartError> for AybError {
+    fn from(cause: actix_multipart::MultipartError) -> Self {
+        AybError::Other {
+            message: format!("Multipart error: {cause}"),
         }
     }
 }

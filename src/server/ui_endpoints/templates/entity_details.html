@@ -30,6 +30,7 @@
                         <form
                           class="mt-4"
                           hx-post="/{{ entity }}/create_database"
+                          hx-encoding="multipart/form-data"
                           hx-target-400="#create-database-error"
                           hx-swap="innerHTML">
                             {% include "create_database_fields.html" %}

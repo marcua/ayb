@@ -36,6 +36,36 @@ pub fn create_database(
     Ok(())
 }
 
+pub fn create_database_from_file(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    seed_path: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, "sqlite", "no-access", "--from_file", seed_path; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
+
+pub fn export_database(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    output_path: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "export_database", database, output_path; {
+        "AYB_API_TOKEN" => api_key,
+    });
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
+
 pub fn query(
     config: &str,
     api_key: &str,

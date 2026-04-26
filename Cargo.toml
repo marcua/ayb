@@ -10,6 +10,8 @@ default-run = "ayb"
 
 [dependencies]
 actix-cors = { version = "0.7.1" }
+actix-files = { version = "0.6.6" }
+actix-multipart = { version = "0.7.2", features = ["derive"] }
 actix-web = { version = "4.12.1" }
 actix-web-httpauth = { version = "0.8.2" }
 async-trait = { version = "0.1.89" }
@@ -27,7 +29,7 @@ go-parse-duration = { version = "0.1.1" }
 lettre = { version = "0.11.19", features = ["tokio1-native-tls"] }
 quoted_printable = { version = "0.5.2" }
 regex = { version = "1.12.3"}
-reqwest = { version = "0.13.2", features = ["json"] }
+reqwest = { version = "0.13.2", features = ["json", "multipart"] }
 rusqlite = { version = "0.27.0", features = ["bundled", "limits"] }
 rustyline = { version = "17.0.2" }
 rust-s3 = { version = "0.37.1" }
@@ -46,6 +48,7 @@ sha2 = { version = "0.10.9" }
 subtle = { version = "2.6.1" }
 base64 = { version = "0.22.1" }
 prettytable-rs = { version = "0.10.0"}
+tempfile = { version = "3.24" }
 url = { version = "2.5.8", features = ["serde"] }
 urlencoding = { version = "2.1.3" }
 uuid = { version = "1.19.0", features = ["v7"] }
@@ -61,7 +64,6 @@ assert-json-diff = "2.0.2"
 predicates = "3.1.3"
 playwright = "0.0.20"
 image = "0.25"
-tempfile = "3.24"
 
 [[bin]]
 name = "ayb"

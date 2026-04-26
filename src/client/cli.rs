@@ -101,8 +101,25 @@ pub fn client_commands() -> Command {
                         .value_parser(value_parser!(PublicSharingLevel))
                         .default_value(PublicSharingLevel::NoAccess.to_str())
                         .required(false)
+                )
+                .arg(
+                    arg!(--from_file <path> "Optional path to an existing database file to use as the initial contents")
+                        .value_parser(value_parser!(PathBuf))
+                        .required(false)
                 ),
 
+        )
+        .subcommand(
+            Command::new("export_database")
+                .about("Download a consistent copy of a database to a local file")
+                .arg(arg!(<database> "The database to export (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+                .arg(arg!(<output_path> "The local path to write the exported database to")
+                     .value_parser(value_parser!(PathBuf))
+                     .required(true)
+                )
         )
         .subcommand(
             Command::new("query")
@@ -314,12 +331,14 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
             matches.get_one::<DBType>("type"),
             matches.get_one::<PublicSharingLevel>("public_sharing_level"),
         ) {
+            let seed_file = matches.get_one::<PathBuf>("from_file");
             match client
                 .create_database(
                     &entity_database.entity,
                     &entity_database.database,
                     db_type,
                     public_sharing_level,
+                    seed_file.map(|p| p.as_path()),
                 )
                 .await
             {
@@ -327,6 +346,32 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                     println!(
                         "Successfully created {}/{}",
                         entity_database.entity, entity_database.database
+                    );
+                }
+                Err(err) => {
+                    println!("Error: {err}");
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("export_database") {
+        if let (Some(entity_database), Some(output_path)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<PathBuf>("output_path"),
+        ) {
+            match client
+                .export_database(
+                    &entity_database.entity,
+                    &entity_database.database,
+                    output_path,
+                )
+                .await
+            {
+                Ok(()) => {
+                    println!(
+                        "Exported {}/{} to {}",
+                        entity_database.entity,
+                        entity_database.database,
+                        output_path.display()
                     );
                 }
                 Err(err) => {
