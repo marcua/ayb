@@ -34,6 +34,15 @@ impl AybClient {
         }
     }
 
+    fn add_optional_bearer_token(&self, headers: &mut HeaderMap) {
+        if let Some(api_token) = &self.api_token {
+            headers.insert(
+                HeaderName::from_static("authorization"),
+                HeaderValue::from_str(format!("Bearer {api_token}").as_str()).unwrap(),
+            );
+        }
+    }
+
     async fn handle_response<T: DeserializeOwned>(
         &self,
         response: reqwest::Response,
@@ -160,7 +169,7 @@ impl AybClient {
 
     pub async fn entity_details(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_optional_bearer_token(&mut headers);
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("entity/{entity}")))
@@ -274,7 +283,7 @@ impl AybClient {
         database: &str,
     ) -> Result<DatabaseDetails, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_optional_bearer_token(&mut headers);
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("{entity}/{database}/details")))

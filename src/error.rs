@@ -31,6 +31,7 @@ pub enum AybError {
     SnapshotError { message: String },
     SnapshotDoesNotExistError,
     EmptyUpdateError { message: String },
+    Unauthorized { message: String },
     Other { message: String },
 }
 
@@ -45,14 +46,22 @@ impl Display for AybError {
             AybError::NoWriteAccessError { message } => write!(f, "{message}"),
             AybError::RegistrationError { message } => write!(f, "{message}"),
             AybError::EmptyUpdateError { message } => write!(f, "{message}"),
+            AybError::Unauthorized { message } => write!(f, "{message}"),
             _ => write!(f, "{self:?}"),
         }
     }
 }
 
 impl actix_web::error::ResponseError for AybError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        match self {
+            AybError::Unauthorized { .. } => actix_web::http::StatusCode::UNAUTHORIZED,
+            _ => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
     fn error_response(&self) -> actix_web::HttpResponse {
-        actix_web::HttpResponse::InternalServerError().json(self)
+        actix_web::HttpResponse::build(self.status_code()).json(self)
     }
 }
 

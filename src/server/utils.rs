@@ -36,8 +36,8 @@ pub fn unwrap_authenticated_entity(
 ) -> Result<InstantiatedEntity, AybError> {
     match entity {
         Some(instantiated_entity) => Ok(instantiated_entity.clone().into_inner()),
-        None => Err(AybError::Other {
-            message: "Endpoint requires an entity, but one was not provided".to_string(),
+        None => Err(AybError::Unauthorized {
+            message: "This endpoint requires authentication".to_string(),
         }),
     }
 }
