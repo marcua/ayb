@@ -51,7 +51,7 @@ jobs:
       run: cargo clippy -- -D warnings
 
     - name: Cache Python environment
-      uses: actions/cache@v5.0.4
+      uses: actions/cache@v5.0.5
       with:
         path: tests/test-env
         key: ${{ runner.os }}-pip-${{ hashFiles('tests/set_up_e2e_env.sh') }}
