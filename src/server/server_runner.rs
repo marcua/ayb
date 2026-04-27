@@ -38,10 +38,6 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     //     `database_details`) — anonymous requests pass through, but
     //     invalid / revoked / expired bearer tokens are still rejected (a
     //     bad token is never silently downgraded to anonymous).
-    // The /v1 scope itself has no `wrap`; per-endpoint wraps stack on the
-    // resource directly. This is the only way to mix two middlewares on a
-    // shared path prefix in actix-web — sibling scopes at `/v1` don't
-    // fall through.
     cfg.service(
         web::scope("/v1")
             .service(api_endpoints::create_database_endpoint)
@@ -101,34 +97,30 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     }
 }
 
+/// Validate `token` against the metadata DB attached to `req`, and on
+/// success insert the resolved `InstantiatedEntity` and `APIToken` into
+/// the request extensions. Used by both validators below.
+async fn attach_validated_entity(token: &str, req: &ServiceRequest) -> Result<(), AybError> {
+    let ayb_db = req
+        .app_data::<web::Data<Box<dyn AybDb>>>()
+        .ok_or_else(|| AybError::Other {
+            message: "Misconfigured server: no database".to_string(),
+        })?;
+    let api_token = retrieve_and_validate_api_token(token, ayb_db).await?;
+    let entity = ayb_db.get_entity_by_id(api_token.entity_id).await?;
+    req.extensions_mut().insert(entity);
+    req.extensions_mut().insert(api_token);
+    Ok(())
+}
+
 pub async fn entity_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
-    let ayb_db = match req.app_data::<web::Data<Box<dyn AybDb>>>() {
-        Some(db) => db.clone(),
-        None => {
-            return Err((
-                AybError::Other {
-                    message: "Misconfigured server: no database".to_string(),
-                }
-                .into(),
-                req,
-            ))
-        }
-    };
-
-    let api_token = match retrieve_and_validate_api_token(credentials.token(), &ayb_db).await {
-        Ok(t) => t,
-        Err(e) => return Err((e.into(), req)),
-    };
-    let entity = match ayb_db.get_entity_by_id(api_token.entity_id).await {
-        Ok(e) => e,
-        Err(e) => return Err((e.into(), req)),
-    };
-    req.extensions_mut().insert(entity);
-    req.extensions_mut().insert(api_token);
-    Ok(req)
+    match attach_validated_entity(credentials.token(), &req).await {
+        Ok(()) => Ok(req),
+        Err(e) => Err((e.into(), req)),
+    }
 }
 
 pub async fn optional_entity_validator(
@@ -142,34 +134,15 @@ pub async fn optional_entity_validator(
         .map(str::to_string);
 
     if let Some(header_value) = auth_header {
-        let token = match header_value.strip_prefix("Bearer ").or_else(|| {
-            header_value
-                .strip_prefix("bearer ")
-                .or_else(|| header_value.strip_prefix("BEARER "))
-        }) {
-            Some(t) => t.trim().to_string(),
-            None => {
-                return Err(AybError::Other {
-                    message: "Invalid Authorization header: expected `Bearer <token>`".to_string(),
-                }
-                .into());
-            }
-        };
-
-        let ayb_db = match req.app_data::<web::Data<Box<dyn AybDb>>>() {
-            Some(db) => db.clone(),
-            None => {
-                return Err(AybError::Other {
-                    message: "Misconfigured server: no database".to_string(),
-                }
-                .into());
-            }
-        };
-
-        let api_token = retrieve_and_validate_api_token(&token, &ayb_db).await?;
-        let entity = ayb_db.get_entity_by_id(api_token.entity_id).await?;
-        req.extensions_mut().insert(entity);
-        req.extensions_mut().insert(api_token);
+        let token = header_value
+            .strip_prefix("Bearer ")
+            .or_else(|| header_value.strip_prefix("bearer "))
+            .or_else(|| header_value.strip_prefix("BEARER "))
+            .ok_or_else(|| AybError::Other {
+                message: "Invalid Authorization header: expected `Bearer <token>`".to_string(),
+            })?
+            .trim();
+        attach_validated_entity(token, &req).await?;
     }
 
     next.call(req).await

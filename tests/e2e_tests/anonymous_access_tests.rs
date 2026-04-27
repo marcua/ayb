@@ -19,7 +19,9 @@ pub async fn test_anonymous_access(
         "Database e2e-first/test.sqlite updated successfully",
     )?;
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .pool_max_idle_per_host(0)
+        .build()?;
 
     // GET /v1/entity/{slug} without Authorization returns 200 and only lists
     // public databases. The non-public another.sqlite is filtered out, and
