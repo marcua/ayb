@@ -8,7 +8,10 @@ use crate::server::permissions::{
 };
 use actix_web::{get, web, HttpResponse, Result};
 
-#[get("/{entity}/{database}/details")]
+#[get(
+    "/{entity}/{database}/details",
+    wrap = "actix_web::middleware::from_fn(crate::server::server_runner::optional_entity_validator)"
+)]
 pub async fn database_details(
     path: web::Path<EntityDatabasePath>,
     ayb_db: web::Data<Box<dyn AybDb>>,

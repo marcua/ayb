@@ -14,7 +14,10 @@ use crate::server::permissions::can_create_database;
 use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
-#[post("/{entity}/{database}/create")]
+#[post(
+    "/{entity}/{database}/create",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,

@@ -14,6 +14,7 @@ use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::middleware::Next;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use dyn_clone::clone_box;
 use std::fs;
 use std::path::Path;
@@ -26,18 +27,23 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
         .service(api_endpoints::register_endpoint)
         .service(api_endpoints::oauth_token_endpoint);
 
-    // API endpoints. The optional middleware validates a bearer token if
-    // one is provided (and rejects invalid / revoked / expired tokens — a
-    // bad token is never silently downgraded to anonymous), but lets
-    // requests through without an `Authorization` header. Endpoints that
-    // require authentication enforce that themselves via
-    // `unwrap_authenticated_entity`, which returns 401 when no entity is
-    // attached. Endpoints that allow anonymous read access to publicly-
-    // shared resources (entity_details, database_details) inspect the
-    // optional entity directly.
+    // API endpoints under /v1. Each endpoint declares its own auth posture
+    // via a `wrap = ...` attribute on its route macro:
+    //   - `HttpAuthentication::bearer(entity_validator)` for the
+    //     auth-required endpoints (writes, query, manage, snapshots, share,
+    //     tokens, profile updates) — missing or invalid bearer tokens are
+    //     rejected at the middleware layer.
+    //   - `middleware::from_fn(optional_entity_validator)` for the two
+    //     anonymous-readable endpoints (`entity_details`,
+    //     `database_details`) — anonymous requests pass through, but
+    //     invalid / revoked / expired bearer tokens are still rejected (a
+    //     bad token is never silently downgraded to anonymous).
+    // The /v1 scope itself has no `wrap`; per-endpoint wraps stack on the
+    // resource directly. This is the only way to mix two middlewares on a
+    // shared path prefix in actix-web — sibling scopes at `/v1` don't
+    // fall through.
     cfg.service(
         web::scope("/v1")
-            .wrap(middleware::from_fn(optional_entity_validator))
             .service(api_endpoints::create_database_endpoint)
             .service(api_endpoints::database_details_endpoint)
             .service(api_endpoints::update_database_endpoint)
@@ -95,7 +101,37 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     }
 }
 
-async fn optional_entity_validator(
+pub async fn entity_validator(
+    req: ServiceRequest,
+    credentials: BearerAuth,
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+    let ayb_db = match req.app_data::<web::Data<Box<dyn AybDb>>>() {
+        Some(db) => db.clone(),
+        None => {
+            return Err((
+                AybError::Other {
+                    message: "Misconfigured server: no database".to_string(),
+                }
+                .into(),
+                req,
+            ))
+        }
+    };
+
+    let api_token = match retrieve_and_validate_api_token(credentials.token(), &ayb_db).await {
+        Ok(t) => t,
+        Err(e) => return Err((e.into(), req)),
+    };
+    let entity = match ayb_db.get_entity_by_id(api_token.entity_id).await {
+        Ok(e) => e,
+        Err(e) => return Err((e.into(), req)),
+    };
+    req.extensions_mut().insert(entity);
+    req.extensions_mut().insert(api_token);
+    Ok(req)
+}
+
+pub async fn optional_entity_validator(
     req: ServiceRequest,
     next: Next<impl MessageBody + 'static>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
