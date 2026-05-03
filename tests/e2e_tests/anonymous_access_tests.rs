@@ -1,6 +1,7 @@
 use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_SLUG};
-use crate::utils::ayb::update_database;
-use serde_json::Value;
+use crate::utils::ayb::{
+    database_details_no_auth, list_databases, list_databases_no_auth, update_database,
+};
 use std::collections::HashMap;
 
 pub async fn test_anonymous_access(
@@ -9,6 +10,14 @@ pub async fn test_anonymous_access(
     server_url: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let first_token = &api_keys.get("first").unwrap()[0];
+
+    // CLI config used for anonymous calls — pointed at a tempfile so it
+    // can't pick up cached tokens for `server_url` from the main test
+    // config. The CLI may write `default_url` into this file the first
+    // time `--url` is passed, but never any auth.
+    let anon_config_dir = tempfile::tempdir()?;
+    let anon_config = anon_config_dir.path().join("anon.json");
+    let anon_config = anon_config.to_str().unwrap();
 
     // Make test.sqlite publicly readable so anonymous viewers can discover it.
     update_database(
@@ -19,79 +28,58 @@ pub async fn test_anonymous_access(
         "Database e2e-first/test.sqlite updated successfully",
     )?;
 
+    // `ayb client list` without an API token returns only public databases —
+    // the non-public another.sqlite is filtered out.
+    list_databases_no_auth(
+        anon_config,
+        server_url,
+        FIRST_ENTITY_SLUG,
+        "csv",
+        "Database slug,Type\ntest.sqlite,sqlite",
+    )?;
+
+    // `ayb client database_details` without an API token succeeds for a
+    // publicly read-only database, with no query access and no management.
+    database_details_no_auth(
+        anon_config,
+        server_url,
+        FIRST_ENTITY_DB,
+        "Database: e2e-first/test.sqlite\nType: sqlite\nAccess level: No query access",
+    )?;
+
+    // The same call against a non-public database is rejected with the
+    // anon-friendly message (no leak of the requesting entity's identity,
+    // because there is none).
+    database_details_no_auth(
+        anon_config,
+        server_url,
+        FIRST_ENTITY_DB2,
+        "Error: Database e2e-first/another.sqlite is not accessible",
+    )?;
+
+    // An invalid bearer token on the optional-auth scope is rejected — not
+    // silently downgraded to anonymous. We exercise this through the CLI
+    // by appending garbage to a real token (preserving the prefix/parts
+    // shape so the server actually validates it rather than rejecting at
+    // the parser stage).
+    list_databases(
+        config_path,
+        &format!("{first_token}bad"),
+        FIRST_ENTITY_SLUG,
+        "csv",
+        "Error: Invalid API token",
+    )?;
+
+    // Querying and creating remain authenticated. The CLI's own
+    // `add_bearer_token(optional=false)` fails before reaching the server
+    // when no token is set, so we verify the *server-side* rejection
+    // directly with reqwest. Disable connection pooling so the empty-body
+    // 401 response from `HttpAuthentication::bearer` doesn't leave a
+    // stale connection that the next request would race on.
     let client = reqwest::Client::builder()
         .pool_max_idle_per_host(0)
         .build()?;
 
-    // GET /v1/entity/{slug} without Authorization returns 200 and only lists
-    // public databases. The non-public another.sqlite is filtered out, and
-    // can_create_database is false for the anonymous viewer.
-    let entity_url = format!("{server_url}/v1/entity/{FIRST_ENTITY_SLUG}");
-    let response = client.get(&entity_url).send().await?;
-    assert_eq!(
-        response.status(),
-        200,
-        "Anonymous entity_details should return 200"
-    );
-    let body: Value = response.json().await?;
-    let databases = body
-        .get("databases")
-        .and_then(|d| d.as_array())
-        .expect("databases should be an array");
-    let slugs: Vec<&str> = databases
-        .iter()
-        .filter_map(|d| d.get("slug").and_then(|s| s.as_str()))
-        .collect();
-    assert_eq!(
-        slugs,
-        vec!["test.sqlite"],
-        "Anonymous viewer should only see public databases"
-    );
-    assert_eq!(
-        body.get("permissions")
-            .and_then(|p| p.get("can_create_database"))
-            .and_then(|v| v.as_bool()),
-        Some(false),
-        "Anonymous viewer should not be able to create databases"
-    );
-
-    // GET /v1/{entity}/{db}/details for a public read-only database returns
-    // 200 with can_manage_database=false and highest_query_access_level=null.
-    let details_url = format!("{server_url}/v1/{FIRST_ENTITY_DB}/details");
-    let response = client.get(&details_url).send().await?;
-    assert_eq!(
-        response.status(),
-        200,
-        "Anonymous database_details on a public DB should return 200"
-    );
-    let body: Value = response.json().await?;
-    assert_eq!(
-        body.get("can_manage_database").and_then(|v| v.as_bool()),
-        Some(false),
-        "Anonymous viewer should not be able to manage the database"
-    );
-    assert!(
-        body.get("highest_query_access_level")
-            .map(|v| v.is_null())
-            .unwrap_or(false),
-        "Anonymous viewer should have no query access level"
-    );
-    assert_eq!(
-        body.get("public_sharing_level").and_then(|v| v.as_str()),
-        Some("read-only")
-    );
-
-    // GET /v1/{entity}/{db}/details for a non-public database is rejected.
-    let details_url2 = format!("{server_url}/v1/{FIRST_ENTITY_DB2}/details");
-    let response = client.get(&details_url2).send().await?;
-    assert!(
-        !response.status().is_success(),
-        "Anonymous database_details on a non-public DB should be rejected"
-    );
-
-    // POST /v1/{entity}/{db}/query without Authorization is still rejected,
-    // even though the database is publicly readable. Querying remains
-    // authenticated.
     let query_url = format!("{server_url}/v1/{FIRST_ENTITY_DB}/query");
     let response = client.post(&query_url).body("SELECT 1").send().await?;
     assert_eq!(
@@ -100,7 +88,6 @@ pub async fn test_anonymous_access(
         "Anonymous query should be rejected with 401"
     );
 
-    // POST /v1/{entity}/{db}/create without Authorization is rejected.
     let create_url = format!("{server_url}/v1/{FIRST_ENTITY_SLUG}/anon-test.sqlite/create");
     let response = client
         .post(&create_url)
@@ -114,20 +101,8 @@ pub async fn test_anonymous_access(
         "Anonymous create_database should be rejected with 401"
     );
 
-    // An invalid bearer token on the optional-auth scope is rejected, not
-    // silently downgraded to anonymous.
-    let response = client
-        .get(&entity_url)
-        .header("Authorization", "Bearer not-a-real-token")
-        .send()
-        .await?;
-    assert!(
-        !response.status().is_success(),
-        "Invalid bearer token should be rejected even on optional-auth endpoints"
-    );
-
-    // Reset the database to no-access so subsequent tests start from a known
-    // state.
+    // Reset the database to no-access so subsequent tests start from a
+    // known state.
     update_database(
         config_path,
         first_token,
@@ -136,25 +111,23 @@ pub async fn test_anonymous_access(
         "Database e2e-first/test.sqlite updated successfully",
     )?;
 
-    // After resetting to no-access, anonymous database_details is rejected.
-    let response = client.get(&details_url).send().await?;
-    assert!(
-        !response.status().is_success(),
-        "Anonymous database_details on a now-private DB should be rejected"
-    );
+    // After resetting, anonymous database_details on the now-private DB is
+    // rejected.
+    database_details_no_auth(
+        anon_config,
+        server_url,
+        FIRST_ENTITY_DB,
+        "Error: Database e2e-first/test.sqlite is not accessible",
+    )?;
 
-    // Anonymous entity_details still works but contains no databases.
-    let response = client.get(&entity_url).send().await?;
-    assert_eq!(response.status(), 200);
-    let body: Value = response.json().await?;
-    let databases = body
-        .get("databases")
-        .and_then(|d| d.as_array())
-        .expect("databases should be an array");
-    assert!(
-        databases.is_empty(),
-        "Anonymous viewer should see no databases when none are public"
-    );
+    // Anonymous list still succeeds, but contains no databases.
+    list_databases_no_auth(
+        anon_config,
+        server_url,
+        FIRST_ENTITY_SLUG,
+        "csv",
+        &format!("No queryable databases owned by {FIRST_ENTITY_SLUG}"),
+    )?;
 
     Ok(())
 }
