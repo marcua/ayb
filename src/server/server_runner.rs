@@ -10,10 +10,11 @@ use crate::server::tokens::retrieve_and_validate_api_token;
 use crate::server::web_frontend::WebFrontendDetails;
 use crate::server::{api_endpoints, ui_endpoints};
 use actix_cors::Cors;
-use actix_web::dev::ServiceRequest;
+use actix_web::body::MessageBody;
+use actix_web::dev::{ServiceRequest, ServiceResponse};
+use actix_web::middleware::Next;
 use actix_web::{middleware, web, App, Error, HttpMessage, HttpServer};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use actix_web_httpauth::middleware::HttpAuthentication;
 use dyn_clone::clone_box;
 use std::fs;
 use std::path::Path;
@@ -26,10 +27,19 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
         .service(api_endpoints::register_endpoint)
         .service(api_endpoints::oauth_token_endpoint);
 
-    // Authenticated API endpoints
+    // API endpoints under /v1. Each endpoint declares its own auth posture
+    // via a `wrap = ...` attribute on its route macro:
+    //   - `HttpAuthentication::bearer(entity_validator)` for the
+    //     auth-required endpoints (writes, query, manage, snapshots, share,
+    //     tokens, profile updates) — missing or invalid bearer tokens are
+    //     rejected at the middleware layer.
+    //   - `middleware::from_fn(optional_entity_validator)` for the two
+    //     anonymous-readable endpoints (`entity_details`,
+    //     `database_details`) — anonymous requests pass through, but
+    //     invalid / revoked / expired bearer tokens are still rejected (a
+    //     bad token is never silently downgraded to anonymous).
     cfg.service(
         web::scope("/v1")
-            .wrap(HttpAuthentication::bearer(entity_validator))
             .service(api_endpoints::create_database_endpoint)
             .service(api_endpoints::database_details_endpoint)
             .service(api_endpoints::update_database_endpoint)
@@ -87,36 +97,55 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     }
 }
 
-async fn entity_validator(
+/// Validate `token` against the metadata DB attached to `req`, and on
+/// success insert the resolved `InstantiatedEntity` and `APIToken` into
+/// the request extensions. Used by both validators below.
+async fn attach_validated_entity(token: &str, req: &ServiceRequest) -> Result<(), AybError> {
+    let ayb_db = req
+        .app_data::<web::Data<Box<dyn AybDb>>>()
+        .ok_or_else(|| AybError::Other {
+            message: "Misconfigured server: no database".to_string(),
+        })?;
+    let api_token = retrieve_and_validate_api_token(token, ayb_db).await?;
+    let entity = ayb_db.get_entity_by_id(api_token.entity_id).await?;
+    req.extensions_mut().insert(entity);
+    req.extensions_mut().insert(api_token);
+    Ok(())
+}
+
+pub async fn entity_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
-    match req.app_data::<web::Data<Box<dyn AybDb>>>() {
-        Some(ayb_db) => {
-            let api_token = retrieve_and_validate_api_token(credentials.token(), ayb_db).await;
-            match api_token {
-                Ok(api_token) => {
-                    let entity = ayb_db.get_entity_by_id(api_token.entity_id).await;
-                    match entity {
-                        Ok(entity) => {
-                            req.extensions_mut().insert(entity);
-                            req.extensions_mut().insert(api_token);
-                            Ok(req)
-                        }
-                        Err(e) => Err((e.into(), req)),
-                    }
-                }
-                Err(e) => Err((e.into(), req)),
-            }
-        }
-        None => Err((
-            AybError::Other {
-                message: "Misconfigured server: no database".to_string(),
-            }
-            .into(),
-            req,
-        )),
+    match attach_validated_entity(credentials.token(), &req).await {
+        Ok(()) => Ok(req),
+        Err(e) => Err((e.into(), req)),
     }
+}
+
+pub async fn optional_entity_validator(
+    req: ServiceRequest,
+    next: Next<impl MessageBody + 'static>,
+) -> Result<ServiceResponse<impl MessageBody>, Error> {
+    let auth_header = req
+        .headers()
+        .get(actix_web::http::header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
+        .map(str::to_string);
+
+    if let Some(header_value) = auth_header {
+        let token = header_value
+            .strip_prefix("Bearer ")
+            .or_else(|| header_value.strip_prefix("bearer "))
+            .or_else(|| header_value.strip_prefix("BEARER "))
+            .ok_or_else(|| AybError::Other {
+                message: "Invalid Authorization header: expected `Bearer <token>`".to_string(),
+            })?
+            .trim();
+        attach_validated_entity(token, &req).await?;
+    }
+
+    next.call(req).await
 }
 
 fn build_cors(ayb_cors: AybConfigCors) -> Cors {

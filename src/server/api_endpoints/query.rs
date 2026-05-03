@@ -11,7 +11,10 @@ use crate::server::permissions::highest_query_access_level;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{post, web};
 
-#[post("/{entity}/{database}/query")]
+#[post(
+    "/{entity}/{database}/query",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn query(
     path: web::Path<EntityDatabasePath>,
     query: String,

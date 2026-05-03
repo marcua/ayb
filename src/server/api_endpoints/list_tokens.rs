@@ -5,7 +5,10 @@ use crate::http::structs::{APITokenInfo, TokenList};
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
-#[get("/tokens")]
+#[get(
+    "/tokens",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn list_tokens(
     ayb_db: web::Data<Box<dyn AybDb>>,
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,

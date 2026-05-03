@@ -8,7 +8,10 @@ use crate::server::permissions::can_manage_database;
 use crate::server::utils::{get_optional_header, unwrap_authenticated_entity};
 use actix_web::{patch, web, HttpRequest, HttpResponse};
 
-#[patch("/{entity}/{database}/update")]
+#[patch(
+    "/{entity}/{database}/update",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn update_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,

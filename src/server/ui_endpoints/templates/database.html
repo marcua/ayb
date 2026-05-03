@@ -101,9 +101,16 @@
                         </div>
                     </div>
                 {% else %}
-                    <div class="uk-alert uk-alert-destructive" data-uk-alert="">
+                    <div class="uk-alert" data-uk-alert="">
                         <div class="uk-alert-title">You don't have query access to this database.</div>
+                        {% if logged_in_entity %}
                         <p>You can request access from the database owner or fork a copy.</p>
+                        {% else %}
+                        <p>
+                            <a href="/log_in?next=/{{ entity }}/{{ database }}" class="underline">Login</a>
+                            is required for query access.
+                        </p>
+                        {% endif %}
                     </div>
                 {% endif %}
             </li>

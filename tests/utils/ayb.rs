@@ -107,6 +107,26 @@ pub fn list_databases(
     Ok(())
 }
 
+/// Like `list_databases`, but without an API token. Uses an explicit
+/// `--url` and a caller-provided config path (which can point to a
+/// nonexistent / temp file) so the CLI doesn't pick up any cached
+/// authentication for this server URL.
+pub fn list_databases_no_auth(
+    config: &str,
+    server_url: &str,
+    entity: &str,
+    format: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!(
+        "client", "--config", config, "--url", server_url,
+        "list", entity, "--format", format; {}
+    );
+
+    cmd.stdout(format!("{result}\n"));
+    Ok(())
+}
+
 pub fn list_snapshots(
     config: &str,
     api_key: &str,
@@ -285,6 +305,23 @@ pub fn database_details(
     let cmd = ayb_assert_cmd!("client", "--config", config, "database_details", database; {
         "AYB_API_TOKEN" => api_key,
     });
+
+    cmd.stdout(predicate::str::contains(result));
+    Ok(())
+}
+
+/// Like `database_details`, but without an API token. See
+/// [`list_databases_no_auth`] for the config / URL conventions.
+pub fn database_details_no_auth(
+    config: &str,
+    server_url: &str,
+    database: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!(
+        "client", "--config", config, "--url", server_url,
+        "database_details", database; {}
+    );
 
     cmd.stdout(predicate::str::contains(result));
     Ok(())
