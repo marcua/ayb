@@ -101,7 +101,7 @@
                         </div>
                     </div>
                 {% else %}
-                    <div class="uk-alert uk-alert-destructive" data-uk-alert="">
+                    <div class="uk-alert{% if logged_in_entity %} uk-alert-destructive{% endif %}" data-uk-alert="">
                         <div class="uk-alert-title">You don't have query access to this database.</div>
                         {% if logged_in_entity %}
                         <p>You can request access from the database owner or fork a copy.</p>
