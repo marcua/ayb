@@ -2,9 +2,17 @@ use regex::Regex;
 use std::sync::OnceLock;
 use url::Url;
 
+// Pre-filter for candidate <a> tags: requires a `rel` attribute whose value
+// contains a `me` token (in any quote style, or unquoted). The strict
+// per-tag check still validates href and exact rel-token semantics.
 fn anchor_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
-    R.get_or_init(|| Regex::new(r"(?is)<a\b([^>]*)>").unwrap())
+    R.get_or_init(|| {
+        Regex::new(
+            r#"(?is)<a\b([^>]*\brel\s*=\s*(?:"[^"]*\bme\b[^"]*"|'[^']*\bme\b[^']*'|me\b)[^>]*)>"#,
+        )
+        .unwrap()
+    })
 }
 
 fn attr_regex() -> &'static Regex {
@@ -20,6 +28,10 @@ fn attr_regex() -> &'static Regex {
 /// HTML spec `rel` is a space-separated token list, so values like
 /// `rel="me author"` are valid matches.
 pub fn html_has_rel_me_link(html: &str, expected_url: &str) -> bool {
+    // Cheap short-circuit: if the URL is nowhere on the page, no anchor can match.
+    if !html.contains(expected_url) {
+        return false;
+    }
     for tag in anchor_regex().captures_iter(html) {
         let attrs_blob = &tag[1];
         let mut href: Option<&str> = None;
@@ -140,6 +152,24 @@ mod tests {
     fn negative_rel_substring_only() {
         assert!(!html_has_rel_me_link(
             r#"<a href="https://ayb.host/u/me" rel="metoo">x</a>"#,
+            URL
+        ));
+    }
+
+    #[test]
+    fn positive_unquoted_rel() {
+        assert!(html_has_rel_me_link(
+            r#"<a rel=me href="https://ayb.host/u/me">x</a>"#,
+            URL
+        ));
+    }
+
+    #[test]
+    fn negative_rel_hyphenated_me() {
+        // `me-author` is a single rel token, not the `me` keyword: the
+        // pre-filter regex would accept (\b at `-`), strict check rejects.
+        assert!(!html_has_rel_me_link(
+            r#"<a href="https://ayb.host/u/me" rel="me-author">x</a>"#,
             URL
         ));
     }
