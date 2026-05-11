@@ -56,9 +56,6 @@ port = {port}
 database_url = "{database_url}"
 data_path = "./tests/ayb_data_{test_type}"
 
-[web]
-hosting_method = "Local"
-
 [email.file]
 path = "tests/ayb_data_{test_type}/emails.jsonl"
 

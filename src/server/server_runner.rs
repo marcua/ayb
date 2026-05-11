@@ -4,10 +4,9 @@ use crate::email::create_email_backends;
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::server::config::read_config;
-use crate::server::config::{AybConfig, AybConfigCors, WebHostingMethod};
+use crate::server::config::AybConfigCors;
 use crate::server::snapshots::execution::schedule_periodic_snapshots;
 use crate::server::tokens::retrieve_and_validate_api_token;
-use crate::server::web_frontend::WebFrontendDetails;
 use crate::server::{api_endpoints, ui_endpoints};
 use actix_cors::Cors;
 use actix_web::body::MessageBody;
@@ -19,7 +18,7 @@ use dyn_clone::clone_box;
 use std::fs;
 use std::path::Path;
 
-pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
+pub fn config(cfg: &mut web::ServiceConfig) {
     // Unauthenticated API endpoints
     cfg.service(api_endpoints::health_endpoint)
         .service(api_endpoints::confirm_endpoint)
@@ -54,8 +53,6 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
             .service(api_endpoints::revoke_token_endpoint),
     );
 
-    // Only add UI routes if web frontend is configured for local serving.
-    //
     // CSRF note: the cookie-authenticated UI endpoints below rely on the
     // `auth` cookie's `SameSite=Lax` attribute (set in
     // `ui_endpoints/auth.rs`) as their sole CSRF defense. This works because
@@ -71,30 +68,26 @@ pub fn config(cfg: &mut web::ServiceConfig, ayb_config: &AybConfig) {
     // than cookie-authenticated non-safe methods, add explicit CSRF tokens
     // (e.g. a double-submit cookie or a per-session token embedded in forms)
     // — `SameSite=Lax` alone will not cover those cases.
-    if let Some(web_config) = &ayb_config.web {
-        if web_config.hosting_method == WebHostingMethod::Local {
-            cfg.service(ui_endpoints::log_in_endpoint)
-                .service(ui_endpoints::log_in_submit_endpoint)
-                .service(ui_endpoints::log_out_endpoint)
-                .service(ui_endpoints::register_endpoint)
-                .service(ui_endpoints::register_submit_endpoint)
-                .service(ui_endpoints::confirm_endpoint)
-                .service(ui_endpoints::entity_tokens_endpoint)
-                .service(ui_endpoints::revoke_token_endpoint)
-                .service(ui_endpoints::oauth_authorize_endpoint)
-                .service(ui_endpoints::oauth_authorize_submit_endpoint)
-                .service(ui_endpoints::entity_details_endpoint)
-                .service(ui_endpoints::create_database_endpoint)
-                .service(ui_endpoints::update_profile_endpoint)
-                .service(ui_endpoints::database_endpoint)
-                .service(ui_endpoints::query_endpoint)
-                .service(ui_endpoints::update_public_sharing_endpoint)
-                .service(ui_endpoints::share_with_entity_endpoint)
-                .service(ui_endpoints::database_permissions_endpoint)
-                .service(ui_endpoints::database_snapshots_endpoint)
-                .service(ui_endpoints::restore_snapshot_endpoint);
-        }
-    }
+    cfg.service(ui_endpoints::log_in_endpoint)
+        .service(ui_endpoints::log_in_submit_endpoint)
+        .service(ui_endpoints::log_out_endpoint)
+        .service(ui_endpoints::register_endpoint)
+        .service(ui_endpoints::register_submit_endpoint)
+        .service(ui_endpoints::confirm_endpoint)
+        .service(ui_endpoints::entity_tokens_endpoint)
+        .service(ui_endpoints::revoke_token_endpoint)
+        .service(ui_endpoints::oauth_authorize_endpoint)
+        .service(ui_endpoints::oauth_authorize_submit_endpoint)
+        .service(ui_endpoints::entity_details_endpoint)
+        .service(ui_endpoints::create_database_endpoint)
+        .service(ui_endpoints::update_profile_endpoint)
+        .service(ui_endpoints::database_endpoint)
+        .service(ui_endpoints::query_endpoint)
+        .service(ui_endpoints::update_public_sharing_endpoint)
+        .service(ui_endpoints::share_with_entity_endpoint)
+        .service(ui_endpoints::database_permissions_endpoint)
+        .service(ui_endpoints::database_snapshots_endpoint)
+        .service(ui_endpoints::restore_snapshot_endpoint);
 }
 
 /// Validate `token` against the metadata DB attached to `req`, and on
@@ -173,9 +166,6 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
     let ayb_db = connect_to_ayb_db(ayb_conf.database_url)
         .await
         .expect("unable to connect to ayb database");
-    let web_details = WebFrontendDetails::load(ayb_conf_for_server.clone())
-        .await
-        .expect("failed to load web frontend details");
     let email_backends = create_email_backends(&ayb_conf.email);
 
     // Create the daemon registry for managing persistent query runner processes
@@ -199,12 +189,11 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(middleware::Compress::default())
             .wrap(cors)
-            .app_data(web::Data::new(web_details.clone()))
             .app_data(web::Data::new(clone_box(&*ayb_db)))
             .app_data(web::Data::new(ayb_conf_for_server.clone()))
             .app_data(web::Data::new(email_backends.clone()))
             .app_data(web::Data::new(daemon_registry.clone()))
-            .configure(|cfg| config(cfg, &ayb_conf_for_server.clone()))
+            .configure(config)
     })
     .bind((ayb_conf.host, ayb_conf.port))?
     .run();

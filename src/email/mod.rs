@@ -1,23 +1,21 @@
 use crate::email::backend::{EmailBackends, FileBackend, SmtpBackend};
 use crate::email::templating::render_confirmation_template;
 use crate::error::AybError;
-use crate::server::config::AybConfigEmailBackends;
-use crate::server::web_frontend::WebFrontendDetails;
+use crate::server::config::{AybConfig, AybConfigEmailBackends};
 
 pub mod backend;
 mod templating;
 
 pub async fn send_registration_email(
     email_backends: &EmailBackends,
-    email_config: &AybConfigEmailBackends,
+    ayb_config: &AybConfig,
     to: &str,
     token: &str,
-    web_details: &Option<WebFrontendDetails>,
 ) -> Result<(), AybError> {
     // Get from/reply_to from SMTP config if available, or use defaults
-    let (from, reply_to) = get_email_addresses(email_config);
+    let (from, reply_to) = get_email_addresses(&ayb_config.email);
 
-    let body = render_confirmation_template(web_details, token);
+    let body = render_confirmation_template(ayb_config, token);
 
     email_backends
         .send_email(to, "Your login credentials", &body, &from, &reply_to)
