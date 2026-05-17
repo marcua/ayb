@@ -27,7 +27,10 @@ fn attr_regex() -> &'static Regex {
 /// `expected_url` and whose `rel` attribute contains the token `me`. Per the
 /// HTML spec `rel` is a space-separated token list, so values like
 /// `rel="me author"` are valid matches.
-pub fn html_has_rel_me_link(html: &str, expected_url: &str) -> bool {
+///
+/// Note: scans the whole body; also matches `<a>` text inside `<script>`,
+/// `<style>`, or HTML comments.
+fn html_has_rel_me_link(html: &str, expected_url: &str) -> bool {
     // Cheap short-circuit: if the URL is nowhere on the page, no anchor can match.
     if !html.contains(expected_url) {
         return false;
@@ -57,8 +60,8 @@ pub fn html_has_rel_me_link(html: &str, expected_url: &str) -> bool {
     false
 }
 
-/// Verifies that the HTML website located at `input_url` contains an anchor tag whose `rel` attribute is set to `me`
-/// and whose `href` attribute is equal to the value of `expected_url`.
+/// Verifies that the HTML at `input_url` contains an anchor tag whose `rel`
+/// attribute contains the `me` token and whose `href` equals `expected_url`.
 pub async fn is_verified_url(input_url: Url, expected_url: Url) -> bool {
     if input_url.scheme() != "https" {
         return false;
@@ -166,10 +169,18 @@ mod tests {
 
     #[test]
     fn negative_rel_hyphenated_me() {
-        // `me-author` is a single rel token, not the `me` keyword: the
-        // pre-filter regex would accept (\b at `-`), strict check rejects.
+        // `me-author` is a single rel token, not the `me` keyword.
         assert!(!html_has_rel_me_link(
             r#"<a href="https://ayb.host/u/me" rel="me-author">x</a>"#,
+            URL
+        ));
+    }
+
+    #[test]
+    fn negative_href_is_url_prefix() {
+        // URL is a substring of the href but not equal to it.
+        assert!(!html_has_rel_me_link(
+            r#"<a rel="me" href="https://ayb.host/u/mexx">x</a>"#,
             URL
         ));
     }
