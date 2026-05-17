@@ -9,7 +9,7 @@ fn anchor_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
         Regex::new(
-            r#"(?is)<a\b([^>]*\brel\s*=\s*(?:"[^"]*\bme\b[^"]*"|'[^']*\bme\b[^']*'|me\b)[^>]*)>"#,
+            r#"(?i)<a\b([^>]*\brel\s*=\s*(?:"[^"]*\bme\b[^"]*"|'[^']*\bme\b[^']*'|me\b)[^>]*)>"#,
         )
         .unwrap()
     })
@@ -18,7 +18,7 @@ fn anchor_regex() -> &'static Regex {
 fn attr_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
-        Regex::new(r#"(?is)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))"#)
+        Regex::new(r#"(?i)([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))"#)
             .unwrap()
     })
 }

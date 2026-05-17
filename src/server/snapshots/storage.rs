@@ -175,7 +175,7 @@ impl SnapshotStorage {
         }
 
         // Return results in descending order.
-        snapshots.sort_by(|a, b| b.last_modified_at.cmp(&a.last_modified_at));
+        snapshots.sort_by_key(|s| std::cmp::Reverse(s.last_modified_at));
         Ok(snapshots)
     }
 
