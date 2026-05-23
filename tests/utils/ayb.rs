@@ -28,7 +28,17 @@ pub fn create_database(
     database: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, "sqlite"; {
+    create_database_with_type(config, api_key, database, "sqlite", result)
+}
+
+pub fn create_database_with_type(
+    config: &str,
+    api_key: &str,
+    database: &str,
+    db_type: &str,
+    result: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, db_type; {
         "AYB_API_TOKEN" => api_key,
     });
 

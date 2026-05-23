@@ -1,17 +1,20 @@
 use crate::ayb_db::db_interfaces::AybDb;
+use crate::ayb_db::models::DBType;
 use crate::error::AybError;
+use crate::hosted_db::duckdb::query_duckdb;
 use crate::hosted_db::paths::{
     current_database_path, database_parent_path, database_snapshot_path, pathbuf_to_file_name,
     pathbuf_to_parent,
 };
 use crate::hosted_db::sqlite::query_sqlite;
 use crate::hosted_db::QueryMode;
-use crate::server::config::{AybConfig, SqliteSnapshotMethod};
+use crate::server::config::{AybConfig, DuckdbSnapshotMethod, SqliteSnapshotMethod};
 use crate::server::snapshots::hashes::hash_db_directory;
 use crate::server::snapshots::models::{Snapshot, SnapshotType};
 use crate::server::snapshots::storage::SnapshotStorage;
 use go_parse_duration::parse_duration;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -135,7 +138,8 @@ pub async fn snapshot_database(
     let snapshot_config = config.snapshots.as_ref().unwrap();
 
     match ayb_db.get_database(entity_slug, database_slug).await {
-        Ok(_db) => {
+        Ok(db) => {
+            let db_type = DBType::try_from(db.db_type)?;
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
@@ -143,44 +147,14 @@ pub async fn snapshot_database(
             snapshot_path.push(database_slug);
             // Try to remove the file if it already exists, but don't fail if it doesn't.
             fs::remove_file(&snapshot_path).ok();
-            let backup_query = match snapshot_config.sqlite_method {
-                // TODO(marcua): Figure out dot commands to make .backup work
-                SqliteSnapshotMethod::Backup => {
-                    return Err(AybError::SnapshotError {
-                        message: "Backup requires dot commands, which are not yet supported"
-                            .to_string(),
-                    })
+
+            match db_type {
+                DBType::Sqlite => {
+                    create_sqlite_snapshot(snapshot_config, &db_path, &snapshot_path)?
                 }
-                SqliteSnapshotMethod::Vacuum => {
-                    format!("VACUUM INTO \"{}\"", snapshot_path.display())
+                DBType::Duckdb => {
+                    create_duckdb_snapshot(snapshot_config, &db_path, &snapshot_path)?
                 }
-            };
-            let result = query_sqlite(
-                &db_path,
-                &backup_query,
-                // Run in unsafe mode to allow backup process to
-                // attach to destination database.
-                true,
-                QueryMode::ReadOnly,
-            )?;
-            if !result.rows.is_empty() {
-                return Err(AybError::SnapshotError {
-                    message: format!("Unexpected snapshot result: {result:?}"),
-                });
-            }
-            let result = query_sqlite(
-                &snapshot_path,
-                "PRAGMA integrity_check;",
-                false,
-                QueryMode::ReadOnly,
-            )?;
-            if result.fields.len() != 1
-                || result.rows.len() != 1
-                || result.rows[0][0] != Some("ok".to_string())
-            {
-                return Err(AybError::SnapshotError {
-                    message: format!("Snapshot failed integrity check: {result:?}"),
-                });
             }
 
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
@@ -250,6 +224,77 @@ pub async fn snapshot_database(
                 return Err(err);
             }
         },
+    }
+    Ok(())
+}
+
+fn create_sqlite_snapshot(
+    snapshot_config: &crate::server::config::AybConfigSnapshots,
+    db_path: &PathBuf,
+    snapshot_path: &PathBuf,
+) -> Result<(), AybError> {
+    let backup_query = match snapshot_config.sqlite_method {
+        SqliteSnapshotMethod::Backup => {
+            return Err(AybError::SnapshotError {
+                message: "Backup requires dot commands, which are not yet supported".to_string(),
+            })
+        }
+        SqliteSnapshotMethod::Vacuum => {
+            format!("VACUUM INTO \"{}\"", snapshot_path.display())
+        }
+    };
+    let result = query_sqlite(db_path, &backup_query, true, QueryMode::ReadOnly)?;
+    if !result.rows.is_empty() {
+        return Err(AybError::SnapshotError {
+            message: format!("Unexpected snapshot result: {result:?}"),
+        });
+    }
+    let result = query_sqlite(
+        snapshot_path,
+        "PRAGMA integrity_check;",
+        false,
+        QueryMode::ReadOnly,
+    )?;
+    if result.fields.len() != 1
+        || result.rows.len() != 1
+        || result.rows[0][0] != Some("ok".to_string())
+    {
+        return Err(AybError::SnapshotError {
+            message: format!("Snapshot failed integrity check: {result:?}"),
+        });
+    }
+    Ok(())
+}
+
+fn create_duckdb_snapshot(
+    snapshot_config: &crate::server::config::AybConfigSnapshots,
+    db_path: &PathBuf,
+    snapshot_path: &PathBuf,
+) -> Result<(), AybError> {
+    match snapshot_config.duckdb_method {
+        DuckdbSnapshotMethod::CopyDatabase => {
+            let copy_query = format!(
+                "ATTACH '{}' AS snapshot_dest;COPY FROM DATABASE main TO snapshot_dest;",
+                snapshot_path.display()
+            );
+            let result = query_duckdb(db_path, &copy_query, true, QueryMode::ReadOnly)?;
+            if !result.rows.is_empty() {
+                return Err(AybError::SnapshotError {
+                    message: format!("Unexpected snapshot result: {result:?}"),
+                });
+            }
+        }
+    }
+    let result = query_duckdb(
+        snapshot_path,
+        "SELECT count(*) FROM information_schema.tables;",
+        false,
+        QueryMode::ReadOnly,
+    )?;
+    if result.rows.is_empty() {
+        return Err(AybError::SnapshotError {
+            message: "Snapshot verification failed: could not read snapshot".to_string(),
+        });
     }
     Ok(())
 }

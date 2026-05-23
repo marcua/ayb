@@ -1,5 +1,9 @@
-use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_DB_CASED};
-use crate::utils::ayb::{create_database, query, query_no_api_token, set_default_url};
+use crate::e2e_tests::{
+    FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DUCKDB,
+};
+use crate::utils::ayb::{
+    create_database, create_database_with_type, query, query_no_api_token, set_default_url,
+};
 use ayb::client::config::ClientConfig;
 use std::collections::HashMap;
 use std::fs;
@@ -160,6 +164,46 @@ pub fn test_create_and_query_db(
         FIRST_ENTITY_DB_CASED, // Entity slugs should be case-insensitive
         "csv",
         "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
+    )?;
+
+    Ok(())
+}
+
+pub fn test_create_and_query_duckdb(
+    config_path: &str,
+    api_keys: &HashMap<String, Vec<String>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    create_database_with_type(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DUCKDB,
+        "duckdb",
+        "Successfully created e2e-first/test.duckdb",
+    )?;
+
+    query(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        "CREATE TABLE duck_test(id INTEGER, name VARCHAR);",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        "\nRows: 0",
+    )?;
+    query(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        "INSERT INTO duck_test VALUES (1, 'hello'), (2, 'world');",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        "\nRows: 0",
+    )?;
+    query(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        "SELECT * FROM duck_test ORDER BY id;",
+        FIRST_ENTITY_DUCKDB,
+        "csv",
+        "id,name\n1,hello\n2,world\n\nRows: 2",
     )?;
 
     Ok(())

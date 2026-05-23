@@ -103,9 +103,8 @@ fn print_warning_banner(details: &[&str]) {
 /// - Filesystem: only the database file (read-write) and shared
 ///   libraries (read-only) are accessible.
 /// - Network: all TCP bind/connect denied (on kernel 6.7+).
-/// - Memory: 64 MB virtual memory limit (RLIMIT_AS).
-/// - File size: 75 MB max file size (RLIMIT_FSIZE).
-/// - File descriptors: 10 max open files (RLIMIT_NOFILE).
+/// - SQLite limits: 64 MB memory, 75 MB file size, 10 file descriptors.
+/// - DuckDB limits: 2 GB memory, 256 MB file size, 32 file descriptors.
 ///
 /// On any other platform or older Linux kernel, the daemon runs
 /// without isolation. The server prints a unified warning at startup
@@ -114,11 +113,11 @@ fn print_warning_banner(details: &[&str]) {
 /// Configurable per-database limits and per-process CPU/thread
 /// limitation is future work.
 #[cfg_attr(not(target_os = "linux"), allow(unused_variables))]
-pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
+pub fn apply_sandbox(db_path: &Path, db_type: &str) -> Result<(), AybError> {
     #[cfg(target_os = "linux")]
     {
         apply_landlock_restrictions(db_path)?;
-        apply_resource_limits()?;
+        apply_resource_limits(db_type)?;
     }
     Ok(())
 }
@@ -176,7 +175,7 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     }
 
     // Allow read-write access to the database file's parent directory.
-    // SQLite needs access to the directory for journal/WAL files.
+    // Both SQLite and DuckDB need this for journal/WAL/temp files.
     let db_dir = db_path.parent().ok_or(AybError::Other {
         message: format!(
             "Cannot determine parent directory of database: {}",
@@ -204,12 +203,23 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     Ok(())
 }
 
-/// Apply resource limits via setrlimit.
+/// Apply resource limits via setrlimit. DuckDB needs higher limits
+/// than SQLite because its runtime requires more memory and file
+/// descriptors even for trivial queries.
 #[cfg(target_os = "linux")]
-fn apply_resource_limits() -> Result<(), AybError> {
-    set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?; // 64 MB memory
-    set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?; // 75 MB file size
-    set_rlimit(libc::RLIMIT_NOFILE, 10)?; // 10 file descriptors
+fn apply_resource_limits(db_type: &str) -> Result<(), AybError> {
+    match db_type {
+        "duckdb" => {
+            set_rlimit(libc::RLIMIT_AS, 2048 * 1024 * 1024)?;
+            set_rlimit(libc::RLIMIT_FSIZE, 256 * 1024 * 1024)?;
+            set_rlimit(libc::RLIMIT_NOFILE, 32)?;
+        }
+        _ => {
+            set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?;
+            set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?;
+            set_rlimit(libc::RLIMIT_NOFILE, 10)?;
+        }
+    }
     Ok(())
 }
 
@@ -233,12 +243,15 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
 }
 
 /// Build command for running the query daemon.
-pub fn build_daemon_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
+pub fn build_daemon_command(
+    db_path: &PathBuf,
+    db_type: &str,
+) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
-    cmd.arg(db_path);
+    cmd.arg(db_path).arg(db_type);
 
     Ok(cmd)
 }

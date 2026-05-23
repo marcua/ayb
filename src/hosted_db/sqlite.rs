@@ -93,13 +93,13 @@ pub fn query_sqlite(
     })
 }
 
-/// Run `query` against the database at `path` via the sandboxed query
-/// daemon.
 pub async fn run_sqlite_query(
     daemon_registry: &DaemonRegistry,
     path: &PathBuf,
     query: &str,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    daemon_registry.execute_query(path, query, query_mode).await
+    daemon_registry
+        .execute_query(path, query, "sqlite", query_mode)
+        .await
 }

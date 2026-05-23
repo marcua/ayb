@@ -11,6 +11,27 @@
 </div>
 
 <div class="mb-4">
+    <label class="block text-sm font-medium mb-1">Database type</label>
+    <div class="uk-btn-group" data-uk-button-radio>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default uk-active"
+            data-value="sqlite"
+            onclick="setDbType(this, 'sqlite')">
+            SQLite
+        </button>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default"
+            data-value="duckdb"
+            onclick="setDbType(this, 'duckdb')">
+            DuckDB
+        </button>
+    </div>
+    <input type="hidden" id="db-type" name="db_type" value="sqlite">
+</div>
+
+<div class="mb-4">
     <label class="block text-sm font-medium mb-1">Public sharing level</label>
     <div class="uk-btn-group" data-uk-button-radio>
         <button
@@ -39,6 +60,13 @@
 </div>
 
 <script>
+    function setDbType(button, value) {
+        document.getElementById('db-type').value = value;
+        const buttons = button.parentElement.querySelectorAll('button');
+        buttons.forEach(btn => btn.classList.remove('uk-active'));
+        button.classList.add('uk-active');
+    }
+
     function setPublicSharingLevel(button, value) {
         document.getElementById('public-sharing-level').value = value;
         const buttons = button.parentElement.querySelectorAll('button');

@@ -71,6 +71,7 @@ origin = "*"
 
 [snapshots]
 sqlite_method = "Vacuum"
+duckdb_method = "CopyDatabase"
 access_key_id = "minioadmin"
 secret_access_key = "minioadmin"
 bucket = "bucket"
