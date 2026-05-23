@@ -10,7 +10,10 @@ use crate::server::snapshots::storage::SnapshotStorage;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web};
 
-#[get("/{entity}/{database}/list_snapshots")]
+#[get(
+    "/{entity}/{database}/list_snapshots",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn list_snapshots(
     path: web::Path<EntityDatabasePath>,
     ayb_db: web::Data<Box<dyn AybDb>>,

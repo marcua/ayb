@@ -17,7 +17,10 @@ use uuid::{timestamp::context::ContextV7, Timestamp, Uuid};
 
 const EXPORTS_DIR: &str = "exports";
 
-#[get("/{entity}/{database}/export")]
+#[get(
+    "/{entity}/{database}/export",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn export(
     req: HttpRequest,
     path: web::Path<EntityDatabasePath>,

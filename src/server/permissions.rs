@@ -11,6 +11,14 @@ fn is_owner(authenticated_entity: &InstantiatedEntity, database: &InstantiatedDa
     authenticated_entity.id == database.entity_id
 }
 
+pub fn is_publicly_discoverable(database: &InstantiatedDatabase) -> Result<bool, AybError> {
+    let level = PublicSharingLevel::try_from(database.public_sharing_level)?;
+    Ok(matches!(
+        level,
+        PublicSharingLevel::ReadOnly | PublicSharingLevel::Fork
+    ))
+}
+
 pub fn can_create_database(
     authenticated_entity: &InstantiatedEntity,
     desired_entity: &InstantiatedEntity,
@@ -23,11 +31,7 @@ pub async fn can_discover_database(
     database: &InstantiatedDatabase,
     ayb_db: &web::Data<Box<dyn AybDb>>,
 ) -> Result<bool, AybError> {
-    let public_sharing_level = PublicSharingLevel::try_from(database.public_sharing_level)?;
-    if is_owner(authenticated_entity, database)
-        || public_sharing_level == PublicSharingLevel::ReadOnly
-        || public_sharing_level == PublicSharingLevel::Fork
-    {
+    if is_owner(authenticated_entity, database) || is_publicly_discoverable(database)? {
         return Ok(true);
     }
 

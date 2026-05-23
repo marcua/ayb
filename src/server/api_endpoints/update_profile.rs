@@ -10,7 +10,10 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
 
-#[patch("/entity/{entity}")]
+#[patch(
+    "/entity/{entity}",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 pub async fn update_profile(
     path: web::Path<EntityPath>,
     profile: web::Json<HashMap<String, Option<String>>>,

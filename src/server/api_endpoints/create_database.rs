@@ -25,7 +25,10 @@ pub struct CreateDatabaseForm {
     pub database: Option<TempFile>,
 }
 
-#[post("/{entity}/{database}/create")]
+#[post(
+    "/{entity}/{database}/create",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,

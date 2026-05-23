@@ -21,18 +21,20 @@ impl AybClient {
         format!("{}/v1/{}", self.base_url, endpoint)
     }
 
-    fn add_bearer_token(&self, headers: &mut HeaderMap) -> Result<(), AybError> {
-        if let Some(api_token) = &self.api_token {
-            headers.insert(
-                HeaderName::from_static("authorization"),
-                HeaderValue::from_str(format!("Bearer {api_token}").as_str()).unwrap(),
-            );
-            Ok(())
-        } else {
-            Err(AybError::Other {
+    fn add_bearer_token(&self, headers: &mut HeaderMap, optional: bool) -> Result<(), AybError> {
+        match &self.api_token {
+            Some(api_token) => {
+                headers.insert(
+                    HeaderName::from_static("authorization"),
+                    HeaderValue::from_str(format!("Bearer {api_token}").as_str()).unwrap(),
+                );
+                Ok(())
+            }
+            None if optional => Ok(()),
+            None => Err(AybError::Other {
                 message: "Calling endpoint that requires client API token, but none provided"
                     .to_string(),
-            })
+            }),
         }
     }
 
@@ -114,7 +116,7 @@ impl AybClient {
             HeaderName::from_static("public-sharing-level"),
             HeaderValue::from_str(public_sharing_level.to_str()).unwrap(),
         );
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let form = if let Some(file_path) = seed_file {
             let bytes = tokio::fs::read(file_path)
@@ -154,7 +156,7 @@ impl AybClient {
         output_path: &Path,
     ) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("{entity}/{database}/export")))
@@ -191,7 +193,7 @@ impl AybClient {
         database: &str,
     ) -> Result<SnapshotList, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("{entity}/{database}/list_snapshots")))
@@ -222,7 +224,7 @@ impl AybClient {
 
     pub async fn entity_details(&self, entity: &str) -> Result<EntityQueryResponse, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, true)?;
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("entity/{entity}")))
@@ -241,7 +243,7 @@ impl AybClient {
         query: &str,
     ) -> Result<QueryResult, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{entity}/{database}/query")))
@@ -291,7 +293,7 @@ impl AybClient {
         snapshot_id: &str,
     ) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{entity}/{database}/restore_snapshot")))
@@ -310,7 +312,7 @@ impl AybClient {
         profile_update: &HashMap<String, Option<String>>,
     ) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         headers.insert(
             "Content-Type",
@@ -336,7 +338,7 @@ impl AybClient {
         database: &str,
     ) -> Result<DatabaseDetails, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, true)?;
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("{entity}/{database}/details")))
@@ -355,7 +357,7 @@ impl AybClient {
         public_sharing_level: &PublicSharingLevel,
     ) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         headers.insert(
             HeaderName::from_static("public-sharing-level"),
@@ -380,7 +382,7 @@ impl AybClient {
         sharing_level: &EntityDatabaseSharingLevel,
     ) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         headers.insert(
             HeaderName::from_static("entity-for-permission"),
@@ -408,7 +410,7 @@ impl AybClient {
         database: &str,
     ) -> Result<DatabasePermissions, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .get(self.make_url(format!("{entity}/{database}/permissions")))
@@ -422,7 +424,7 @@ impl AybClient {
 
     pub async fn list_tokens(&self) -> Result<TokenList, AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .get(self.make_url("tokens".to_owned()))
@@ -436,7 +438,7 @@ impl AybClient {
 
     pub async fn revoke_token(&self, short_token: &str) -> Result<(), AybError> {
         let mut headers = HeaderMap::new();
-        self.add_bearer_token(&mut headers)?;
+        self.add_bearer_token(&mut headers, false)?;
 
         let response = reqwest::Client::new()
             .delete(self.make_url(format!("tokens/{short_token}")))

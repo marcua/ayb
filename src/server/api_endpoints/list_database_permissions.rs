@@ -6,7 +6,10 @@ use crate::server::permissions::can_manage_database;
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{get, web, HttpResponse};
 
-#[get("/{entity}/{database}/permissions")]
+#[get(
+    "/{entity}/{database}/permissions",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn list_database_permissions(
     path: web::Path<EntityDatabasePath>,
     ayb_db: web::Data<Box<dyn AybDb>>,

@@ -5,7 +5,10 @@ use crate::http::structs::{EmptyResponse, ShortTokenPath};
 use crate::server::utils::unwrap_authenticated_entity;
 use actix_web::{delete, web};
 
-#[delete("/tokens/{short_token}")]
+#[delete(
+    "/tokens/{short_token}",
+    wrap = "actix_web_httpauth::middleware::HttpAuthentication::bearer(crate::server::server_runner::entity_validator)"
+)]
 async fn revoke_token(
     path: web::Path<ShortTokenPath>,
     ayb_db: web::Data<Box<dyn AybDb>>,
