@@ -104,7 +104,7 @@ fn print_warning_banner(details: &[&str]) {
 ///   libraries (read-only) are accessible.
 /// - Network: all TCP bind/connect denied (on kernel 6.7+).
 /// - SQLite limits: 64 MB memory, 75 MB file size, 10 file descriptors.
-/// - DuckDB limits: 2 GB memory, 256 MB file size, 32 file descriptors.
+/// - DuckDB limits: 256 MB memory, 256 MB file size, 32 file descriptors.
 ///
 /// On any other platform or older Linux kernel, the daemon runs
 /// without isolation. The server prints a unified warning at startup
@@ -210,7 +210,7 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
 fn apply_resource_limits(db_type: &str) -> Result<(), AybError> {
     match db_type {
         "duckdb" => {
-            set_rlimit(libc::RLIMIT_AS, 2048 * 1024 * 1024)?;
+            set_rlimit(libc::RLIMIT_AS, 256 * 1024 * 1024)?;
             set_rlimit(libc::RLIMIT_FSIZE, 256 * 1024 * 1024)?;
             set_rlimit(libc::RLIMIT_NOFILE, 32)?;
         }
