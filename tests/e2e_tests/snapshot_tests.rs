@@ -7,6 +7,32 @@ use std::collections::HashMap;
 use std::thread;
 use std::time;
 
+fn wait_for_snapshot_count(
+    config_path: &str,
+    api_key: &str,
+    database: &str,
+    expected: usize,
+    timeout_secs: u64,
+) -> Vec<ayb::server::snapshots::models::ListSnapshotResult> {
+    let deadline = time::Instant::now() + time::Duration::from_secs(timeout_secs);
+    loop {
+        thread::sleep(time::Duration::from_secs(2));
+        let snapshots = list_snapshots(config_path, api_key, database, "csv")
+            .expect("failed to list snapshots");
+        if snapshots.len() == expected || time::Instant::now() >= deadline {
+            assert_eq!(
+                snapshots.len(),
+                expected,
+                "expected {} snapshots but found {} (after {}s timeout)",
+                expected,
+                snapshots.len(),
+                timeout_secs
+            );
+            return snapshots;
+        }
+    }
+}
+
 pub async fn test_snapshots(
     db_type: &str,
     config_path: &str,
@@ -45,28 +71,15 @@ pub async fn test_snapshots(
         "csv",
         "No snapshots for E2E-FiRST/test.sqlite",
     )?;
-    // We'll sleep between various checks in this test to allow the
-    // snapshotting logic, which runs every 2 seconds, to
-    // execute. Each insert, update, and snapshot restore causes
-    // another snapshot to be taken, and if we don't sleep after them,
-    // we can encounter a race condition between the test and the
-    // asynchronous snapshots being taken in parallel. By sleeping, we
-    // ensure predictability of relative snapshot timing and
-    // quanitity.
-    thread::sleep(time::Duration::from_secs(4));
-    let snapshots = list_snapshots(
+    let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "csv",
-    )?;
+        1,
+        20,
+    );
 
     let last_modified_at = snapshots[0].last_modified_at;
-    assert_eq!(
-        snapshots.len(),
-        1,
-        "there should be one snapshot after sleeping"
-    );
     // No change to database, so same number of snapshots after sleep.
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
@@ -93,18 +106,12 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
-    let snapshots = list_snapshots(
+    let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "csv",
-    )?;
-
-    assert_eq!(
-        snapshots.len(),
         2,
-        "there two snapshots after updating database"
+        20,
     );
     // Insert another row and ensure there are four.
     query(
@@ -123,7 +130,14 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
+    // Wait for snapshot of the latest insert to be taken before restoring.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        3,
+        20,
+    );
 
     // Restore the previous snapshot, ensuring there are only three
     // rows.
@@ -146,7 +160,14 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
-    thread::sleep(time::Duration::from_secs(4));
+    // Wait for the restore-triggered snapshot before doing the next restore.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        4,
+        20,
+    );
 
     // Restore the snapshot before that, ensuring there are only two
     // rows.
@@ -169,8 +190,14 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
-    // Ensure another snapshot-due-to-restore.
-    thread::sleep(time::Duration::from_secs(4));
+    // Wait for restore-triggered snapshot.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        5,
+        20,
+    );
 
     // There are 6 max_snapshots, so let's force 2 more snapshots to
     // be created (more than 6 snapshots would exist: the original
@@ -186,7 +213,14 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
+    // Wait for snapshot of the insert above.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        6,
+        20,
+    );
 
     query(
         config_path,
@@ -197,18 +231,15 @@ pub async fn test_snapshots(
         "\nRows: 0",
     )?;
 
-    thread::sleep(time::Duration::from_secs(4));
     let old_snapshots = snapshots;
-    let snapshots = list_snapshots(
+    // After 7 snapshots created and max_snapshots=6, pruning should
+    // leave exactly 6.
+    wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "csv",
-    )?;
-    assert_eq!(
-        snapshots.len(),
         6,
-        "there are six snapshots after further updating database and pruning old snapshots"
+        20,
     );
 
     // Restoring the previous oldest snapshot fails
