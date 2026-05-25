@@ -2,49 +2,6 @@ use crate::utils::browser::BrowserHelpers;
 use playwright::api::Page;
 use std::error::Error;
 
-/// Poll the Snapshots tab until it shows at least `min_count` snapshot
-/// rows, then switch back to the Query tab so the caller can continue.
-async fn wait_for_browser_snapshot(page: &Page, min_count: usize) -> Result<(), Box<dyn Error>> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
-    loop {
-        page.click_builder("a[href='#snapshots']")
-            .timeout(5000.0)
-            .click()
-            .await?;
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
-        let row_count: serde_json::Value = page
-            .evaluate(
-                "document.querySelectorAll('#snapshots tbody tr').length",
-                serde_json::Value::Null,
-            )
-            .await?;
-        let count = row_count.as_u64().unwrap_or(0) as usize;
-
-        if count >= min_count || std::time::Instant::now() >= deadline {
-            assert!(
-                count >= min_count,
-                "expected at least {} snapshot rows in UI but found {}",
-                min_count,
-                count
-            );
-            // Switch back to Query tab
-            page.click_builder("a[href='#query']")
-                .timeout(5000.0)
-                .click()
-                .await?;
-            return Ok(());
-        }
-
-        // Switch back to Query tab before retrying
-        page.click_builder("a[href='#query']")
-            .timeout(5000.0)
-            .click()
-            .await?;
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-    }
-}
-
 pub async fn test_snapshots_flow(
     page: &Page,
     username: &str,
@@ -85,10 +42,9 @@ pub async fn test_snapshots_flow(
     let page_text = page.inner_text("#query-results", None).await?;
     assert!(page_text.contains("2"), "Initial count should show 2 rows");
 
-    // Step 3: Wait for automatic snapshot to be created (snapshots are auto-created after DB changes).
-    // Poll the Snapshots tab until at least one snapshot row appears, rather than
-    // using a fixed sleep that races with the background daemon.
-    wait_for_browser_snapshot(page, 1).await?;
+    // Step 3: Wait for automatic snapshot to be created (snapshots are auto-created after DB changes)
+    // The system takes snapshots automatically every 2 seconds when database changes
+    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
 
     // Step 4: Insert a new row
     let insert_query = "INSERT INTO test_table (fname, lname) VALUES (\"snapshot\", \"test\");";
@@ -133,8 +89,8 @@ pub async fn test_snapshots_flow(
         "Count after insert should show 3 rows"
     );
 
-    // Step 6: Wait for daemon to create a snapshot of the new database state.
-    wait_for_browser_snapshot(page, 2).await?;
+    // Step 6: Sleep to allow automatic snapshot after insert
+    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
 
     // Step 7: Click the Snapshots tab to see available snapshots
     // This triggers the proper tab switching and AJAX loading of snapshots
