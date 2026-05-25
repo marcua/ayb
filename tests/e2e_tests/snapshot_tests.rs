@@ -33,6 +33,34 @@ fn wait_for_snapshot_count(
     }
 }
 
+/// Wait until the newest snapshot ID differs from `prev_newest_id`,
+/// then return the current snapshot list. This is needed for the
+/// pruning test where the count stays the same (6 → 7 → 6) but the
+/// contents change.
+fn wait_for_new_snapshot(
+    config_path: &str,
+    api_key: &str,
+    database: &str,
+    prev_newest_id: &str,
+    timeout_secs: u64,
+) -> Vec<ayb::server::snapshots::models::ListSnapshotResult> {
+    let deadline = time::Instant::now() + time::Duration::from_secs(timeout_secs);
+    loop {
+        thread::sleep(time::Duration::from_secs(2));
+        let snapshots = list_snapshots(config_path, api_key, database, "csv")
+            .expect("failed to list snapshots");
+        let newest_changed = !snapshots.is_empty() && snapshots[0].snapshot_id != prev_newest_id;
+        if newest_changed || time::Instant::now() >= deadline {
+            assert!(
+                newest_changed,
+                "newest snapshot did not change from {} within {}s",
+                prev_newest_id, timeout_secs
+            );
+            return snapshots;
+        }
+    }
+}
+
 pub async fn test_snapshots(
     db_type: &str,
     config_path: &str,
@@ -63,14 +91,12 @@ pub async fn test_snapshots(
         )
         .await?;
 
-    // Can list snapshots from the first set of API keys.
-    list_snapshots_match_output(
-        config_path,
-        &api_keys.get("first").unwrap()[0],
-        FIRST_ENTITY_DB_CASED,
-        "csv",
-        "No snapshots for E2E-FiRST/test.sqlite",
-    )?;
+    // The background snapshot daemon runs every 2 seconds. After
+    // deleting all snapshots, the daemon will quickly recreate one
+    // for the current database state. Rather than trying to observe
+    // the zero-snapshot window (which is a race), we wait for the
+    // daemon to produce the first snapshot and then verify via the
+    // case-insensitive slug that listing works correctly.
     let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
@@ -78,6 +104,19 @@ pub async fn test_snapshots(
         1,
         20,
     );
+
+    // Also verify case-insensitive listing works.
+    list_snapshots_match_output(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB_CASED,
+        "csv",
+        &format!(
+            "Name,Last modified\n{},{}",
+            snapshots[0].snapshot_id,
+            snapshots[0].last_modified_at.to_rfc3339()
+        ),
+    )?;
 
     let last_modified_at = snapshots[0].last_modified_at;
     // No change to database, so same number of snapshots after sleep.
@@ -213,8 +252,8 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
-    // Wait for snapshot of the insert above.
-    wait_for_snapshot_count(
+    // Wait for snapshot of the insert above (6th snapshot, no pruning yet).
+    let snapshots_before_prune = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -232,14 +271,19 @@ pub async fn test_snapshots(
     )?;
 
     let old_snapshots = snapshots;
-    // After 7 snapshots created and max_snapshots=6, pruning should
-    // leave exactly 6.
-    wait_for_snapshot_count(
+    // The 7th snapshot triggers pruning back to 6. The count stays
+    // at 6, but the newest snapshot ID changes. Wait for that.
+    let snapshots = wait_for_new_snapshot(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        6,
+        &snapshots_before_prune[0].snapshot_id,
         20,
+    );
+    assert_eq!(
+        snapshots.len(),
+        6,
+        "there are six snapshots after further updating database and pruning old snapshots"
     );
 
     // Restoring the previous oldest snapshot fails
