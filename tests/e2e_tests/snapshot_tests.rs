@@ -5,55 +5,45 @@ use std::collections::HashMap;
 use std::thread;
 use std::time;
 
+const SNAPSHOT_TIMEOUT_SECS: u64 = 20;
+
+/// Poll until the snapshot list reaches `expected` entries. When
+/// `changed_since` is `Some(id)`, also require the newest snapshot's
+/// ID to differ from `id` — this handles the pruning case where the
+/// count stays the same but the contents change.
 fn wait_for_snapshot_count(
     config_path: &str,
     api_key: &str,
     database: &str,
     expected: usize,
-    timeout_secs: u64,
+    changed_since: Option<&str>,
 ) -> Vec<ayb::server::snapshots::models::ListSnapshotResult> {
-    let deadline = time::Instant::now() + time::Duration::from_secs(timeout_secs);
+    let deadline = time::Instant::now() + time::Duration::from_secs(SNAPSHOT_TIMEOUT_SECS);
     loop {
         thread::sleep(time::Duration::from_secs(2));
         let snapshots = list_snapshots(config_path, api_key, database, "csv")
             .expect("failed to list snapshots");
-        if snapshots.len() == expected || time::Instant::now() >= deadline {
+        let count_ok = snapshots.len() == expected;
+        let newest_ok = match changed_since {
+            Some(prev_id) => !snapshots.is_empty() && snapshots[0].snapshot_id != prev_id,
+            None => true,
+        };
+        if (count_ok && newest_ok) || time::Instant::now() >= deadline {
             assert_eq!(
                 snapshots.len(),
                 expected,
                 "expected {} snapshots but found {} (after {}s timeout)",
                 expected,
                 snapshots.len(),
-                timeout_secs
+                SNAPSHOT_TIMEOUT_SECS
             );
-            return snapshots;
-        }
-    }
-}
-
-/// Wait until the newest snapshot ID differs from `prev_newest_id`,
-/// then return the current snapshot list. This is needed for the
-/// pruning test where the count stays the same (6 → 7 → 6) but the
-/// contents change.
-fn wait_for_new_snapshot(
-    config_path: &str,
-    api_key: &str,
-    database: &str,
-    prev_newest_id: &str,
-    timeout_secs: u64,
-) -> Vec<ayb::server::snapshots::models::ListSnapshotResult> {
-    let deadline = time::Instant::now() + time::Duration::from_secs(timeout_secs);
-    loop {
-        thread::sleep(time::Duration::from_secs(2));
-        let snapshots = list_snapshots(config_path, api_key, database, "csv")
-            .expect("failed to list snapshots");
-        let newest_changed = !snapshots.is_empty() && snapshots[0].snapshot_id != prev_newest_id;
-        if newest_changed || time::Instant::now() >= deadline {
-            assert!(
-                newest_changed,
-                "newest snapshot did not change from {} within {}s",
-                prev_newest_id, timeout_secs
-            );
+            if let Some(prev_id) = changed_since {
+                assert!(
+                    newest_ok,
+                    "newest snapshot did not change from {} within {}s",
+                    prev_id, SNAPSHOT_TIMEOUT_SECS
+                );
+            }
             return snapshots;
         }
     }
@@ -99,11 +89,11 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         1,
-        20,
+        None,
     );
 
-    let last_modified_at = snapshots[0].last_modified_at;
     // No change to database, so same number of snapshots after sleep.
+    let last_modified_at = snapshots[0].last_modified_at;
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
         config_path,
@@ -120,6 +110,7 @@ pub async fn test_snapshots(
         last_modified_at, snapshots[0].last_modified_at,
         "After sleeping, the snapshot shouldn't have been modified/updated"
     );
+
     // Modify database, wait, and ensure a new snapshot was taken.
     query(
         config_path,
@@ -134,8 +125,9 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         2,
-        20,
+        None,
     );
+
     // Insert another row and ensure there are four.
     query(
         config_path,
@@ -153,13 +145,14 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
+
     // Wait for snapshot of the latest insert to be taken before restoring.
     wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         3,
-        20,
+        None,
     );
 
     // Restore the previous snapshot, ensuring there are only three
@@ -189,7 +182,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         4,
-        20,
+        None,
     );
 
     // Restore the snapshot before that, ensuring there are only two
@@ -219,7 +212,7 @@ pub async fn test_snapshots(
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         5,
-        20,
+        None,
     );
 
     // There are 6 max_snapshots, so let's force 2 more snapshots to
@@ -236,13 +229,14 @@ pub async fn test_snapshots(
         "table",
         "\nRows: 0",
     )?;
+
     // Wait for snapshot of the insert above (6th snapshot, no pruning yet).
     let snapshots_before_prune = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
         6,
-        20,
+        None,
     );
 
     query(
@@ -257,12 +251,12 @@ pub async fn test_snapshots(
     let old_snapshots = snapshots;
     // The 7th snapshot triggers pruning back to 6. The count stays
     // at 6, but the newest snapshot ID changes. Wait for that.
-    let snapshots = wait_for_new_snapshot(
+    let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        &snapshots_before_prune[0].snapshot_id,
-        20,
+        6,
+        Some(&snapshots_before_prune[0].snapshot_id),
     );
     assert_eq!(
         snapshots.len(),
