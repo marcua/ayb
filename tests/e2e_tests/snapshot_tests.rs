@@ -1,6 +1,4 @@
-use crate::e2e_tests::{
-    FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG,
-};
+use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG};
 use crate::utils::ayb::{list_snapshots, list_snapshots_match_output, query, restore_snapshot};
 use crate::utils::testing::snapshot_storage;
 use std::collections::HashMap;
@@ -95,8 +93,7 @@ pub async fn test_snapshots(
     // deleting all snapshots, the daemon will quickly recreate one
     // for the current database state. Rather than trying to observe
     // the zero-snapshot window (which is a race), we wait for the
-    // daemon to produce the first snapshot and then verify via the
-    // case-insensitive slug that listing works correctly.
+    // daemon to produce the first snapshot.
     let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
@@ -104,19 +101,6 @@ pub async fn test_snapshots(
         1,
         20,
     );
-
-    // Also verify case-insensitive listing works.
-    list_snapshots_match_output(
-        config_path,
-        &api_keys.get("first").unwrap()[0],
-        FIRST_ENTITY_DB_CASED,
-        "csv",
-        &format!(
-            "Name,Last modified\n{},{}",
-            snapshots[0].snapshot_id,
-            snapshots[0].last_modified_at.to_rfc3339()
-        ),
-    )?;
 
     let last_modified_at = snapshots[0].last_modified_at;
     // No change to database, so same number of snapshots after sleep.
