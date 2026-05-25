@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::thread;
 use std::time;
 
-const SNAPSHOT_TIMEOUT_SECS: u64 = 20;
-
 /// Poll until the snapshot list reaches `expected` entries. When
 /// `changed_since` is `Some(id)`, also require the newest snapshot's
 /// ID to differ from `id` — this handles the pruning case where the
@@ -18,7 +16,8 @@ fn wait_for_snapshot_count(
     expected: usize,
     changed_since: Option<&str>,
 ) -> Vec<ayb::server::snapshots::models::ListSnapshotResult> {
-    let deadline = time::Instant::now() + time::Duration::from_secs(SNAPSHOT_TIMEOUT_SECS);
+    let timeout_secs = 20;
+    let deadline = time::Instant::now() + time::Duration::from_secs(timeout_secs);
     loop {
         thread::sleep(time::Duration::from_secs(2));
         let snapshots = list_snapshots(config_path, api_key, database, "csv")
@@ -35,13 +34,13 @@ fn wait_for_snapshot_count(
                 "expected {} snapshots but found {} (after {}s timeout)",
                 expected,
                 snapshots.len(),
-                SNAPSHOT_TIMEOUT_SECS
+                timeout_secs
             );
             if let Some(prev_id) = changed_since {
                 assert!(
                     newest_ok,
                     "newest snapshot did not change from {} within {}s",
-                    prev_id, SNAPSHOT_TIMEOUT_SECS
+                    prev_id, timeout_secs
                 );
             }
             return snapshots;
