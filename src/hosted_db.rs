@@ -1,5 +1,6 @@
 pub mod daemon_registry;
 pub mod duckdb;
+pub mod engine;
 pub mod paths;
 pub mod sandbox;
 pub mod sqlite;
@@ -8,8 +9,9 @@ use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::from_str;
-use crate::hosted_db::duckdb::run_duckdb_query;
-use crate::hosted_db::sqlite::run_sqlite_query;
+use crate::hosted_db::duckdb::DuckdbEngine;
+use crate::hosted_db::engine::DbEngine;
+use crate::hosted_db::sqlite::SqliteEngine;
 use crate::try_from_i16;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
@@ -79,6 +81,13 @@ impl TabularFormatter for QueryResult {
     }
 }
 
+pub fn engine_for(db_type: &DBType) -> Box<dyn DbEngine> {
+    match db_type {
+        DBType::Sqlite => Box::new(SqliteEngine),
+        DBType::Duckdb => Box::new(DuckdbEngine),
+    }
+}
+
 pub async fn run_query(
     daemon_registry: &daemon_registry::DaemonRegistry,
     path: &PathBuf,
@@ -86,8 +95,8 @@ pub async fn run_query(
     db_type: &DBType,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    match db_type {
-        DBType::Sqlite => run_sqlite_query(daemon_registry, path, query, query_mode).await,
-        DBType::Duckdb => run_duckdb_query(daemon_registry, path, query, query_mode).await,
-    }
+    let engine = engine_for(db_type);
+    daemon_registry
+        .execute_query(path, query, engine.db_type_str(), query_mode)
+        .await
 }

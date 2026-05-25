@@ -1,11 +1,75 @@
 use crate::error::AybError;
-use crate::hosted_db::daemon_registry::DaemonRegistry;
+use crate::hosted_db::engine::DbEngine;
 use crate::hosted_db::{QueryMode, QueryResult};
+use crate::server::config::{AybConfigSnapshots, SqliteSnapshotMethod};
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+pub struct SqliteEngine;
+
+impl DbEngine for SqliteEngine {
+    fn query(
+        &self,
+        path: &Path,
+        query: &str,
+        allow_unsafe: bool,
+        query_mode: QueryMode,
+    ) -> Result<QueryResult, AybError> {
+        query_sqlite(&path.to_path_buf(), query, allow_unsafe, query_mode)
+    }
+
+    fn create_snapshot(
+        &self,
+        config: &AybConfigSnapshots,
+        db_path: &Path,
+        snapshot_path: &Path,
+    ) -> Result<(), AybError> {
+        let backup_query = match config.sqlite_method {
+            SqliteSnapshotMethod::Backup => {
+                return Err(AybError::SnapshotError {
+                    message: "Backup requires dot commands, which are not yet supported"
+                        .to_string(),
+                })
+            }
+            SqliteSnapshotMethod::Vacuum => {
+                format!("VACUUM INTO \"{}\"", snapshot_path.display())
+            }
+        };
+        let result = query_sqlite(
+            &db_path.to_path_buf(),
+            &backup_query,
+            true,
+            QueryMode::ReadOnly,
+        )?;
+        if !result.rows.is_empty() {
+            return Err(AybError::SnapshotError {
+                message: format!("Unexpected snapshot result: {result:?}"),
+            });
+        }
+        let result = query_sqlite(
+            &snapshot_path.to_path_buf(),
+            "PRAGMA integrity_check;",
+            false,
+            QueryMode::ReadOnly,
+        )?;
+        if result.fields.len() != 1
+            || result.rows.len() != 1
+            || result.rows[0][0] != Some("ok".to_string())
+        {
+            return Err(AybError::SnapshotError {
+                message: format!("Snapshot failed integrity check: {result:?}"),
+            });
+        }
+        Ok(())
+    }
+
+    fn db_type_str(&self) -> &'static str {
+        "sqlite"
+    }
+}
 
 /// `allow_unsafe` disables features that prevent abuse but also
 /// prevent backups/snapshots. The only known use case in the codebase
@@ -91,15 +155,4 @@ pub fn query_sqlite(
         fields,
         rows: results,
     })
-}
-
-pub async fn run_sqlite_query(
-    daemon_registry: &DaemonRegistry,
-    path: &PathBuf,
-    query: &str,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    daemon_registry
-        .execute_query(path, query, "sqlite", query_mode)
-        .await
 }

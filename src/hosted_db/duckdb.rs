@@ -1,8 +1,66 @@
 use crate::error::AybError;
-use crate::hosted_db::daemon_registry::DaemonRegistry;
+use crate::hosted_db::engine::DbEngine;
 use crate::hosted_db::{QueryMode, QueryResult};
+use crate::server::config::{AybConfigSnapshots, DuckdbSnapshotMethod};
 use duckdb::types::Value;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+pub struct DuckdbEngine;
+
+impl DbEngine for DuckdbEngine {
+    fn query(
+        &self,
+        path: &Path,
+        query: &str,
+        allow_unsafe: bool,
+        query_mode: QueryMode,
+    ) -> Result<QueryResult, AybError> {
+        query_duckdb(&path.to_path_buf(), query, allow_unsafe, query_mode)
+    }
+
+    fn create_snapshot(
+        &self,
+        config: &AybConfigSnapshots,
+        db_path: &Path,
+        snapshot_path: &Path,
+    ) -> Result<(), AybError> {
+        match config.duckdb_method {
+            DuckdbSnapshotMethod::CopyDatabase => {
+                let copy_query = format!(
+                    "ATTACH '{}' AS snapshot_dest;COPY FROM DATABASE main TO snapshot_dest;",
+                    snapshot_path.display()
+                );
+                let result = query_duckdb(
+                    &db_path.to_path_buf(),
+                    &copy_query,
+                    true,
+                    QueryMode::ReadOnly,
+                )?;
+                if !result.rows.is_empty() {
+                    return Err(AybError::SnapshotError {
+                        message: format!("Unexpected snapshot result: {result:?}"),
+                    });
+                }
+            }
+        }
+        let result = query_duckdb(
+            &snapshot_path.to_path_buf(),
+            "SELECT count(*) FROM information_schema.tables;",
+            false,
+            QueryMode::ReadOnly,
+        )?;
+        if result.rows.is_empty() {
+            return Err(AybError::SnapshotError {
+                message: "Snapshot verification failed: could not read snapshot".to_string(),
+            });
+        }
+        Ok(())
+    }
+
+    fn db_type_str(&self) -> &'static str {
+        "duckdb"
+    }
+}
 
 pub fn query_duckdb(
     path: &PathBuf,
@@ -166,15 +224,4 @@ mod tests {
         );
         assert!(result.is_err());
     }
-}
-
-pub async fn run_duckdb_query(
-    daemon_registry: &DaemonRegistry,
-    path: &PathBuf,
-    query: &str,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    daemon_registry
-        .execute_query(path, query, "duckdb", query_mode)
-        .await
 }

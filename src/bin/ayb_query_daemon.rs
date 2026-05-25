@@ -1,22 +1,17 @@
-use ayb::hosted_db::duckdb::query_duckdb;
+use ayb::ayb_db::models::DBType;
+use ayb::hosted_db::engine::DbEngine;
 use ayb::hosted_db::sandbox::apply_sandbox;
-use ayb::hosted_db::sqlite::query_sqlite;
-use ayb::hosted_db::QueryMode;
+use ayb::hosted_db::{engine_for, QueryMode};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct QueryRequest {
     query: String,
     query_mode: i16,
-}
-
-#[derive(Clone, Copy)]
-enum DaemonDBType {
-    Sqlite,
-    Duckdb,
 }
 
 /// This binary runs as a persistent daemon that executes queries
@@ -40,26 +35,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     let (db_file, db_type) = parse_args(&args)?;
 
-    let db_type_str = match db_type {
-        DaemonDBType::Sqlite => "sqlite",
-        DaemonDBType::Duckdb => "duckdb",
-    };
-    apply_sandbox(&db_file, db_type_str)?;
+    let engine = engine_for(&db_type);
+    apply_sandbox(&db_file, engine.db_type_str())?;
 
-    run(db_file, db_type)
+    run(db_file, engine)
 }
 
-fn parse_args(args: &[String]) -> Result<(PathBuf, DaemonDBType), Box<dyn std::error::Error>> {
+fn parse_args(args: &[String]) -> Result<(PathBuf, DBType), Box<dyn std::error::Error>> {
     match args.len() {
         3 => {
-            let db_type = match args[2].as_str() {
-                "sqlite" => DaemonDBType::Sqlite,
-                "duckdb" => DaemonDBType::Duckdb,
-                other => {
-                    eprintln!("Unknown db_type: {other}");
-                    std::process::exit(1);
-                }
-            };
+            let db_type = DBType::from_str(&args[2])?;
             Ok((PathBuf::from(&args[1]), db_type))
         }
         _ => {
@@ -69,7 +54,7 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, DaemonDBType), Box<dyn std::e
     }
 }
 
-fn run(db_file: PathBuf, db_type: DaemonDBType) -> Result<(), Box<dyn std::error::Error>> {
+fn run(db_file: PathBuf, engine: Box<dyn DbEngine>) -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -100,10 +85,7 @@ fn run(db_file: PathBuf, db_type: DaemonDBType) -> Result<(), Box<dyn std::error
             }
         };
 
-        let result = match db_type {
-            DaemonDBType::Sqlite => query_sqlite(&db_file, &request.query, false, query_mode),
-            DaemonDBType::Duckdb => query_duckdb(&db_file, &request.query, false, query_mode),
-        };
+        let result = engine.query(&db_file, &request.query, false, query_mode);
 
         match result {
             Ok(result) => {
