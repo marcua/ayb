@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (db_file, db_type) = parse_args(&args)?;
 
     let engine = engine_for(&db_type);
-    apply_sandbox(&db_file, engine.db_type_str())?;
+    apply_sandbox(&db_file)?;
 
     run(db_file, engine)
 }

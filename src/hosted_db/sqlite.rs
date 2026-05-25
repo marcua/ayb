@@ -1,7 +1,7 @@
 use crate::error::AybError;
 use crate::hosted_db::engine::DbEngine;
 use crate::hosted_db::{QueryMode, QueryResult};
-use crate::server::config::{AybConfigSnapshots, SqliteSnapshotMethod};
+use crate::server::config::AybConfigSnapshots;
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
@@ -23,21 +23,11 @@ impl DbEngine for SqliteEngine {
 
     fn create_snapshot(
         &self,
-        config: &AybConfigSnapshots,
+        _config: &AybConfigSnapshots,
         db_path: &Path,
         snapshot_path: &Path,
     ) -> Result<(), AybError> {
-        let backup_query = match config.sqlite_method {
-            SqliteSnapshotMethod::Backup => {
-                return Err(AybError::SnapshotError {
-                    message: "Backup requires dot commands, which are not yet supported"
-                        .to_string(),
-                })
-            }
-            SqliteSnapshotMethod::Vacuum => {
-                format!("VACUUM INTO \"{}\"", snapshot_path.display())
-            }
-        };
+        let backup_query = format!("VACUUM INTO \"{}\"", snapshot_path.display());
         let result = query_sqlite(
             &db_path.to_path_buf(),
             &backup_query,
@@ -74,7 +64,7 @@ impl DbEngine for SqliteEngine {
 /// `allow_unsafe` disables features that prevent abuse but also
 /// prevent backups/snapshots. The only known use case in the codebase
 /// is for snapshots.
-pub fn query_sqlite(
+fn query_sqlite(
     path: &PathBuf,
     query: &str,
     allow_unsafe: bool,

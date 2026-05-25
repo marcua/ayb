@@ -26,15 +26,6 @@ pub fn create_database(
     config: &str,
     api_key: &str,
     database: &str,
-    result: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    create_database_with_type(config, api_key, database, "sqlite", result)
-}
-
-pub fn create_database_with_type(
-    config: &str,
-    api_key: &str,
-    database: &str,
     db_type: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {

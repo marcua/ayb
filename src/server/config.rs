@@ -62,17 +62,6 @@ impl AybConfigEmailBackends {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub enum SqliteSnapshotMethod {
-    Backup,
-    Vacuum,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum DuckdbSnapshotMethod {
-    CopyDatabase,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshotsAutomation {
     pub interval: String, // A time interval in Go's time.ParseDuration format (e.g., "5m" means "every 5 minutes",
     pub max_snapshots: u16,
@@ -80,9 +69,6 @@ pub struct AybConfigSnapshotsAutomation {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshots {
-    pub sqlite_method: SqliteSnapshotMethod,
-    #[serde(default = "default_duckdb_snapshot_method")]
-    pub duckdb_method: DuckdbSnapshotMethod,
     pub access_key_id: String,
     pub secret_access_key: String,
     pub bucket: String,
@@ -110,10 +96,6 @@ pub struct AybConfig {
     pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
     pub snapshots: Option<AybConfigSnapshots>,
-}
-
-fn default_duckdb_snapshot_method() -> DuckdbSnapshotMethod {
-    DuckdbSnapshotMethod::CopyDatabase
 }
 
 pub fn config_to_toml(ayb_config: AybConfig) -> Result<String, AybError> {

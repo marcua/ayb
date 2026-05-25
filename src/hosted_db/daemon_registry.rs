@@ -1,3 +1,4 @@
+use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::hosted_db::sandbox::build_daemon_command;
 use crate::hosted_db::{QueryMode, QueryResult};
@@ -89,7 +90,7 @@ impl DaemonRegistry {
     async fn get_or_create_daemon(
         &self,
         db_path: &PathBuf,
-        db_type: &str,
+        db_type: &DBType,
     ) -> Result<Arc<Mutex<DaemonHandle>>, AybError> {
         // Canonicalize the path to ensure consistency
         let canonical_path = canonicalize(db_path)?;
@@ -117,7 +118,7 @@ impl DaemonRegistry {
         &self,
         db_path: &PathBuf,
         query: &str,
-        db_type: &str,
+        db_type: &DBType,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
         let daemon_arc = self.get_or_create_daemon(db_path, db_type).await?;
@@ -130,7 +131,7 @@ impl DaemonRegistry {
     async fn spawn_daemon(
         &self,
         db_path: &PathBuf,
-        db_type: &str,
+        db_type: &DBType,
     ) -> Result<DaemonHandle, AybError> {
         let mut cmd = build_daemon_command(db_path, db_type)?;
 

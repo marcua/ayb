@@ -1,9 +1,7 @@
 use crate::e2e_tests::{
     FIRST_ENTITY_DB, FIRST_ENTITY_DB2, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DUCKDB,
 };
-use crate::utils::ayb::{
-    create_database, create_database_with_type, query, query_no_api_token, set_default_url,
-};
+use crate::utils::ayb::{create_database, query, query_no_api_token, set_default_url};
 use ayb::client::config::ClientConfig;
 use std::collections::HashMap;
 use std::fs;
@@ -19,6 +17,7 @@ pub fn test_create_and_query_db(
         config_path,
         &api_keys.get("second").unwrap()[0],
         FIRST_ENTITY_DB,
+        "sqlite",
         "Error: Authenticated entity e2e-second can't create a database for entity e2e-first",
     )?;
 
@@ -27,6 +26,7 @@ pub fn test_create_and_query_db(
         config_path,
         &format!("{}bad", api_keys.get("first").unwrap()[0]),
         FIRST_ENTITY_DB,
+        "sqlite",
         "Error: Invalid API token",
     )?;
 
@@ -35,6 +35,7 @@ pub fn test_create_and_query_db(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
+        "sqlite",
         "Successfully created e2e-first/test.sqlite",
     )?;
 
@@ -43,6 +44,7 @@ pub fn test_create_and_query_db(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
+        "sqlite",
         "Error: Database already exists",
     )?;
 
@@ -51,6 +53,7 @@ pub fn test_create_and_query_db(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB2,
+        "sqlite",
         "Successfully created e2e-first/another.sqlite",
     )?;
 
@@ -105,7 +108,7 @@ pub fn test_create_and_query_db(
         &api_keys.get("first").unwrap()[0],
         "SELECT * FROM test_table;",
         FIRST_ENTITY_DB,
-        "table",                 
+        "table",
         " fname      | lname \n------------+-----------\n the first  | the last \n the first2 | the last2 \n\nRows: 2")?;
     query(
         config_path,
@@ -173,7 +176,7 @@ pub fn test_create_and_query_duckdb(
     config_path: &str,
     api_keys: &HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    create_database_with_type(
+    create_database(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DUCKDB,
@@ -184,7 +187,7 @@ pub fn test_create_and_query_duckdb(
     query(
         config_path,
         &api_keys.get("first").unwrap()[0],
-        "CREATE TABLE duck_test(id INTEGER, name VARCHAR);",
+        "CREATE TABLE test_table(fname varchar, lname varchar);",
         FIRST_ENTITY_DUCKDB,
         "table",
         "\nRows: 0",
@@ -192,7 +195,7 @@ pub fn test_create_and_query_duckdb(
     query(
         config_path,
         &api_keys.get("first").unwrap()[0],
-        "INSERT INTO duck_test VALUES (1, 'hello'), (2, 'world');",
+        "INSERT INTO test_table VALUES ('the first', 'the last');",
         FIRST_ENTITY_DUCKDB,
         "table",
         "\nRows: 0",
@@ -200,10 +203,18 @@ pub fn test_create_and_query_duckdb(
     query(
         config_path,
         &api_keys.get("first").unwrap()[0],
-        "SELECT * FROM duck_test ORDER BY id;",
+        "INSERT INTO test_table VALUES ('the first2', 'the last2');",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        "\nRows: 0",
+    )?;
+    query(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        "SELECT * FROM test_table;",
         FIRST_ENTITY_DUCKDB,
         "csv",
-        "id,name\n1,hello\n2,world\n\nRows: 2",
+        "fname,lname\nthe first,the last\nthe first2,the last2\n\nRows: 2",
     )?;
 
     Ok(())

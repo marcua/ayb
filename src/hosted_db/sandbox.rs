@@ -1,3 +1,4 @@
+use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use std::env::current_exe;
 use std::path::{Path, PathBuf};
@@ -103,8 +104,9 @@ fn print_warning_banner(details: &[&str]) {
 /// - Filesystem: only the database file (read-write) and shared
 ///   libraries (read-only) are accessible.
 /// - Network: all TCP bind/connect denied (on kernel 6.7+).
-/// - SQLite limits: 64 MB memory, 75 MB file size, 10 file descriptors.
-/// - DuckDB limits: 256 MB memory, 256 MB file size, 32 file descriptors.
+/// - Memory: 256 MB virtual memory limit (RLIMIT_AS).
+/// - File size: 256 MB max file size (RLIMIT_FSIZE).
+/// - File descriptors: 32 max open files (RLIMIT_NOFILE).
 ///
 /// On any other platform or older Linux kernel, the daemon runs
 /// without isolation. The server prints a unified warning at startup
@@ -113,11 +115,11 @@ fn print_warning_banner(details: &[&str]) {
 /// Configurable per-database limits and per-process CPU/thread
 /// limitation is future work.
 #[cfg_attr(not(target_os = "linux"), allow(unused_variables))]
-pub fn apply_sandbox(db_path: &Path, db_type: &str) -> Result<(), AybError> {
+pub fn apply_sandbox(db_path: &Path) -> Result<(), AybError> {
     #[cfg(target_os = "linux")]
     {
         apply_landlock_restrictions(db_path)?;
-        apply_resource_limits(db_type)?;
+        apply_resource_limits()?;
     }
     Ok(())
 }
@@ -203,23 +205,11 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     Ok(())
 }
 
-/// Apply resource limits via setrlimit. DuckDB needs higher limits
-/// than SQLite because its runtime requires more memory and file
-/// descriptors even for trivial queries.
 #[cfg(target_os = "linux")]
-fn apply_resource_limits(db_type: &str) -> Result<(), AybError> {
-    match db_type {
-        "duckdb" => {
-            set_rlimit(libc::RLIMIT_AS, 256 * 1024 * 1024)?;
-            set_rlimit(libc::RLIMIT_FSIZE, 256 * 1024 * 1024)?;
-            set_rlimit(libc::RLIMIT_NOFILE, 32)?;
-        }
-        _ => {
-            set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?;
-            set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?;
-            set_rlimit(libc::RLIMIT_NOFILE, 10)?;
-        }
-    }
+fn apply_resource_limits() -> Result<(), AybError> {
+    set_rlimit(libc::RLIMIT_AS, 256 * 1024 * 1024)?;
+    set_rlimit(libc::RLIMIT_FSIZE, 256 * 1024 * 1024)?;
+    set_rlimit(libc::RLIMIT_NOFILE, 32)?;
     Ok(())
 }
 
@@ -245,13 +235,13 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
 /// Build command for running the query daemon.
 pub fn build_daemon_command(
     db_path: &PathBuf,
-    db_type: &str,
+    db_type: &DBType,
 ) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
-    cmd.arg(db_path).arg(db_type);
+    cmd.arg(db_path).arg(db_type.to_str());
 
     Ok(cmd)
 }

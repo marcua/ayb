@@ -95,8 +95,7 @@ pub async fn run_query(
     db_type: &DBType,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    let engine = engine_for(db_type);
     daemon_registry
-        .execute_query(path, query, engine.db_type_str(), query_mode)
+        .execute_query(path, query, db_type, query_mode)
         .await
 }
