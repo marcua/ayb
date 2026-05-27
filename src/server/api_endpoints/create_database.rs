@@ -29,20 +29,23 @@ async fn create_database(
     let entity_slug = &path.entity;
 
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
-    let db_type = get_required_header(&req, "db-type")?;
+    let db_type = DBType::from_str(&get_required_header(&req, "db-type")?)?;
     let public_sharing_level = get_required_header(&req, "public-sharing-level")?;
     let database = Database {
         entity_id: entity.id,
         slug: path.database.clone(),
-        db_type: DBType::from_str(&db_type)? as i16,
+        db_type: db_type as i16,
         public_sharing_level: PublicSharingLevel::from_str(&public_sharing_level)? as i16,
     };
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     if can_create_database(&authenticated_entity, &entity) {
         let created_database = ayb_db.create_database(&database).await?;
-        // Create the database file at the appropriate path
-        let db_path =
-            instantiated_new_database_path(entity_slug, &path.database, &ayb_config.data_path)?;
+        let db_path = instantiated_new_database_path(
+            entity_slug,
+            &path.database,
+            &ayb_config.data_path,
+            &db_type,
+        )?;
         set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?, &daemon_registry).await?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
     } else {

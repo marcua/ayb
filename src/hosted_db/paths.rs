@@ -1,3 +1,4 @@
+use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use std::fs;
@@ -63,19 +64,29 @@ pub fn new_database_path(
 
 /// Returns a path to a new database location (the file for the future
 /// database inside a newly created directory) after creating a
-/// directory and empty file in the future location of that database.
+/// directory in the future location of that database. For SQLite, an
+/// empty file is also created because SQLite requires it to exist
+/// before opening. DuckDB creates the file itself on first write.
 pub fn instantiated_new_database_path(
     entity_slug: &str,
     database_slug: &str,
     data_path: &str,
+    db_type: &DBType,
 ) -> Result<PathBuf, AybError> {
-    let mut path = new_database_path(entity_slug, database_slug, data_path)?;
-    path.push(database_slug);
-    if !path.exists() {
-        fs::File::create(path.clone())?;
+    let dir = new_database_path(entity_slug, database_slug, data_path)?;
+    let file_path = dir.join(database_slug);
+    match db_type {
+        DBType::Sqlite => {
+            if !file_path.exists() {
+                fs::File::create(&file_path)?;
+            }
+            Ok(fs::canonicalize(file_path)?)
+        }
+        DBType::Duckdb => {
+            let canonical_dir = fs::canonicalize(&dir)?;
+            Ok(canonical_dir.join(database_slug))
+        }
     }
-
-    Ok(fs::canonicalize(path)?)
 }
 
 pub fn current_database_path(
