@@ -1,7 +1,7 @@
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use std::env::current_exe;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::hosted_db::paths::pathbuf_to_parent;
 
@@ -234,7 +234,7 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
 
 /// Build command for running the query daemon.
 pub fn build_daemon_command(
-    db_path: &PathBuf,
+    db_path: &Path,
     db_type: &DBType,
 ) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;

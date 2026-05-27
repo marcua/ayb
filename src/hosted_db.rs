@@ -15,7 +15,7 @@ use crate::hosted_db::sqlite::SqliteEngine;
 use crate::try_from_i16;
 use prettytable::{Cell, Row, Table};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 use std::str::FromStr;
 use std::vec::Vec;
 
@@ -90,7 +90,7 @@ pub fn engine_for(db_type: &DBType) -> Box<dyn DbEngine> {
 
 pub async fn run_query(
     daemon_registry: &daemon_registry::DaemonRegistry,
-    path: &PathBuf,
+    path: &Path,
     query: &str,
     db_type: &DBType,
     query_mode: QueryMode,

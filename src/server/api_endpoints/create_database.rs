@@ -40,12 +40,8 @@ async fn create_database(
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
     if can_create_database(&authenticated_entity, &entity) {
         let created_database = ayb_db.create_database(&database).await?;
-        let db_path = instantiated_new_database_path(
-            entity_slug,
-            &path.database,
-            &ayb_config.data_path,
-            &db_type,
-        )?;
+        let db_path =
+            instantiated_new_database_path(entity_slug, &path.database, &ayb_config.data_path)?;
         set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?, &daemon_registry).await?;
         Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
     } else {

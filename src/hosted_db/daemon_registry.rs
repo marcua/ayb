@@ -1,11 +1,11 @@
 use crate::ayb_db::models::DBType;
 use crate::error::AybError;
+use crate::hosted_db::paths::canonical_db_path;
 use crate::hosted_db::sandbox::build_daemon_command;
 use crate::hosted_db::{QueryMode, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::canonicalize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 use tokio::io::BufReader;
@@ -89,11 +89,11 @@ impl DaemonRegistry {
     /// Returns an Arc<Mutex<DaemonHandle>> that can be used across threads
     async fn get_or_create_daemon(
         &self,
-        db_path: &PathBuf,
+        db_path: &Path,
         db_type: &DBType,
     ) -> Result<Arc<Mutex<DaemonHandle>>, AybError> {
         // Canonicalize the path to ensure consistency
-        let canonical_path = canonicalize(db_path)?;
+        let canonical_path = canonical_db_path(db_path)?;
 
         // Lock for the entire check-and-create operation to avoid race condition
         // where multiple threads spawn daemon processes for the same database
@@ -116,7 +116,7 @@ impl DaemonRegistry {
     /// Execute a query by getting/creating daemon, locking, and executing
     pub async fn execute_query(
         &self,
-        db_path: &PathBuf,
+        db_path: &Path,
         query: &str,
         db_type: &DBType,
         query_mode: QueryMode,
@@ -130,7 +130,7 @@ impl DaemonRegistry {
     /// Spawn a new daemon process for the given database
     async fn spawn_daemon(
         &self,
-        db_path: &PathBuf,
+        db_path: &Path,
         db_type: &DBType,
     ) -> Result<DaemonHandle, AybError> {
         let mut cmd = build_daemon_command(db_path, db_type)?;
@@ -158,8 +158,8 @@ impl DaemonRegistry {
     }
 
     /// Shut down a daemon for a specific database path
-    pub async fn shut_down_daemon(&self, db_path: &PathBuf) -> Result<(), AybError> {
-        let canonical_path = canonicalize(db_path)?;
+    pub async fn shut_down_daemon(&self, db_path: &Path) -> Result<(), AybError> {
+        let canonical_path = canonical_db_path(db_path)?;
 
         let mut daemons = self.daemons.lock().await;
         if let Some(daemon_arc) = daemons.remove(&canonical_path) {
