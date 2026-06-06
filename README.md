@@ -182,7 +182,7 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 ```
 
 ### Web interface
-`ayb` comes with a fully functional web interface that is always enabled. With the server configuration shown above, visit [http://localhost:5433/register](http://localhost:5433/register) to get started. The web interface allows you to register, log in, create databases, and run queries through your browser without needing to use the command line client.
+`ayb` comes with a fully functional web interface. With the server configuration shown above, visit [http://localhost:5433/register](http://localhost:5433/register) to get started. The web interface allows you to register, log in, create databases, and run queries through your browser without needing to use the command line client.
 
 ### JavaScript client library
 
