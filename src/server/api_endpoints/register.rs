@@ -7,7 +7,6 @@ use crate::server::config::AybConfig;
 use crate::server::tokens::encrypt_auth_token;
 use crate::server::username_validation::validate_username;
 use crate::server::utils::{get_lowercased_header, get_required_header};
-use crate::server::web_frontend::WebFrontendDetails;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::str::FromStr;
 
@@ -16,7 +15,6 @@ async fn register(
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
-    web_info: web::Data<Option<WebFrontendDetails>>,
     email_backends: web::Data<EmailBackends>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
@@ -59,13 +57,6 @@ async fn register(
         },
         &ayb_config.authentication,
     )?;
-    send_registration_email(
-        &email_backends,
-        &ayb_config.email,
-        &email_address,
-        &token,
-        web_info.get_ref(),
-    )
-    .await?;
+    send_registration_email(&email_backends, &ayb_config, &email_address, &token).await?;
     Ok(HttpResponse::Ok().json(EmptyResponse {}))
 }

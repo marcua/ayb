@@ -57,9 +57,6 @@ smtp_password = "the_password"
 [email.file]
 path = "./ayb_data/emails.jsonl"
 
-[web]
-hosting_method = "Local"
-
 [cors]
 origin = "*"
 
