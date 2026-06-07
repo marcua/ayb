@@ -135,11 +135,19 @@ impl DaemonRegistry {
     ) -> Result<DaemonHandle, AybError> {
         let mut cmd = build_daemon_command(db_path, db_type)?;
 
-        // Spawn the process with piped stdin/stdout
+        // Cap glibc malloc arenas. Each arena reserves ~64 MB of virtual
+        // address space per CPU core, which under RLIMIT_AS can push the
+        // daemon over its 256 MB budget on multi-core hosts before any
+        // query runs. See src/hosted_db/sandbox.rs.
+        cmd.env("MALLOC_ARENA_MAX", "2");
+
+        // Spawn the process with piped stdin/stdout. Inherit stderr so
+        // crashes (panic backtraces, aborts) surface in the server log
+        // instead of being swallowed.
         let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::inherit())
             .spawn()?;
 
         let stdin = child.stdin.take().ok_or(AybError::Other {
