@@ -1,6 +1,6 @@
 use crate::http::structs::APIToken;
+use crate::server::config::local_base_url;
 use crate::server::utils::get_optional_header;
-use crate::server::web_frontend::local_base_url;
 use actix_web::{http::header, HttpRequest, HttpResponse};
 
 pub const COOKIE_FOR_LOGOUT: &str = "auth=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
