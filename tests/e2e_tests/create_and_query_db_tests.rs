@@ -192,13 +192,16 @@ pub fn test_create_and_query_duckdb(
         "table",
         "\nRows: 0",
     )?;
+    // Unlike SQLite (which returns no rows for an INSERT), DuckDB returns
+    // a one-row "Count" result with the number of affected rows, so these
+    // single-row inserts report "Rows: 1".
     query(
         config_path,
         &api_keys.get("first").unwrap()[0],
         "INSERT INTO test_table VALUES ('the first', 'the last');",
         FIRST_ENTITY_DUCKDB,
         "table",
-        "\nRows: 0",
+        "\nRows: 1",
     )?;
     query(
         config_path,
@@ -206,7 +209,7 @@ pub fn test_create_and_query_duckdb(
         "INSERT INTO test_table VALUES ('the first2', 'the last2');",
         FIRST_ENTITY_DUCKDB,
         "table",
-        "\nRows: 0",
+        "\nRows: 1",
     )?;
     query(
         config_path,
