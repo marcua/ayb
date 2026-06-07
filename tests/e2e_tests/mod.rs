@@ -16,7 +16,7 @@ pub use health_check_tests::test_health_check;
 pub use oauth_tests::test_oauth_token_exchange_errors;
 pub use permissions_tests::test_permissions;
 pub use registration_tests::test_registration;
-pub use snapshot_tests::test_snapshots;
+pub use snapshot_tests::{test_snapshots, test_snapshots_duckdb};
 pub use token_management_tests::test_token_management;
 
 const FIRST_ENTITY_DB: &str = "e2e-first/test.sqlite";
@@ -24,6 +24,7 @@ const FIRST_ENTITY_DB_CASED: &str = "E2E-FiRST/test.sqlite";
 const FIRST_ENTITY_DB2: &str = "e2e-first/another.sqlite";
 const FIRST_ENTITY_DB_SLUG: &str = "test.sqlite";
 const FIRST_ENTITY_DUCKDB: &str = "e2e-first/test.duckdb";
+const FIRST_ENTITY_DUCKDB_SLUG: &str = "test.duckdb";
 const FIRST_ENTITY_SLUG: &str = "e2e-first";
 const FIRST_ENTITY_SLUG_CASED: &str = "E2E-FiRsT";
 const SECOND_ENTITY_SLUG: &str = "e2e-second";
