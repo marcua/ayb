@@ -64,32 +64,36 @@ fn query_duckdb(
     allow_unsafe: bool,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
+    // Cap threads and memory on the Config *before* opening. DuckDB probes
+    // the host at instantiation (/sys/devices/system/cpu/online,
+    // /sys/fs/cgroup/..., /proc/self/*) to auto-size these to the whole
+    // machine -- on a CI runner or large host that means many worker
+    // threads and a multi-GB buffer pool, which blows the daemon's 256 MB
+    // RLIMIT_AS. Explicit values override the auto-detected ones so DuckDB
+    // stays within the sandbox budget regardless of host size. (The probe
+    // paths themselves are allowed read-only in the Landlock ruleset; see
+    // src/hosted_db/sandbox.rs -- without that the probe aborts the
+    // process before any query runs.)
     let config = duckdb::Config::default()
         .access_mode(match query_mode {
             QueryMode::ReadOnly => duckdb::AccessMode::ReadOnly,
             QueryMode::ReadWrite => duckdb::AccessMode::ReadWrite,
         })
-        .map_err(|e| AybError::Other {
-            message: format!("DuckDB config error: {e}"),
-        })?;
+        .map_err(config_err)?
+        .threads(1)
+        .map_err(config_err)?
+        .max_memory("128MB")
+        .map_err(config_err)?;
 
     let conn = duckdb::Connection::open_with_flags(path, config)?;
 
     if !allow_unsafe {
-        // Keep DuckDB inside the daemon's sandbox budget. DuckDB spawns
-        // one worker per core by default; each thread + its glibc arena
-        // eat virtual address space (RLIMIT_AS), so we cap at one. The
-        // MALLOC_ARENA_MAX=2 env var (set by the daemon registry) also
-        // contributes to keeping virtual address space bounded. Setting
-        // memory_limit or temp_directory here would be ideal for graceful
-        // OOM handling, but they trigger an InternalException
-        // ("dereference unique_ptr that is NULL") under Landlock on a
-        // not-yet-materialized DuckDB file. Disabling extensions, external
-        // access, and locking the configuration are the same safety
-        // perimeter we'd want regardless.
+        // Disable extension install/load and external (file/network)
+        // access, then lock the configuration so a query can't re-enable
+        // them. This is the same safety perimeter as SQLite's ATTACH/
+        // defensive settings.
         conn.execute_batch(
-            "SET threads=1;
-             SET autoinstall_known_extensions=false;
+            "SET autoinstall_known_extensions=false;
              SET autoload_known_extensions=false;
              SET enable_external_access=false;
              SET lock_configuration=true;",
@@ -122,6 +126,12 @@ fn query_duckdb(
         fields,
         rows: results,
     })
+}
+
+fn config_err(e: duckdb::Error) -> AybError {
+    AybError::Other {
+        message: format!("DuckDB config error: {e}"),
+    }
 }
 
 fn map_duckdb_error(err: duckdb::Error) -> AybError {
