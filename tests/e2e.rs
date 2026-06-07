@@ -91,13 +91,16 @@ async fn client_server_integration(
 
     let api_keys = test_registration(test_type, &config_path, server_url, &mut expected_config)?;
     test_create_and_query_db(&config_path, &api_keys, server_url, &mut expected_config)?;
-    test_create_and_query_duckdb(&config_path, &api_keys)?;
     test_entity_details_and_profile(&config_path, &api_keys)?;
     test_snapshots(test_type, &config_path, &api_keys).await?;
     test_permissions(&config_path, &api_keys).await?;
     test_anonymous_access(&config_path, &api_keys, server_url).await?;
     test_token_management(&config_path, &api_keys)?;
     test_oauth_token_exchange_errors(server_url).await?;
+    // Runs last: it creates a DuckDB database under e2e-first, which would
+    // otherwise appear in the many exact database-listing assertions above
+    // (and in the periodic snapshot job during test_snapshots).
+    test_create_and_query_duckdb(&config_path, &api_keys)?;
 
     Ok(())
 }
