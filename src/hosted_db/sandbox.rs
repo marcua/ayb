@@ -162,15 +162,18 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     })?;
 
     // Allow read-only access to shared libraries and system paths.
-    // /proc and /sys are needed because DuckDB reads them at database
+    // /proc/self and /sys are needed because DuckDB reads them at database
     // instantiation to detect CPU count and memory limits
     // (/sys/devices/system/cpu/online, /sys/fs/cgroup/..., /proc/self/*).
     // Without them, that probing fails under Landlock and DuckDB aborts
-    // with an InternalException before any query runs. Read-only access
-    // here does not let SQL queries read those files: external file/
-    // network access is disabled at the DuckDB layer (enable_external_access
-    // = false), so this only permits the engine's own initialization.
-    let read_only_paths: Vec<&str> = vec!["/lib", "/lib64", "/usr", "/proc", "/sys"];
+    // with an InternalException before any query runs. We scope the /proc
+    // rule to /proc/self (the daemon's own entry) rather than all of /proc
+    // so the daemon can't read other processes' /proc -- in particular the
+    // server's /proc/<pid>/environ, which holds secrets. Read-only access
+    // here does not let SQL queries read these files: external file/network
+    // access is disabled at the DuckDB layer (enable_external_access=false),
+    // so this only permits the engine's own initialization.
+    let read_only_paths: Vec<&str> = vec!["/lib", "/lib64", "/usr", "/proc/self", "/sys"];
     let existing_read_only: Vec<&str> = read_only_paths
         .into_iter()
         .filter(|p| Path::new(p).exists())
