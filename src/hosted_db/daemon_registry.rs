@@ -1,10 +1,11 @@
+use crate::ayb_db::models::DBType;
 use crate::error::AybError;
+use crate::hosted_db::paths::canonical_db_path;
 use crate::hosted_db::sandbox::build_daemon_command;
 use crate::hosted_db::{QueryMode, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::canonicalize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 use tokio::io::BufReader;
@@ -88,10 +89,11 @@ impl DaemonRegistry {
     /// Returns an Arc<Mutex<DaemonHandle>> that can be used across threads
     async fn get_or_create_daemon(
         &self,
-        db_path: &PathBuf,
+        db_path: &Path,
+        db_type: &DBType,
     ) -> Result<Arc<Mutex<DaemonHandle>>, AybError> {
         // Canonicalize the path to ensure consistency
-        let canonical_path = canonicalize(db_path)?;
+        let canonical_path = canonical_db_path(db_path)?;
 
         // Lock for the entire check-and-create operation to avoid race condition
         // where multiple threads spawn daemon processes for the same database
@@ -103,7 +105,7 @@ impl DaemonRegistry {
         }
 
         // Spawn the daemon process while holding the lock
-        let daemon_handle = self.spawn_daemon(&canonical_path).await?;
+        let daemon_handle = self.spawn_daemon(&canonical_path, db_type).await?;
         let daemon_arc = Arc::new(Mutex::new(daemon_handle));
 
         // Insert into registry
@@ -114,25 +116,42 @@ impl DaemonRegistry {
     /// Execute a query by getting/creating daemon, locking, and executing
     pub async fn execute_query(
         &self,
-        db_path: &PathBuf,
+        db_path: &Path,
         query: &str,
+        db_type: &DBType,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        let daemon_arc = self.get_or_create_daemon(db_path).await?;
+        let daemon_arc = self.get_or_create_daemon(db_path, db_type).await?;
         let mut daemon = daemon_arc.lock().await;
         let response = daemon.execute_query(query, query_mode).await?;
         parse_response(&response)
     }
 
     /// Spawn a new daemon process for the given database
-    async fn spawn_daemon(&self, db_path: &PathBuf) -> Result<DaemonHandle, AybError> {
-        let mut cmd = build_daemon_command(db_path)?;
+    async fn spawn_daemon(
+        &self,
+        db_path: &Path,
+        db_type: &DBType,
+    ) -> Result<DaemonHandle, AybError> {
+        let mut cmd = build_daemon_command(db_path, db_type)?;
 
-        // Spawn the process with piped stdin/stdout
+        // Run the query daemon with an empty environment. It inherits
+        // nothing from the server process, so server secrets (fernet key,
+        // S3 credentials, SMTP password) never reach the sandboxed daemon
+        // -- they can't be read out of /proc/self/environ even if a query
+        // somehow escaped DuckDB's file-access restrictions. The daemon
+        // needs no environment: it is invoked by absolute path, links only
+        // standard system libraries, and resource/sandbox limits come from
+        // setrlimit/Landlock rather than env vars.
+        cmd.env_clear();
+
+        // Spawn the process with piped stdin/stdout. Inherit stderr so
+        // crashes (panic backtraces, aborts) surface in the server log
+        // instead of being swallowed.
         let mut child = cmd
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::inherit())
             .spawn()?;
 
         let stdin = child.stdin.take().ok_or(AybError::Other {
@@ -151,8 +170,8 @@ impl DaemonRegistry {
     }
 
     /// Shut down a daemon for a specific database path
-    pub async fn shut_down_daemon(&self, db_path: &PathBuf) -> Result<(), AybError> {
-        let canonical_path = canonicalize(db_path)?;
+    pub async fn shut_down_daemon(&self, db_path: &Path) -> Result<(), AybError> {
+        let canonical_path = canonical_db_path(db_path)?;
 
         let mut daemons = self.daemons.lock().await;
         if let Some(daemon_arc) = daemons.remove(&canonical_path) {

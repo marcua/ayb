@@ -60,12 +60,6 @@ impl AybConfigEmailBackends {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub enum SqliteSnapshotMethod {
-    Backup,
-    Vacuum,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshotsAutomation {
     pub interval: String, // A time interval in Go's time.ParseDuration format (e.g., "5m" means "every 5 minutes",
     pub max_snapshots: u16,
@@ -73,7 +67,6 @@ pub struct AybConfigSnapshotsAutomation {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshots {
-    pub sqlite_method: SqliteSnapshotMethod,
     pub access_key_id: String,
     pub secret_access_key: String,
     pub bucket: String,

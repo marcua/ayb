@@ -8,6 +8,19 @@ use std::os::windows::fs::symlink_dir;
 use std::path::{Path, PathBuf};
 use uuid::{timestamp::context::ContextV7, Timestamp, Uuid};
 
+/// Canonicalize a database file path by canonicalizing its parent
+/// directory and appending the filename. Works even if the file doesn't
+/// exist yet (new databases before first write).
+pub fn canonical_db_path(path: &Path) -> Result<PathBuf, AybError> {
+    let parent = path.parent().ok_or(AybError::Other {
+        message: format!("Cannot determine parent of: {}", path.display()),
+    })?;
+    let file_name = path.file_name().ok_or(AybError::Other {
+        message: format!("Cannot determine filename of: {}", path.display()),
+    })?;
+    Ok(fs::canonicalize(parent)?.join(file_name))
+}
+
 pub const CURRENT: &str = "current";
 pub const CURRENT_TMP: &str = "current.tmp";
 const DATABASES: &str = "databases";
@@ -62,20 +75,16 @@ pub fn new_database_path(
 }
 
 /// Returns a path to a new database location (the file for the future
-/// database inside a newly created directory) after creating a
-/// directory and empty file in the future location of that database.
+/// database inside a newly created directory) after creating the
+/// directory. The database engine creates the actual file on first use.
 pub fn instantiated_new_database_path(
     entity_slug: &str,
     database_slug: &str,
     data_path: &str,
 ) -> Result<PathBuf, AybError> {
-    let mut path = new_database_path(entity_slug, database_slug, data_path)?;
-    path.push(database_slug);
-    if !path.exists() {
-        fs::File::create(path.clone())?;
-    }
-
-    Ok(fs::canonicalize(path)?)
+    let dir = new_database_path(entity_slug, database_slug, data_path)?;
+    let canonical_dir = fs::canonicalize(&dir)?;
+    Ok(canonical_dir.join(database_slug))
 }
 
 pub fn current_database_path(
@@ -85,18 +94,14 @@ pub fn current_database_path(
 ) -> Result<PathBuf, AybError> {
     // `current` is a symlink to the database directory containing the
     // most recently restored/created version of the database.
-    let path: PathBuf = [
-        data_path,
-        DATABASES,
-        entity_slug,
-        database_slug,
-        CURRENT,
-        database_slug,
-    ]
-    .iter()
-    .collect();
+    // Canonicalize the directory (resolves the symlink) and append the
+    // filename, since the file may not exist yet for new databases.
+    let dir: PathBuf = [data_path, DATABASES, entity_slug, database_slug, CURRENT]
+        .iter()
+        .collect();
 
-    Ok(fs::canonicalize(path)?)
+    let canonical_dir = fs::canonicalize(dir)?;
+    Ok(canonical_dir.join(database_slug))
 }
 
 /// Returns a path for a new database snapshot directory for storing a

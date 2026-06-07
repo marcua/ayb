@@ -67,7 +67,6 @@ token_expiration_seconds = 3600
 origin = "*"
 
 [snapshots]
-sqlite_method = "Vacuum"
 access_key_id = "minioadmin"
 secret_access_key = "minioadmin"
 bucket = "bucket"

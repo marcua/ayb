@@ -26,9 +26,10 @@ pub fn create_database(
     config: &str,
     api_key: &str,
     database: &str,
+    db_type: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, "sqlite"; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, db_type; {
         "AYB_API_TOKEN" => api_key,
     });
 
@@ -139,7 +140,11 @@ pub fn list_snapshots(
     let output = std::str::from_utf8(&cmd.get_output().stdout)?;
     let mut output_lines = output.lines().collect::<Vec<&str>>();
 
-    if output_lines.is_empty() {
+    // A database with no snapshots prints "No snapshots for <db>" rather
+    // than a header row. Treat that as an empty list so callers polling
+    // for the first snapshot (e.g. wait_for_snapshot_count) don't panic on
+    // the no-snapshot window.
+    if output_lines.is_empty() || output_lines[0].starts_with("No snapshots for") {
         return Ok(vec![]);
     }
 

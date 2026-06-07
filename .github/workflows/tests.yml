@@ -40,6 +40,12 @@ jobs:
         # GitHub automatically evicts caches after 7 days of inactivity
         # rust-cache also cleans build artifacts older than 1 week
         shared-key: "ayb-tests"
+        # Save the cache even when the job fails. The bundled DuckDB C++
+        # build is large (~13 GB of debug artifacts, 20+ min cold) and by
+        # default the cache is only saved on a successful job -- so while a
+        # branch iterates on a red build, every run recompiles DuckDB from
+        # scratch. Saving on failure lets subsequent runs reuse it.
+        cache-on-failure: "true"
 
     - name: Build
       run: cargo build --verbose

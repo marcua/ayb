@@ -1,10 +1,12 @@
+use ayb::ayb_db::models::DBType;
+use ayb::hosted_db::engine::DbEngine;
 use ayb::hosted_db::sandbox::apply_sandbox;
-use ayb::hosted_db::sqlite::query_sqlite;
-use ayb::hosted_db::QueryMode;
+use ayb::hosted_db::{engine_for, QueryMode};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct QueryRequest {
@@ -16,7 +18,7 @@ struct QueryRequest {
 /// against a database and returns results in QueryResult format.
 ///
 /// Usage:
-/// $ ayb_query_daemon <database.sqlite>
+/// $ ayb_query_daemon <database_file> <db_type>
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
 /// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
@@ -31,35 +33,37 @@ struct QueryRequest {
 /// See src/hosted_db/sandbox.rs.
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
-    let db_file = parse_args(&args)?;
+    let (db_file, db_type) = parse_args(&args)?;
 
+    let engine = engine_for(&db_type);
     apply_sandbox(&db_file)?;
 
-    run(db_file)
+    run(db_file, engine)
 }
 
-fn parse_args(args: &[String]) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn parse_args(args: &[String]) -> Result<(PathBuf, DBType), Box<dyn std::error::Error>> {
     match args.len() {
-        2 => Ok(PathBuf::from(&args[1])),
+        3 => {
+            let db_type = DBType::from_str(&args[2])?;
+            Ok((PathBuf::from(&args[1]), db_type))
+        }
         _ => {
-            eprintln!("Usage: ayb_query_daemon <database.sqlite>");
+            eprintln!("Usage: ayb_query_daemon <database_file> <db_type>");
             std::process::exit(1);
         }
     }
 }
 
-fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+fn run(db_file: PathBuf, engine: Box<dyn DbEngine>) -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
     for line in stdin.lock().lines() {
         let line = line?;
 
-        // Parse the query request
         let request: QueryRequest = match serde_json::from_str(&line) {
             Ok(req) => req,
             Err(e) => {
-                // Send error response and continue
                 let error_response = serde_json::json!({
                     "error": format!("Failed to parse request: {}", e)
                 });
@@ -69,7 +73,6 @@ fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        // Convert query_mode to enum
         let query_mode = match QueryMode::try_from(request.query_mode) {
             Ok(mode) => mode,
             Err(_) => {
@@ -82,10 +85,8 @@ fn run(db_file: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        // Execute the query
-        let result = query_sqlite(&db_file, &request.query, false, query_mode);
+        let result = engine.query(&db_file, &request.query, false, query_mode);
 
-        // Send response
         match result {
             Ok(result) => {
                 writeln!(stdout, "{}", serde_json::to_string(&result)?)?;

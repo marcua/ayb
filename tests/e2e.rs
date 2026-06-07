@@ -10,9 +10,10 @@ use crate::browser_e2e_tests::{
     test_token_management_flow,
 };
 use crate::e2e_tests::{
-    test_anonymous_access, test_create_and_query_db, test_entity_details_and_profile,
-    test_health_check, test_oauth_token_exchange_errors, test_permissions, test_registration,
-    test_snapshots, test_token_management,
+    test_anonymous_access, test_create_and_query_db, test_create_and_query_duckdb,
+    test_entity_details_and_profile, test_health_check, test_oauth_token_exchange_errors,
+    test_permissions, test_registration, test_snapshots, test_snapshots_duckdb,
+    test_token_management,
 };
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
@@ -97,6 +98,11 @@ async fn client_server_integration(
     test_anonymous_access(&config_path, &api_keys, server_url).await?;
     test_token_management(&config_path, &api_keys)?;
     test_oauth_token_exchange_errors(server_url).await?;
+    // Runs last: it creates a DuckDB database under e2e-first, which would
+    // otherwise appear in the many exact database-listing assertions above
+    // (and in the periodic snapshot job during test_snapshots).
+    test_create_and_query_duckdb(&config_path, &api_keys)?;
+    test_snapshots_duckdb(test_type, &config_path, &api_keys).await?;
 
     Ok(())
 }

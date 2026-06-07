@@ -1,6 +1,7 @@
+use crate::ayb_db::models::DBType;
 use crate::error::AybError;
 use std::env::current_exe;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::hosted_db::paths::pathbuf_to_parent;
 
@@ -103,9 +104,9 @@ fn print_warning_banner(details: &[&str]) {
 /// - Filesystem: only the database file (read-write) and shared
 ///   libraries (read-only) are accessible.
 /// - Network: all TCP bind/connect denied (on kernel 6.7+).
-/// - Memory: 64 MB virtual memory limit (RLIMIT_AS).
-/// - File size: 75 MB max file size (RLIMIT_FSIZE).
-/// - File descriptors: 10 max open files (RLIMIT_NOFILE).
+/// - Memory: 256 MB virtual memory limit (RLIMIT_AS).
+/// - File size: 256 MB max file size (RLIMIT_FSIZE).
+/// - File descriptors: 32 max open files (RLIMIT_NOFILE).
 ///
 /// On any other platform or older Linux kernel, the daemon runs
 /// without isolation. The server prints a unified warning at startup
@@ -161,7 +162,18 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     })?;
 
     // Allow read-only access to shared libraries and system paths.
-    let read_only_paths: Vec<&str> = vec!["/lib", "/lib64", "/usr"];
+    // /proc/self and /sys are needed because DuckDB reads them at database
+    // instantiation to detect CPU count and memory limits
+    // (/sys/devices/system/cpu/online, /sys/fs/cgroup/..., /proc/self/*).
+    // Without them, that probing fails under Landlock and DuckDB aborts
+    // with an InternalException before any query runs. We scope the /proc
+    // rule to /proc/self (the daemon's own entry) rather than all of /proc
+    // so the daemon can't read other processes' /proc -- in particular the
+    // server's /proc/<pid>/environ, which holds secrets. Read-only access
+    // here does not let SQL queries read these files: external file/network
+    // access is disabled at the DuckDB layer (enable_external_access=false),
+    // so this only permits the engine's own initialization.
+    let read_only_paths: Vec<&str> = vec!["/lib", "/lib64", "/usr", "/proc/self", "/sys"];
     let existing_read_only: Vec<&str> = read_only_paths
         .into_iter()
         .filter(|p| Path::new(p).exists())
@@ -176,7 +188,7 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     }
 
     // Allow read-write access to the database file's parent directory.
-    // SQLite needs access to the directory for journal/WAL files.
+    // Both SQLite and DuckDB need this for journal/WAL/temp files.
     let db_dir = db_path.parent().ok_or(AybError::Other {
         message: format!(
             "Cannot determine parent directory of database: {}",
@@ -204,12 +216,11 @@ fn apply_landlock_restrictions(db_path: &Path) -> Result<(), AybError> {
     Ok(())
 }
 
-/// Apply resource limits via setrlimit.
 #[cfg(target_os = "linux")]
 fn apply_resource_limits() -> Result<(), AybError> {
-    set_rlimit(libc::RLIMIT_AS, 64 * 1024 * 1024)?; // 64 MB memory
-    set_rlimit(libc::RLIMIT_FSIZE, 75 * 1024 * 1024)?; // 75 MB file size
-    set_rlimit(libc::RLIMIT_NOFILE, 10)?; // 10 file descriptors
+    set_rlimit(libc::RLIMIT_AS, 256 * 1024 * 1024)?;
+    set_rlimit(libc::RLIMIT_FSIZE, 256 * 1024 * 1024)?;
+    set_rlimit(libc::RLIMIT_NOFILE, 32)?;
     Ok(())
 }
 
@@ -233,12 +244,15 @@ fn set_rlimit(resource: libc::__rlimit_resource_t, limit: u64) -> Result<(), Ayb
 }
 
 /// Build command for running the query daemon.
-pub fn build_daemon_command(db_path: &PathBuf) -> Result<tokio::process::Command, AybError> {
+pub fn build_daemon_command(
+    db_path: &Path,
+    db_type: &DBType,
+) -> Result<tokio::process::Command, AybError> {
     let ayb_path = current_exe()?;
     let query_daemon_path = pathbuf_to_parent(&ayb_path)?.join("ayb_query_daemon");
 
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
-    cmd.arg(db_path);
+    cmd.arg(db_path).arg(db_type.to_str());
 
     Ok(cmd)
 }

@@ -113,6 +113,14 @@ impl From<quoted_printable::QuotedPrintableError> for AybError {
     }
 }
 
+impl From<duckdb::Error> for AybError {
+    fn from(cause: duckdb::Error) -> Self {
+        AybError::Other {
+            message: format!("{cause:?}"),
+        }
+    }
+}
+
 impl From<rusqlite::Error> for AybError {
     fn from(cause: rusqlite::Error) -> Self {
         AybError::Other {

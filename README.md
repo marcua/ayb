@@ -273,7 +273,6 @@ configuration block like the following in your `ayb.toml`:
 
 ```toml
 [snapshots]
-sqlite_method = "Vacuum"
 access_key_id = "YOUR_S3_ACCESS_KEY_ID"
 secret_access_key = "YOUR_S3_ACCESS_KEY_SECRET"
 bucket = "bucket-to-upload-snapshots"
@@ -288,7 +287,6 @@ max_snapshots = 3
 ```
 
 Here is an explanation of the parameters:
-* `sqlite_method`: The two SQLite backup methods are [Vacuum](https://www.sqlite.org/lang_vacuum.html#vacuuminto) and [Backup](https://www.sqlite.org/backup.html). `ayb` only supports `Vacuum` for now.
 * `access_key_id` / `secret_access_key`: The access key ID and secret to upload/list snapshots to your S3-compatible storage provider.
 * `bucket`: The name of the bucket to which to upload snapshots.
 * `bucket_prefix`: (Can be blank) if you want to upload snapshots to a prefixed path inside `bucket` (e.g., `my-bucket/the-snapshots`), provide a prefix (e.g., `the-snapshots`).
