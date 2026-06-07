@@ -76,28 +76,24 @@ fn query_duckdb(
     let conn = duckdb::Connection::open_with_flags(path, config)?;
 
     if !allow_unsafe {
-        // Keep DuckDB inside the daemon's sandbox budget:
-        // - threads=1: DuckDB spawns one worker per core by default; each
-        //   thread + its glibc arena eat virtual address space (RLIMIT_AS).
-        // - memory_limit: cap DuckDB's buffer pool well under RLIMIT_AS so
-        //   it returns a clean SQL error instead of mmap-aborting the
-        //   process when a query needs more memory than the sandbox allows.
-        // - temp_directory: DuckDB spills sorts/joins to disk when over
-        //   memory_limit. Point at the db's parent dir (Landlock-allowed);
-        //   the default /tmp is blocked by the sandbox.
-        let parent = path.parent().ok_or(AybError::Other {
-            message: format!("Cannot determine parent directory of {}", path.display()),
-        })?;
-        conn.execute_batch(&format!(
+        // Keep DuckDB inside the daemon's sandbox budget. DuckDB spawns
+        // one worker per core by default; each thread + its glibc arena
+        // eat virtual address space (RLIMIT_AS), so we cap at one. The
+        // MALLOC_ARENA_MAX=2 env var (set by the daemon registry) also
+        // contributes to keeping virtual address space bounded. Setting
+        // memory_limit or temp_directory here would be ideal for graceful
+        // OOM handling, but they trigger an InternalException
+        // ("dereference unique_ptr that is NULL") under Landlock on a
+        // not-yet-materialized DuckDB file. Disabling extensions, external
+        // access, and locking the configuration are the same safety
+        // perimeter we'd want regardless.
+        conn.execute_batch(
             "SET threads=1;
-             SET memory_limit='128MB';
-             SET temp_directory='{}';
              SET autoinstall_known_extensions=false;
              SET autoload_known_extensions=false;
              SET enable_external_access=false;
              SET lock_configuration=true;",
-            parent.display()
-        ))?;
+        )?;
     }
 
     let mut prepared = conn.prepare(query).map_err(map_duckdb_error)?;
