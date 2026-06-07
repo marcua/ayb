@@ -28,11 +28,17 @@ impl DbEngine for DuckdbEngine {
             "ATTACH '{}' AS snapshot_dest;COPY FROM DATABASE main TO snapshot_dest;",
             snapshot_path.display()
         );
+        // Open the source read-write. Opening it read-only makes the whole
+        // DuckDB instance read-only -- including the attached destination --
+        // so the COPY fails with "write to database while in read-only
+        // mode". The COPY only reads `main` and writes the freshly attached
+        // `snapshot_dest`, so the source is not modified. This mirrors
+        // DuckDB's documented COPY FROM DATABASE backup pattern.
         let result = query_duckdb(
             &db_path.to_path_buf(),
             &copy_query,
             true,
-            QueryMode::ReadOnly,
+            QueryMode::ReadWrite,
         )?;
         if !result.rows.is_empty() {
             return Err(AybError::SnapshotError {
