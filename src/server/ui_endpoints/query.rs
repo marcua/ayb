@@ -26,7 +26,10 @@ pub async fn query(
     let client = init_ayb_client(&ayb_config, &req);
 
     // Execute the query using the API client
-    let query_result = match client.query(entity_slug, database_slug, query_text).await {
+    let query_result = match client
+        .query(entity_slug, database_slug, query_text, &[])
+        .await
+    {
         Ok(result) => result,
         Err(err) => {
             let error_message = format!("{err}");

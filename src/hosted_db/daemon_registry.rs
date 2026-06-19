@@ -16,6 +16,8 @@ use tokio::sync::Mutex;
 struct QueryRequest {
     query: String,
     query_mode: i16,
+    #[serde(default)]
+    params: Vec<serde_json::Value>,
 }
 
 /// Handle to a running daemon process for a specific database
@@ -30,6 +32,7 @@ impl DaemonHandle {
     pub async fn execute_query(
         &mut self,
         query: &str,
+        params: &[serde_json::Value],
         query_mode: QueryMode,
     ) -> Result<String, AybError> {
         let stdin = self.stdin.as_mut().ok_or(AybError::Other {
@@ -40,6 +43,7 @@ impl DaemonHandle {
         let request = QueryRequest {
             query: query.to_string(),
             query_mode: query_mode as i16,
+            params: params.to_vec(),
         };
         let request_json = serde_json::to_string(&request)?;
 
@@ -118,12 +122,13 @@ impl DaemonRegistry {
         &self,
         db_path: &Path,
         query: &str,
+        params: &[serde_json::Value],
         db_type: &DBType,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
         let daemon_arc = self.get_or_create_daemon(db_path, db_type).await?;
         let mut daemon = daemon_arc.lock().await;
-        let response = daemon.execute_query(query, query_mode).await?;
+        let response = daemon.execute_query(query, params, query_mode).await?;
         parse_response(&response)
     }
 

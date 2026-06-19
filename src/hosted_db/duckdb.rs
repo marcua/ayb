@@ -12,10 +12,11 @@ impl DbEngine for DuckdbEngine {
         &self,
         path: &Path,
         query: &str,
+        params: &[serde_json::Value],
         allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_duckdb(&path.to_path_buf(), query, allow_unsafe, query_mode)
+        query_duckdb(&path.to_path_buf(), query, params, allow_unsafe, query_mode)
     }
 
     fn create_snapshot(
@@ -50,6 +51,7 @@ impl DbEngine for DuckdbEngine {
         let result = query_duckdb(
             &snapshot_path.to_path_buf(),
             "SELECT count(*) FROM information_schema.tables;",
+            &[],
             false,
             QueryMode::ReadOnly,
         )?;
@@ -69,6 +71,7 @@ impl DbEngine for DuckdbEngine {
 fn query_duckdb(
     path: &PathBuf,
     query: &str,
+    params: &[serde_json::Value],
     allow_unsafe: bool,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
@@ -110,7 +113,13 @@ fn query_duckdb(
 
     let mut prepared = conn.prepare(query).map_err(map_duckdb_error)?;
 
-    let mut rows = prepared.query([]).map_err(map_duckdb_error)?;
+    let bound = params
+        .iter()
+        .map(json_to_duckdb_value)
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut rows = prepared
+        .query(duckdb::params_from_iter(bound))
+        .map_err(map_duckdb_error)?;
 
     let num_columns = rows.as_ref().unwrap().column_count();
     let mut fields: Vec<String> = Vec::new();
@@ -133,6 +142,34 @@ fn query_duckdb(
     Ok(QueryResult {
         fields,
         rows: results,
+    })
+}
+
+/// Convert a JSON-native bind parameter into a DuckDB value. Integers
+/// bind as `BigInt`, non-integer numbers as `Double`, and booleans use
+/// DuckDB's native `BOOLEAN` (unlike SQLite, which has no boolean). JSON
+/// arrays and objects have no scalar DuckDB equivalent and are rejected.
+fn json_to_duckdb_value(value: &serde_json::Value) -> Result<Value, AybError> {
+    Ok(match value {
+        serde_json::Value::Null => Value::Null,
+        serde_json::Value::Bool(b) => Value::Boolean(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::BigInt(i)
+            } else if let Some(f) = n.as_f64() {
+                Value::Double(f)
+            } else {
+                return Err(AybError::QueryError {
+                    message: format!("Unsupported numeric bind parameter: {n}"),
+                });
+            }
+        }
+        serde_json::Value::String(s) => Value::Text(s.clone()),
+        serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
+            return Err(AybError::QueryError {
+                message: "Array and object bind parameters are not supported".to_string(),
+            });
+        }
     })
 }
 
@@ -192,6 +229,7 @@ mod tests {
         let r = query_duckdb(
             &path,
             "CREATE TABLE t(id INTEGER, name VARCHAR);",
+            &[],
             false,
             QueryMode::ReadWrite,
         )
@@ -201,6 +239,7 @@ mod tests {
         let r = query_duckdb(
             &path,
             "INSERT INTO t VALUES (1, 'hello'), (2, 'world');",
+            &[],
             false,
             QueryMode::ReadWrite,
         )
@@ -211,6 +250,7 @@ mod tests {
         let r = query_duckdb(
             &path,
             "SELECT * FROM t ORDER BY id;",
+            &[],
             false,
             QueryMode::ReadOnly,
         )
@@ -237,6 +277,7 @@ mod tests {
         query_duckdb(
             &path,
             "CREATE TABLE t(id INTEGER);",
+            &[],
             false,
             QueryMode::ReadWrite,
         )
@@ -245,9 +286,58 @@ mod tests {
         let result = query_duckdb(
             &path,
             "INSERT INTO t VALUES (1);",
+            &[],
             false,
             QueryMode::ReadOnly,
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_duckdb_positional_params() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_params.duckdb");
+
+        query_duckdb(
+            &path,
+            "CREATE TABLE t(id INTEGER, name VARCHAR, score DOUBLE);",
+            &[],
+            false,
+            QueryMode::ReadWrite,
+        )
+        .unwrap();
+
+        query_duckdb(
+            &path,
+            "INSERT INTO t VALUES (1, 'alice', 9.5), (2, 'bob', 7.0);",
+            &[],
+            false,
+            QueryMode::ReadWrite,
+        )
+        .unwrap();
+
+        // Bind a string and a number positionally ($1, $2).
+        let r = query_duckdb(
+            &path,
+            "SELECT id FROM t WHERE name = $1 AND score >= $2 ORDER BY id;",
+            &[serde_json::json!("alice"), serde_json::json!(9.0)],
+            false,
+            QueryMode::ReadOnly,
+        )
+        .unwrap();
+        assert_eq!(r.rows, vec![vec![Some("1".to_string())]]);
+
+        // A NULL bind parameter compares as expected.
+        let r = query_duckdb(
+            &path,
+            "SELECT count(*) FROM t WHERE $1 IS NULL;",
+            &[serde_json::Value::Null],
+            false,
+            QueryMode::ReadOnly,
+        )
+        .unwrap();
+        assert_eq!(r.rows, vec![vec![Some("2".to_string())]]);
+
+        fs::remove_dir_all(dir.path()).ok();
     }
 }

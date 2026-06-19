@@ -50,6 +50,23 @@ impl QueryMode {
     }
 }
 
+/// Positional bind parameters for a query.
+///
+/// Values are carried as JSON-native scalars (null, bool, number,
+/// string) and bound positionally to the engine's placeholders (`?` /
+/// `?NNN` for SQLite, `?` / `$N` for DuckDB). This lenient mapping is
+/// portable across both engines and mirrors the stringy `QueryResult`
+/// output contract, where every column is already flattened to
+/// `Option<String>`.
+///
+/// Out of scope for now (documented extension points, not blockers):
+/// - **Blobs**: JSON can't represent binary; a future tagged form
+///   (e.g. `{"$blob": "<base64>"}`) could carry them.
+/// - **Named parameters**: SQLite (`:name`/`@name`/`$name`) and DuckDB
+///   (`$name`) disagree on placeholder syntax, so positional binding is
+///   the portable core. A named variant would be engine-specific.
+pub type QueryParams = Vec<serde_json::Value>;
+
 #[derive(Serialize, Debug, Deserialize)]
 pub struct QueryResult {
     pub fields: Vec<String>,
@@ -92,10 +109,11 @@ pub async fn run_query(
     daemon_registry: &daemon_registry::DaemonRegistry,
     path: &Path,
     query: &str,
+    params: &QueryParams,
     db_type: &DBType,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
     daemon_registry
-        .execute_query(path, query, db_type, query_mode)
+        .execute_query(path, query, params, db_type, query_mode)
         .await
 }

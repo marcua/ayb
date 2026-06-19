@@ -15,10 +15,11 @@ impl DbEngine for SqliteEngine {
         &self,
         path: &Path,
         query: &str,
+        params: &[serde_json::Value],
         allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_sqlite(&path.to_path_buf(), query, allow_unsafe, query_mode)
+        query_sqlite(&path.to_path_buf(), query, params, allow_unsafe, query_mode)
     }
 
     fn create_snapshot(
@@ -31,6 +32,7 @@ impl DbEngine for SqliteEngine {
         let result = query_sqlite(
             &db_path.to_path_buf(),
             &backup_query,
+            &[],
             true,
             QueryMode::ReadOnly,
         )?;
@@ -42,6 +44,7 @@ impl DbEngine for SqliteEngine {
         let result = query_sqlite(
             &snapshot_path.to_path_buf(),
             "PRAGMA integrity_check;",
+            &[],
             false,
             QueryMode::ReadOnly,
         )?;
@@ -67,6 +70,7 @@ impl DbEngine for SqliteEngine {
 fn query_sqlite(
     path: &PathBuf,
     query: &str,
+    params: &[serde_json::Value],
     allow_unsafe: bool,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
@@ -114,7 +118,11 @@ fn query_sqlite(
         fields.push(String::from(prepared.column_name(column_index)?))
     }
 
-    let mut rows = prepared.query([])?;
+    let bound = params
+        .iter()
+        .map(json_to_sqlite_value)
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut rows = prepared.query(rusqlite::params_from_iter(bound))?;
     let mut results: Vec<Vec<Option<String>>> = Vec::new();
     while let Some(row) = rows.next().map_err(|err| match err {
         rusqlite::Error::SqliteFailure(ref code, _)
@@ -145,4 +153,104 @@ fn query_sqlite(
         fields,
         rows: results,
     })
+}
+
+/// Convert a JSON-native bind parameter into a SQLite value. SQLite has
+/// no native boolean, so `true`/`false` bind as integer `1`/`0`. JSON
+/// arrays and objects have no scalar SQLite equivalent and are rejected.
+fn json_to_sqlite_value(value: &serde_json::Value) -> Result<rusqlite::types::Value, AybError> {
+    use rusqlite::types::Value;
+    Ok(match value {
+        serde_json::Value::Null => Value::Null,
+        serde_json::Value::Bool(b) => Value::Integer(*b as i64),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::Integer(i)
+            } else if let Some(f) = n.as_f64() {
+                Value::Real(f)
+            } else {
+                return Err(AybError::QueryError {
+                    message: format!("Unsupported numeric bind parameter: {n}"),
+                });
+            }
+        }
+        serde_json::Value::String(s) => Value::Text(s.clone()),
+        serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
+            return Err(AybError::QueryError {
+                message: "Array and object bind parameters are not supported".to_string(),
+            });
+        }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sqlite_positional_params() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test_params.sqlite");
+
+        query_sqlite(
+            &path,
+            "CREATE TABLE t(id INTEGER, name TEXT, score REAL);",
+            &[],
+            false,
+            QueryMode::ReadWrite,
+        )
+        .unwrap();
+
+        query_sqlite(
+            &path,
+            "INSERT INTO t VALUES (1, 'alice', 9.5), (2, 'bob', 7.0);",
+            &[],
+            false,
+            QueryMode::ReadWrite,
+        )
+        .unwrap();
+
+        // Bind a string and a number positionally (?1, ?2).
+        let r = query_sqlite(
+            &path,
+            "SELECT id FROM t WHERE name = ?1 AND score >= ?2 ORDER BY id;",
+            &[serde_json::json!("alice"), serde_json::json!(9.0)],
+            false,
+            QueryMode::ReadOnly,
+        )
+        .unwrap();
+        assert_eq!(r.rows, vec![vec![Some("1".to_string())]]);
+
+        // A NULL bind parameter compares as expected.
+        let r = query_sqlite(
+            &path,
+            "SELECT count(*) FROM t WHERE ?1 IS NULL;",
+            &[serde_json::Value::Null],
+            false,
+            QueryMode::ReadOnly,
+        )
+        .unwrap();
+        assert_eq!(r.rows, vec![vec![Some("2".to_string())]]);
+
+        // Booleans bind as SQLite integers (1/0).
+        let r = query_sqlite(
+            &path,
+            "SELECT ?1;",
+            &[serde_json::json!(true)],
+            false,
+            QueryMode::ReadOnly,
+        )
+        .unwrap();
+        assert_eq!(r.rows, vec![vec![Some("1".to_string())]]);
+
+        // Array/object parameters are rejected.
+        let err = query_sqlite(
+            &path,
+            "SELECT ?1;",
+            &[serde_json::json!([1, 2, 3])],
+            false,
+            QueryMode::ReadOnly,
+        );
+        assert!(err.is_err());
+    }
 }

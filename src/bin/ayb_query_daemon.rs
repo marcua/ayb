@@ -12,6 +12,8 @@ use std::str::FromStr;
 struct QueryRequest {
     query: String,
     query_mode: i16,
+    #[serde(default)]
+    params: Vec<serde_json::Value>,
 }
 
 /// This binary runs as a persistent daemon that executes queries
@@ -21,7 +23,8 @@ struct QueryRequest {
 /// $ ayb_query_daemon <database_file> <db_type>
 ///
 /// The daemon reads line-delimited JSON requests from stdin:
-/// {"query":"SELECT * FROM x","query_mode":[0=read-only|1=read-write]}
+/// {"query":"SELECT * FROM x WHERE id = ?","query_mode":[0=read-only|1=read-write],"params":[42]}
+/// `params` is optional and binds positionally to the query's placeholders.
 ///
 /// And writes line-delimited JSON responses to stdout.
 ///
@@ -85,7 +88,7 @@ fn run(db_file: PathBuf, engine: Box<dyn DbEngine>) -> Result<(), Box<dyn std::e
             }
         };
 
-        let result = engine.query(&db_file, &request.query, false, query_mode);
+        let result = engine.query(&db_file, &request.query, &request.params, false, query_mode);
 
         match result {
             Ok(result) => {

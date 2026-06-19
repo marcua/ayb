@@ -8,6 +8,7 @@ pub trait DbEngine: Send + Sync {
         &self,
         path: &Path,
         query: &str,
+        params: &[serde_json::Value],
         allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError>;

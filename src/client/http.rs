@@ -3,7 +3,7 @@ use crate::error::AybError;
 use crate::hosted_db::QueryResult;
 use crate::http::structs::{
     APIToken, Database, DatabaseDetails, DatabasePermissions, EmptyResponse, EntityQueryResponse,
-    SnapshotList, TokenList,
+    QueryRequest, SnapshotList, TokenList,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
@@ -179,16 +179,30 @@ impl AybClient {
         entity: &str,
         database: &str,
         query: &str,
+        params: &[serde_json::Value],
     ) -> Result<QueryResult, AybError> {
         let mut headers = HeaderMap::new();
         self.add_bearer_token(&mut headers, false)?;
 
-        let response = reqwest::Client::new()
+        // With no parameters, send the bare SQL as a plain-text body (the
+        // historical wire format). With parameters, send a JSON body so
+        // the server binds them positionally.
+        let request = reqwest::Client::new()
             .post(self.make_url(format!("{entity}/{database}/query")))
-            .headers(headers)
-            .body(query.to_owned())
-            .send()
-            .await?;
+            .headers(headers);
+        let request = if params.is_empty() {
+            request.body(query.to_owned())
+        } else {
+            let payload = QueryRequest {
+                query: query.to_owned(),
+                params: params.to_vec(),
+            };
+            request
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .body(serde_json::to_string(&payload)?)
+        };
+
+        let response = request.send().await?;
 
         self.handle_response(response, reqwest::StatusCode::OK)
             .await

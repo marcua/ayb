@@ -53,6 +53,17 @@ pub struct EntityDatabasePath {
     pub database: String,
 }
 
+/// JSON body for the query endpoint when sent with
+/// `Content-Type: application/json`. `params` bind positionally to the
+/// query's placeholders. For backward compatibility, a `text/plain`
+/// body is still accepted and treated as bare SQL with no parameters.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct QueryRequest {
+    pub query: String,
+    #[serde(default)]
+    pub params: Vec<serde_json::Value>,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EntityPath {
     pub entity: String,
