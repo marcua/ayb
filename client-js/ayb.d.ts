@@ -22,6 +22,8 @@ export class AybClient {
     constructor(options?: {
         appId: string;
         storageKey?: string;
+        url?: string;
+        token?: string;
     });
     appId: string;
     storageKey: string;

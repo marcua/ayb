@@ -236,6 +236,18 @@ db.saveConfig('https://host/v1/entity/database', token);
 const rows = await db.queryObjects('SELECT * FROM todos');
 ```
 
+In environments without `localStorage` (Node.js, serverless functions,
+tests), pass `url` and `token` to the constructor to connect immediately:
+
+```js
+const db = new AybClient({
+  appId: 'my-app',
+  url: 'https://host/v1/entity/database',
+  token: 'ayb_xxx_yyy',
+});
+const rows = await db.queryObjects('SELECT * FROM todos');
+```
+
 ### Email Configuration
 
 `ayb` supports multiple email backends for sending registration and login emails. A standard SMTP configuration can be used in production settings, and a file-based log can also be configured to help with development and testing. At least one of the backends must be configured for `ayb` to start.

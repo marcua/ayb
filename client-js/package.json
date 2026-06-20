@@ -26,6 +26,7 @@
     "ayb.d.ts"
   ],
   "scripts": {
-    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && sed -i '/^[[:space:]]*\\/\\*\\*/,/\\*\\//d' ayb.d.ts"
+    "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && sed -i '/^[[:space:]]*\\/\\*\\*/,/\\*\\//d' ayb.d.ts",
+    "test": "node --test"
   }
 }
