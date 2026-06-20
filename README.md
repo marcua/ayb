@@ -200,10 +200,10 @@ npm install @aybdb/client
 
 ```js
 // ES module
-import { restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
+import { AybClient, restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
 
 // CommonJS
-const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
+const { AybClient, restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
 ```
 
 **OAuth flow (recommended):**
