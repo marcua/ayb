@@ -67,6 +67,7 @@ export class AybOAuth extends AybClient {
         callbackPath?: string;
     }): Promise<void>;
     handleCallback(): Promise<boolean>;
+    _generateCodeVerifier(): string;
     _generateState(): string;
     _sha256(str: string): Promise<string>;
     _base64UrlEncode(array: Uint8Array): string;
