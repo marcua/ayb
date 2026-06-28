@@ -99,13 +99,13 @@ Rows: 0
 # If you don't pass a query to the query command, ayb launches an interactive query session
 $ ayb client query marcua/test.sqlite
 Launching an interactive session for marcua/test.sqlite
-marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("PostgreSQL", 10);
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ('PostgreSQL', 10);
 
 Rows: 0
-marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("SQLite", 9);
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ('SQLite', 9);
 
 Rows: 0
-marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("DuckDB", 9);
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ('DuckDB', 9);
 
 Rows: 0
 marcua/test.sqlite> SELECT * FROM favorite_databases;
@@ -164,15 +164,15 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES ('PostgreSQL', 10);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES ('SQLite', 9);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"DuckDB\", 9);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES ('DuckDB', 9);"
 
 {"fields":[],"rows":[]}
 
@@ -305,11 +305,11 @@ Successfully created marcua/snapshots.sqlite
 $ ayb client query marcua/snapshots.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 Rows: 0
 
-$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES ('PostgreSQL', 10);"
 Rows: 0
 
 # Wait longer than 3 seconds before inserting the next row, so that a snapshot with just PostgreSQL exists.
-$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
+$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES ('SQLite', 9);"
 Rows: 0
 
 $ ayb client query marcua/snapshots.sqlite "SELECT * FROM favorite_databases;"
