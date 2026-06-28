@@ -594,6 +594,7 @@ The JavaScript client is published to npm from the `client-js/` directory. To pu
 
 ```bash
 cd client-js
+npm ci  # install pinned devDependencies (typescript) for generate-types
 npm version patch  # or minor/major
 npm run generate-types  # regenerate ayb.d.ts if the public API changed
 npm publish --access public
