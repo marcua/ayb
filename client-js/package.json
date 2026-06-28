@@ -27,5 +27,8 @@
   ],
   "scripts": {
     "generate-types": "tsc --allowJs --declaration --emitDeclarationOnly --outDir . ayb.js && sed -i '/^[[:space:]]*\\/\\*\\*/,/\\*\\//d' ayb.d.ts"
+  },
+  "devDependencies": {
+    "typescript": "6.0.2"
   }
 }

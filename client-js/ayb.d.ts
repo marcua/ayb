@@ -1,16 +1,16 @@
 export type ServerSelectionModalOptions = {
     appName: string;
     queryPermissionLevel: "read-only" | "read-write";
-    serverUrls?: string[];
-    appId?: string;
-    storageKey?: string;
+    serverUrls?: string[] | undefined;
+    appId?: string | undefined;
+    storageKey?: string | undefined;
 };
 export type AybOAuthOptions = {
     appName: string;
     queryPermissionLevel: "read-only" | "read-write";
     serverUrl: string;
-    appId?: string;
-    storageKey?: string;
+    appId?: string | undefined;
+    storageKey?: string | undefined;
 };
 export class AybClient {
     static escapeSQL(str: any): string;
@@ -21,13 +21,18 @@ export class AybClient {
     };
     constructor(options?: {
         appId: string;
-        storageKey?: string;
-        url?: string;
-        token?: string;
+        storageKey?: string | undefined;
+        url?: string | undefined;
+        token?: string | undefined;
     });
     appId: string;
     storageKey: string;
-    _config: any;
+    _config: {
+        token: string;
+        baseUrl: string;
+        entity: string;
+        database: string;
+    } | null;
     loadConfig(): boolean;
     saveConfig(url: string, token: string): void;
     disconnect(): void;
