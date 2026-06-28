@@ -229,6 +229,8 @@ if (ayb && ayb.isConnected()) {
 
 **Manual token auth:**
 
+If you want to pass in an ayb URL and token and have them stored in 
+`localStorage` for future sessions, use `saveConfig`:
 ```js
 const db = new AybClient({ appId: 'my-app' });
 const token = 'ayb_xxx_yyy';
