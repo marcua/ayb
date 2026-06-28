@@ -117,7 +117,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"another first\", \"another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('another first', 'another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -134,7 +134,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"yet another first\", \"yet another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('yet another first', 'yet another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -226,7 +226,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"a new first name\", \"a new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('a new first name', 'a new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -244,7 +244,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('and another new first name', 'and another new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -280,7 +280,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 1 \n\nRows: 1",
@@ -300,7 +300,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 0 \n\nRows: 1",

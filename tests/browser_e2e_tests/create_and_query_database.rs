@@ -69,8 +69,7 @@ pub async fn test_create_and_query_database_flow(
     BrowserHelpers::screenshot_compare(&page, "table_created", &[]).await?;
 
     // Step 7: Insert data
-    let insert_query1 =
-        "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");";
+    let insert_query1 = "INSERT INTO test_table (fname, lname) VALUES ('the first', 'the last');";
 
     // Clear previous query and enter insert query
     page.fill_builder("textarea[name='query']", "")
@@ -89,8 +88,7 @@ pub async fn test_create_and_query_database_flow(
         .await?;
 
     // Insert second row
-    let insert_query2 =
-        "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");";
+    let insert_query2 = "INSERT INTO test_table (fname, lname) VALUES ('the first2', 'the last2');";
 
     page.fill_builder("textarea[name='query']", "")
         .timeout(1000.0)

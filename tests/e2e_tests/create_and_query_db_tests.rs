@@ -90,7 +90,7 @@ pub fn test_create_and_query_db(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('the first', 'the last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -98,7 +98,7 @@ pub fn test_create_and_query_db(
     query(
         config_path,
         &api_keys.get("first").unwrap()[2],
-        "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('the first2', 'the last2');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
