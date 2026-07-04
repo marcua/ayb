@@ -200,10 +200,10 @@ npm install @aybdb/client
 
 ```js
 // ES module
-import { restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
+import { AybClient, restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
 
 // CommonJS
-const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
+const { AybClient, restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
 ```
 
 **OAuth flow (recommended):**
@@ -229,10 +229,24 @@ if (ayb && ayb.isConnected()) {
 
 **Manual token auth:**
 
+If you want to pass in an ayb URL and token and have them stored in 
+`localStorage` for future sessions, use `saveConfig`:
 ```js
 const db = new AybClient({ appId: 'my-app' });
 const token = 'ayb_xxx_yyy';
 db.saveConfig('https://host/v1/entity/database', token);
+const rows = await db.queryObjects('SELECT * FROM todos');
+```
+
+In environments without `localStorage` (Node.js, serverless functions,
+tests), pass `url` and `token` to the constructor to connect immediately:
+
+```js
+const db = new AybClient({
+  appId: 'my-app',
+  url: 'https://host/v1/entity/database',
+  token: 'ayb_xxx_yyy',
+});
 const rows = await db.queryObjects('SELECT * FROM todos');
 ```
 
@@ -580,6 +594,7 @@ The JavaScript client is published to npm from the `client-js/` directory. To pu
 
 ```bash
 cd client-js
+npm ci  # install pinned devDependencies (typescript) for generate-types
 npm version patch  # or minor/major
 npm run generate-types  # regenerate ayb.d.ts if the public API changed
 npm publish --access public
