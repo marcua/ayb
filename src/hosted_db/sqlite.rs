@@ -28,12 +28,7 @@ impl DbEngine for SqliteEngine {
         snapshot_path: &Path,
     ) -> Result<(), AybError> {
         let backup_query = format!("VACUUM INTO \"{}\"", snapshot_path.display());
-        let result = query_sqlite(
-            db_path,
-            &backup_query,
-            true,
-            QueryMode::ReadOnly,
-        )?;
+        let result = query_sqlite(db_path, &backup_query, true, QueryMode::ReadOnly)?;
         if !result.rows.is_empty() {
             return Err(AybError::SnapshotError {
                 message: format!("Unexpected snapshot result: {result:?}"),
