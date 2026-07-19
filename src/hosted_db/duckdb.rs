@@ -2,7 +2,7 @@ use crate::error::AybError;
 use crate::hosted_db::engine::DbEngine;
 use crate::hosted_db::{QueryMode, QueryResult};
 use crate::server::config::AybConfigSnapshots;
-use duckdb::types::Value;
+use duckdb::types::{TimeUnit, Value};
 use std::path::{Path, PathBuf};
 
 pub struct DuckdbEngine;
@@ -155,6 +155,16 @@ fn map_duckdb_error(err: duckdb::Error) -> AybError {
     }
 }
 
+/// Convert a DuckDB time-unit-tagged integer into microseconds.
+fn duckdb_micros(unit: TimeUnit, value: i64) -> i64 {
+    match unit {
+        TimeUnit::Second => value.saturating_mul(1_000_000),
+        TimeUnit::Millisecond => value.saturating_mul(1_000),
+        TimeUnit::Microsecond => value,
+        TimeUnit::Nanosecond => value / 1_000,
+    }
+}
+
 fn duckdb_value_to_string(value: Value) -> Option<String> {
     match value {
         Value::Null => None,
@@ -172,9 +182,33 @@ fn duckdb_value_to_string(value: Value) -> Option<String> {
         Value::Double(f) => Some(f.to_string()),
         Value::Text(s) => Some(s),
         Value::Blob(b) => Some(String::from_utf8_lossy(&b).to_string()),
-        Value::Timestamp(_, _) => Some(format!("{value:?}")),
-        Value::Date32(d) => Some(d.to_string()),
-        Value::Time64(_, t) => Some(t.to_string()),
+        // Temporal types are tagged integers (days/microseconds since the
+        // Unix epoch or midnight). Render them as readable date/time strings
+        // rather than the raw integers or Debug form. Fall back to the raw
+        // value only if the timestamp is out of chrono's representable range.
+        Value::Date32(days) => chrono::DateTime::from_timestamp((days as i64) * 86_400, 0)
+            .map(|dt| dt.date_naive().to_string())
+            .or_else(|| Some(days.to_string())),
+        Value::Timestamp(unit, v) => {
+            let micros = duckdb_micros(unit, v);
+            chrono::DateTime::from_timestamp(
+                micros.div_euclid(1_000_000),
+                (micros.rem_euclid(1_000_000) as u32) * 1_000,
+            )
+            .map(|dt| dt.naive_utc().to_string())
+            .or_else(|| Some(v.to_string()))
+        }
+        Value::Time64(unit, v) => {
+            let micros = duckdb_micros(unit, v);
+            chrono::NaiveTime::from_num_seconds_from_midnight_opt(
+                micros.div_euclid(1_000_000) as u32,
+                (micros.rem_euclid(1_000_000) as u32) * 1_000,
+            )
+            .map(|t| t.to_string())
+            .or_else(|| Some(v.to_string()))
+        }
+        // Remaining types (lists, structs, maps, decimals, intervals, ...)
+        // have no lossless scalar form; stringify with their Debug rendering.
         _ => Some(format!("{value:?}")),
     }
 }
