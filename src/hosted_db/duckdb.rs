@@ -3,7 +3,7 @@ use crate::hosted_db::engine::DbEngine;
 use crate::hosted_db::{QueryMode, QueryResult};
 use crate::server::config::AybConfigSnapshots;
 use duckdb::types::{TimeUnit, Value};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct DuckdbEngine;
 
@@ -15,7 +15,7 @@ impl DbEngine for DuckdbEngine {
         allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_duckdb(&path.to_path_buf(), query, allow_unsafe, query_mode)
+        query_duckdb(path, query, allow_unsafe, query_mode)
     }
 
     fn create_snapshot(
@@ -33,12 +33,7 @@ impl DbEngine for DuckdbEngine {
         // attached destination) read-only, breaking the COPY. With an
         // in-memory read-write main, the source is attached READ_ONLY (so
         // it is never modified) and the destination read-write.
-        let config = duckdb::Config::default()
-            .threads(1)
-            .map_err(config_err)?
-            .max_memory("128MB")
-            .map_err(config_err)?;
-        let conn = duckdb::Connection::open_in_memory_with_flags(config)?;
+        let conn = duckdb::Connection::open_in_memory_with_flags(base_config()?)?;
         conn.execute_batch(&format!(
             "ATTACH '{}' AS src (READ_ONLY); ATTACH '{}' AS dst; \
              COPY FROM DATABASE src TO dst;",
@@ -47,17 +42,16 @@ impl DbEngine for DuckdbEngine {
         ))
         .map_err(map_duckdb_error)?;
         drop(conn);
-        let result = query_duckdb(
-            &snapshot_path.to_path_buf(),
+        // Verify the snapshot is a readable DuckDB database: a successful
+        // query here (propagated via `?`) means the file opened and is
+        // queryable. `information_schema.tables` always returns exactly one
+        // row (the count), so there is nothing further to assert on it.
+        query_duckdb(
+            snapshot_path,
             "SELECT count(*) FROM information_schema.tables;",
             false,
             QueryMode::ReadOnly,
         )?;
-        if result.rows.is_empty() {
-            return Err(AybError::SnapshotError {
-                message: "Snapshot verification failed: could not read snapshot".to_string(),
-            });
-        }
         Ok(())
     }
 
@@ -67,7 +61,7 @@ impl DbEngine for DuckdbEngine {
 }
 
 fn query_duckdb(
-    path: &PathBuf,
+    path: &Path,
     query: &str,
     allow_unsafe: bool,
     query_mode: QueryMode,
@@ -82,15 +76,11 @@ fn query_duckdb(
     // paths themselves are allowed read-only in the Landlock ruleset; see
     // src/hosted_db/sandbox.rs -- without that the probe aborts the
     // process before any query runs.)
-    let config = duckdb::Config::default()
+    let config = base_config()?
         .access_mode(match query_mode {
             QueryMode::ReadOnly => duckdb::AccessMode::ReadOnly,
             QueryMode::ReadWrite => duckdb::AccessMode::ReadWrite,
         })
-        .map_err(config_err)?
-        .threads(1)
-        .map_err(config_err)?
-        .max_memory("128MB")
         .map_err(config_err)?;
 
     let conn = duckdb::Connection::open_with_flags(path, config)?;
@@ -112,11 +102,20 @@ fn query_duckdb(
 
     let mut rows = prepared.query([]).map_err(map_duckdb_error)?;
 
-    let num_columns = rows.as_ref().unwrap().column_count();
-    let mut fields: Vec<String> = Vec::new();
-    for i in 0..num_columns {
-        fields.push(rows.as_ref().unwrap().column_name(i)?.to_string());
-    }
+    // Read column metadata inside a scoped borrow so the mutable
+    // rows.next() below is free to borrow `rows` again. Return an error
+    // rather than unwrap()ing if there is no result statement.
+    let (num_columns, fields) = {
+        let statement = rows.as_ref().ok_or_else(|| AybError::Other {
+            message: "DuckDB query produced no result statement".to_string(),
+        })?;
+        let num_columns = statement.column_count();
+        let mut fields: Vec<String> = Vec::with_capacity(num_columns);
+        for i in 0..num_columns {
+            fields.push(statement.column_name(i)?.to_string());
+        }
+        (num_columns, fields)
+    };
 
     let mut results: Vec<Vec<Option<String>>> = Vec::new();
     while let Some(row) = rows.next().map_err(map_duckdb_error)? {
@@ -134,6 +133,17 @@ fn query_duckdb(
         fields,
         rows: results,
     })
+}
+
+/// Base DuckDB config shared by the query and snapshot connections: a
+/// single worker thread and a 128 MB buffer pool, keeping the process
+/// within the daemon's RLIMIT_AS regardless of host CPU/RAM size.
+fn base_config() -> Result<duckdb::Config, AybError> {
+    duckdb::Config::default()
+        .threads(1)
+        .map_err(config_err)?
+        .max_memory("128MB")
+        .map_err(config_err)
 }
 
 fn config_err(e: duckdb::Error) -> AybError {

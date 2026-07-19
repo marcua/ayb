@@ -6,7 +6,7 @@ use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct SqliteEngine;
 
@@ -18,7 +18,7 @@ impl DbEngine for SqliteEngine {
         allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_sqlite(&path.to_path_buf(), query, allow_unsafe, query_mode)
+        query_sqlite(path, query, allow_unsafe, query_mode)
     }
 
     fn create_snapshot(
@@ -29,7 +29,7 @@ impl DbEngine for SqliteEngine {
     ) -> Result<(), AybError> {
         let backup_query = format!("VACUUM INTO \"{}\"", snapshot_path.display());
         let result = query_sqlite(
-            &db_path.to_path_buf(),
+            db_path,
             &backup_query,
             true,
             QueryMode::ReadOnly,
@@ -40,7 +40,7 @@ impl DbEngine for SqliteEngine {
             });
         }
         let result = query_sqlite(
-            &snapshot_path.to_path_buf(),
+            snapshot_path,
             "PRAGMA integrity_check;",
             false,
             QueryMode::ReadOnly,
@@ -65,7 +65,7 @@ impl DbEngine for SqliteEngine {
 /// prevent backups/snapshots. The only known use case in the codebase
 /// is for snapshots.
 fn query_sqlite(
-    path: &PathBuf,
+    path: &Path,
     query: &str,
     allow_unsafe: bool,
     query_mode: QueryMode,
