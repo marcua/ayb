@@ -138,6 +138,14 @@ pub async fn snapshot_database(
         Ok(db) => {
             let db_type = DBType::try_from(db.db_type)?;
             let db_path = current_database_path(entity_slug, database_slug, &config.data_path)?;
+            // A database file is only materialized on the first write query
+            // (the engine creates it, not `create_database`). Skip snapshots
+            // for a database that has been created but never written -- there
+            // is nothing to back up yet, and trying would error every
+            // interval (the engine can't open a file that doesn't exist).
+            if !db_path.exists() {
+                return Ok(());
+            }
             let mut snapshot_path =
                 database_snapshot_path(entity_slug, database_slug, &config.data_path)?;
             let snapshot_directory = snapshot_path.clone();
