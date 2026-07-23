@@ -4,6 +4,8 @@ use crate::hosted_db::{QueryMode, QueryResult};
 use crate::server::config::AybConfigSnapshots;
 use duckdb::types::{TimeUnit, Value};
 use std::path::Path;
+use std::thread;
+use std::time::{Duration, Instant};
 
 pub struct DuckdbEngine;
 
@@ -66,24 +68,7 @@ fn query_duckdb(
     allow_unsafe: bool,
     query_mode: QueryMode,
 ) -> Result<QueryResult, AybError> {
-    // Cap threads and memory on the Config *before* opening. DuckDB probes
-    // the host at instantiation (/sys/devices/system/cpu/online,
-    // /sys/fs/cgroup/..., /proc/self/*) to auto-size these to the whole
-    // machine -- on a CI runner or large host that means many worker
-    // threads and a multi-GB buffer pool, which blows the daemon's 256 MB
-    // RLIMIT_AS. Explicit values override the auto-detected ones so DuckDB
-    // stays within the sandbox budget regardless of host size. (The probe
-    // paths themselves are allowed read-only in the Landlock ruleset; see
-    // src/hosted_db/sandbox.rs -- without that the probe aborts the
-    // process before any query runs.)
-    let config = base_config()?
-        .access_mode(match query_mode {
-            QueryMode::ReadOnly => duckdb::AccessMode::ReadOnly,
-            QueryMode::ReadWrite => duckdb::AccessMode::ReadWrite,
-        })
-        .map_err(config_err)?;
-
-    let conn = duckdb::Connection::open_with_flags(path, config)?;
+    let conn = open_with_retry(path, query_mode)?;
 
     if !allow_unsafe {
         // Disable extension install/load and external (file/network)
@@ -133,6 +118,51 @@ fn query_duckdb(
         fields,
         rows: results,
     })
+}
+
+/// Open a DuckDB connection at `path`, retrying briefly on a file-lock
+/// conflict.
+///
+/// DuckDB takes a whole-file lock when it opens a database and fails
+/// *immediately* if another process holds a conflicting lock (a
+/// read-write open is exclusive; a read-only open is shared). In ayb the
+/// snapshot daemon periodically opens each database to back it up, so a
+/// query can collide with an in-progress snapshot (or another query) and
+/// get an `IO Error: Could not set lock on file ...` failure. Unlike
+/// SQLite -- where we set a `busy_timeout` so a contended open waits --
+/// DuckDB has no built-in wait, so we poll with a short backoff for a few
+/// seconds before giving up. This keeps transient contention from
+/// surfacing to callers as a query error.
+///
+/// The Config is rebuilt each attempt because `open_with_flags` consumes
+/// it. Threads/memory are capped via `base_config`: DuckDB probes the
+/// host (/sys/devices/system/cpu/online, /sys/fs/cgroup/..., /proc/self/*)
+/// at instantiation to auto-size them, which would blow the daemon's
+/// RLIMIT_AS on a large host, so `base_config` pins them to fixed values.
+fn open_with_retry(path: &Path, query_mode: QueryMode) -> Result<duckdb::Connection, AybError> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let config = base_config()?
+            .access_mode(match query_mode {
+                QueryMode::ReadOnly => duckdb::AccessMode::ReadOnly,
+                QueryMode::ReadWrite => duckdb::AccessMode::ReadWrite,
+            })
+            .map_err(config_err)?;
+
+        match duckdb::Connection::open_with_flags(path, config) {
+            Ok(conn) => return Ok(conn),
+            Err(err) => {
+                let message = err.to_string();
+                let lock_conflict =
+                    message.contains("Could not set lock") || message.contains("Conflicting lock");
+                if lock_conflict && Instant::now() < deadline {
+                    thread::sleep(Duration::from_millis(100));
+                    continue;
+                }
+                return Err(AybError::from(err));
+            }
+        }
+    }
 }
 
 /// Base DuckDB config shared by the query and snapshot connections: a
