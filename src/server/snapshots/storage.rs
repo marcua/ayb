@@ -50,7 +50,7 @@ impl SnapshotStorage {
         let mut path_prefix = config.path_prefix.clone();
         if force_path_style {
             bucket = bucket.with_path_style();
-            path_prefix = format!("{}/{}", &config.bucket, path_prefix);
+            path_prefix = format!("{}/{}", config.bucket, path_prefix);
         }
 
         Ok(SnapshotStorage {

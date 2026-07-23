@@ -1,6 +1,6 @@
 use crate::utils::browser::BrowserHelpers;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use playwright::api::Page;
+use playwright_rs::{ClickOptions, Page, WaitForOptions};
 use prefixed_api_key::rand::{self, Rng};
 use sha2::{Digest, Sha256};
 use std::error::Error;
@@ -67,11 +67,12 @@ async fn complete_oauth_flow(
         urlencoding::encode(&app_name)
     );
 
-    page.goto_builder(&authorize_url).goto().await?;
+    page.goto(&authorize_url, None).await?;
 
-    page.wait_for_selector_builder("#database-select")
-        .timeout(5000.0)
-        .wait_for_selector()
+    page.locator("#database-select")
+        .await
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(
@@ -96,7 +97,7 @@ async fn complete_oauth_flow(
         "#,
         db = database_path
     );
-    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, serde_json::Value::Null)
+    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, None)
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -108,14 +109,15 @@ async fn complete_oauth_flow(
     )
     .await?;
 
-    page.click_builder("#authorize-btn")
-        .timeout(5000.0)
-        .click()
+    page.locator("#authorize-btn")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let current_url = page.url()?;
+    let current_url = page.url();
     let url = url::Url::parse(&current_url)?;
 
     let code = url
@@ -361,11 +363,12 @@ pub async fn test_oauth_deny_flow(
         urlencoding::encode("Deny Test App")
     );
 
-    page.goto_builder(&authorize_url).goto().await?;
+    page.goto(&authorize_url, None).await?;
 
-    page.wait_for_selector_builder("#database-select")
-        .timeout(5000.0)
-        .wait_for_selector()
+    page.locator("#database-select")
+        .await
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
     let database_path = format!("{}/test.sqlite", username);
@@ -379,19 +382,20 @@ pub async fn test_oauth_deny_flow(
         "#,
         db = database_path
     );
-    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, serde_json::Value::Null)
+    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, None)
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "oauth_before_deny", &[]).await?;
 
-    page.click_builder("button[value='deny']")
-        .timeout(5000.0)
-        .click()
+    page.locator("button[value='deny']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let current_url = page.url()?;
+    let current_url = page.url();
 
     let url = url::Url::parse(&current_url)?;
     let error = url
