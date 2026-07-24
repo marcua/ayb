@@ -76,3 +76,12 @@ path = "src/bin/ayb_query_daemon.rs"
 # server. Comment this out if you need more debugging information.
 # See https://github.com/marcua/ayb/issues/342.
 debug = 1
+
+# The bundled DuckDB C++ amalgamation dominates dev-build disk usage
+# (~13 GB of debug objects) and its unoptimized build makes queries in
+# tests crawl. We never step through DuckDB internals, so skip its debug
+# info and optimize it even in dev builds. Rust code (including the
+# `duckdb` wrapper crate) keeps normal dev settings.
+[profile.dev.package.libduckdb-sys]
+debug = 0
+opt-level = 2
