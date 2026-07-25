@@ -117,6 +117,13 @@ pub async fn test_duckdb_flow(
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
+    // Let the first insert's request finish before submitting the next
+    // one. The query form posts via htmx with no hx-sync, so two submits
+    // fired back-to-back from the same form overlap and one of the
+    // inserts is lost. Every other step here is separated by a
+    // screenshot_compare (which settles briefly); these two are not.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
     // Insert second row
     let insert_query2 = "INSERT INTO test_table (fname, lname) VALUES ('the first2', 'the last2');";
 
