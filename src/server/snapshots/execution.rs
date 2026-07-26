@@ -154,7 +154,7 @@ pub async fn snapshot_database(
             fs::remove_file(&snapshot_path).ok();
 
             let engine = engine_for(&db_type);
-            engine.create_snapshot(snapshot_config, &db_path, &snapshot_path)?;
+            engine.create_snapshot(&db_path, &snapshot_path)?;
 
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
             let existing_snapshots = snapshot_storage

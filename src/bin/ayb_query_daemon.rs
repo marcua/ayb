@@ -54,7 +54,7 @@ fn parse_args(args: &[String]) -> Result<(PathBuf, DBType), Box<dyn std::error::
     }
 }
 
-fn run(db_file: PathBuf, engine: Box<dyn DbEngine>) -> Result<(), Box<dyn std::error::Error>> {
+fn run(db_file: PathBuf, engine: &dyn DbEngine) -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
@@ -85,7 +85,7 @@ fn run(db_file: PathBuf, engine: Box<dyn DbEngine>) -> Result<(), Box<dyn std::e
             }
         };
 
-        let result = engine.query(&db_file, &request.query, false, query_mode);
+        let result = engine.query(&db_file, &request.query, query_mode);
 
         match result {
             Ok(result) => {

@@ -81,10 +81,33 @@ impl TabularFormatter for QueryResult {
     }
 }
 
-pub fn engine_for(db_type: &DBType) -> Box<dyn DbEngine> {
+/// Render `path` as a single-quoted SQL string literal, doubling any
+/// embedded single quotes.
+///
+/// Database paths contain entity and database slugs, which are
+/// user-controlled, so they must never be interpolated into SQL raw.
+/// Slugs are also validated at the API boundary (see
+/// `server::slug_validation`); this is the second line of defense, at
+/// the point where the string actually becomes SQL. It matters most for
+/// snapshots, which build statements by interpolation and run them in
+/// the server process rather than in a sandboxed daemon.
+///
+/// Doubling a single quote is the standard SQL escape and is understood
+/// by both SQLite and DuckDB.
+pub(crate) fn sql_string_literal(path: &Path) -> String {
+    format!("'{}'", path.display().to_string().replace('\'', "''"))
+}
+
+/// Return the engine for `db_type`.
+///
+/// Both engines are zero-sized structs with no per-database state, so a
+/// single shared instance of each serves every caller; returning a
+/// `&'static dyn` keeps the dynamic dispatch while avoiding an
+/// allocation on every query and snapshot.
+pub fn engine_for(db_type: &DBType) -> &'static dyn DbEngine {
     match db_type {
-        DBType::Sqlite => Box::new(SqliteEngine),
-        DBType::Duckdb => Box::new(DuckdbEngine),
+        DBType::Sqlite => &SqliteEngine,
+        DBType::Duckdb => &DuckdbEngine,
     }
 }
 

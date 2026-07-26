@@ -1,7 +1,6 @@
 use crate::error::AybError;
 use crate::hosted_db::engine::DbEngine;
-use crate::hosted_db::{QueryMode, QueryResult};
-use crate::server::config::AybConfigSnapshots;
+use crate::hosted_db::{sql_string_literal, QueryMode, QueryResult};
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
@@ -15,19 +14,17 @@ impl DbEngine for SqliteEngine {
         &self,
         path: &Path,
         query: &str,
-        allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_sqlite(path, query, allow_unsafe, query_mode)
+        query_sqlite(path, query, false, query_mode)
     }
 
-    fn create_snapshot(
-        &self,
-        _config: &AybConfigSnapshots,
-        db_path: &Path,
-        snapshot_path: &Path,
-    ) -> Result<(), AybError> {
-        let backup_query = format!("VACUUM INTO \"{}\"", snapshot_path.display());
+    fn create_snapshot(&self, db_path: &Path, snapshot_path: &Path) -> Result<(), AybError> {
+        // The snapshot path embeds user-controlled entity and database
+        // slugs, so it is rendered as an escaped SQL string literal
+        // rather than interpolated raw. (Single quotes, not the double
+        // quotes SQLite would read as an identifier.)
+        let backup_query = format!("VACUUM INTO {}", sql_string_literal(snapshot_path));
         let result = query_sqlite(db_path, &backup_query, true, QueryMode::ReadOnly)?;
         if !result.rows.is_empty() {
             return Err(AybError::SnapshotError {
@@ -49,10 +46,6 @@ impl DbEngine for SqliteEngine {
             });
         }
         Ok(())
-    }
-
-    fn db_type_str(&self) -> &'static str {
-        "sqlite"
     }
 }
 

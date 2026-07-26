@@ -1,7 +1,6 @@
 use crate::error::AybError;
 use crate::hosted_db::engine::DbEngine;
-use crate::hosted_db::{QueryMode, QueryResult};
-use crate::server::config::AybConfigSnapshots;
+use crate::hosted_db::{sql_string_literal, QueryMode, QueryResult};
 use duckdb::types::{TimeUnit, Value};
 use std::path::Path;
 use std::thread;
@@ -14,18 +13,12 @@ impl DbEngine for DuckdbEngine {
         &self,
         path: &Path,
         query: &str,
-        allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_duckdb(path, query, allow_unsafe, query_mode)
+        query_duckdb(path, query, false, query_mode)
     }
 
-    fn create_snapshot(
-        &self,
-        _config: &AybConfigSnapshots,
-        db_path: &Path,
-        snapshot_path: &Path,
-    ) -> Result<(), AybError> {
+    fn create_snapshot(&self, db_path: &Path, snapshot_path: &Path) -> Result<(), AybError> {
         // Copy the database into a fresh snapshot file via an in-memory
         // connection that attaches both sides with explicit aliases.
         // Opening the source directly and running "COPY FROM DATABASE main"
@@ -35,15 +28,23 @@ impl DbEngine for DuckdbEngine {
         // attached destination) read-only, breaking the COPY. With an
         // in-memory read-write main, the source is attached READ_ONLY (so
         // it is never modified) and the destination read-write.
-        let conn = duckdb::Connection::open_in_memory_with_flags(base_config()?)?;
-        conn.execute_batch(&format!(
-            "ATTACH '{}' AS src (READ_ONLY); ATTACH '{}' AS dst; \
-             COPY FROM DATABASE src TO dst;",
-            db_path.display(),
-            snapshot_path.display()
-        ))
-        .map_err(map_duckdb_error)?;
-        drop(conn);
+        //
+        // Both paths are rendered as escaped SQL string literals: they
+        // embed user-controlled entity and database slugs, and this
+        // statement runs in the server process rather than in a
+        // sandboxed daemon.
+        let attach = format!(
+            "ATTACH {} AS src (READ_ONLY); ATTACH {} AS dst; COPY FROM DATABASE src TO dst;",
+            sql_string_literal(db_path),
+            sql_string_literal(snapshot_path)
+        );
+        // The source may be momentarily locked by an in-flight query, so
+        // retry on lock conflicts the same way opening a connection does.
+        with_lock_retry(|| {
+            let conn = duckdb::Connection::open_in_memory_with_flags(snapshot_config()?)?;
+            conn.execute_batch(&attach)?;
+            Ok(())
+        })?;
         // Verify the snapshot is a readable DuckDB database: a successful
         // query here (propagated via `?`) means the file opened and is
         // queryable. `information_schema.tables` always returns exactly one
@@ -55,10 +56,6 @@ impl DbEngine for DuckdbEngine {
             QueryMode::ReadOnly,
         )?;
         Ok(())
-    }
-
-    fn db_type_str(&self) -> &'static str {
-        "duckdb"
     }
 }
 
@@ -120,79 +117,107 @@ fn query_duckdb(
     })
 }
 
-/// Open a DuckDB connection at `path`, retrying briefly on a file-lock
-/// conflict.
+/// How long to keep retrying an operation blocked by a DuckDB file lock,
+/// and how long to wait between attempts. The total matches the
+/// `busy_timeout` we give SQLite, so both engines wait the same amount
+/// for a contended database.
+const LOCK_RETRY_TIMEOUT: Duration = Duration::from_secs(5);
+const LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(100);
+
+/// Run `op`, retrying while it fails with a DuckDB file-lock conflict.
 ///
 /// DuckDB takes a whole-file lock when it opens a database and fails
 /// *immediately* if another process holds a conflicting lock (a
 /// read-write open is exclusive; a read-only open is shared). In ayb the
-/// snapshot daemon periodically opens each database to back it up, so a
-/// query can collide with an in-progress snapshot (or another query) and
-/// get an `IO Error: Could not set lock on file ...` failure. Unlike
-/// SQLite -- where we set a `busy_timeout` so a contended open waits --
-/// DuckDB has no built-in wait, so we poll with a short backoff for a few
-/// seconds before giving up. This keeps transient contention from
-/// surfacing to callers as a query error.
-///
-/// The Config is rebuilt each attempt because `open_with_flags` consumes
-/// it. Threads/memory are capped via `base_config`: DuckDB probes the
-/// host (/sys/devices/system/cpu/online, /sys/fs/cgroup/..., /proc/self/*)
-/// at instantiation to auto-size them, which would blow the daemon's
-/// RLIMIT_AS on a large host, so `base_config` pins them to fixed values.
-fn open_with_retry(path: &Path, query_mode: QueryMode) -> Result<duckdb::Connection, AybError> {
-    let deadline = Instant::now() + Duration::from_secs(5);
+/// snapshot job periodically opens each database to back it up, so a
+/// query can collide with an in-progress snapshot -- and a snapshot's
+/// ATTACH can collide with an in-flight query. Unlike SQLite, where a
+/// `busy_timeout` makes a contended open wait, DuckDB has no built-in
+/// wait, so we poll with a short backoff before giving up. Any error
+/// that is not a lock conflict is returned immediately.
+fn with_lock_retry<T>(mut op: impl FnMut() -> Result<T, duckdb::Error>) -> Result<T, AybError> {
+    let deadline = Instant::now() + LOCK_RETRY_TIMEOUT;
     loop {
-        let config = base_config()?
-            .access_mode(match query_mode {
-                QueryMode::ReadOnly => duckdb::AccessMode::ReadOnly,
-                QueryMode::ReadWrite => duckdb::AccessMode::ReadWrite,
-            })
-            .map_err(config_err)?;
-
-        match duckdb::Connection::open_with_flags(path, config) {
-            Ok(conn) => return Ok(conn),
+        match op() {
+            Ok(value) => return Ok(value),
             Err(err) => {
-                let message = err.to_string();
-                let lock_conflict =
-                    message.contains("Could not set lock") || message.contains("Conflicting lock");
-                if lock_conflict && Instant::now() < deadline {
-                    thread::sleep(Duration::from_millis(100));
+                if is_lock_conflict(&err) && Instant::now() < deadline {
+                    thread::sleep(LOCK_RETRY_INTERVAL);
                     continue;
                 }
-                return Err(AybError::from(err));
+                return Err(map_duckdb_error(err));
             }
         }
     }
+}
+
+/// Open a DuckDB connection at `path` for `query_mode`, waiting out a
+/// transient file-lock conflict.
+///
+/// The Config is rebuilt on each attempt because `open_with_flags`
+/// consumes it. Threads/memory are capped via `base_config`: DuckDB
+/// probes the host (/sys/devices/system/cpu/online, /sys/fs/cgroup/...,
+/// /proc/self/*) at instantiation to auto-size them, which would blow the
+/// daemon's RLIMIT_AS on a large host, so `base_config` pins them.
+fn open_with_retry(path: &Path, query_mode: QueryMode) -> Result<duckdb::Connection, AybError> {
+    let access_mode = match query_mode {
+        QueryMode::ReadOnly => duckdb::AccessMode::ReadOnly,
+        QueryMode::ReadWrite => duckdb::AccessMode::ReadWrite,
+    };
+    with_lock_retry(|| {
+        let config = base_config()?.access_mode(access_mode.clone())?;
+        duckdb::Connection::open_with_flags(path, config)
+    })
 }
 
 /// Base DuckDB config shared by the query and snapshot connections: a
 /// single worker thread and a 128 MB buffer pool, keeping the process
 /// within the daemon's RLIMIT_AS regardless of host CPU/RAM size.
-fn base_config() -> Result<duckdb::Config, AybError> {
-    duckdb::Config::default()
-        .threads(1)
-        .map_err(config_err)?
-        .max_memory("128MB")
-        .map_err(config_err)
+fn base_config() -> duckdb::Result<duckdb::Config> {
+    duckdb::Config::default().threads(1)?.max_memory("128MB")
 }
 
-fn config_err(e: duckdb::Error) -> AybError {
-    AybError::Other {
-        message: format!("DuckDB config error: {e}"),
-    }
+/// Config for the snapshot connection. Snapshots run ATTACH, which needs
+/// external file access, so unlike the query path we cannot disable it.
+/// Extension autoloading/autoinstalling is not needed either way and is
+/// turned off so a snapshot can never pull in and run extension code --
+/// this connection runs in the server process, outside the daemon's
+/// Landlock sandbox.
+fn snapshot_config() -> duckdb::Result<duckdb::Config> {
+    base_config()?
+        .with("autoinstall_known_extensions", "false")?
+        .with("autoload_known_extensions", "false")
+}
+
+/// True if `err` reports a DuckDB file-lock conflict.
+///
+/// This has to match on the message text: the `duckdb` crate builds every
+/// failure with `ffi::Error::new`, which hardcodes `ErrorCode::Unknown`
+/// and carries only a generic `extended_code` (1 = DuckDBError), so no
+/// structured code distinguishes a lock conflict from any other open
+/// failure. The unit tests below provoke a real lock conflict and assert
+/// this returns true, so a DuckDB upgrade that rewords the message fails
+/// CI loudly instead of silently disabling the retry.
+fn is_lock_conflict(err: &duckdb::Error) -> bool {
+    let message = err.to_string();
+    message.contains("Could not set lock") || message.contains("Conflicting lock")
+}
+
+/// True if `err` reports a write attempted against a read-only database.
+/// Message-matched for the same reason as `is_lock_conflict`, and
+/// likewise pinned by a unit test below.
+fn is_read_only_violation(err: &duckdb::Error) -> bool {
+    let message = err.to_string();
+    message.contains("read-only") || message.contains("Cannot execute write")
 }
 
 fn map_duckdb_error(err: duckdb::Error) -> AybError {
-    match &err {
-        duckdb::Error::DuckDBFailure(_, Some(msg))
-            if msg.contains("read-only") || msg.contains("Cannot execute write") =>
-        {
-            AybError::NoWriteAccessError {
-                message: "Attempted to write to database while in read-only mode".to_string(),
-            }
-        }
-        _ => AybError::from(err),
+    if is_read_only_violation(&err) {
+        return AybError::NoWriteAccessError {
+            message: "Attempted to write to database while in read-only mode".to_string(),
+        };
     }
+    AybError::from(err)
 }
 
 /// Convert a DuckDB time-unit-tagged integer into microseconds.
@@ -299,6 +324,69 @@ mod tests {
             r.rows[1],
             vec![Some("2".to_string()), Some("world".to_string())]
         );
+
+        fs::remove_dir_all(dir.path()).ok();
+    }
+
+    /// Pins `is_read_only_violation` against a real read-only write
+    /// error. If a DuckDB upgrade rewords the message, this fails rather
+    /// than silently downgrading NoWriteAccessError to a generic error.
+    #[test]
+    fn test_read_only_violation_is_recognized() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("classify_ro.duckdb");
+        query_duckdb(
+            &path,
+            "CREATE TABLE t(id INTEGER);",
+            false,
+            QueryMode::ReadWrite,
+        )
+        .unwrap();
+
+        let conn = open_with_retry(&path, QueryMode::ReadOnly).unwrap();
+        let err = conn
+            .execute_batch("INSERT INTO t VALUES (1);")
+            .expect_err("insert into a read-only database should fail");
+        assert!(
+            is_read_only_violation(&err),
+            "unrecognized read-only error: {err}"
+        );
+        assert!(matches!(
+            map_duckdb_error(err),
+            AybError::NoWriteAccessError { .. }
+        ));
+
+        fs::remove_dir_all(dir.path()).ok();
+    }
+
+    /// Pins `is_lock_conflict` against a real lock conflict: hold a
+    /// read-write connection open, then try to open the same database
+    /// again. If a DuckDB upgrade rewords the message, this fails rather
+    /// than silently disabling the retry in `with_lock_retry`.
+    #[test]
+    fn test_lock_conflict_is_recognized() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("classify_lock.duckdb");
+        let _holder = {
+            let config = base_config()
+                .unwrap()
+                .access_mode(duckdb::AccessMode::ReadWrite)
+                .unwrap();
+            duckdb::Connection::open_with_flags(&path, config).unwrap()
+        };
+
+        let config = base_config()
+            .unwrap()
+            .access_mode(duckdb::AccessMode::ReadWrite)
+            .unwrap();
+        match duckdb::Connection::open_with_flags(&path, config) {
+            Err(err) => assert!(is_lock_conflict(&err), "unrecognized lock error: {err}"),
+            // The conflict this guards against is cross-process (the
+            // server's snapshot job vs. a query daemon). If a DuckDB build
+            // permits a second open within one process there is nothing to
+            // pin here, so don't fail the suite over it.
+            Ok(_) => {}
+        }
 
         fs::remove_dir_all(dir.path()).ok();
     }
