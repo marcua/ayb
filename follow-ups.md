@@ -65,6 +65,46 @@ tenant data. It also lets the snapshot connection drop
 `enable_external_access` back to a narrower posture, since Landlock —
 not DuckDB's own setting — becomes the thing bounding file access.
 
+### Unlocks: persistent connections with explicit handoff
+
+Doing this also removes the reason the query path re-opens the database
+on every statement, so the two changes belong together.
+
+Today `query_duckdb` and `query_sqlite` open a connection, run one
+statement, and drop it. The daemon amortizes process spawn and sandbox
+setup, but *not* connection setup — and for DuckDB that cost is real,
+since it probes the host (`/sys/devices/system/cpu/online`,
+`/sys/fs/cgroup/...`, `/proc/self/*`) at instantiation to size its thread
+pool and buffer pool.
+
+That open/close cycle is currently load-bearing rather than accidental:
+it is what leaves the file unlocked between queries so the snapshot job's
+`ATTACH` can acquire it. A persistent read-write DuckDB connection would
+hold the exclusive file lock for the daemon's entire lifetime and
+snapshots would never succeed. **So do not make connections persistent
+before moving snapshots into the daemon — in that order it breaks
+backups.**
+
+Once snapshots run *through* the daemon, the conflict disappears: the
+daemon is the single writer for that database and can sequence the work
+itself — keep a connection open for queries, close it (or quiesce it)
+around the snapshot, reopen after. That yields both properties at once:
+no per-query open cost, and no lock contention.
+
+It also deletes code rather than adding it. `with_lock_retry`,
+`LOCK_RETRY_TIMEOUT`/`LOCK_RETRY_INTERVAL`, and `is_lock_conflict` in
+`hosted_db/duckdb.rs` exist only to wait out cross-process lock
+conflicts. With one process owning the file they are unnecessary — which
+also retires `is_lock_conflict`'s matching on DuckDB's English error text
+(the crate exposes no structured code for this; see the unit tests
+pinning that behavior).
+
+A narrower alternative was considered and rejected: keep a persistent
+*read-only* connection (DuckDB's read lock is shared) and open
+read-write connections transiently. It helps the common case without
+requiring the snapshot move, but it adds a second connection-state
+machine for a partial win, and the handoff above supersedes it.
+
 **Cost.** The daemon protocol grows a second request type, snapshot
 errors have to travel back over that protocol, and the Landlock ruleset
 must be widened to include the snapshot destination directory (today the
