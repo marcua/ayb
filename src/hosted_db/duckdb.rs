@@ -379,13 +379,12 @@ mod tests {
             .unwrap()
             .access_mode(duckdb::AccessMode::ReadWrite)
             .unwrap();
-        match duckdb::Connection::open_with_flags(&path, config) {
-            Err(err) => assert!(is_lock_conflict(&err), "unrecognized lock error: {err}"),
-            // The conflict this guards against is cross-process (the
-            // server's snapshot job vs. a query daemon). If a DuckDB build
-            // permits a second open within one process there is nothing to
-            // pin here, so don't fail the suite over it.
-            Ok(_) => {}
+        // The conflict this guards against is cross-process (the server's
+        // snapshot job vs. a query daemon). If a DuckDB build permits a
+        // second open within one process there is nothing to pin here, so
+        // don't fail the suite over it.
+        if let Err(err) = duckdb::Connection::open_with_flags(&path, config) {
+            assert!(is_lock_conflict(&err), "unrecognized lock error: {err}");
         }
 
         fs::remove_dir_all(dir.path()).ok();
