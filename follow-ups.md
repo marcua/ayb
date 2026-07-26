@@ -69,3 +69,29 @@ not DuckDB's own setting — becomes the thing bounding file access.
 errors have to travel back over that protocol, and the Landlock ruleset
 must be widened to include the snapshot destination directory (today the
 daemon only gets the database directory).
+
+## Lint test code too (`cargo clippy --all-targets`)
+
+**Problem.** `make lint` and the CI "Ensure clippy finds no issues" step
+both run `cargo clippy -- -D warnings`, which lints the library and
+binaries but *not* test code. Everything under `tests/` (and any
+`#[cfg(test)]` module) is therefore unlinted, and lint debt has
+accumulated there unnoticed.
+
+**Known instances**, all in `tests/browser_e2e_tests/oauth_flow.rs`:
+
+- `clippy::needless_borrows_for_generic_args` — five occurrences of
+  `.post(&format!(...))`, which should be `.post(format!(...))`.
+- `clippy::let_and_return` — a `let c = if ... ;` block whose binding is
+  returned immediately.
+
+**Proposal.** Change both the Makefile target and the CI step to
+`cargo clippy --all-targets -- -D warnings`, and fix the findings above
+in the same change. Do it on `main` rather than inside a feature branch:
+the findings predate any one feature, and widening the gate will surface
+them for whoever's branch happens to run first otherwise.
+
+**Cost.** Slightly longer lint runs (test targets get compiled), and a
+one-time cleanup pass. Worth it: test code is where several of ayb's
+recent timing and correctness bugs lived, so it benefits from the same
+scrutiny as the library.
