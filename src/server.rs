@@ -2,6 +2,7 @@ pub mod api_endpoints;
 pub mod config;
 pub mod permissions;
 pub mod server_runner;
+pub mod slug_validation;
 pub mod snapshots;
 pub mod tokens;
 pub mod ui_endpoints;

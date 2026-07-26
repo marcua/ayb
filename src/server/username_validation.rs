@@ -26,6 +26,9 @@ pub fn is_username_banned(username: &str) -> bool {
 }
 
 pub fn validate_username(username: &str) -> Result<(), AybError> {
+    // Entity slugs become path components and appear in snapshot SQL.
+    crate::server::slug_validation::validate_slug("entity", username)?;
+
     // Check banned username list
     if is_username_banned(username) {
         return Err(AybError::RegistrationError {
