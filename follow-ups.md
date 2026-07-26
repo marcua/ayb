@@ -85,11 +85,41 @@ snapshots would never succeed. **So do not make connections persistent
 before moving snapshots into the daemon — in that order it breaks
 backups.**
 
-Once snapshots run *through* the daemon, the conflict disappears: the
-daemon is the single writer for that database and can sequence the work
-itself — keep a connection open for queries, close it (or quiesce it)
-around the snapshot, reopen after. That yields both properties at once:
-no per-query open cost, and no lock contention.
+Once snapshots run *through* the daemon, the lock conflict disappears:
+the daemon is the single writer for that database and can sequence the
+work itself — keep a connection open for queries, close it (or quiesce
+it) around the snapshot, reopen after.
+
+**But weigh this against losing engine-enforced read-only.** Today
+`query_duckdb` opens with `AccessMode::ReadOnly` for a read-only
+request, so such a query physically cannot write: the engine refuses it
+(this is what `map_duckdb_error`'s `NoWriteAccessError` and
+`test_duckdb_read_only_prevents_writes` encode). That is defense in
+depth *behind* the permission layer — a permission bug alone would not
+be enough to let a read-only caller write. A single persistent
+connection has a single access mode, and to serve writes it must be
+read-write, so read-only requests would run on a read-write connection
+and permission checks would become the only barrier.
+
+Separate read and write connections do **not** solve this, at least for
+DuckDB: `access_mode` is a property of the database *instance*
+(it is set on `Config`, passed to `duckdb_open_ext`), `Connection::
+try_clone` shares that instance, and opening the file a second time to
+get a second instance is itself a lock conflict — including within a
+single process, as `test_lock_conflict_is_recognized` demonstrates.
+SQLite would allow it (rusqlite sets read-only/read-write per
+connection), but building it there alone means an engine-asymmetric
+mechanism inside an abstraction meant to hide such differences.
+
+Note also that connection reuse buys no *concurrency* on its own:
+`DaemonRegistry::execute_query` holds the per-daemon mutex for the whole
+round trip and the daemon is a single-threaded stdin loop, so requests
+to one database are serialized regardless of how many connections exist.
+
+Net: treat the security boundary and the deletion of the lock-retry code
+as the reasons to move snapshots into the daemon. Persistent connections
+are a separate, smaller optimization with a real safety cost — decide it
+on its own merits rather than assuming it comes along for free.
 
 It also deletes code rather than adding it. `with_lock_retry`,
 `LOCK_RETRY_TIMEOUT`/`LOCK_RETRY_INTERVAL`, and `is_lock_conflict` in
