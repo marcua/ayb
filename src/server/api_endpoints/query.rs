@@ -4,7 +4,7 @@ use crate::ayb_db::models::{APIToken, DBType, InstantiatedEntity};
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
 use crate::hosted_db::paths::current_database_path;
-use crate::hosted_db::{run_query, QueryResult};
+use crate::hosted_db::QueryResult;
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::permissions::highest_query_access_level;
@@ -37,8 +37,9 @@ async fn query(
         Some(access_level) => {
             let db_type = DBType::try_from(database.db_type)?;
             let db_path = current_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
-            let result =
-                run_query(&daemon_registry, &db_path, &query, &db_type, access_level).await?;
+            let result = daemon_registry
+                .execute_query(&db_path, &query, &db_type, access_level)
+                .await?;
             Ok(web::Json(result))
         }
         None => Err(AybError::Other {

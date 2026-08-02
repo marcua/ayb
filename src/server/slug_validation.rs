@@ -20,13 +20,13 @@ use crate::error::AybError;
 /// and so was trivially bypassed by calling the API directly.
 pub fn validate_slug(kind: &str, slug: &str) -> Result<(), AybError> {
     if slug.is_empty() {
-        return Err(AybError::Other {
+        return Err(AybError::InvalidSlug {
             message: format!("A {kind} slug can't be empty"),
         });
     }
 
     if slug == "." || slug == ".." {
-        return Err(AybError::Other {
+        return Err(AybError::InvalidSlug {
             message: format!("Invalid {kind} slug: {slug}"),
         });
     }
@@ -35,7 +35,7 @@ pub fn validate_slug(kind: &str, slug: &str) -> Result<(), AybError> {
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
     {
-        return Err(AybError::Other {
+        return Err(AybError::InvalidSlug {
             message: format!(
                 "Invalid {kind} slug: {slug}. Only letters, numbers, underscores, hyphens, and periods are allowed"
             ),

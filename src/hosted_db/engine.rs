@@ -9,7 +9,7 @@ use std::path::Path;
 /// (no extension loading, no external file/network access, no ATTACH),
 /// so callers cannot ask for an unrestricted connection. Engines relax
 /// those restrictions internally where a specific operation requires it
-/// -- snapshots need ATTACH -- but that stays an implementation detail
+/// , e.g., snapshots need ATTACH, but that stays an implementation detail
 /// rather than a parameter callers can pass.
 pub trait DbEngine: Send + Sync {
     fn query(

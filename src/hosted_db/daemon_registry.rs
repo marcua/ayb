@@ -135,16 +135,6 @@ impl DaemonRegistry {
     ) -> Result<DaemonHandle, AybError> {
         let mut cmd = build_daemon_command(db_path, db_type)?;
 
-        // Run the query daemon with an empty environment. It inherits
-        // nothing from the server process, so server secrets (fernet key,
-        // S3 credentials, SMTP password) never reach the sandboxed daemon
-        // -- they can't be read out of /proc/self/environ even if a query
-        // somehow escaped DuckDB's file-access restrictions. The daemon
-        // needs no environment: it is invoked by absolute path, links only
-        // standard system libraries, and resource/sandbox limits come from
-        // setrlimit/Landlock rather than env vars.
-        cmd.env_clear();
-
         // Spawn the process with piped stdin/stdout. Inherit stderr so
         // crashes (panic backtraces, aborts) surface in the server log
         // instead of being swallowed.

@@ -105,9 +105,7 @@ pub async fn test_create_and_query_database_flow(
         .await?;
 
     // Let the first insert's request finish before submitting the next
-    // one. The query form posts via htmx with no hx-sync, so two submits
-    // fired back-to-back from the same form overlap and one of the
-    // inserts is lost. Every other step here is separated by a
+    // one. Every other step here is separated by a
     // screenshot_compare (which settles briefly); these two are not.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 

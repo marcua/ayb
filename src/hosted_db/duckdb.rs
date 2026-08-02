@@ -19,20 +19,6 @@ impl DbEngine for DuckdbEngine {
     }
 
     fn create_snapshot(&self, db_path: &Path, snapshot_path: &Path) -> Result<(), AybError> {
-        // Copy the database into a fresh snapshot file via an in-memory
-        // connection that attaches both sides with explicit aliases.
-        // Opening the source directly and running "COPY FROM DATABASE main"
-        // fails with `Catalog "main" does not exist` because the source
-        // catalog is named after the file, not "main". Opening the source
-        // read-only would also make the whole instance (including the
-        // attached destination) read-only, breaking the COPY. With an
-        // in-memory read-write main, the source is attached READ_ONLY (so
-        // it is never modified) and the destination read-write.
-        //
-        // Both paths are rendered as escaped SQL string literals: they
-        // embed user-controlled entity and database slugs, and this
-        // statement runs in the server process rather than in a
-        // sandboxed daemon.
         let attach = format!(
             "ATTACH {} AS src (READ_ONLY); ATTACH {} AS dst; COPY FROM DATABASE src TO dst;",
             sql_string_literal(db_path),
@@ -103,11 +89,8 @@ fn query_duckdb(
     while let Some(row) = rows.next().map_err(map_duckdb_error)? {
         let mut result: Vec<Option<String>> = Vec::new();
         for col_idx in 0..num_columns {
-            let value: duckdb::Result<Value> = row.get(col_idx);
-            match value {
-                Ok(val) => result.push(duckdb_value_to_string(val)),
-                Err(_) => result.push(None),
-            }
+            let value: Value = row.get(col_idx).map_err(map_duckdb_error)?;
+            result.push(duckdb_value_to_string(value));
         }
         results.push(result);
     }

@@ -6,7 +6,6 @@ pub mod sandbox;
 pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
-use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::from_str;
 use crate::hosted_db::duckdb::DuckdbEngine;
@@ -98,27 +97,9 @@ pub(crate) fn sql_string_literal(path: &Path) -> String {
     format!("'{}'", path.display().to_string().replace('\'', "''"))
 }
 
-/// Return the engine for `db_type`.
-///
-/// Both engines are zero-sized structs with no per-database state, so a
-/// single shared instance of each serves every caller; returning a
-/// `&'static dyn` keeps the dynamic dispatch while avoiding an
-/// allocation on every query and snapshot.
 pub fn engine_for(db_type: &DBType) -> &'static dyn DbEngine {
     match db_type {
         DBType::Sqlite => &SqliteEngine,
         DBType::Duckdb => &DuckdbEngine,
     }
-}
-
-pub async fn run_query(
-    daemon_registry: &daemon_registry::DaemonRegistry,
-    path: &Path,
-    query: &str,
-    db_type: &DBType,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    daemon_registry
-        .execute_query(path, query, db_type, query_mode)
-        .await
 }

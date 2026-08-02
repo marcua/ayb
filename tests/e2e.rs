@@ -98,9 +98,6 @@ async fn client_server_integration(
     test_anonymous_access(&config_path, &api_keys, server_url).await?;
     test_token_management(&config_path, &api_keys)?;
     test_oauth_token_exchange_errors(server_url).await?;
-    // Runs last: it creates a DuckDB database under e2e-first, which would
-    // otherwise appear in the many exact database-listing assertions above
-    // (and in the periodic snapshot job during test_snapshots).
     test_create_and_query_duckdb(&config_path, &api_keys)?;
     test_snapshots_duckdb(test_type, &config_path, &api_keys).await?;
 
@@ -158,8 +155,7 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     // Test token management UI (uses the OAuth read-only token for revocation testing)
     test_token_management_flow(&page, &username, &base_url, readonly_token).await?;
 
-    // Runs last: creates a DuckDB database whose periodic snapshots would
-    // otherwise perturb the SQLite snapshot-count assertions above.
+    // Test DuckDB flows
     test_duckdb_flow(&page, &username, &base_url).await?;
 
     Ok(())

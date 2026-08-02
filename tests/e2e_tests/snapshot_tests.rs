@@ -319,9 +319,8 @@ pub async fn test_snapshots_duckdb(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let api_key = &api_keys.get("first").unwrap()[0];
 
-    // Object storage (MinIO) persists across test runs even though the
-    // data directory is reset, so clear any DuckDB snapshots left behind
-    // by previous runs to get a deterministic starting count.
+    // Remove all snapshots so our tests aren't affected by
+    // timing/snapshots from previous tests.
     let storage = snapshot_storage(db_type).await?;
     storage
         .delete_snapshots(

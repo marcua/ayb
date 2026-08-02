@@ -87,9 +87,14 @@ Successfully authenticated and saved token <API_TOKEN>
 $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
 
+# Databases are SQLite by default. Pass duckdb to create a DuckDB one instead.
+$ ayb client create_database marcua/test.duckdb duckdb
+Successfully created marcua/test.duckdb
+
 $ ayb client list marcua
  Database slug | Type
 ---------------+--------
+ test.duckdb   | duckdb
  test.sqlite   | sqlite
 
 $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
