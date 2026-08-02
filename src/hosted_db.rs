@@ -6,6 +6,9 @@ pub mod sandbox;
 pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
+// Used by the try_from_i16!/from_str! macro expansions below, which name
+// AybError without it appearing textually in this file.
+use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::from_str;
 use crate::hosted_db::duckdb::DuckdbEngine;
