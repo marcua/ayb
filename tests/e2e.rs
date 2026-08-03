@@ -5,14 +5,15 @@ mod e2e_tests;
 mod utils;
 
 use crate::browser_e2e_tests::{
-    test_create_and_query_database_flow, test_entity_profile_flow, test_oauth_deny_flow,
-    test_oauth_flow, test_permissions_flow, test_registration_flow, test_snapshots_flow,
-    test_token_management_flow,
+    test_create_and_query_database_flow, test_duckdb_flow, test_entity_profile_flow,
+    test_oauth_deny_flow, test_oauth_flow, test_permissions_flow, test_registration_flow,
+    test_snapshots_flow, test_token_management_flow,
 };
 use crate::e2e_tests::{
-    test_anonymous_access, test_create_and_query_db, test_entity_details_and_profile,
-    test_health_check, test_oauth_token_exchange_errors, test_permissions, test_registration,
-    test_snapshots, test_token_management,
+    test_anonymous_access, test_create_and_query_db, test_create_and_query_duckdb,
+    test_entity_details_and_profile, test_health_check, test_oauth_token_exchange_errors,
+    test_permissions, test_registration, test_snapshots, test_snapshots_duckdb,
+    test_token_management,
 };
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
@@ -97,6 +98,8 @@ async fn client_server_integration(
     test_anonymous_access(&config_path, &api_keys, server_url).await?;
     test_token_management(&config_path, &api_keys)?;
     test_oauth_token_exchange_errors(server_url).await?;
+    test_create_and_query_duckdb(&config_path, &api_keys)?;
+    test_snapshots_duckdb(test_type, &config_path, &api_keys).await?;
 
     Ok(())
 }
@@ -151,6 +154,9 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test token management UI (uses the OAuth read-only token for revocation testing)
     test_token_management_flow(&page, &username, &base_url, readonly_token).await?;
+
+    // Test DuckDB flows
+    test_duckdb_flow(&page, &username, &base_url).await?;
 
     Ok(())
 }

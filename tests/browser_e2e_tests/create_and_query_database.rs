@@ -80,8 +80,7 @@ pub async fn test_create_and_query_database_flow(
     BrowserHelpers::screenshot_compare(page, "table_created", &[]).await?;
 
     // Step 7: Insert data
-    let insert_query1 =
-        "INSERT INTO test_table (fname, lname) VALUES (\"the first\", \"the last\");";
+    let insert_query1 = "INSERT INTO test_table (fname, lname) VALUES ('the first', 'the last');";
 
     // Clear previous query and enter insert query
     page.locator("textarea[name='query']")
@@ -105,9 +104,13 @@ pub async fn test_create_and_query_database_flow(
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
+    // Let the first insert's request finish before submitting the next
+    // one. Every other step here is separated by a
+    // screenshot_compare (which settles briefly); these two are not.
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
     // Insert second row
-    let insert_query2 =
-        "INSERT INTO test_table (fname, lname) VALUES (\"the first2\", \"the last2\");";
+    let insert_query2 = "INSERT INTO test_table (fname, lname) VALUES ('the first2', 'the last2');";
 
     page.locator("textarea[name='query']")
         .await

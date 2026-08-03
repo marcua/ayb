@@ -1,4 +1,7 @@
-use crate::e2e_tests::{FIRST_ENTITY_DB, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG};
+use crate::e2e_tests::{
+    FIRST_ENTITY_DB, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_DUCKDB, FIRST_ENTITY_DUCKDB_SLUG,
+    FIRST_ENTITY_SLUG,
+};
 use crate::utils::ayb::{list_snapshots, list_snapshots_match_output, query, restore_snapshot};
 use crate::utils::testing::snapshot_storage;
 use std::collections::HashMap;
@@ -114,7 +117,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"another first\", \"another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('another first', 'another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -131,7 +134,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"yet another first\", \"yet another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('yet another first', 'yet another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -223,7 +226,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"a new first name\", \"a new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('a new first name', 'a new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -241,7 +244,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('and another new first name', 'and another new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -277,7 +280,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 1 \n\nRows: 1",
@@ -297,10 +300,95 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 0 \n\nRows: 1",
+    )?;
+
+    Ok(())
+}
+
+/// A simpler snapshot/restore cycle for a DuckDB database, paralleling
+/// the SQLite test above. Assumes `test_create_and_query_duckdb` has
+/// already created `e2e-first/test.duckdb` with two rows.
+pub async fn test_snapshots_duckdb(
+    db_type: &str,
+    config_path: &str,
+    api_keys: &HashMap<String, Vec<String>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = &api_keys.get("first").unwrap()[0];
+
+    // Remove all snapshots so our tests aren't affected by
+    // timing/snapshots from previous tests.
+    let storage = snapshot_storage(db_type).await?;
+    storage
+        .delete_snapshots(
+            FIRST_ENTITY_SLUG,
+            FIRST_ENTITY_DUCKDB_SLUG,
+            &storage
+                .list_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DUCKDB_SLUG)
+                .await?
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.clone())
+                .collect(),
+        )
+        .await?;
+
+    // The database has two rows from test_create_and_query_duckdb. Wait
+    // for the snapshot daemon to capture that state, and record it.
+    let snapshots = wait_for_snapshot_count(config_path, api_key, FIRST_ENTITY_DUCKDB, 1, None);
+    let two_row_snapshot = snapshots[0].snapshot_id.clone();
+    query(
+        config_path,
+        api_key,
+        "SELECT count(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        " the_count \n-----------\n 2 \n\nRows: 1",
+    )?;
+
+    // Insert a third row (DuckDB returns a one-row affected-count result,
+    // so "Rows: 1") and wait for a second, distinct snapshot.
+    query(
+        config_path,
+        api_key,
+        "INSERT INTO test_table VALUES ('the third', 'the last3');",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        "\nRows: 1",
+    )?;
+    wait_for_snapshot_count(
+        config_path,
+        api_key,
+        FIRST_ENTITY_DUCKDB,
+        2,
+        Some(&two_row_snapshot),
+    );
+    query(
+        config_path,
+        api_key,
+        "SELECT count(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        " the_count \n-----------\n 3 \n\nRows: 1",
+    )?;
+
+    // Restore the two-row snapshot and confirm the third row is gone.
+    restore_snapshot(
+        config_path,
+        api_key,
+        FIRST_ENTITY_DUCKDB,
+        &two_row_snapshot,
+        &format!("Restored e2e-first/test.duckdb to snapshot {two_row_snapshot}"),
+    )?;
+    query(
+        config_path,
+        api_key,
+        "SELECT count(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
     Ok(())

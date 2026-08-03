@@ -54,7 +54,7 @@ pub async fn test_snapshots_flow(
     tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
 
     // Step 4: Insert a new row
-    let insert_query = "INSERT INTO test_table (fname, lname) VALUES (\"snapshot\", \"test\");";
+    let insert_query = "INSERT INTO test_table (fname, lname) VALUES ('snapshot', 'test');";
 
     page.locator("textarea[name='query']")
         .await

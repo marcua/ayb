@@ -40,6 +40,7 @@ jobs:
         # GitHub automatically evicts caches after 7 days of inactivity
         # rust-cache also cleans build artifacts older than 1 week
         shared-key: "ayb-tests"
+        cache-on-failure: "true"
 
     - name: Build
       run: cargo build --verbose
