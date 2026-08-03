@@ -89,7 +89,7 @@ impl TabularFormatter for QueryResult {
 /// Database paths contain entity and database slugs, which are
 /// user-controlled, so they must never be interpolated into SQL raw.
 /// Slugs are also validated at the API boundary (see
-/// `server::slug_validation`); this is the second line of defense, at
+/// `server::validation`); this is the second line of defense, at
 /// the point where the string actually becomes SQL. It matters most for
 /// snapshots, which build statements by interpolation and run them in
 /// the server process rather than in a sandboxed daemon.

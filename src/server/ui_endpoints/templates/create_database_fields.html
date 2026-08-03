@@ -6,6 +6,9 @@
         name="database_slug"
         class="p-2 border rounded focus:border-blue-500 w-full"
         placeholder="example.sqlite"
+        <!-- Browser-side convenience only. The authoritative check is
+             validate_database_slug in src/server/validation.rs; keep the
+             two character sets in sync. -->
         pattern="[A-Za-z0-9\-_\.]+"
         title="Only letters, numbers, underscores, hyphens, and periods are allowed">
 </div>
