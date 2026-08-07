@@ -752,7 +752,7 @@ dependencies = [
  "assert-json-diff",
  "assert_cmd",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.0",
  "blake3",
  "chrono",
  "clap",
