@@ -37,7 +37,7 @@ serde_json = { version = "1.0.149", features = ["raw_value"] }
 serde_repr = { version = "0.1.20" }
 sqlx = { version = "0.6.3", features = ["chrono", "postgres", "runtime-actix-native-tls", "sqlite"] }
 time = { version = "0.3.47" }  # Consider removing once another dependency updates time (https://github.com/time-rs/time/issues/681)
-tera = { version = "1.20.1" }
+tera = { version = "2.1.0" }
 toml = { version = "1.0.6" }
 tokio = { version = "1.51.1", features = ["macros", "process", "rt"] }
 tokio-cron-scheduler = { version = "0.15.1", features = ["signal"]}
