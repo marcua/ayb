@@ -12,7 +12,7 @@ pub async fn test_oauth_token_exchange_errors(
 
     // Test 1: Invalid grant_type should fail
     let response = client
-        .post(&format!("{}/v1/oauth/token", server_url))
+        .post(format!("{}/v1/oauth/token", server_url))
         .json(&serde_json::json!({
             "grant_type": "invalid",
             "code": "test",
@@ -28,7 +28,7 @@ pub async fn test_oauth_token_exchange_errors(
 
     // Test 2: Invalid code should fail
     let response = client
-        .post(&format!("{}/v1/oauth/token", server_url))
+        .post(format!("{}/v1/oauth/token", server_url))
         .json(&serde_json::json!({
             "grant_type": "authorization_code",
             "code": "nonexistent_code",

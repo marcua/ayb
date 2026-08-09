@@ -87,7 +87,8 @@ impl BrowserHelpers {
         for path in &browser_paths {
             if std::path::Path::new(path).exists() {
                 println!("Trying system browser at: {}", path);
-                match chromium
+                // On failure, fall through to the next fallback.
+                if let Ok(browser) = chromium
                     .launch_with_options(
                         LaunchOptions::new()
                             .headless(headless)
@@ -95,8 +96,7 @@ impl BrowserHelpers {
                     )
                     .await
                 {
-                    Ok(browser) => return Ok(browser),
-                    Err(_) => {} // Try next fallback
+                    return Ok(browser);
                 }
             }
         }

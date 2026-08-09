@@ -2,7 +2,7 @@
 
 lint:
 	cargo fmt
-	cargo clippy -- -D warnings
+	cargo clippy --all-targets -- -D warnings
 
 server:
 	RUST_BACKTRACE=1 RUST_LOG=debug cargo run -- server
