@@ -3,6 +3,27 @@ use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions
 use std::error::Error;
 use std::time::Duration;
 
+/// Let a query submission's request finish before the next one is issued.
+///
+/// The query form posts via htmx from a single element with no `hx-sync`,
+/// so a submit issued while another is in flight is queued rather than
+/// sent, and the queued closure re-reads the textarea when it eventually
+/// runs. A further overlapping submit dumps that queue outright (htmx's
+/// default queue strategy is `last`). Either way a submission silently
+/// produces no request of its own, which shows up downstream as a row
+/// count that is short by one.
+///
+/// The `screenshot_compare` calls between steps settle briefly, but that
+/// margin is incidental rather than designed, and it is too thin on a
+/// loaded runner. Settling explicitly after every query submission
+/// removes the whole class. A sleep rather than an extra
+/// `screenshot_compare` is deliberate: the screenshot counter is global
+/// and sequential, so inserting a screenshot mid-suite renumbers every
+/// later reference PNG.
+async fn settle_after_query() {
+    tokio::time::sleep(Duration::from_millis(500)).await;
+}
+
 pub async fn test_snapshots_flow(
     page: &Page,
     username: &str,
@@ -44,6 +65,7 @@ pub async fn test_snapshots_flow(
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "snapshots_initial_count", &[]).await?;
+    settle_after_query().await;
 
     // Verify we have 2 rows initially
     let page_text = page.locator("#query-results").await.inner_text().await?;
@@ -80,6 +102,7 @@ pub async fn test_snapshots_flow(
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "snapshots_row_inserted", &[]).await?;
+    settle_after_query().await;
 
     // Step 5: Verify we now have 3 rows
     page.locator("textarea[name='query']")
@@ -99,6 +122,7 @@ pub async fn test_snapshots_flow(
 
     // Screenshot immediately after query execution (following create_and_query_database pattern)
     BrowserHelpers::screenshot_compare(page, "snapshots_count_after_insert", &[]).await?;
+    settle_after_query().await;
 
     // Now read the results from the specific query results element
     let query_results = page.locator("#query-results").await.inner_text().await?;
@@ -173,6 +197,7 @@ pub async fn test_snapshots_flow(
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "snapshots_final_count", &[]).await?;
+    settle_after_query().await;
 
     let page_text_after_restore = page.locator("#query-results").await.inner_text().await?;
     assert!(
@@ -199,6 +224,7 @@ pub async fn test_snapshots_flow(
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "snapshots_test_complete", &[]).await?;
+    settle_after_query().await;
 
     let final_page_text = page.locator("#query-results").await.inner_text().await?;
     assert!(
