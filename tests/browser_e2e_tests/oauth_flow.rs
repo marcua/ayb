@@ -9,14 +9,13 @@ fn generate_pkce() -> (String, String) {
     let verifier: String = (0..64)
         .map(|_| {
             let idx = rand::thread_rng().gen::<u8>() % 62;
-            let c = if idx < 10 {
+            if idx < 10 {
                 (b'0' + idx) as char
             } else if idx < 36 {
                 (b'a' + idx - 10) as char
             } else {
                 (b'A' + idx - 36) as char
-            };
-            c
+            }
         })
         .collect();
 
@@ -145,7 +144,7 @@ async fn complete_oauth_flow(
 
     let client = reqwest::Client::new();
     let token_response = client
-        .post(&format!("{}/v1/oauth/token", base_url))
+        .post(format!("{}/v1/oauth/token", base_url))
         .json(&serde_json::json!({
             "grant_type": "authorization_code",
             "code": code,
@@ -201,7 +200,7 @@ pub async fn test_oauth_flow_readonly(
 
     // Test that the scoped token can read from the database
     let read_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("SELECT * FROM test_table LIMIT 1")
         .send()
@@ -218,7 +217,7 @@ pub async fn test_oauth_flow_readonly(
     // This is the key test for permission capping - even though the user has
     // read-write access to their own database, the scoped token only has read-only.
     let write_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("INSERT INTO test_table (fname, lname) VALUES ('oauth_readonly_test', 'should_fail')")
         .send()
@@ -269,7 +268,7 @@ pub async fn test_oauth_flow_readwrite(
 
     // Test that the scoped token can read from the database
     let read_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("SELECT * FROM test_table LIMIT 1")
         .send()
@@ -285,7 +284,7 @@ pub async fn test_oauth_flow_readwrite(
     // Test that the scoped token can write to the database.
     // This verifies that read-write scope is not capped.
     let write_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("INSERT INTO test_table (fname, lname) VALUES ('oauth_readwrite_test', 'should_succeed')")
         .send()
@@ -301,7 +300,7 @@ pub async fn test_oauth_flow_readwrite(
 
     // Verify the write actually worked
     let verify_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("SELECT * FROM test_table WHERE fname = 'oauth_readwrite_test'")
         .send()

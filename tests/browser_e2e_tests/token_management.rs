@@ -20,7 +20,7 @@ pub async fn test_token_management_flow(
 
     // Verify the OAuth token works before we revoke it
     let pre_revoke_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
         .body("SELECT 1")
         .send()
@@ -158,7 +158,7 @@ pub async fn test_token_management_flow(
     // Brief pause to avoid transient connection errors during snapshot cycles.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
         .body("SELECT 1")
         .send()
