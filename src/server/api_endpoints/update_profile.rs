@@ -5,10 +5,20 @@ use crate::http::structs::{EmptyResponse, EntityPath, ProfileLinkUpdate};
 use crate::server::config::{public_base_url, AybConfig};
 use crate::server::url_verification::is_verified_url;
 use crate::server::utils::unwrap_authenticated_entity;
+use crate::server::validation::strip_bidi_and_invisible;
 use actix_web::{patch, web, HttpResponse};
 use std::collections::HashMap;
 use std::str::FromStr;
 use url::Url;
+
+/// Pull one profile field out of the update, distinguishing "absent"
+/// (`None`, leave it alone) from "present and null" (`Some(None)`,
+/// clear it), and clean whatever text was provided.
+fn cleaned_field(profile: &HashMap<String, Option<String>>, field: &str) -> Option<Option<String>> {
+    profile
+        .get(field)
+        .map(|value| value.as_deref().map(strip_bidi_and_invisible))
+}
 
 #[patch(
     "/entity/{entity}",
@@ -38,9 +48,12 @@ pub async fn update_profile(
 
             let mut links = vec![];
             for link in profile_links.into_iter() {
-                let url = Url::parse(&link.url)?;
+                // Clean before parsing so that the stored URL and the
+                // one we verify are the same string.
+                let link_url = strip_bidi_and_invisible(&link.url);
+                let url = Url::parse(&link_url)?;
                 links.push(Link {
-                    url: link.url,
+                    url: link_url,
                     verified: is_verified_url(url, expected_profile_url.clone()).await,
                 })
             }
@@ -54,18 +67,10 @@ pub async fn update_profile(
     };
 
     let mut partial = PartialEntity::new();
-    partial.display_name = profile
-        .get("display_name")
-        .map(|v| v.as_ref().map(String::from));
-    partial.description = profile
-        .get("description")
-        .map(|v| v.as_ref().map(String::from));
-    partial.organization = profile
-        .get("organization")
-        .map(|v| v.as_ref().map(String::from));
-    partial.location = profile
-        .get("location")
-        .map(|v| v.as_ref().map(String::from));
+    partial.display_name = cleaned_field(&profile, "display_name");
+    partial.description = cleaned_field(&profile, "description");
+    partial.organization = cleaned_field(&profile, "organization");
+    partial.location = cleaned_field(&profile, "location");
     partial.links = links;
 
     // Check if there are any fields to update

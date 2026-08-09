@@ -94,6 +94,57 @@ pub fn validate_database_slug(slug: &str) -> Result<(), AybError> {
     validate_slug_syntax("database", slug)
 }
 
+/// Remove Unicode bidirectional-control and invisible-formatting
+/// characters from user-supplied profile text.
+///
+/// Unlike slugs, profile fields (display name, description,
+/// organization, location, and link URLs) are where a user is expected
+/// to write their real name in whatever script it belongs to, so they
+/// accept arbitrary Unicode. Tera auto-escapes them, which handles HTML
+/// injection, but escaping leaves these characters intact, and they act
+/// on the text *around* them once rendered:
+///
+/// - Bidirectional controls (`U+061C`, `U+200E`, `U+200F`,
+///   `U+202A`..=`U+202E`, `U+2066`..=`U+2069`) reorder neighboring text.
+///   A display name containing RIGHT-TO-LEFT OVERRIDE (`U+202E`)
+///   rewrites how the slug, database names, and sharing controls shown
+///   next to it appear. This is the "Trojan Source" class of attack
+///   (CVE-2021-42574), and it matters here because slugs are ASCII-only,
+///   which makes the display name the only Unicode-accepting field a
+///   viewer actually reads.
+/// - Zero-width and other invisible characters (`U+00AD`, `U+200B`,
+///   `U+200C`, `U+200D`, `U+2060`, `U+FEFF`) let two different profiles
+///   render identically, which aids impersonation in listings.
+///
+/// We strip rather than reject: these characters are not something a
+/// user types on purpose in a name, so removing them silently is
+/// friendlier than an error nobody can act on. Stripping happens where
+/// the profile is written rather than where it's read, so the stored
+/// value is clean for every consumer — the web UI, CLI output, the JSON
+/// API, and email.
+///
+/// Every other code point is preserved, so names in Arabic, Hebrew, CJK,
+/// Cyrillic, accented Latin, and so on round-trip untouched. The one
+/// tradeoff is that `U+200C` (ZWNJ) and `U+200D` (ZWJ) are meaningful in
+/// Persian and in Indic scripts, and join emoji sequences; a name that
+/// legitimately uses them will render slightly differently once they're
+/// removed.
+pub fn strip_bidi_and_invisible(text: &str) -> String {
+    text.chars()
+        .filter(|c| {
+            !matches!(*c,
+                '\u{00AD}'                 // SOFT HYPHEN
+                | '\u{061C}'               // ARABIC LETTER MARK
+                | '\u{200B}'..='\u{200F}'  // zero-width characters, LRM, RLM
+                | '\u{202A}'..='\u{202E}'  // LRE, RLE, PDF, LRO, RLO
+                | '\u{2060}'               // WORD JOINER
+                | '\u{2066}'..='\u{2069}'  // LRI, RLI, FSI, PDI
+                | '\u{FEFF}'               // ZERO WIDTH NO-BREAK SPACE
+            )
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,5 +194,57 @@ mod tests {
     fn test_reserved_names_apply_only_to_entities() {
         assert!(validate_entity_slug("register").is_err());
         assert!(validate_database_slug("register").is_ok());
+    }
+
+    /// The characters that let a profile field rewrite the text around
+    /// it, or render identically to a different profile, are removed.
+    #[test]
+    fn test_strips_bidi_and_invisible_characters() {
+        for (input, expected) in [
+            // Trojan Source: an override that reorders what follows it.
+            ("Entity\u{202E} 0", "Entity 0"),
+            ("\u{202E}gnp.eliforp", "gnp.eliforp"),
+            // The rest of the bidi controls, embeddings and isolates.
+            ("a\u{202A}b\u{202B}c\u{202C}d\u{202D}e", "abcde"),
+            ("a\u{2066}b\u{2067}c\u{2068}d\u{2069}e", "abcde"),
+            ("a\u{200E}b\u{200F}c\u{061C}d", "abcd"),
+            // Invisible characters that make two names look the same.
+            ("Ent\u{200B}ity 0", "Entity 0"),
+            ("Ent\u{00AD}ity 0", "Entity 0"),
+            ("Ent\u{FEFF}ity 0", "Entity 0"),
+            ("Ent\u{2060}ity 0", "Entity 0"),
+            ("Ent\u{200C}it\u{200D}y 0", "Entity 0"),
+            // Text that needs no cleaning is returned unchanged.
+            ("", ""),
+            ("Entity 0", "Entity 0"),
+        ] {
+            assert_eq!(
+                strip_bidi_and_invisible(input),
+                expected,
+                "unexpected result for {input:?}"
+            );
+        }
+    }
+
+    /// The point of stripping only formatting controls is that every
+    /// real script still round-trips: profile fields are where users
+    /// write their actual name.
+    #[test]
+    fn test_preserves_ordinary_unicode_names() {
+        for name in [
+            "Entity 0",
+            "أحمد بن سليمان",     // Arabic
+            "משה בן־מימון",       // Hebrew
+            "北京大学",           // Chinese
+            "やまだ たろう",      // Japanese
+            "Ясен Стойчев",       // Cyrillic
+            "José Ángel Peña",    // Accented Latin
+            "Δημήτριος",          // Greek
+            "ᏣᎳᎩ",                // Cherokee
+            "Data — everywhere!", // Punctuation and symbols
+            "🐘 postgres fan",    // Emoji
+        ] {
+            assert_eq!(strip_bidi_and_invisible(name), name, "modified {name:?}");
+        }
     }
 }
