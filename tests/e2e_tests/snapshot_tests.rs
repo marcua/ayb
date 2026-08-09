@@ -274,7 +274,7 @@ pub async fn test_snapshots(
         &old_snapshots[1].snapshot_id,
         &format!(
             "Error: Snapshot {} does not exist for e2e-first/test.sqlite",
-            &old_snapshots[1].snapshot_id
+            old_snapshots[1].snapshot_id
         ),
     )?;
     query(
