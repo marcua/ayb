@@ -559,6 +559,7 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [x] Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
   * [x] Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data.
   * [x] Persistence beyond the node. Back databases up to persistent S3-compatible storage and allow (for now) manual recovery on failure.
+  * [x] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command.
   * [ ] Clustering. Support for multiple `ayb` nodes to serve databases and requests. Whereas a single database will not span multiple machines, parallelism/distribution will happen across users and databases.
   * [ ] Sessions/transactions. `ayb`'s query API is a stateless request/response API, making it impossible to start a database transaction or issue multiple queries in a session. Exposing sessions in the API will allow multiple statements per session, and by extension, transactions.
   * [ ] Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
@@ -567,7 +568,6 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [x] Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
   * [ ] Forking. Allowing a user to fork their own copy of a database will enable collaborators to remix and build on each others' work.
   * [ ] Versioning. To both make it less scary to execute sensitive operations and to make it possible for scientists to reference and publish checkpoints of their work, a user should be able to snapshot and revert to a database at a point in time.
-  * [ ] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command. This effort is dependent on the DuckDB project. First, the DuckDB file format is rapidly changing ahead of the project's 1.0 release. Additionally, I don't know of an equivalent streaming replication project to LiteFS for DuckDB that handles *persistence beyond the node*.
   * [ ] PostgreSQL wire protocol. While an HTTP API makes it easy to build new web apps, exposing `ayb` over the PostgreSQL wire protocol will allow existing tools and libraries to connect to and query an `ayb` database.
 * Increase discoverability with a web frontend
   * [x] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
