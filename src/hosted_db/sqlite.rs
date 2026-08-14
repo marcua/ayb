@@ -1,17 +1,59 @@
 use crate::error::AybError;
-use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::{QueryMode, QueryResult};
+use crate::hosted_db::engine::DbEngine;
+use crate::hosted_db::{sql_string_literal, QueryMode, QueryResult};
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use std::path::PathBuf;
+use std::path::Path;
+
+pub struct SqliteEngine;
+
+impl DbEngine for SqliteEngine {
+    fn query(
+        &self,
+        path: &Path,
+        query: &str,
+        query_mode: QueryMode,
+    ) -> Result<QueryResult, AybError> {
+        query_sqlite(path, query, false, query_mode)
+    }
+
+    fn create_snapshot(&self, db_path: &Path, snapshot_path: &Path) -> Result<(), AybError> {
+        // The snapshot path embeds user-controlled entity and database
+        // slugs, so it is rendered as an escaped SQL string literal
+        // rather than interpolated raw. (Single quotes, not the double
+        // quotes SQLite would read as an identifier.)
+        let backup_query = format!("VACUUM INTO {}", sql_string_literal(snapshot_path));
+        let result = query_sqlite(db_path, &backup_query, true, QueryMode::ReadOnly)?;
+        if !result.rows.is_empty() {
+            return Err(AybError::SnapshotError {
+                message: format!("Unexpected snapshot result: {result:?}"),
+            });
+        }
+        let result = query_sqlite(
+            snapshot_path,
+            "PRAGMA integrity_check;",
+            false,
+            QueryMode::ReadOnly,
+        )?;
+        if result.fields.len() != 1
+            || result.rows.len() != 1
+            || result.rows[0][0] != Some("ok".to_string())
+        {
+            return Err(AybError::SnapshotError {
+                message: format!("Snapshot failed integrity check: {result:?}"),
+            });
+        }
+        Ok(())
+    }
+}
 
 /// `allow_unsafe` disables features that prevent abuse but also
 /// prevent backups/snapshots. The only known use case in the codebase
 /// is for snapshots.
-pub fn query_sqlite(
-    path: &PathBuf,
+fn query_sqlite(
+    path: &Path,
     query: &str,
     allow_unsafe: bool,
     query_mode: QueryMode,
@@ -91,15 +133,4 @@ pub fn query_sqlite(
         fields,
         rows: results,
     })
-}
-
-/// Run `query` against the database at `path` via the sandboxed query
-/// daemon.
-pub async fn run_sqlite_query(
-    daemon_registry: &DaemonRegistry,
-    path: &PathBuf,
-    query: &str,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    daemon_registry.execute_query(path, query, query_mode).await
 }

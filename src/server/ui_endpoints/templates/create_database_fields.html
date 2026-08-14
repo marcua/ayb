@@ -1,5 +1,8 @@
 <div class="mb-4">
     <label for="database-slug" class="block text-sm font-medium mb-1">Database name</label>
+    <!-- The pattern below is a browser-side convenience only. The
+         authoritative check is validate_database_slug in
+         src/server/validation.rs; keep the two character sets in sync. -->
     <input
         type="text"
         id="database-slug"
@@ -8,6 +11,27 @@
         placeholder="example.sqlite"
         pattern="[A-Za-z0-9\-_\.]+"
         title="Only letters, numbers, underscores, hyphens, and periods are allowed">
+</div>
+
+<div class="mb-4">
+    <label class="block text-sm font-medium mb-1">Database type</label>
+    <div class="uk-btn-group" data-uk-button-radio>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default uk-active"
+            data-value="sqlite"
+            onclick="setDbType(this, 'sqlite')">
+            SQLite
+        </button>
+        <button
+            type="button"
+            class="uk-btn uk-btn-default"
+            data-value="duckdb"
+            onclick="setDbType(this, 'duckdb')">
+            DuckDB
+        </button>
+    </div>
+    <input type="hidden" id="db-type" name="db_type" value="sqlite">
 </div>
 
 <div class="mb-4">
@@ -39,6 +63,13 @@
 </div>
 
 <script>
+    function setDbType(button, value) {
+        document.getElementById('db-type').value = value;
+        const buttons = button.parentElement.querySelectorAll('button');
+        buttons.forEach(btn => btn.classList.remove('uk-active'));
+        button.classList.add('uk-active');
+    }
+
     function setPublicSharingLevel(button, value) {
         document.getElementById('public-sharing-level').value = value;
         const buttons = button.parentElement.querySelectorAll('button');

@@ -1,6 +1,6 @@
 use crate::utils::browser::BrowserHelpers;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use playwright::api::Page;
+use playwright_rs::{ClickOptions, Page, WaitForOptions};
 use prefixed_api_key::rand::{self, Rng};
 use sha2::{Digest, Sha256};
 use std::error::Error;
@@ -9,14 +9,13 @@ fn generate_pkce() -> (String, String) {
     let verifier: String = (0..64)
         .map(|_| {
             let idx = rand::thread_rng().gen::<u8>() % 62;
-            let c = if idx < 10 {
+            if idx < 10 {
                 (b'0' + idx) as char
             } else if idx < 36 {
                 (b'a' + idx - 10) as char
             } else {
                 (b'A' + idx - 36) as char
-            };
-            c
+            }
         })
         .collect();
 
@@ -67,11 +66,12 @@ async fn complete_oauth_flow(
         urlencoding::encode(&app_name)
     );
 
-    page.goto_builder(&authorize_url).goto().await?;
+    page.goto(&authorize_url, None).await?;
 
-    page.wait_for_selector_builder("#database-select")
-        .timeout(5000.0)
-        .wait_for_selector()
+    page.locator("#database-select")
+        .await
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(
@@ -96,7 +96,7 @@ async fn complete_oauth_flow(
         "#,
         db = database_path
     );
-    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, serde_json::Value::Null)
+    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, None)
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -108,14 +108,15 @@ async fn complete_oauth_flow(
     )
     .await?;
 
-    page.click_builder("#authorize-btn")
-        .timeout(5000.0)
-        .click()
+    page.locator("#authorize-btn")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let current_url = page.url()?;
+    let current_url = page.url();
     let url = url::Url::parse(&current_url)?;
 
     let code = url
@@ -143,7 +144,7 @@ async fn complete_oauth_flow(
 
     let client = reqwest::Client::new();
     let token_response = client
-        .post(&format!("{}/v1/oauth/token", base_url))
+        .post(format!("{}/v1/oauth/token", base_url))
         .json(&serde_json::json!({
             "grant_type": "authorization_code",
             "code": code,
@@ -199,7 +200,7 @@ pub async fn test_oauth_flow_readonly(
 
     // Test that the scoped token can read from the database
     let read_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("SELECT * FROM test_table LIMIT 1")
         .send()
@@ -216,7 +217,7 @@ pub async fn test_oauth_flow_readonly(
     // This is the key test for permission capping - even though the user has
     // read-write access to their own database, the scoped token only has read-only.
     let write_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("INSERT INTO test_table (fname, lname) VALUES ('oauth_readonly_test', 'should_fail')")
         .send()
@@ -267,7 +268,7 @@ pub async fn test_oauth_flow_readwrite(
 
     // Test that the scoped token can read from the database
     let read_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("SELECT * FROM test_table LIMIT 1")
         .send()
@@ -283,7 +284,7 @@ pub async fn test_oauth_flow_readwrite(
     // Test that the scoped token can write to the database.
     // This verifies that read-write scope is not capped.
     let write_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("INSERT INTO test_table (fname, lname) VALUES ('oauth_readwrite_test', 'should_succeed')")
         .send()
@@ -299,7 +300,7 @@ pub async fn test_oauth_flow_readwrite(
 
     // Verify the write actually worked
     let verify_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", result.access_token))
         .body("SELECT * FROM test_table WHERE fname = 'oauth_readwrite_test'")
         .send()
@@ -361,11 +362,12 @@ pub async fn test_oauth_deny_flow(
         urlencoding::encode("Deny Test App")
     );
 
-    page.goto_builder(&authorize_url).goto().await?;
+    page.goto(&authorize_url, None).await?;
 
-    page.wait_for_selector_builder("#database-select")
-        .timeout(5000.0)
-        .wait_for_selector()
+    page.locator("#database-select")
+        .await
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
     let database_path = format!("{}/test.sqlite", username);
@@ -379,19 +381,20 @@ pub async fn test_oauth_deny_flow(
         "#,
         db = database_path
     );
-    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, serde_json::Value::Null)
+    page.evaluate::<serde_json::Value, serde_json::Value>(&select_script, None)
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "oauth_before_deny", &[]).await?;
 
-    page.click_builder("button[value='deny']")
-        .timeout(5000.0)
-        .click()
+    page.locator("button[value='deny']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    let current_url = page.url()?;
+    let current_url = page.url();
 
     let url = url::Url::parse(&current_url)?;
     let error = url

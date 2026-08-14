@@ -10,6 +10,7 @@ use std::str::FromStr;
 #[derive(Deserialize)]
 pub struct CreateDatabaseRequest {
     database_slug: String,
+    db_type: String,
     public_sharing_level: String,
 }
 
@@ -22,22 +23,16 @@ pub async fn create_database(
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = &form.database_slug.to_lowercase();
+    let db_type = DBType::from_str(&form.db_type)?;
     let public_sharing_level = PublicSharingLevel::from_str(&form.public_sharing_level)?;
 
     let client = init_ayb_client(&ayb_config, &req);
 
-    // Create the database using the API client
     match client
-        .create_database(
-            entity_slug,
-            database_slug,
-            &DBType::Sqlite,
-            &public_sharing_level,
-        )
+        .create_database(entity_slug, database_slug, &db_type, &public_sharing_level)
         .await
     {
         Ok(_) => {
-            // Redirect to the new database page
             let redirect_url = format!("/{entity_slug}/{database_slug}");
             Ok(HttpResponse::Ok()
                 .append_header(("HX-Redirect", redirect_url))

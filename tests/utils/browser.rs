@@ -1,9 +1,9 @@
 use image::GenericImageView;
-use playwright::{
-    api::{BrowserContext, Page},
-    Playwright,
+use playwright_rs::{
+    Browser, BrowserContext, BrowserContextOptions, BrowserType, LaunchOptions, Page, Playwright,
+    ScreenshotOptions,
 };
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 static SCREENSHOT_COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -15,7 +15,7 @@ impl BrowserHelpers {
     pub async fn set_up_browser(
         user_count: usize,
     ) -> Result<(Playwright, Vec<(BrowserContext, Page)>), Box<dyn std::error::Error>> {
-        let playwright = Playwright::initialize().await?;
+        let playwright = Playwright::launch().await?;
 
         // Check for BROWSER_VISIBLE environment variable to run in non-headless mode
         let headless = std::env::var("BROWSER_VISIBLE").is_err();
@@ -28,15 +28,17 @@ impl BrowserHelpers {
         }
 
         let chromium = playwright.chromium();
-        let browser = Self::try_launch_browser(&chromium, headless).await?;
+        let browser = Self::try_launch_browser(chromium, headless).await?;
 
         let mut contexts_and_pages = Vec::new();
 
         for i in 0..user_count {
             let context = browser
-                .context_builder()
-                .accept_downloads(true)
-                .build()
+                .new_context_with_options(
+                    BrowserContextOptions::builder()
+                        .accept_downloads(true)
+                        .build(),
+                )
                 .await?;
             let page = context.new_page().await?;
 
@@ -51,11 +53,14 @@ impl BrowserHelpers {
     }
 
     async fn try_launch_browser(
-        chromium: &playwright::api::BrowserType,
+        chromium: &BrowserType,
         headless: bool,
-    ) -> Result<playwright::api::Browser, Box<dyn std::error::Error>> {
+    ) -> Result<Browser, Box<dyn std::error::Error>> {
         // Strategy 1: Try Playwright-installed browser first
-        match chromium.launcher().headless(headless).launch().await {
+        match chromium
+            .launch_with_options(LaunchOptions::new().headless(headless))
+            .await
+        {
             Ok(browser) => return Ok(browser),
             Err(_) => println!(
                 "Preinstalled Playwright not available on this platform, trying fallbacks..."
@@ -82,15 +87,16 @@ impl BrowserHelpers {
         for path in &browser_paths {
             if std::path::Path::new(path).exists() {
                 println!("Trying system browser at: {}", path);
-                match chromium
-                    .launcher()
-                    .headless(headless)
-                    .executable(std::path::Path::new(path))
-                    .launch()
+                // On failure, fall through to the next fallback.
+                if let Ok(browser) = chromium
+                    .launch_with_options(
+                        LaunchOptions::new()
+                            .headless(headless)
+                            .executable_path(path.to_string()),
+                    )
                     .await
                 {
-                    Ok(browser) => return Ok(browser),
-                    Err(_) => {} // Try next fallback
+                    return Ok(browser);
                 }
             }
         }
@@ -147,7 +153,7 @@ impl BrowserHelpers {
                 selector
             );
             if let Err(e) = page
-                .evaluate::<serde_json::Value, serde_json::Value>(&script, serde_json::Value::Null)
+                .evaluate::<serde_json::Value, serde_json::Value>(&script, None)
                 .await
             {
                 println!("Warning: Could not grey out selector '{}': {}", selector, e);
@@ -158,11 +164,11 @@ impl BrowserHelpers {
         tokio::time::sleep(std::time::Duration::from_millis(150)).await;
 
         // Take current screenshot
-        page.screenshot_builder()
-            .path(PathBuf::from(&current_path))
-            .full_page(true)
-            .screenshot()
-            .await?;
+        page.screenshot_to_file(
+            Path::new(&current_path),
+            Some(ScreenshotOptions::builder().full_page(true).build()),
+        )
+        .await?;
 
         // If no reference exists, save current as reference
         if !Path::new(&reference_path).exists() {

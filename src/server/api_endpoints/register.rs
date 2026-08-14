@@ -5,8 +5,8 @@ use crate::error::AybError;
 use crate::http::structs::{AuthenticationDetails, EmptyResponse};
 use crate::server::config::AybConfig;
 use crate::server::tokens::encrypt_auth_token;
-use crate::server::username_validation::validate_username;
 use crate::server::utils::{get_lowercased_header, get_required_header};
+use crate::server::validation::validate_entity_slug;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::str::FromStr;
 
@@ -22,7 +22,7 @@ async fn register(
     let entity_type = get_required_header(&req, "entity-type")?;
 
     // Validate username for route conflicts
-    validate_username(&entity)?;
+    validate_entity_slug(&entity)?;
     let desired_entity = ayb_db.get_entity_by_slug(&entity).await;
     // Ensure that there are no authentication methods aside from
     // perhaps the currently requested one.

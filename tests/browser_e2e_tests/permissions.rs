@@ -1,7 +1,8 @@
 use crate::browser_e2e_tests::test_registration_flow;
 use crate::utils::browser::BrowserHelpers;
-use playwright::api::Page;
+use playwright_rs::{BrowserContext, ClickOptions, FillOptions, GotoOptions, Page};
 use std::error::Error;
+use std::time::Duration;
 
 pub struct UserBrowserProfile {
     pub username: String,
@@ -10,7 +11,7 @@ pub struct UserBrowserProfile {
 
 /// Register multiple users in separate browser contexts
 pub async fn register_multiple_users(
-    contexts_and_pages: Vec<(playwright::api::BrowserContext, Page)>,
+    contexts_and_pages: Vec<(BrowserContext, Page)>,
     base_url: &str,
     test_type: &str,
 ) -> Result<Vec<UserBrowserProfile>, Box<dyn Error>> {
@@ -51,16 +52,21 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // Create database
     user_a
         .page
-        .click_builder("button:has-text('Create database')")
-        .timeout(3000.0)
-        .click()
+        .locator("button:has-text('Create database')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
 
     user_a
         .page
-        .fill_builder("input[name='database_slug']", "shared_test.sqlite")
-        .timeout(1000.0)
-        .fill()
+        .locator("input[name='database_slug']")
+        .await
+        .first()
+        .fill(
+            "shared_test.sqlite",
+            Some(FillOptions::builder().timeout(1000.0).build()),
+        )
         .await?;
 
     // Database is created as private by default
@@ -68,9 +74,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
 
     user_a
         .page
-        .click_builder("button[type='submit']:has-text('Create database')")
-        .timeout(5000.0)
-        .click()
+        .locator("button[type='submit']:has-text('Create database')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_database_created", &[]).await?;
@@ -80,16 +87,21 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
 
     user_a
         .page
-        .fill_builder("textarea[name='query']", create_table_query)
-        .timeout(1000.0)
-        .fill()
+        .locator("textarea[name='query']")
+        .await
+        .first()
+        .fill(
+            create_table_query,
+            Some(FillOptions::builder().timeout(1000.0).build()),
+        )
         .await?;
 
     user_a
         .page
-        .click_builder("button:has-text('Run query')")
-        .timeout(5000.0)
-        .click()
+        .locator("button:has-text('Run query')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_table_created", &[]).await?;
@@ -97,12 +109,13 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // Step 5: Users B and C should not see User A's private database
     user_b
         .page
-        .goto_builder(&format!("{}/{}", base_url, user_a.username))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
-    let page_content_b = user_b.page.inner_text("body", None).await?;
+    let page_content_b = user_b.page.locator("body").await.inner_text().await?;
     let can_see_db_b = page_content_b.contains("shared_test.sqlite");
     assert!(
         !can_see_db_b,
@@ -112,12 +125,13 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
 
     user_c
         .page
-        .goto_builder(&format!("{}/{}", base_url, user_a.username))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
-    let page_content_c = user_c.page.inner_text("body", None).await?;
+    let page_content_c = user_c.page.locator("body").await.inner_text().await?;
     let can_see_db_c = page_content_c.contains("shared_test.sqlite");
     assert!(
         !can_see_db_c,
@@ -129,19 +143,18 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User A navigates to database and clicks sharing tab
     user_a
         .page
-        .goto_builder(&format!(
-            "{}/{}/shared_test.sqlite",
-            base_url, user_a.username
-        ))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}/shared_test.sqlite", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
     user_a
         .page
-        .click_builder("a[href='#sharing']")
-        .timeout(5000.0)
-        .click()
+        .locator("a[href='#sharing']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_sharing_tab", &[]).await?;
@@ -149,16 +162,18 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // Set public sharing to read-only
     user_a
         .page
-        .click_builder("button[data-value='read-only']")
-        .timeout(3000.0)
-        .click()
+        .locator("button[data-value='read-only']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
 
     user_a
         .page
-        .click_builder("#update-public-sharing-btn")
-        .timeout(5000.0)
-        .click()
+        .locator("#update-public-sharing-btn")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_set_public_readonly", &[]).await?;
@@ -166,12 +181,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // Users B and C should now be able to access the database
     user_b
         .page
-        .goto_builder(&format!(
-            "{}/{}/shared_test.sqlite",
-            base_url, user_a.username
-        ))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}/shared_test.sqlite", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_can_access_readonly", &[]).await?;
@@ -179,22 +192,32 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User B can run read-only query
     user_b
         .page
-        .fill_builder("textarea[name='query']", "SELECT COUNT(*) FROM test_table;")
-        .timeout(1000.0)
-        .fill()
+        .locator("textarea[name='query']")
+        .await
+        .first()
+        .fill(
+            "SELECT COUNT(*) FROM test_table;",
+            Some(FillOptions::builder().timeout(1000.0).build()),
+        )
         .await?;
 
     user_b
         .page
-        .click_builder("button:has-text('Run query')")
-        .timeout(5000.0)
-        .click()
+        .locator("button:has-text('Run query')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_readonly_query_success", &[]).await?;
 
     // Verify User B can see the count result (should be 0 since no data inserted yet)
-    let query_results_b_count = user_b.page.inner_text("#query-results", None).await?;
+    let query_results_b_count = user_b
+        .page
+        .locator("#query-results")
+        .await
+        .inner_text()
+        .await?;
     assert!(
         query_results_b_count.contains("0"),
         "User B should see count of 0 rows in empty table"
@@ -203,25 +226,32 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User B cannot run insert query (should fail)
     user_b
         .page
-        .fill_builder(
-            "textarea[name='query']",
+        .locator("textarea[name='query']")
+        .await
+        .first()
+        .fill(
             "INSERT INTO test_table (fname, lname) VALUES ('unauthorized', 'insert');",
+            Some(FillOptions::builder().timeout(1000.0).build()),
         )
-        .timeout(1000.0)
-        .fill()
         .await?;
 
     user_b
         .page
-        .click_builder("button:has-text('Run query')")
-        .timeout(5000.0)
-        .click()
+        .locator("button:has-text('Run query')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_insert_query_failed", &[]).await?;
 
     // Verify the error message indicates read-only access
-    let query_results_b = user_b.page.inner_text("#query-results", None).await?;
+    let query_results_b = user_b
+        .page
+        .locator("#query-results")
+        .await
+        .inner_text()
+        .await?;
     assert!(
         query_results_b.contains("Attempted to write to database while in read-only mode"),
         "User B should get the specific read-only error when trying to insert"
@@ -230,12 +260,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User C should also be able to access the database now
     user_c
         .page
-        .goto_builder(&format!(
-            "{}/{}/shared_test.sqlite",
-            base_url, user_a.username
-        ))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}/shared_test.sqlite", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_c.page, "userC_can_access_readonly", &[]).await?;
@@ -246,33 +274,34 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User A sets database back to private
     user_a
         .page
-        .goto_builder(&format!(
-            "{}/{}/shared_test.sqlite",
-            base_url, user_a.username
-        ))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}/shared_test.sqlite", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
     user_a
         .page
-        .click_builder("a[href='#sharing']")
-        .timeout(5000.0)
-        .click()
+        .locator("a[href='#sharing']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     user_a
         .page
-        .click_builder("button[data-value='no-access']")
-        .timeout(3000.0)
-        .click()
+        .locator("button[data-value='no-access']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
 
     user_a
         .page
-        .click_builder("#update-public-sharing-btn")
-        .timeout(5000.0)
-        .click()
+        .locator("#update-public-sharing-btn")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_a.page, "userA_set_back_to_private", &[]).await?;
@@ -280,23 +309,29 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User A shares specifically with User B
     user_a
         .page
-        .fill_builder("#share-entity", &user_b.username)
-        .timeout(1000.0)
-        .fill()
+        .locator("#share-entity")
+        .await
+        .first()
+        .fill(
+            &user_b.username,
+            Some(FillOptions::builder().timeout(1000.0).build()),
+        )
         .await?;
 
     user_a
         .page
-        .click_builder("#entity-sharing-form button[data-value='read-only']")
-        .timeout(3000.0)
-        .click()
+        .locator("#entity-sharing-form button[data-value='read-only']")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
 
     user_a
         .page
-        .click_builder("#share-entity-btn")
-        .timeout(5000.0)
-        .click()
+        .locator("#share-entity-btn")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     // Sleep a little bit so new sharing table can be retrieved/rendered.
@@ -307,12 +342,10 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User B should now be able to access the database
     user_b
         .page
-        .goto_builder(&format!(
-            "{}/{}/shared_test.sqlite",
-            base_url, user_a.username
-        ))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}/shared_test.sqlite", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_specific_access_granted", &[]).await?;
@@ -320,22 +353,32 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User B can run read-only query
     user_b
         .page
-        .fill_builder("textarea[name='query']", "SELECT COUNT(*) FROM test_table;")
-        .timeout(1000.0)
-        .fill()
+        .locator("textarea[name='query']")
+        .await
+        .first()
+        .fill(
+            "SELECT COUNT(*) FROM test_table;",
+            Some(FillOptions::builder().timeout(1000.0).build()),
+        )
         .await?;
 
     user_b
         .page
-        .click_builder("button:has-text('Run query')")
-        .timeout(5000.0)
-        .click()
+        .locator("button:has-text('Run query')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_specific_query_success", &[]).await?;
 
     // Verify User B can see the count result (should still be 0)
-    let query_results_b_specific = user_b.page.inner_text("#query-results", None).await?;
+    let query_results_b_specific = user_b
+        .page
+        .locator("#query-results")
+        .await
+        .inner_text()
+        .await?;
     assert!(
         query_results_b_specific.contains("0"),
         "User B should see count of 0 rows when specifically shared"
@@ -344,15 +387,13 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     // User C should still not be able to access the database
     user_c
         .page
-        .goto_builder(&format!(
-            "{}/{}/shared_test.sqlite",
-            base_url, user_a.username
-        ))
-        .timeout(5000.0)
-        .goto()
+        .goto(
+            &format!("{}/{}/shared_test.sqlite", base_url, user_a.username),
+            Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+        )
         .await?;
 
-    let page_content_c_final = user_c.page.inner_text("body", None).await?;
+    let page_content_c_final = user_c.page.locator("body").await.inner_text().await?;
     let can_see_db_c_final = page_content_c_final.contains("shared_test.sqlite")
         || page_content_c_final.contains("Query");
     assert!(
