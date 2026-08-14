@@ -2,7 +2,11 @@
 
 **Status:** draft for discussion
 **Date:** 2026-07-06
-**Code references:** `main` at `70898f6`. Line numbers will drift; function/file names are the stable pointers.
+**Code references:** written against `main` at `70898f6`; updated after
+merging `main` at `0dcd201`, which includes DuckDB support (#776: the
+`DbEngine` trait in `src/hosted_db/engine.rs`, a db-type-aware daemon, and
+unified 256 MB/256 MB/32-fd daemon rlimits). Line numbers will drift;
+function/file names are the stable pointers.
 
 This document proposes how to scale ayb from one stateful server to many
 nodes: how databases are placed on nodes, how requests are routed, how a
@@ -247,8 +251,8 @@ path; upload size is emergent (churn since last ship). The only
 full-upload events are the first ship and a deliberate defrag/rebaseline.
 
 **Producers must be checkpoint-then-copy, not rebuilders.** `VACUUM INTO`
-(SQLite) and `COPY FROM DATABASE` (DuckDB) — the current and PR #776
-snapshot methods — rewrite/repack the file and are chunk-catastrophic
+(SQLite) and `COPY FROM DATABASE` (DuckDB) — the shipped snapshot
+methods behind the `DbEngine` trait since #776 — rewrite/repack the file and are chunk-catastrophic
 (measured: 99.7% / 97.7% churn around 100-row / 10-row changes; §5). Both
 are kept as rare, deliberate maintenance operations (defrag + fresh
 baseline + integrity re-verification), not as the shipped artifact.
@@ -319,7 +323,7 @@ got a 200).
 
 **Crash:** heartbeats stop → TTL lapses (~15–30s) → next request (or
 manager sweep) claims the group (epoch++) → owner rehydrates: fetch
-pointer + manifest, fetch chunks in parallel (75–256 MB caps ⇒ ~1–3s),
+pointer + manifest, fetch chunks in parallel (≤256 MB rlimit cap ⇒ ~1–3s),
 replay any T2 segments → serve. **RTO ≈ TTL + seconds; RPO per tier.**
 Groups nobody asks for stay cold — a node death with 30k groups is not
 30k restores, it is lease markers plus lazy rehydration with jittered,
@@ -467,7 +471,8 @@ Findings the design relies on:
 
 1. **Checkpoint-then-copy is byte-stable and tracks physical churn**; the
    rebuilders (`VACUUM INTO`, `COPY FROM DATABASE`) are unusable as
-   shipping producers. (PR #776's snapshot methods need this swap.)
+   shipping producers. (The `DbEngine::create_snapshot` implementations
+   from #776 need this swap.)
 2. **SQLite churn floor = pages touched**, ~10× the fraction of rows for
    scattered updates. Small chunks (64 KiB) or page-granular T2 segments
    are the mitigations; clustered/append/tiny writes diff beautifully at
@@ -606,7 +611,8 @@ refine RPO/RTO and scale; earlier phases already improve single-node ayb.
 6. **Snapshot pipeline fixes**: discovery from the metadata DB + daemon
    dirty flags (not FS walks); snapshot index in Postgres (not S3 LIST
    dedup); producer switched to checkpoint+copy (coordinate with
-   PR #776's `DbEngine` snapshot methods); `VACUUM INTO` /
+   the `DbEngine::create_snapshot` implementations,
+   `src/hosted_db/engine.rs`); `VACUUM INTO` /
    `COPY FROM DATABASE` demoted to maintenance ops.
 
 *Exit test:* kill a single-node server, delete `data_path`, start a fresh
