@@ -36,6 +36,8 @@
  *   ayb.disconnect();
  *
  * --- Manual token auth ---
+ * If you want to pass in an ayb URL and token and have them stored in 
+ * `localStorage` for future sessions, use `saveConfig`:
  *
  *   const db = new AybClient({ appId: 'my-app' });
  *   const token = 'ayb_xxx_yyy';
@@ -43,6 +45,18 @@
  *   await runMigrations(db, 'my-app', [...]);
  *   const rows = await db.queryObjects('SELECT * FROM todos');
  *   // On next page load: db.loadConfig() restores the saved connection.
+ *
+ * --- Server-side / no localStorage ---
+ *
+ * In Node.js (serverless, CLI, tests) there is no localStorage. Pass
+ * url + token to the constructor to connect immediately:
+ *
+ *   const db = new AybClient({
+ *     appId: 'my-app',
+ *     url: 'https://host/v1/entity/database',
+ *     token: 'ayb_xxx_yyy',
+ *   });
+ *   const rows = await db.queryObjects('SELECT * FROM todos');
  */
 
 class AybClient {
@@ -52,6 +66,9 @@ class AybClient {
      *   localStorage keys and migration state. Required.
      * @property {string} [storageKey] - localStorage key prefix.
      *   Defaults to 'ayb_<appId>'.
+     * @property {string} [url] - Database URL (e.g. https://host/v1/entity/database).
+     *   When provided with token, connects immediately without localStorage.
+     * @property {string} [token] - API token. Required when url is provided.
      */
     /**
      * @param {AybClientOptions} [options]
@@ -61,6 +78,10 @@ class AybClient {
         this.appId = options.appId;
         this.storageKey = options.storageKey || `ayb_${this.appId}`;
         this._config = null;
+        if (options.url && options.token) {
+            const parsed = AybClient.parseDatabaseUrl(options.url);
+            this._config = { ...parsed, token: options.token };
+        }
     }
 
     // ---- Config Management ----

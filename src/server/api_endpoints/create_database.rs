@@ -12,6 +12,7 @@ use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
 use crate::server::config::AybConfig;
 use crate::server::permissions::can_create_database;
 use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
+use crate::server::validation::validate_database_slug;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post(
@@ -27,6 +28,7 @@ async fn create_database(
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
+    validate_database_slug(&path.database)?;
 
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
     let db_type = DBType::from_str(&get_required_header(&req, "db-type")?)?;

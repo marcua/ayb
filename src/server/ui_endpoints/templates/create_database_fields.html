@@ -1,5 +1,8 @@
 <div class="mb-4">
     <label for="database-slug" class="block text-sm font-medium mb-1">Database name</label>
+    <!-- The pattern below is a browser-side convenience only. The
+         authoritative check is validate_database_slug in
+         src/server/validation.rs; keep the two character sets in sync. -->
     <input
         type="text"
         id="database-slug"

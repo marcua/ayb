@@ -6,6 +6,8 @@ pub mod sandbox;
 pub mod sqlite;
 
 use crate::ayb_db::models::DBType;
+// Used by the try_from_i16!/from_str! macro expansions below, which name
+// AybError without it appearing textually in this file.
 use crate::error::AybError;
 use crate::formatting::TabularFormatter;
 use crate::from_str;
@@ -98,22 +100,26 @@ impl TabularFormatter for QueryResult {
     }
 }
 
-pub fn engine_for(db_type: &DBType) -> Box<dyn DbEngine> {
-    match db_type {
-        DBType::Sqlite => Box::new(SqliteEngine),
-        DBType::Duckdb => Box::new(DuckdbEngine),
-    }
+/// Render `path` as a single-quoted SQL string literal, doubling any
+/// embedded single quotes.
+///
+/// Database paths contain entity and database slugs, which are
+/// user-controlled, so they must never be interpolated into SQL raw.
+/// Slugs are also validated at the API boundary (see
+/// `server::validation`); this is the second line of defense, at
+/// the point where the string actually becomes SQL. It matters most for
+/// snapshots, which build statements by interpolation and run them in
+/// the server process rather than in a sandboxed daemon.
+///
+/// Doubling a single quote is the standard SQL escape and is understood
+/// by both SQLite and DuckDB.
+pub(crate) fn sql_string_literal(path: &Path) -> String {
+    format!("'{}'", path.display().to_string().replace('\'', "''"))
 }
 
-pub async fn run_query(
-    daemon_registry: &daemon_registry::DaemonRegistry,
-    path: &Path,
-    query: &str,
-    params: &QueryParams,
-    db_type: &DBType,
-    query_mode: QueryMode,
-) -> Result<QueryResult, AybError> {
-    daemon_registry
-        .execute_query(path, query, params, db_type, query_mode)
-        .await
+pub fn engine_for(db_type: &DBType) -> &'static dyn DbEngine {
+    match db_type {
+        DBType::Sqlite => &SqliteEngine,
+        DBType::Duckdb => &DuckdbEngine,
+    }
 }

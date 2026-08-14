@@ -254,5 +254,13 @@ pub fn build_daemon_command(
     let mut cmd = tokio::process::Command::new(&query_daemon_path);
     cmd.arg(db_path).arg(db_type.to_str());
 
+    // Run with an empty environment so the daemon inherits none of the
+    // server's secrets (fernet key, S3 credentials, SMTP password): they
+    // can't be read out of /proc/self/environ even if a query escaped the
+    // engine's file-access restrictions. The daemon needs no environment
+    // -- it is invoked by absolute path, links only standard system
+    // libraries, and its limits come from setrlimit/Landlock.
+    cmd.env_clear();
+
     Ok(cmd)
 }

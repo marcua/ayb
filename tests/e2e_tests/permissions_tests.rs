@@ -22,7 +22,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions1\", \"last permissions1\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions1', 'last permissions1');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -128,7 +128,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions2', 'last permissions2');",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -237,7 +237,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions2', 'last permissions2');",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -335,7 +335,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions2', 'last permissions2');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -441,7 +441,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("second").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions2', 'last permissions2');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -527,7 +527,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("third").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions2', 'last permissions2');",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",
@@ -607,7 +607,7 @@ pub async fn test_permissions(
     query(
         config_path,
         &api_keys.get("third").unwrap()[0],
-        "INSERT INTO test_table (fname, lname) VALUES (\"first permissions2\", \"last permissions2\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('first permissions2', 'last permissions2');",
         FIRST_ENTITY_DB,
         "table",
         "Error: Attempted to write to database while in read-only mode",

@@ -117,7 +117,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"another first\", \"another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('another first', 'another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -134,7 +134,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"yet another first\", \"yet another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('yet another first', 'yet another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -226,7 +226,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"a new first name\", \"a new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('a new first name', 'a new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -244,7 +244,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('and another new first name', 'and another new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -274,13 +274,13 @@ pub async fn test_snapshots(
         &old_snapshots[1].snapshot_id,
         &format!(
             "Error: Snapshot {} does not exist for e2e-first/test.sqlite",
-            &old_snapshots[1].snapshot_id
+            old_snapshots[1].snapshot_id
         ),
     )?;
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 1 \n\nRows: 1",
@@ -300,7 +300,7 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 0 \n\nRows: 1",
@@ -319,9 +319,8 @@ pub async fn test_snapshots_duckdb(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let api_key = &api_keys.get("first").unwrap()[0];
 
-    // Object storage (MinIO) persists across test runs even though the
-    // data directory is reset, so clear any DuckDB snapshots left behind
-    // by previous runs to get a deterministic starting count.
+    // Remove all snapshots so our tests aren't affected by
+    // timing/snapshots from previous tests.
     let storage = snapshot_storage(db_type).await?;
     storage
         .delete_snapshots(

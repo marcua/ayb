@@ -5,9 +5,9 @@ mod e2e_tests;
 mod utils;
 
 use crate::browser_e2e_tests::{
-    test_create_and_query_database_flow, test_entity_profile_flow, test_oauth_deny_flow,
-    test_oauth_flow, test_permissions_flow, test_registration_flow, test_snapshots_flow,
-    test_token_management_flow,
+    test_create_and_query_database_flow, test_duckdb_flow, test_entity_profile_flow,
+    test_oauth_deny_flow, test_oauth_flow, test_permissions_flow, test_registration_flow,
+    test_snapshots_flow, test_token_management_flow,
 };
 use crate::e2e_tests::{
     test_anonymous_access, test_create_and_query_db, test_create_and_query_duckdb,
@@ -98,9 +98,6 @@ async fn client_server_integration(
     test_anonymous_access(&config_path, &api_keys, server_url).await?;
     test_token_management(&config_path, &api_keys)?;
     test_oauth_token_exchange_errors(server_url).await?;
-    // Runs last: it creates a DuckDB database under e2e-first, which would
-    // otherwise appear in the many exact database-listing assertions above
-    // (and in the periodic snapshot job during test_snapshots).
     test_create_and_query_duckdb(&config_path, &api_keys)?;
     test_snapshots_duckdb(test_type, &config_path, &api_keys).await?;
 
@@ -135,28 +132,31 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     let base_url = format!("http://127.0.0.1:{}", port);
 
     // Run registration test and get the username
-    let username = test_registration_flow(&page, &base_url, "browser_sqlite").await?;
+    let username = test_registration_flow(page, &base_url, "browser_sqlite").await?;
 
     // Continue with profile test using the registered user
-    test_entity_profile_flow(&page, &username).await?;
+    test_entity_profile_flow(page, &username).await?;
 
     // Continue with database creation and query test
-    test_create_and_query_database_flow(&page, &username).await?;
+    test_create_and_query_database_flow(page, &username).await?;
 
     // Test multi-user permissions with separate browser contexts
     test_permissions_flow(&base_url, "browser_sqlite").await?;
 
     // Test snapshots functionality
-    test_snapshots_flow(&page, &username, &base_url).await?;
+    test_snapshots_flow(page, &username, &base_url).await?;
 
     // Test OAuth flow (creates scoped tokens for read-only and read-write access)
-    let (readonly_token, _readwrite_token) = test_oauth_flow(&page, &username, &base_url).await?;
+    let (readonly_token, _readwrite_token) = test_oauth_flow(page, &username, &base_url).await?;
 
     // Test OAuth deny flow
-    test_oauth_deny_flow(&page, &username, &base_url).await?;
+    test_oauth_deny_flow(page, &username, &base_url).await?;
 
     // Test token management UI (uses the OAuth read-only token for revocation testing)
-    test_token_management_flow(&page, &username, &base_url, readonly_token).await?;
+    test_token_management_flow(page, &username, &base_url, readonly_token).await?;
+
+    // Test DuckDB flows
+    test_duckdb_flow(page, &username, &base_url).await?;
 
     Ok(())
 }

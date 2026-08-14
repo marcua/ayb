@@ -1,12 +1,11 @@
 use crate::error::AybError;
 use crate::hosted_db::engine::DbEngine;
-use crate::hosted_db::{QueryMode, QueryResult};
-use crate::server::config::AybConfigSnapshots;
+use crate::hosted_db::{sql_string_literal, QueryMode, QueryResult};
 use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct SqliteEngine;
 
@@ -16,33 +15,25 @@ impl DbEngine for SqliteEngine {
         path: &Path,
         query: &str,
         params: &[serde_json::Value],
-        allow_unsafe: bool,
         query_mode: QueryMode,
     ) -> Result<QueryResult, AybError> {
-        query_sqlite(&path.to_path_buf(), query, params, allow_unsafe, query_mode)
+        query_sqlite(path, query, params, false, query_mode)
     }
 
-    fn create_snapshot(
-        &self,
-        _config: &AybConfigSnapshots,
-        db_path: &Path,
-        snapshot_path: &Path,
-    ) -> Result<(), AybError> {
-        let backup_query = format!("VACUUM INTO \"{}\"", snapshot_path.display());
-        let result = query_sqlite(
-            &db_path.to_path_buf(),
-            &backup_query,
-            &[],
-            true,
-            QueryMode::ReadOnly,
-        )?;
+    fn create_snapshot(&self, db_path: &Path, snapshot_path: &Path) -> Result<(), AybError> {
+        // The snapshot path embeds user-controlled entity and database
+        // slugs, so it is rendered as an escaped SQL string literal
+        // rather than interpolated raw. (Single quotes, not the double
+        // quotes SQLite would read as an identifier.)
+        let backup_query = format!("VACUUM INTO {}", sql_string_literal(snapshot_path));
+        let result = query_sqlite(db_path, &backup_query, &[], true, QueryMode::ReadOnly)?;
         if !result.rows.is_empty() {
             return Err(AybError::SnapshotError {
                 message: format!("Unexpected snapshot result: {result:?}"),
             });
         }
         let result = query_sqlite(
-            &snapshot_path.to_path_buf(),
+            snapshot_path,
             "PRAGMA integrity_check;",
             &[],
             false,
@@ -58,17 +49,13 @@ impl DbEngine for SqliteEngine {
         }
         Ok(())
     }
-
-    fn db_type_str(&self) -> &'static str {
-        "sqlite"
-    }
 }
 
 /// `allow_unsafe` disables features that prevent abuse but also
 /// prevent backups/snapshots. The only known use case in the codebase
 /// is for snapshots.
 fn query_sqlite(
-    path: &PathBuf,
+    path: &Path,
     query: &str,
     params: &[serde_json::Value],
     allow_unsafe: bool,
