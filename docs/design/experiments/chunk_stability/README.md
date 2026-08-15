@@ -54,4 +54,7 @@ Full tables and interpretation live in the design doc (§5). In short:
 
 Re-run this harness when adding secondary-index/blob/multi-GB cases, and
 after DuckDB storage-format upgrades, before trusting the chunk-size
-constants.
+constants. Pin the `duckdb` package to the version ayb bundles
+(`libduckdb-sys` in `Cargo.lock`; 1.10505.0 = DuckDB 1.5.5 as of this
+writing) so the measurements describe the engine the server actually
+runs.

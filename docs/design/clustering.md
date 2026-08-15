@@ -1,18 +1,20 @@
 # Design: clustering, placement, and replication
 
 **Status:** draft for discussion
-**Date:** 2026-07-06
-**Code references:** written against `main` at `70898f6`; updated after
-merging `main` at `0dcd201`, which includes DuckDB support (#776: the
-`DbEngine` trait in `src/hosted_db/engine.rs`, a db-type-aware daemon, and
-unified 256 MB/256 MB/32-fd daemon rlimits). Line numbers will drift;
-function/file names are the stable pointers.
+**Date:** 2026-07-06, revised 2026-08-15
+**Code references:** `main` at `0dcd201`. Line numbers will drift;
+function/file names are the stable pointers. DuckDB is a shipped database
+type, not a pending one: the `DbEngine` trait
+(`src/hosted_db/engine.rs`) with `SqliteEngine` and `DuckdbEngine`
+implementations, `engine_for(&DBType)` dispatch, a db-type-aware query
+daemon (`ayb_query_daemon <database_file> <db_type>`), and one
+256 MB/256 MB/32-fd rlimit envelope covering both engines.
 
 This document proposes how to scale ayb from one stateful server to many
 nodes: how databases are placed on nodes, how requests are routed, how a
 node failure is detected and recovered from, how much data a failure can
-lose, and how the same machinery serves both SQLite and DuckDB. It also
-records the results of chunk-stability experiments (see
+lose, and how one mechanism serves both shipped engines. It also records
+the results of chunk-stability experiments (see
 `docs/design/experiments/chunk_stability/`) that ground several of the
 design choices, and ends with a phased implementation plan.
 
@@ -49,7 +51,7 @@ not shared volumes or per-database consensus.
 ## 1. Where ayb is stateful today
 
 An inventory of the current single-node coupling (verified against `main`
-at `70898f6`):
+at `0dcd201`):
 
 **Already node-agnostic (no work needed):**
 
@@ -77,15 +79,19 @@ at `70898f6`):
    hard error (`fs::canonicalize`), with no rehydration from S3.
 2. One long-lived sandboxed `ayb_query_daemon` process per database file,
    tracked in an in-memory registry keyed by path
-   (`src/hosted_db/daemon_registry.rs`). Queries to a database are fully
-   serialized by a mutex held across the stdin/stdout round-trip. There is
-   no idle reaping, no query/IPC timeout, and shutdown is best-effort
-   `try_lock` — no forced drain.
+   (`src/hosted_db/daemon_registry.rs`). The engine is fixed at spawn: the
+   db type is `argv[2]` and the process resolves one `&'static dyn
+   DbEngine` for its lifetime. Queries to a database are fully serialized
+   by a mutex held across the stdin/stdout round-trip. There is no idle
+   reaping, no query/IPC timeout, and shutdown is best-effort `try_lock` —
+   no forced drain.
 3. The snapshot scheduler discovers databases by walking the local
    filesystem, not the metadata DB (`src/server/snapshots/execution.rs`),
-   deduplicates by listing S3 per database per interval, runs `VACUUM INTO`
-   through a second, unsandboxed connection that bypasses the daemon, and
-   prunes based on its own view of the S3 listing (races across nodes).
+   deduplicates by listing S3 per database per interval, runs
+   `DbEngine::create_snapshot` (`VACUUM INTO` for SQLite,
+   `COPY FROM DATABASE` for DuckDB) through a second, unsandboxed
+   connection that bypasses the daemon, and prunes based on its own view
+   of the S3 listing (races across nodes).
 4. Config mixes per-node values (`host`, `port`, `data_path`) with
    cluster-wide values (`public_url`, `database_url`, `fernet_key`, `email`,
    `snapshots`) in one flat file (`src/server/config.rs`).
@@ -101,8 +107,10 @@ Goals:
   S3** (both already supported).
 - One database has one writer at a time; a database never spans machines
   (matches the roadmap's clustering item).
-- SQLite and DuckDB are served by the same placement/replication machinery;
-  DuckDB is not a second-class citizen.
+- Both shipped engines are served by the same placement/replication
+  machinery — no bespoke DuckDB path — and a future `DbEngine`
+  implementation inherits clustering by implementing the same producer
+  contract (§3.4).
 - Placement groups: multiple databases for one entity share a daemon and a
   fixed resource envelope.
 - Design headroom to tens of thousands–low millions of placement groups.
@@ -140,6 +148,16 @@ and (eventually) billing.
   already matches. The daemon's rlimits (later: cgroup) become the group's
   resource envelope: "pay for a fixed bundle of resources, collocate N
   databases in it."
+- **Groups are engine-mixed.** An entity can own both SQLite and DuckDB
+  databases today, so a per-entity group spans engines while the current
+  daemon binds one engine at spawn (`argv[2]`). The group daemon should
+  instead resolve the engine per request via `engine_for(&DBType)` — the
+  binary already links both — carrying the db type in the protocol
+  alongside the database field. The fallback, if the two engines' sandbox
+  or memory profiles diverge enough to warrant separate processes, is one
+  daemon per (group, engine), which splits the group's resource envelope
+  across two processes rather than one; prefer the single daemon until
+  something forces the split (§9).
 - Group daemons are spawned lazily and reaped when idle (scale-to-zero per
   tenant). This is also what makes mass failover cheap: a failed-over cold
   group is just a cold group.
@@ -250,10 +268,11 @@ There is **no "full vs incremental" decision**: every ship runs the same
 path; upload size is emergent (churn since last ship). The only
 full-upload events are the first ship and a deliberate defrag/rebaseline.
 
-**Producers must be checkpoint-then-copy, not rebuilders.** `VACUUM INTO`
-(SQLite) and `COPY FROM DATABASE` (DuckDB) — the shipped snapshot
-methods behind the `DbEngine` trait since #776 — rewrite/repack the file and are chunk-catastrophic
-(measured: 99.7% / 97.7% churn around 100-row / 10-row changes; §5). Both
+**Producers must be checkpoint-then-copy, not rebuilders.** The shipped
+producers — `VACUUM INTO` (SQLite) and `COPY FROM DATABASE` (DuckDB),
+both behind `DbEngine::create_snapshot` — rewrite/repack the file and are
+chunk-catastrophic (measured: 99.7% / 97.7% churn around 100-row /
+10-row changes; §5). Both
 are kept as rare, deliberate maintenance operations (defrag + fresh
 baseline + integrity re-verification), not as the shipped artifact.
 
@@ -280,8 +299,13 @@ manifests* — but they remain load-bearing:
   `list_snapshots`/`restore_snapshot` UX maps onto "list/restore retained
   manifests."
 - **Verification anchor:** periodically reassemble from chunks and run
-  `PRAGMA integrity_check` (as the snapshot path does today) to catch
-  replication drift. Never trust the delta chain alone.
+  the engine's verification to catch replication drift. Never trust the
+  delta chain alone. Today's `DbEngine::create_snapshot` verifications are
+  uneven — SQLite runs `PRAGMA integrity_check`, DuckDB only probes that
+  the file opens and `information_schema` is queryable — so a
+  `DbEngine::verify` method with comparable strength on both engines
+  (DuckDB: a full scan, e.g. `CHECKPOINT` + `SELECT count(*)` per table)
+  is a prerequisite for trusting reassembled chunks.
 - Scheduling flips from wall-clock cron over all databases to
   **activity-driven retention**: idle databases (most of a large fleet)
   cost zero; the current walk + per-database S3 LIST + unconditional
@@ -437,7 +461,11 @@ Reproducible harness: `docs/design/experiments/chunk_stability/`
 (measured 2026-07-06; Python `sqlite3`, DuckDB 1.5.4; SQLite 35 MB /
 300k rows, ~29 rows per 4 KiB page; DuckDB 50–64 MB / 2M rows ≈ 17 row
 groups; fixed-offset chunk compare; producer = checkpoint-then-copy
-unless noted).
+unless noted). The harness runs Python's own engines, so its versions
+drift from the server's: `main` bundles `libduckdb-sys` 1.10505.0
+(DuckDB 1.5.5) and `rusqlite` 0.27.0. The DuckDB numbers below were
+measured one patch release earlier; re-run against the bundled version
+before freezing chunk constants (§9.9).
 
 | Workload (logical Δ) | 4 KiB | 64 KiB | 256 KiB | 1 MiB |
 |---|---|---|---|---|
@@ -471,8 +499,9 @@ Findings the design relies on:
 
 1. **Checkpoint-then-copy is byte-stable and tracks physical churn**; the
    rebuilders (`VACUUM INTO`, `COPY FROM DATABASE`) are unusable as
-   shipping producers. (The `DbEngine::create_snapshot` implementations
-   from #776 need this swap.)
+   shipping producers. Both shipped `DbEngine::create_snapshot`
+   implementations (`src/hosted_db/sqlite.rs`, `src/hosted_db/duckdb.rs`)
+   need this swap.
 2. **SQLite churn floor = pages touched**, ~10× the fraction of rows for
    scattered updates. Small chunks (64 KiB) or page-granular T2 segments
    are the mitigations; clustered/append/tiny writes diff beautifully at
@@ -491,8 +520,8 @@ Experiments still to run before freezing constants: tables with secondary
 indexes (index-page scatter will raise SQLite churn; the test table was
 PK-only), blob/overflow pages, multi-GB files, DuckDB file-size steady
 state under sustained updates, and DuckDB storage determinism across
-version upgrades (re-run the harness per release while their format
-evolves).
+version upgrades — starting with a re-run against the version `main`
+actually bundles, then per release while their format evolves.
 
 ## 6. Scale analysis (10⁴–10⁶ groups)
 
@@ -563,11 +592,14 @@ for one database/cluster; a poor fit for fleets of thousands–millions of
 small single-writer databases (per-tenant raft groups are exactly what
 they don't give), and it adds a consensus implementation to the binary.
 
-**DuckLake as the DuckDB story** (catalog in SQL DB + Parquet on S3;
-v1.0 April 2026). Attractive future *database type* — catalog in ayb's
-Postgres, data in ayb's bucket, near-stateless nodes — but it hosts
-DuckLake tables, not arbitrary `.duckdb` files, so it complements rather
-than replaces file-level replication. ([DuckLake 1.0](https://ducklake.select/2026/04/13/ducklake-10/))
+**DuckLake instead of file-level DuckDB replication** (catalog in SQL DB
++ Parquet on S3; v1.0 April 2026). Attractive as an *additional* database
+type — catalog in ayb's Postgres, data in ayb's bucket, near-stateless
+nodes — but ayb already hosts `.duckdb` files, and DuckLake hosts
+DuckLake tables rather than arbitrary `.duckdb` files. It therefore
+complements file-level replication rather than replacing it, and cannot
+serve the databases users have already created.
+([DuckLake 1.0](https://ducklake.select/2026/04/13/ducklake-10/))
 
 **Ecosystem reference points** informing this design:
 [Litestream revamped](https://fly.io/blog/litestream-revamped/) /
@@ -593,11 +625,13 @@ refine RPO/RTO and scale; earlier phases already improve single-node ayb.
 1. **Placement groups in metadata**: `placement_groups` table,
    `databases.placement_group_id`, default group per entity on creation
    (backfill migration for existing databases).
-2. **Group daemon**: protocol v2 (request id + database field, JSON lines
-   as today), registry keyed by group, Landlock scoped to the entity
-   directory, per-group rlimits; lazy spawn (exists) + idle reaping;
-   design the protocol with future multiplexing and session pinning in
-   mind.
+2. **Group daemon**: protocol v2 (request id + database field + db type,
+   JSON lines as today), registry keyed by group, Landlock scoped to the
+   entity directory, per-group rlimits; engine resolved per request via
+   `engine_for` instead of once at spawn, so one daemon serves an
+   entity's SQLite and DuckDB databases (§3.1); lazy spawn (exists) +
+   idle reaping; design the protocol with future multiplexing and session
+   pinning in mind.
 3. **Operational hardening**: query/IPC timeout (today `read_line` has no
    deadline and a hung query wedges the database forever); bounded drain
    replacing best-effort `try_lock` shutdown.
@@ -610,14 +644,16 @@ refine RPO/RTO and scale; earlier phases already improve single-node ayb.
    Node replacement becomes: start a fresh node with the same config.
 6. **Snapshot pipeline fixes**: discovery from the metadata DB + daemon
    dirty flags (not FS walks); snapshot index in Postgres (not S3 LIST
-   dedup); producer switched to checkpoint+copy (coordinate with
-   the `DbEngine::create_snapshot` implementations,
-   `src/hosted_db/engine.rs`); `VACUUM INTO` /
-   `COPY FROM DATABASE` demoted to maintenance ops.
+   dedup); both `DbEngine::create_snapshot` implementations switched to
+   checkpoint+copy, with `VACUUM INTO` / `COPY FROM DATABASE` demoted to
+   maintenance ops; a `DbEngine::verify` with comparable strength on both
+   engines (§3.5).
 
 *Exit test:* kill a single-node server, delete `data_path`, start a fresh
 server with the same config → all databases serve (from S3) with no
-manual restore; a hung query times out without wedging its database.
+manual restore, SQLite and DuckDB alike, including an entity that owns
+one of each in the same group; a hung query times out without wedging its
+database.
 
 ### Phase 1 — multi-node, snapshot-fidelity failover
 
@@ -707,4 +743,11 @@ an additional database type, cgroup resource envelopes.
 8. When a hot scattered-update SQLite database should auto-promote from
    T1 chunking to T2 segments (heuristic on churn ratio?).
 9. DuckDB storage-format stability across releases: policy for re-running
-   the §5 harness and re-baselining after engine upgrades.
+   the §5 harness and re-baselining after engine upgrades, and how to
+   keep the harness pinned to the version `main` bundles (today
+   `libduckdb-sys` 1.10505.0) rather than whatever Python has installed.
+10. Mixed-engine groups (§3.1): one daemon dispatching per request via
+    `engine_for`, or one daemon per (group, engine)? The first keeps the
+    resource envelope whole and matches the existing binary; the second
+    is the escape hatch if the engines' memory profiles or sandbox needs
+    diverge. Deciding this early matters — it shapes protocol v2.
