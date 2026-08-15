@@ -6,6 +6,5 @@ pub mod snapshots;
 pub mod tokens;
 pub mod ui_endpoints;
 pub mod url_verification;
-pub mod username_validation;
 pub mod utils;
-pub mod web_frontend;
+pub mod validation;

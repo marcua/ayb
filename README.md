@@ -61,9 +61,6 @@ smtp_password = "the_password"
 [email.file]
 path = "./ayb_data/emails.jsonl"
 
-[web]
-hosting_method = "Local"
-
 [cors]
 origin = "*"
 ```
@@ -90,9 +87,14 @@ Successfully authenticated and saved token <API_TOKEN>
 $ ayb client create_database marcua/test.sqlite
 Successfully created marcua/test.sqlite
 
+# Databases are SQLite by default. Pass duckdb to create a DuckDB one instead.
+$ ayb client create_database marcua/test.duckdb duckdb
+Successfully created marcua/test.duckdb
+
 $ ayb client list marcua
  Database slug | Type
 ---------------+--------
+ test.duckdb   | duckdb
  test.sqlite   | sqlite
 
 $ ayb client query marcua/test.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
@@ -102,13 +104,13 @@ Rows: 0
 # If you don't pass a query to the query command, ayb launches an interactive query session
 $ ayb client query marcua/test.sqlite
 Launching an interactive session for marcua/test.sqlite
-marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("PostgreSQL", 10);
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ('PostgreSQL', 10);
 
 Rows: 0
-marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("SQLite", 9);
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ('SQLite', 9);
 
 Rows: 0
-marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ("DuckDB", 9);
+marcua/test.sqlite> INSERT INTO favorite_databases (name, score) VALUES ('DuckDB', 9);
 
 Rows: 0
 marcua/test.sqlite> SELECT * FROM favorite_databases;
@@ -167,15 +169,15 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES ('PostgreSQL', 10);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES ('SQLite', 9);"
 
 {"fields":[],"rows":[]}
 
-$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES (\"DuckDB\", 9);"
+$ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "authorization: Bearer <API_TOKEN_FROM_PREVIOUS_COMMAND>" -d "INSERT INTO favorite_databases (name, score) VALUES ('DuckDB', 9);"
 
 {"fields":[],"rows":[]}
 
@@ -186,8 +188,6 @@ $ curl -w "\n" -X POST http://127.0.0.1:5433/v1/marcua/test.sqlite/query -H "aut
 
 ### Web interface
 `ayb` comes with a fully functional web interface. With the server configuration shown above, visit [http://localhost:5433/register](http://localhost:5433/register) to get started. The web interface allows you to register, log in, create databases, and run queries through your browser without needing to use the command line client.
-
-The default configuration (with `web.hosting_method` set to `Local`) enables it automatically, though you can remove the `web` section from your configuration if you only want an API server.
 
 ### JavaScript client library
 
@@ -205,10 +205,10 @@ npm install @aybdb/client
 
 ```js
 // ES module
-import { restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
+import { AybClient, restoreOAuth, createServerSelectionModal, runMigrations } from '@aybdb/client';
 
 // CommonJS
-const { restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
+const { AybClient, restoreOAuth, createServerSelectionModal, runMigrations } = require('@aybdb/client');
 ```
 
 **OAuth flow (recommended):**
@@ -234,10 +234,24 @@ if (ayb && ayb.isConnected()) {
 
 **Manual token auth:**
 
+If you want to pass in an ayb URL and token and have them stored in 
+`localStorage` for future sessions, use `saveConfig`:
 ```js
 const db = new AybClient({ appId: 'my-app' });
 const token = 'ayb_xxx_yyy';
 db.saveConfig('https://host/v1/entity/database', token);
+const rows = await db.queryObjects('SELECT * FROM todos');
+```
+
+In environments without `localStorage` (Node.js, serverless functions,
+tests), pass `url` and `token` to the constructor to connect immediately:
+
+```js
+const db = new AybClient({
+  appId: 'my-app',
+  url: 'https://host/v1/entity/database',
+  token: 'ayb_xxx_yyy',
+});
 const rows = await db.queryObjects('SELECT * FROM todos');
 ```
 
@@ -278,7 +292,6 @@ configuration block like the following in your `ayb.toml`:
 
 ```toml
 [snapshots]
-sqlite_method = "Vacuum"
 access_key_id = "YOUR_S3_ACCESS_KEY_ID"
 secret_access_key = "YOUR_S3_ACCESS_KEY_SECRET"
 bucket = "bucket-to-upload-snapshots"
@@ -293,7 +306,6 @@ max_snapshots = 3
 ```
 
 Here is an explanation of the parameters:
-* `sqlite_method`: The two SQLite backup methods are [Vacuum](https://www.sqlite.org/lang_vacuum.html#vacuuminto) and [Backup](https://www.sqlite.org/backup.html). `ayb` only supports `Vacuum` for now.
 * `access_key_id` / `secret_access_key`: The access key ID and secret to upload/list snapshots to your S3-compatible storage provider.
 * `bucket`: The name of the bucket to which to upload snapshots.
 * `bucket_prefix`: (Can be blank) if you want to upload snapshots to a prefixed path inside `bucket` (e.g., `my-bucket/the-snapshots`), provide a prefix (e.g., `the-snapshots`).
@@ -312,11 +324,11 @@ Successfully created marcua/snapshots.sqlite
 $ ayb client query marcua/snapshots.sqlite "CREATE TABLE favorite_databases(name varchar, score integer);"
 Rows: 0
 
-$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"PostgreSQL\", 10);"
+$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES ('PostgreSQL', 10);"
 Rows: 0
 
 # Wait longer than 3 seconds before inserting the next row, so that a snapshot with just PostgreSQL exists.
-$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES (\"SQLite\", 9);"
+$ ayb client query marcua/snapshots.sqlite "INSERT INTO favorite_databases (name, score) VALUES ('SQLite', 9);"
 Rows: 0
 
 $ ayb client query marcua/snapshots.sqlite "SELECT * FROM favorite_databases;"
@@ -547,6 +559,7 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [x] Authentication and permissions. Add authentication/the ability to log in, and add permissions to endpoints so that you can't just issue queries against any database.
   * [x] Isolation. Since an `ayb` instance can have multiple tenants/databases, we want to use one of the many container/isolate/microVM projects to ensure that one tenant isn't able to access another tenant's data.
   * [x] Persistence beyond the node. Back databases up to persistent S3-compatible storage and allow (for now) manual recovery on failure.
+  * [x] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command.
   * [ ] Clustering. Support for multiple `ayb` nodes to serve databases and requests. Whereas a single database will not span multiple machines, parallelism/distribution will happen across users and databases.
   * [ ] Sessions/transactions. `ayb`'s query API is a stateless request/response API, making it impossible to start a database transaction or issue multiple queries in a session. Exposing sessions in the API will allow multiple statements per session, and by extension, transactions.
   * [ ] Import/export of databases. `ayb` already uses existing well-established file formats (e.g., SQLite). There should be endpoints to import existing databases into `ayb` in those formats or export the underlying files so you're not locked in.
@@ -555,7 +568,6 @@ Here's a rough roadmap for the project, with items near the top of the list more
   * [x] Collaboration. In addition to making it easy to create and query databases, it should be easy to share databases with others. Two use cases include adding private collaborators and allowing public read-only access.
   * [ ] Forking. Allowing a user to fork their own copy of a database will enable collaborators to remix and build on each others' work.
   * [ ] Versioning. To both make it less scary to execute sensitive operations and to make it possible for scientists to reference and publish checkpoints of their work, a user should be able to snapshot and revert to a database at a point in time.
-  * [ ] DuckDB. Allowing users to create a DuckDB database in addition to a SQLite database would allow you to create a data warehouse with a single command. This effort is dependent on the DuckDB project. First, the DuckDB file format is rapidly changing ahead of the project's 1.0 release. Additionally, I don't know of an equivalent streaming replication project to LiteFS for DuckDB that handles *persistence beyond the node*.
   * [ ] PostgreSQL wire protocol. While an HTTP API makes it easy to build new web apps, exposing `ayb` over the PostgreSQL wire protocol will allow existing tools and libraries to connect to and query an `ayb` database.
 * Increase discoverability with a web frontend
   * [x] Provide a web interface analogous to the command line interface. Much like GitHub/Gitea/Forgejo make git more approachable, you shouldn't have to pay a command line knowledge tax in order to create, share, and query an `ayb` database.
@@ -585,6 +597,7 @@ The JavaScript client is published to npm from the `client-js/` directory. To pu
 
 ```bash
 cd client-js
+npm ci  # install pinned devDependencies (typescript) for generate-types
 npm version patch  # or minor/major
 npm run generate-types  # regenerate ayb.d.ts if the public API changed
 npm publish --access public

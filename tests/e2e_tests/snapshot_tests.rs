@@ -1,11 +1,55 @@
 use crate::e2e_tests::{
-    FIRST_ENTITY_DB, FIRST_ENTITY_DB_CASED, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_SLUG,
+    FIRST_ENTITY_DB, FIRST_ENTITY_DB_SLUG, FIRST_ENTITY_DUCKDB, FIRST_ENTITY_DUCKDB_SLUG,
+    FIRST_ENTITY_SLUG,
 };
 use crate::utils::ayb::{list_snapshots, list_snapshots_match_output, query, restore_snapshot};
 use crate::utils::testing::snapshot_storage;
 use std::collections::HashMap;
 use std::thread;
 use std::time;
+
+/// Poll until the snapshot list reaches `expected` entries. When
+/// `changed_since` is `Some(id)`, also require the newest snapshot's
+/// ID to differ from `id` — this handles the pruning case where the
+/// count stays the same but the contents change.
+fn wait_for_snapshot_count(
+    config_path: &str,
+    api_key: &str,
+    database: &str,
+    expected: usize,
+    changed_since: Option<&str>,
+) -> Vec<ayb::server::snapshots::models::ListSnapshotResult> {
+    let timeout_secs = 20;
+    let deadline = time::Instant::now() + time::Duration::from_secs(timeout_secs);
+    loop {
+        thread::sleep(time::Duration::from_secs(2));
+        let snapshots = list_snapshots(config_path, api_key, database, "csv")
+            .expect("failed to list snapshots");
+        let count_ok = snapshots.len() == expected;
+        let newest_ok = match changed_since {
+            Some(prev_id) => !snapshots.is_empty() && snapshots[0].snapshot_id != prev_id,
+            None => true,
+        };
+        if (count_ok && newest_ok) || time::Instant::now() >= deadline {
+            assert_eq!(
+                snapshots.len(),
+                expected,
+                "expected {} snapshots but found {} (after {}s timeout)",
+                expected,
+                snapshots.len(),
+                timeout_secs
+            );
+            if let Some(prev_id) = changed_since {
+                assert!(
+                    newest_ok,
+                    "newest snapshot did not change from {} within {}s",
+                    prev_id, timeout_secs
+                );
+            }
+            return snapshots;
+        }
+    }
+}
 
 pub async fn test_snapshots(
     db_type: &str,
@@ -37,37 +81,21 @@ pub async fn test_snapshots(
         )
         .await?;
 
-    // Can list snapshots from the first set of API keys.
-    list_snapshots_match_output(
-        config_path,
-        &api_keys.get("first").unwrap()[0],
-        FIRST_ENTITY_DB_CASED,
-        "csv",
-        "No snapshots for E2E-FiRST/test.sqlite",
-    )?;
-    // We'll sleep between various checks in this test to allow the
-    // snapshotting logic, which runs every 2 seconds, to
-    // execute. Each insert, update, and snapshot restore causes
-    // another snapshot to be taken, and if we don't sleep after them,
-    // we can encounter a race condition between the test and the
-    // asynchronous snapshots being taken in parallel. By sleeping, we
-    // ensure predictability of relative snapshot timing and
-    // quanitity.
-    thread::sleep(time::Duration::from_secs(4));
-    let snapshots = list_snapshots(
+    // The background snapshot daemon runs every 2 seconds. After
+    // deleting all snapshots, the daemon will quickly recreate one
+    // for the current database state. Rather than trying to observe
+    // the zero-snapshot window (which is a race), we wait for the
+    // daemon to produce the first snapshot.
+    let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "csv",
-    )?;
-
-    let last_modified_at = snapshots[0].last_modified_at;
-    assert_eq!(
-        snapshots.len(),
         1,
-        "there should be one snapshot after sleeping"
+        None,
     );
+
     // No change to database, so same number of snapshots after sleep.
+    let last_modified_at = snapshots[0].last_modified_at;
     thread::sleep(time::Duration::from_secs(4));
     let snapshots = list_snapshots(
         config_path,
@@ -84,33 +112,29 @@ pub async fn test_snapshots(
         last_modified_at, snapshots[0].last_modified_at,
         "After sleeping, the snapshot shouldn't have been modified/updated"
     );
+
     // Modify database, wait, and ensure a new snapshot was taken.
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"another first\", \"another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('another first', 'another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
-    let snapshots = list_snapshots(
+    let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "csv",
-    )?;
-
-    assert_eq!(
-        snapshots.len(),
         2,
-        "there two snapshots after updating database"
+        None,
     );
+
     // Insert another row and ensure there are four.
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"yet another first\", \"yet another last\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('yet another first', 'yet another last');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
@@ -123,7 +147,15 @@ pub async fn test_snapshots(
         "table",
         " the_count \n-----------\n 4 \n\nRows: 1",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
+
+    // Wait for snapshot of the latest insert to be taken before restoring.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        3,
+        None,
+    );
 
     // Restore the previous snapshot, ensuring there are only three
     // rows.
@@ -146,7 +178,14 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
-    thread::sleep(time::Duration::from_secs(4));
+    // Wait for the restore-triggered snapshot before doing the next restore.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        4,
+        None,
+    );
 
     // Restore the snapshot before that, ensuring there are only two
     // rows.
@@ -169,8 +208,14 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
-    // Ensure another snapshot-due-to-restore.
-    thread::sleep(time::Duration::from_secs(4));
+    // Wait for restore-triggered snapshot.
+    wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        5,
+        None,
+    );
 
     // There are 6 max_snapshots, so let's force 2 more snapshots to
     // be created (more than 6 snapshots would exist: the original
@@ -181,30 +226,40 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"a new first name\", \"a new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('a new first name', 'a new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
-    thread::sleep(time::Duration::from_secs(4));
+
+    // Wait for snapshot of the insert above (6th snapshot, no pruning yet).
+    let snapshots_before_prune = wait_for_snapshot_count(
+        config_path,
+        &api_keys.get("first").unwrap()[0],
+        FIRST_ENTITY_DB,
+        6,
+        None,
+    );
 
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES (\"and another new first name\", \"and another new last name\");",
+        "INSERT INTO test_table (fname, lname) VALUES ('and another new first name', 'and another new last name');",
         FIRST_ENTITY_DB,
         "table",
         "\nRows: 0",
     )?;
 
-    thread::sleep(time::Duration::from_secs(4));
     let old_snapshots = snapshots;
-    let snapshots = list_snapshots(
+    // The 7th snapshot triggers pruning back to 6. The count stays
+    // at 6, but the newest snapshot ID changes. Wait for that.
+    let snapshots = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        "csv",
-    )?;
+        6,
+        Some(&snapshots_before_prune[0].snapshot_id),
+    );
     assert_eq!(
         snapshots.len(),
         6,
@@ -219,13 +274,13 @@ pub async fn test_snapshots(
         &old_snapshots[1].snapshot_id,
         &format!(
             "Error: Snapshot {} does not exist for e2e-first/test.sqlite",
-            &old_snapshots[1].snapshot_id
+            old_snapshots[1].snapshot_id
         ),
     )?;
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 1 \n\nRows: 1",
@@ -245,10 +300,95 @@ pub async fn test_snapshots(
     query(
         config_path,
         &api_keys.get("first").unwrap()[1],
-        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = \"and another new first name\";",
+        "SELECT COUNT(*) AS the_count FROM test_table WHERE fname = 'and another new first name';",
         FIRST_ENTITY_DB,
         "table",
         " the_count \n-----------\n 0 \n\nRows: 1",
+    )?;
+
+    Ok(())
+}
+
+/// A simpler snapshot/restore cycle for a DuckDB database, paralleling
+/// the SQLite test above. Assumes `test_create_and_query_duckdb` has
+/// already created `e2e-first/test.duckdb` with two rows.
+pub async fn test_snapshots_duckdb(
+    db_type: &str,
+    config_path: &str,
+    api_keys: &HashMap<String, Vec<String>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = &api_keys.get("first").unwrap()[0];
+
+    // Remove all snapshots so our tests aren't affected by
+    // timing/snapshots from previous tests.
+    let storage = snapshot_storage(db_type).await?;
+    storage
+        .delete_snapshots(
+            FIRST_ENTITY_SLUG,
+            FIRST_ENTITY_DUCKDB_SLUG,
+            &storage
+                .list_snapshots(FIRST_ENTITY_SLUG, FIRST_ENTITY_DUCKDB_SLUG)
+                .await?
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.clone())
+                .collect(),
+        )
+        .await?;
+
+    // The database has two rows from test_create_and_query_duckdb. Wait
+    // for the snapshot daemon to capture that state, and record it.
+    let snapshots = wait_for_snapshot_count(config_path, api_key, FIRST_ENTITY_DUCKDB, 1, None);
+    let two_row_snapshot = snapshots[0].snapshot_id.clone();
+    query(
+        config_path,
+        api_key,
+        "SELECT count(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        " the_count \n-----------\n 2 \n\nRows: 1",
+    )?;
+
+    // Insert a third row (DuckDB returns a one-row affected-count result,
+    // so "Rows: 1") and wait for a second, distinct snapshot.
+    query(
+        config_path,
+        api_key,
+        "INSERT INTO test_table VALUES ('the third', 'the last3');",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        "\nRows: 1",
+    )?;
+    wait_for_snapshot_count(
+        config_path,
+        api_key,
+        FIRST_ENTITY_DUCKDB,
+        2,
+        Some(&two_row_snapshot),
+    );
+    query(
+        config_path,
+        api_key,
+        "SELECT count(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        " the_count \n-----------\n 3 \n\nRows: 1",
+    )?;
+
+    // Restore the two-row snapshot and confirm the third row is gone.
+    restore_snapshot(
+        config_path,
+        api_key,
+        FIRST_ENTITY_DUCKDB,
+        &two_row_snapshot,
+        &format!("Restored e2e-first/test.duckdb to snapshot {two_row_snapshot}"),
+    )?;
+    query(
+        config_path,
+        api_key,
+        "SELECT count(*) AS the_count FROM test_table;",
+        FIRST_ENTITY_DUCKDB,
+        "table",
+        " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
     Ok(())

@@ -10,6 +10,7 @@ use std::str::FromStr;
 #[derive(MultipartForm)]
 pub struct CreateDatabaseForm {
     database_slug: Text<String>,
+    db_type: Text<String>,
     public_sharing_level: Text<String>,
     #[multipart(rename = "database")]
     database: Option<TempFile>,
@@ -24,6 +25,10 @@ pub async fn create_database(
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
     let database_slug = form.database_slug.to_lowercase();
+    let db_type = match DBType::from_str(&form.db_type) {
+        Ok(db_type) => db_type,
+        Err(err) => return error_snippet("Error creating database", &format!("{err}")),
+    };
     let public_sharing_level = match PublicSharingLevel::from_str(&form.public_sharing_level) {
         Ok(level) => level,
         Err(err) => return error_snippet("Error creating database", &format!("{err}")),
@@ -36,7 +41,7 @@ pub async fn create_database(
         .create_database(
             entity_slug,
             &database_slug,
-            &DBType::Sqlite,
+            &db_type,
             &public_sharing_level,
             seed_path.as_deref(),
         )

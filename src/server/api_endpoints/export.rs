@@ -1,9 +1,8 @@
 use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{APIToken, DBType, InstantiatedEntity};
 use crate::error::AybError;
+use crate::hosted_db::engine_for;
 use crate::hosted_db::paths::current_database_path;
-use crate::hosted_db::sqlite::query_sqlite;
-use crate::hosted_db::QueryMode;
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::permissions::highest_query_access_level;
@@ -53,7 +52,10 @@ async fn export(
     let temp_dir = make_export_temp_dir(&ayb_config.data_path)?;
     let temp_path = temp_dir.join(database_slug);
 
-    match dump_database(&db_type, &db_path, &temp_path) {
+    // An export is exactly a snapshot that never reaches S3: the same
+    // engine-produced consistent copy, generated fresh for this request
+    // rather than read back from the last scheduled backup.
+    match engine_for(&db_type).create_snapshot(&db_path, &temp_path) {
         Ok(()) => stream_and_clean_up(&req, &temp_path, &temp_dir, database_slug),
         Err(err) => {
             let _ = fs::remove_dir_all(&temp_dir);
@@ -67,36 +69,6 @@ fn make_export_temp_dir(data_path: &str) -> Result<std::path::PathBuf, AybError>
     let path: std::path::PathBuf = [data_path, EXPORTS_DIR, &uuid.to_string()].iter().collect();
     fs::create_dir_all(&path)?;
     Ok(fs::canonicalize(path)?)
-}
-
-fn dump_database(
-    db_type: &DBType,
-    src: &std::path::Path,
-    dest: &std::path::Path,
-) -> Result<(), AybError> {
-    match db_type {
-        DBType::Sqlite => {
-            // VACUUM INTO produces a single-file, transactionally
-            // consistent copy that is automatically defragmented. It
-            // runs while writers continue (WAL mode) and matches the
-            // method used by snapshots.
-            let result = query_sqlite(
-                &src.to_path_buf(),
-                &format!("VACUUM INTO \"{}\"", dest.display()),
-                true,
-                QueryMode::ReadOnly,
-            )?;
-            if !result.rows.is_empty() {
-                return Err(AybError::Other {
-                    message: format!("Unexpected VACUUM INTO result: {result:?}"),
-                });
-            }
-            Ok(())
-        }
-        _ => Err(AybError::Other {
-            message: format!("Export not supported for {} databases", db_type.to_str()),
-        }),
-    }
 }
 
 fn stream_and_clean_up(

@@ -7,7 +7,10 @@ fi
 source tests/test-env/bin/activate
 
 # Install requirements
-pip install awscli playwright
+# Pin playwright to the version bundled by the playwright-rs crate's driver
+# (see PLAYWRIGHT_VERSION in the crate's build.rs) so the Chromium revision
+# installed here matches the driver the tests drive it with.
+pip install awscli "playwright==1.60.0"
 
 # Try to install Playwright browsers, but don't fail if unsupported
 echo "Installing Playwright browsers..."

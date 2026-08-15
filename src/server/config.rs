@@ -2,20 +2,18 @@ use config::{Config, Environment, File};
 use fernet;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use url::Url;
 
 use crate::error::AybError;
 
-#[derive(Clone, Serialize, Debug, Deserialize, PartialEq)]
-pub enum WebHostingMethod {
-    Local,
-    Remote,
+pub fn local_base_url(config: &AybConfig) -> String {
+    format!("http://localhost:{}", config.port)
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct AybConfigWeb {
-    pub hosting_method: WebHostingMethod,
-    pub base_url: Option<Url>,
+pub fn public_base_url(config: &AybConfig) -> String {
+    config
+        .public_url
+        .clone()
+        .unwrap_or_else(|| local_base_url(config))
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -62,12 +60,6 @@ impl AybConfigEmailBackends {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub enum SqliteSnapshotMethod {
-    Backup,
-    Vacuum,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshotsAutomation {
     pub interval: String, // A time interval in Go's time.ParseDuration format (e.g., "5m" means "every 5 minutes",
     pub max_snapshots: u16,
@@ -75,7 +67,6 @@ pub struct AybConfigSnapshotsAutomation {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AybConfigSnapshots {
-    pub sqlite_method: SqliteSnapshotMethod,
     pub access_key_id: String,
     pub secret_access_key: String,
     pub bucket: String,
@@ -100,7 +91,6 @@ pub struct AybConfig {
     pub data_path: String,
     pub authentication: AybConfigAuthentication,
     pub email: AybConfigEmailBackends,
-    pub web: Option<AybConfigWeb>,
     pub cors: AybConfigCors,
     pub snapshots: Option<AybConfigSnapshots>,
 }
@@ -136,10 +126,6 @@ pub fn default_server_config() -> AybConfig {
         cors: AybConfigCors {
             origin: "*".to_string(),
         },
-        web: Some(AybConfigWeb {
-            hosting_method: WebHostingMethod::Local,
-            base_url: None,
-        }),
         snapshots: None,
     }
 }

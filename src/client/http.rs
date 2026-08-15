@@ -147,8 +147,8 @@ impl AybClient {
     }
 
     /// Streams a downloaded copy of the database into `output_path`.
-    /// The server produces a transactionally consistent file via
-    /// `VACUUM INTO`.
+    /// The server produces a transactionally consistent file using the
+    /// same engine-specific mechanism as snapshots.
     pub async fn export_database(
         &self,
         entity: &str,

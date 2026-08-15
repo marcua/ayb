@@ -1,5 +1,5 @@
 use crate::utils::browser::BrowserHelpers;
-use playwright::api::Page;
+use playwright_rs::{ClickOptions, Page, WaitForOptions, WaitForState};
 use std::error::Error;
 
 /// Test the token management UI flow.
@@ -20,7 +20,7 @@ pub async fn test_token_management_flow(
 
     // Verify the OAuth token works before we revoke it
     let pre_revoke_response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
         .body("SELECT 1")
         .send()
@@ -35,25 +35,26 @@ pub async fn test_token_management_flow(
 
     // Step 1: Navigate to the user's profile page first (previous test may
     // have left us on a non-ayb page like the OAuth callback URL).
-    page.goto_builder(&format!("{}/{}", base_url, username))
-        .goto()
+    page.goto(&format!("{}/{}", base_url, username), None)
         .await?;
 
     // Navigate to the tokens page via the dropdown menu
-    page.click_builder(&format!("a:has-text('{}')", username))
-        .timeout(5000.0)
-        .click()
+    page.locator(&format!("a:has-text('{}')", username))
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "tokens_dropdown_menu", &[]).await?;
 
-    page.click_builder("a:has-text('Tokens')")
-        .timeout(5000.0)
-        .click()
+    page.locator("a:has-text('Tokens')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     // Step 2: Verify we're on the tokens page
-    let page_url = page.url()?;
+    let page_url = page.url();
     assert!(
         page_url.contains("/settings/tokens"),
         "Should be on the tokens page, got: {}",
@@ -63,7 +64,7 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_page_initial", &[]).await?;
 
     // Step 3: Verify the page content
-    let page_text = page.inner_text("body", None).await?;
+    let page_text = page.locator("body").await.inner_text().await?;
     assert!(
         page_text.contains("API Tokens") || page_text.contains("Short token"),
         "Tokens page should show token-related content"
@@ -97,16 +98,22 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_page_with_revoke_buttons", &[]).await?;
 
     // Step 7: Revoke the read-only OAuth token by finding its row via the app name
-    page.click_builder("tr:has-text('Test OAuth App (read-only)') button:has-text('Revoke')")
-        .timeout(5000.0)
-        .click()
+    page.locator("tr:has-text('Test OAuth App (read-only)') button:has-text('Revoke')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     // Wait for the modal to appear
-    page.wait_for_selector_builder("#revoke-token-modal")
-        .state(playwright::api::frame::FrameState::Visible)
-        .timeout(5000.0)
-        .wait_for_selector()
+    page.locator("#revoke-token-modal")
+        .await
+        .first()
+        .wait_for(Some(
+            WaitForOptions::builder()
+                .state(WaitForState::Visible)
+                .timeout(5000.0)
+                .build(),
+        ))
         .await?;
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -114,9 +121,10 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_revoke_modal", &[]).await?;
 
     // Click the confirm button
-    page.click_builder("#confirm-revoke-btn")
-        .timeout(5000.0)
-        .click()
+    page.locator("#confirm-revoke-btn")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
@@ -124,17 +132,18 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_revoke", &[]).await?;
 
     // Verify the revocation message appears
-    let page_text = page.inner_text("body", None).await?;
+    let page_text = page.locator("body").await.inner_text().await?;
     assert!(
         page_text.contains("revoked successfully"),
         "Should show revocation success message"
     );
 
     // Reload and verify token count decreased
-    page.reload_builder().reload().await?;
-    page.wait_for_selector_builder("table")
-        .timeout(5000.0)
-        .wait_for_selector()
+    page.reload(None).await?;
+    page.locator("table")
+        .await
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
     let rows_after_reload = page.query_selector_all("table tbody tr").await?;
@@ -149,7 +158,7 @@ pub async fn test_token_management_flow(
     // Brief pause to avoid transient connection errors during snapshot cycles.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let response = client
-        .post(&format!("{}/v1/{}/query", base_url, database_path))
+        .post(format!("{}/v1/{}/query", base_url, database_path))
         .header("Authorization", format!("Bearer {}", oauth_token))
         .body("SELECT 1")
         .send()
@@ -171,17 +180,19 @@ pub async fn test_token_management_flow(
     println!("Confirmed: revoked OAuth token no longer works");
 
     // Step 9: Navigate back to profile
-    page.click_builder(&format!("a:has-text('{}')", username))
-        .timeout(5000.0)
-        .click()
+    page.locator(&format!("a:has-text('{}')", username))
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
-    page.click_builder("a:has-text('Profile')")
-        .timeout(5000.0)
-        .click()
+    page.locator("a:has-text('Profile')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
-    let profile_url = page.url()?;
+    let profile_url = page.url();
     assert!(
         profile_url.ends_with(&format!("/{}", username))
             || profile_url.contains(&format!("/{}/", username)),

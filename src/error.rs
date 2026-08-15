@@ -22,6 +22,7 @@ pub enum AybError {
     ConfigurationError { message: String },
     DurationParseError { message: String },
     EmailError { message: String },
+    InvalidSlug { message: String },
     InvalidToken { message: String },
     NoWriteAccessError { message: String },
     QueryError { message: String },
@@ -43,6 +44,7 @@ impl Display for AybError {
             AybError::ConfigurationError { message } => write!(f, "{message}"),
             AybError::CantSetOwnerPermissions { message } => write!(f, "{message}"),
             AybError::EmailError { message } => write!(f, "{message}"),
+            AybError::InvalidSlug { message } => write!(f, "{message}"),
             AybError::InvalidToken { message } => write!(f, "{message}"),
             AybError::NoWriteAccessError { message } => write!(f, "{message}"),
             AybError::RegistrationError { message } => write!(f, "{message}"),
@@ -108,6 +110,14 @@ impl From<prefixed_api_key::PrefixedApiKeyError> for AybError {
 
 impl From<quoted_printable::QuotedPrintableError> for AybError {
     fn from(cause: quoted_printable::QuotedPrintableError) -> Self {
+        AybError::Other {
+            message: format!("{cause:?}"),
+        }
+    }
+}
+
+impl From<duckdb::Error> for AybError {
+    fn from(cause: duckdb::Error) -> Self {
         AybError::Other {
             message: format!("{cause:?}"),
         }

@@ -5,15 +5,15 @@ use std::str::FromStr;
 use crate::error::AybError;
 
 use crate::hosted_db::daemon_registry::DaemonRegistry;
+use crate::hosted_db::engine_for;
 use crate::hosted_db::paths::{
     instantiated_new_database_path, pathbuf_to_parent, set_current_database_and_clean_up,
 };
-use crate::hosted_db::sqlite::query_sqlite;
-use crate::hosted_db::QueryMode;
 use crate::http::structs::{Database as APIDatabase, EntityDatabasePath};
 use crate::server::config::AybConfig;
 use crate::server::permissions::can_create_database;
 use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
+use crate::server::validation::validate_database_slug;
 use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use std::fs;
@@ -39,10 +39,10 @@ async fn create_database(
     authenticated_entity: Option<web::ReqData<InstantiatedEntity>>,
 ) -> Result<HttpResponse, AybError> {
     let entity_slug = &path.entity;
+    validate_database_slug(&path.database)?;
 
     let entity = ayb_db.get_entity_by_slug(entity_slug).await?;
-    let db_type_header = get_required_header(&req, "db-type")?;
-    let db_type = DBType::from_str(&db_type_header)?;
+    let db_type = DBType::from_str(&get_required_header(&req, "db-type")?)?;
     let public_sharing_level = get_required_header(&req, "public-sharing-level")?;
     let database = Database {
         entity_id: entity.id,
@@ -65,7 +65,7 @@ async fn create_database(
     // Validate the upload before touching any persistent state, so a
     // bad file doesn't leave a half-created database behind.
     if let Some(ref tmp) = uploaded {
-        validate_seed_file(&db_type, tmp.file.path())?;
+        engine_for(&db_type).validate(tmp.file.path())?;
     }
 
     let created_database = ayb_db.create_database(&database).await?;
@@ -86,40 +86,6 @@ async fn create_database(
 
     set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?, &daemon_registry).await?;
     Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
-}
-
-fn validate_seed_file(db_type: &DBType, path: &Path) -> Result<(), AybError> {
-    match db_type {
-        DBType::Sqlite => {
-            let result = query_sqlite(
-                &path.to_path_buf(),
-                "PRAGMA integrity_check;",
-                false,
-                QueryMode::ReadOnly,
-            );
-            let ok = matches!(
-                &result,
-                Ok(r) if r.fields.len() == 1
-                    && r.rows.len() == 1
-                    && r.rows[0][0] == Some("ok".to_string())
-            );
-            if !ok {
-                return Err(AybError::Other {
-                    message: match result {
-                        Ok(r) => format!("Uploaded file failed SQLite integrity check: {r:?}"),
-                        Err(err) => format!("Uploaded file is not a valid SQLite database: {err}"),
-                    },
-                });
-            }
-            Ok(())
-        }
-        _ => Err(AybError::Other {
-            message: format!(
-                "Seeding from an uploaded file is not supported for {} databases",
-                db_type.to_str()
-            ),
-        }),
-    }
 }
 
 fn write_seed_to_db_path(uploaded: TempFile, db_path: &Path) -> Result<(), AybError> {

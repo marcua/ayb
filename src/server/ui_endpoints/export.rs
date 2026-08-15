@@ -1,7 +1,7 @@
 use crate::http::structs::EntityDatabasePath;
+use crate::server::config::local_base_url;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::{authentication_details, redirect_to_login};
-use crate::server::web_frontend::local_base_url;
 use actix_web::{get, web, HttpRequest, HttpResponse, Result};
 
 #[get("/{entity}/{database}/export")]

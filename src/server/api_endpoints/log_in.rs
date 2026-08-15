@@ -7,7 +7,6 @@ use crate::http::structs::{AuthenticationDetails, EmptyResponse};
 use crate::server::config::AybConfig;
 use crate::server::tokens::encrypt_auth_token;
 use crate::server::utils::get_lowercased_header;
-use crate::server::web_frontend::WebFrontendDetails;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 
 #[post("/v1/log_in")]
@@ -15,7 +14,6 @@ async fn log_in(
     req: HttpRequest,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
-    web_details: web::Data<Option<WebFrontendDetails>>,
     email_backends: web::Data<EmailBackends>,
 ) -> Result<HttpResponse, AybError> {
     let entity = get_lowercased_header(&req, "entity")?;
@@ -42,10 +40,9 @@ async fn log_in(
                 )?;
                 send_registration_email(
                     &email_backends,
-                    &ayb_config.email,
+                    &ayb_config,
                     &method.email_address,
                     &token,
-                    web_details.get_ref(),
                 )
                 .await?;
                 return Ok(HttpResponse::Ok().json(EmptyResponse {}));
