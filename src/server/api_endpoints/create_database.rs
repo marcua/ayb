@@ -5,7 +5,6 @@ use std::str::FromStr;
 use crate::error::AybError;
 
 use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::engine_for;
 use crate::hosted_db::paths::{
     instantiated_new_database_path, pathbuf_to_parent, set_current_database_and_clean_up,
 };
@@ -14,16 +13,7 @@ use crate::server::config::AybConfig;
 use crate::server::permissions::can_create_database;
 use crate::server::utils::{get_required_header, unwrap_authenticated_entity};
 use crate::server::validation::validate_database_slug;
-use actix_multipart::form::{tempfile::TempFile, MultipartForm};
 use actix_web::{post, web, HttpRequest, HttpResponse};
-use std::fs;
-use std::path::Path;
-
-#[derive(MultipartForm)]
-pub struct CreateDatabaseForm {
-    #[multipart(rename = "database")]
-    pub database: Option<TempFile>,
-}
 
 #[post(
     "/{entity}/{database}/create",
@@ -32,7 +22,6 @@ pub struct CreateDatabaseForm {
 async fn create_database(
     path: web::Path<EntityDatabasePath>,
     req: HttpRequest,
-    form: Option<MultipartForm<CreateDatabaseForm>>,
     ayb_db: web::Data<Box<dyn AybDb>>,
     ayb_config: web::Data<AybConfig>,
     daemon_registry: web::Data<DaemonRegistry>,
@@ -51,47 +40,18 @@ async fn create_database(
         public_sharing_level: PublicSharingLevel::from_str(&public_sharing_level)? as i16,
     };
     let authenticated_entity = unwrap_authenticated_entity(&authenticated_entity)?;
-    if !can_create_database(&authenticated_entity, &entity) {
-        return Err(AybError::Other {
+    if can_create_database(&authenticated_entity, &entity) {
+        let created_database = ayb_db.create_database(&database).await?;
+        let db_path =
+            instantiated_new_database_path(entity_slug, &path.database, &ayb_config.data_path)?;
+        set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?, &daemon_registry).await?;
+        Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
+    } else {
+        Err(AybError::Other {
             message: format!(
                 "Authenticated entity {} can't create a database for entity {}",
                 authenticated_entity.slug, entity_slug
             ),
-        });
+        })
     }
-
-    let uploaded = form.and_then(|f| f.into_inner().database);
-
-    // Validate the upload before touching any persistent state, so a
-    // bad file doesn't leave a half-created database behind.
-    if let Some(ref tmp) = uploaded {
-        engine_for(&db_type).validate(tmp.file.path())?;
-    }
-
-    let created_database = ayb_db.create_database(&database).await?;
-    let db_path =
-        instantiated_new_database_path(entity_slug, &path.database, &ayb_config.data_path)?;
-
-    if let Some(tmp) = uploaded {
-        if let Err(err) = write_seed_to_db_path(tmp, &db_path) {
-            // Best-effort rollback so the user can retry cleanly. We
-            // don't currently delete the DB row — that requires a
-            // delete API on AybDb that doesn't exist yet — so on
-            // failure here the user must contact an admin or upload a
-            // valid file under the same name later.
-            let _ = fs::remove_dir_all(pathbuf_to_parent(&db_path)?);
-            return Err(err);
-        }
-    }
-
-    set_current_database_and_clean_up(&pathbuf_to_parent(&db_path)?, &daemon_registry).await?;
-    Ok(HttpResponse::Created().json(APIDatabase::from_persisted(&entity, &created_database)))
-}
-
-fn write_seed_to_db_path(uploaded: TempFile, db_path: &Path) -> Result<(), AybError> {
-    // The temp file usually lives under the OS temp dir, which may be
-    // a different mount than data_path. Copy (rather than rename) to
-    // avoid EXDEV; the NamedTempFile drops naturally and cleans up.
-    fs::copy(uploaded.file.path(), db_path)?;
-    Ok(())
 }

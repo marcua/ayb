@@ -101,11 +101,6 @@ pub fn client_commands() -> Command {
                         .value_parser(value_parser!(PublicSharingLevel))
                         .default_value(PublicSharingLevel::NoAccess.to_str())
                         .required(false)
-                )
-                .arg(
-                    arg!(--from_file <path> "Optional path to an existing database file to use as the initial contents")
-                        .value_parser(value_parser!(PathBuf))
-                        .required(false)
                 ),
 
         )
@@ -117,6 +112,18 @@ pub fn client_commands() -> Command {
                      .required(true)
                 )
                 .arg(arg!(<output_path> "The local path to write the exported database to")
+                     .value_parser(value_parser!(PathBuf))
+                     .required(true)
+                )
+        )
+        .subcommand(
+            Command::new("import_database")
+                .about("Replace the contents of an existing database with a local file")
+                .arg(arg!(<database> "The database to import into (e.g., entity/database.sqlite)")
+                     .value_parser(ValueParser::new(entity_database_parser))
+                     .required(true)
+                )
+                .arg(arg!(<input_path> "The local database file to upload")
                      .value_parser(value_parser!(PathBuf))
                      .required(true)
                 )
@@ -331,14 +338,12 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
             matches.get_one::<DBType>("type"),
             matches.get_one::<PublicSharingLevel>("public_sharing_level"),
         ) {
-            let seed_file = matches.get_one::<PathBuf>("from_file");
             match client
                 .create_database(
                     &entity_database.entity,
                     &entity_database.database,
                     db_type,
                     public_sharing_level,
-                    seed_file.map(|p| p.as_path()),
                 )
                 .await
             {
@@ -372,6 +377,32 @@ pub async fn execute_client_command(matches: &ArgMatches) -> std::io::Result<()>
                         entity_database.entity,
                         entity_database.database,
                         output_path.display()
+                    );
+                }
+                Err(err) => {
+                    println!("Error: {err}");
+                }
+            }
+        }
+    } else if let Some(matches) = matches.subcommand_matches("import_database") {
+        if let (Some(entity_database), Some(input_path)) = (
+            matches.get_one::<EntityDatabasePath>("database"),
+            matches.get_one::<PathBuf>("input_path"),
+        ) {
+            match client
+                .import_database(
+                    &entity_database.entity,
+                    &entity_database.database,
+                    input_path,
+                )
+                .await
+            {
+                Ok(_response) => {
+                    println!(
+                        "Imported {} into {}/{}",
+                        input_path.display(),
+                        entity_database.entity,
+                        entity_database.database
                     );
                 }
                 Err(err) => {

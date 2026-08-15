@@ -4,6 +4,7 @@ mod create_database;
 mod database;
 mod entity_details;
 mod export;
+mod import;
 mod log_in;
 mod log_out;
 mod oauth;
@@ -21,6 +22,7 @@ pub use entity_details::{
     entity_details as entity_details_endpoint, update_profile as update_profile_endpoint,
 };
 pub use export::export as export_endpoint;
+pub use import::import_database as import_endpoint;
 pub use log_in::{log_in as log_in_endpoint, log_in_submit as log_in_submit_endpoint};
 pub use log_out::log_out as log_out_endpoint;
 pub use oauth::{

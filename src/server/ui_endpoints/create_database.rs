@@ -3,48 +3,33 @@ use crate::http::structs::EntityPath;
 use crate::server::config::AybConfig;
 use crate::server::ui_endpoints::auth::init_ayb_client;
 use crate::server::ui_endpoints::templates::error_snippet;
-use actix_multipart::form::{tempfile::TempFile, text::Text, MultipartForm};
 use actix_web::{post, web, HttpRequest, HttpResponse, Result};
+use serde::Deserialize;
 use std::str::FromStr;
 
-#[derive(MultipartForm)]
-pub struct CreateDatabaseForm {
-    database_slug: Text<String>,
-    db_type: Text<String>,
-    public_sharing_level: Text<String>,
-    #[multipart(rename = "database")]
-    database: Option<TempFile>,
+#[derive(Deserialize)]
+pub struct CreateDatabaseRequest {
+    database_slug: String,
+    db_type: String,
+    public_sharing_level: String,
 }
 
 #[post("/{entity}/create_database")]
 pub async fn create_database(
     req: HttpRequest,
     path: web::Path<EntityPath>,
-    MultipartForm(form): MultipartForm<CreateDatabaseForm>,
+    form: web::Form<CreateDatabaseRequest>,
     ayb_config: web::Data<AybConfig>,
 ) -> Result<HttpResponse> {
     let entity_slug = &path.entity.to_lowercase();
-    let database_slug = form.database_slug.to_lowercase();
-    let db_type = match DBType::from_str(&form.db_type) {
-        Ok(db_type) => db_type,
-        Err(err) => return error_snippet("Error creating database", &format!("{err}")),
-    };
-    let public_sharing_level = match PublicSharingLevel::from_str(&form.public_sharing_level) {
-        Ok(level) => level,
-        Err(err) => return error_snippet("Error creating database", &format!("{err}")),
-    };
+    let database_slug = &form.database_slug.to_lowercase();
+    let db_type = DBType::from_str(&form.db_type)?;
+    let public_sharing_level = PublicSharingLevel::from_str(&form.public_sharing_level)?;
 
     let client = init_ayb_client(&ayb_config, &req);
-    let seed_path = form.database.as_ref().map(|tmp| tmp.file.path().to_owned());
 
     match client
-        .create_database(
-            entity_slug,
-            &database_slug,
-            &db_type,
-            &public_sharing_level,
-            seed_path.as_deref(),
-        )
+        .create_database(entity_slug, database_slug, &db_type, &public_sharing_level)
         .await
     {
         Ok(_) => {

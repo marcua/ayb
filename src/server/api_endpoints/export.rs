@@ -2,7 +2,7 @@ use crate::ayb_db::db_interfaces::AybDb;
 use crate::ayb_db::models::{APIToken, DBType, InstantiatedEntity};
 use crate::error::AybError;
 use crate::hosted_db::engine_for;
-use crate::hosted_db::paths::current_database_path;
+use crate::hosted_db::paths::{current_database_path, database_export_path};
 use crate::http::structs::EntityDatabasePath;
 use crate::server::config::AybConfig;
 use crate::server::permissions::highest_query_access_level;
@@ -12,9 +12,6 @@ use actix_web::http::header::{ContentDisposition, DispositionParam, DispositionT
 use actix_web::mime;
 use actix_web::{get, web, HttpRequest, HttpResponse};
 use std::fs;
-use uuid::{timestamp::context::ContextV7, Timestamp, Uuid};
-
-const EXPORTS_DIR: &str = "exports";
 
 #[get(
     "/{entity}/{database}/export",
@@ -49,7 +46,7 @@ async fn export(
 
     let db_type = DBType::try_from(database.db_type)?;
     let db_path = current_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
-    let temp_dir = make_export_temp_dir(&ayb_config.data_path)?;
+    let temp_dir = database_export_path(entity_slug, database_slug, &ayb_config.data_path)?;
     let temp_path = temp_dir.join(database_slug);
 
     // An export is exactly a snapshot that never reaches S3: the same
@@ -62,13 +59,6 @@ async fn export(
             Err(err)
         }
     }
-}
-
-fn make_export_temp_dir(data_path: &str) -> Result<std::path::PathBuf, AybError> {
-    let uuid = Uuid::new_v7(Timestamp::now(ContextV7::new()));
-    let path: std::path::PathBuf = [data_path, EXPORTS_DIR, &uuid.to_string()].iter().collect();
-    fs::create_dir_all(&path)?;
-    Ok(fs::canonicalize(path)?)
 }
 
 fn stream_and_clean_up(

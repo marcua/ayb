@@ -37,15 +37,14 @@ pub fn create_database(
     Ok(())
 }
 
-pub fn create_database_from_file(
+pub fn import_database(
     config: &str,
     api_key: &str,
     database: &str,
-    db_type: &str,
-    seed_path: &str,
+    input_path: &str,
     result: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cmd = ayb_assert_cmd!("client", "--config", config, "create_database", database, db_type, "no-access", "--from_file", seed_path; {
+    let cmd = ayb_assert_cmd!("client", "--config", config, "import_database", database, input_path; {
         "AYB_API_TOKEN" => api_key,
     });
 

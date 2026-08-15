@@ -43,6 +43,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(api_endpoints::create_database_endpoint)
             .service(api_endpoints::database_details_endpoint)
             .service(api_endpoints::export_endpoint)
+            .service(api_endpoints::import_endpoint)
             .service(api_endpoints::update_database_endpoint)
             .service(api_endpoints::query_endpoint)
             .service(api_endpoints::entity_details_endpoint)
@@ -83,6 +84,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         .service(ui_endpoints::entity_details_endpoint)
         .service(ui_endpoints::create_database_endpoint)
         .service(ui_endpoints::export_endpoint)
+        .service(ui_endpoints::import_endpoint)
         .service(ui_endpoints::update_profile_endpoint)
         .service(ui_endpoints::database_endpoint)
         .service(ui_endpoints::query_endpoint)
@@ -185,9 +187,9 @@ pub async fn run_server(config_path: &Path) -> std::io::Result<()> {
         crate::hosted_db::sandbox::detect_isolation_status(),
     );
 
-    // Cap database upload size at 4 GiB. Most embedded SQLite
-    // databases are far smaller; this is an upper bound to avoid
-    // unbounded resource use rather than a typical-case limit.
+    // Cap database upload size at 4 GiB. Most embedded databases are
+    // far smaller; this is an upper bound to avoid unbounded resource
+    // use rather than a typical-case limit.
     let multipart_config = MultipartFormConfig::default()
         .total_limit(4 * 1024 * 1024 * 1024)
         .memory_limit(2 * 1024 * 1024);

@@ -31,39 +31,34 @@ impl DbEngine for SqliteEngine {
                 message: format!("Unexpected snapshot result: {result:?}"),
             });
         }
-        integrity_check(snapshot_path).map_err(|err| AybError::SnapshotError {
-            message: format!("Snapshot failed integrity check: {err}"),
-        })
+        // Verify the copy we just wrote with the same check an uploaded
+        // file gets, so there is one definition of "this is a readable
+        // SQLite database" for snapshots, exports, and imports alike.
+        self.validate(snapshot_path)
+            .map_err(|err| AybError::SnapshotError {
+                message: format!("Snapshot failed verification: {err}"),
+            })
     }
 
     fn validate(&self, path: &Path) -> Result<(), AybError> {
-        integrity_check(path)
-    }
-}
-
-/// Run `PRAGMA integrity_check` against the database at `path` and
-/// return an error unless it reports the single row `ok`.
-///
-/// Shared by snapshots (verifying the copy we just wrote) and upload
-/// validation (vetting a file someone handed us). The connection is
-/// opened read-only with the standard perimeter (no ATTACH, defensive
-/// mode), so an untrusted file cannot use it to reach outside itself.
-fn integrity_check(path: &Path) -> Result<(), AybError> {
-    let result = query_sqlite(path, "PRAGMA integrity_check;", false, QueryMode::ReadOnly);
-    match result {
-        Ok(result)
-            if result.fields.len() == 1
-                && result.rows.len() == 1
-                && result.rows[0][0] == Some("ok".to_string()) =>
-        {
-            Ok(())
+        // The connection is opened read-only with the standard perimeter
+        // (no ATTACH, defensive mode), so an untrusted file cannot use it
+        // to reach outside itself.
+        match query_sqlite(path, "PRAGMA integrity_check;", false, QueryMode::ReadOnly) {
+            Ok(result)
+                if result.fields.len() == 1
+                    && result.rows.len() == 1
+                    && result.rows[0][0] == Some("ok".to_string()) =>
+            {
+                Ok(())
+            }
+            Ok(result) => Err(AybError::Other {
+                message: format!("File failed SQLite integrity check: {result:?}"),
+            }),
+            Err(err) => Err(AybError::Other {
+                message: format!("File is not a valid SQLite database: {err}"),
+            }),
         }
-        Ok(result) => Err(AybError::Other {
-            message: format!("File failed SQLite integrity check: {result:?}"),
-        }),
-        Err(err) => Err(AybError::Other {
-            message: format!("File is not a valid SQLite database: {err}"),
-        }),
     }
 }
 

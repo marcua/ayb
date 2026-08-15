@@ -10,14 +10,71 @@
                 <a href="/{{ entity }}" class="hover:underline">{{ entity }}</a> /
                 <span class="font-semibold">{{ database }}</span> ({{ database_type }})
             </div>
-            {% if highest_query_access_level %}
-            <a href="/{{ entity }}/{{ database }}/export"
-               class="uk-btn uk-btn-default uk-btn-sm"
-               download="{{ database }}">
-                <uk-icon icon="download" class="mr-1"></uk-icon> Download
-            </a>
-            {% endif %}
+            <div class="flex gap-2">
+                {% if highest_query_access_level %}
+                <a href="/{{ entity }}/{{ database }}/export"
+                   class="uk-btn uk-btn-default uk-btn-sm"
+                   download="{{ database }}">
+                    <uk-icon icon="download" class="mr-1"></uk-icon> Download
+                </a>
+                {% endif %}
+                {% if can_manage_database %}
+                <button
+                    class="uk-btn uk-btn-default uk-btn-sm"
+                    type="button"
+                    onclick="showImportModal()">
+                    <uk-icon icon="upload" class="mr-1"></uk-icon> Replace
+                </button>
+                {% endif %}
+            </div>
         </div>
+
+        {% if can_manage_database %}
+        <div id="import-results" class="mb-4"></div>
+
+        <!-- Replace-database confirmation modal. Import overwrites the
+             database in place, so it is deliberately gated behind the
+             same kind of explicit confirmation as restoring a snapshot. -->
+        <div id="import-modal" class="uk-flex-top" data-uk-modal>
+            <div class="uk-modal-dialog uk-modal-body uk-margin-auto-vertical">
+                <h2 class="uk-modal-title">Replace database</h2>
+                <p class="mt-1">Upload a {{ database_type }} file to replace the contents of <code>{{ entity }}/{{ database }}</code>.</p>
+                <p class="uk-text-muted text-sm mt-2">This permanently replaces the current contents. The file is checked before anything is replaced, so an unreadable file or one of the wrong type leaves the database as it is.</p>
+                <form id="import-form"
+                      class="mt-4"
+                      hx-post="/{{ entity }}/{{ database }}/import"
+                      hx-encoding="multipart/form-data"
+                      hx-target="#import-results"
+                      hx-target-400="#import-results"
+                      hx-swap="innerHTML">
+                    <input
+                        type="file"
+                        id="import-file"
+                        name="database"
+                        required
+                        class="p-2 border rounded focus:border-blue-500 w-full">
+                    <p class="uk-text-right mt-4">
+                        <button class="uk-btn uk-btn-default uk-modal-close" type="button">Cancel</button>
+                        <button class="uk-btn uk-btn-primary" type="submit">Replace database</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            function showImportModal() {
+                document.getElementById('import-form').reset();
+                document.getElementById('import-results').innerHTML = '';
+                UIkit.modal('#import-modal').show();
+            }
+
+            document.body.addEventListener('htmx:afterRequest', function (event) {
+                if (event.target.closest('#import-form') && event.detail.xhr.status === 200) {
+                    UIkit.modal('#import-modal').hide();
+                }
+            });
+        </script>
+        {% endif %}
         <ul data-uk-tab class="mb-6" id="database-tabs">
             <li><a class="px-4 pb-3 pt-2" href="#query">Query</a></li>
             {% if can_manage_database %}

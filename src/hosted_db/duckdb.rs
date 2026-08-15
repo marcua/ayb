@@ -31,17 +31,13 @@ impl DbEngine for DuckdbEngine {
             conn.execute_batch(&attach)?;
             Ok(())
         })?;
-        // Verify the snapshot is a readable DuckDB database: a successful
-        // query here (propagated via `?`) means the file opened and is
-        // queryable. `information_schema.tables` always returns exactly one
-        // row (the count), so there is nothing further to assert on it.
-        query_duckdb(
-            snapshot_path,
-            "SELECT count(*) FROM information_schema.tables;",
-            false,
-            QueryMode::ReadOnly,
-        )?;
-        Ok(())
+        // Verify the copy we just wrote with the same check an uploaded
+        // file gets, so there is one definition of "this is a readable
+        // DuckDB database" for snapshots, exports, and imports alike.
+        self.validate(snapshot_path)
+            .map_err(|err| AybError::SnapshotError {
+                message: format!("Snapshot failed verification: {err}"),
+            })
     }
 
     fn validate(&self, path: &Path) -> Result<(), AybError> {

@@ -1,8 +1,8 @@
 use crate::ayb_db::db_interfaces::AybDb;
-use crate::ayb_db::models::InstantiatedEntity;
+use crate::ayb_db::models::{DBType, InstantiatedEntity};
 use crate::error::AybError;
 use crate::hosted_db::daemon_registry::DaemonRegistry;
-use crate::hosted_db::paths::{new_database_path, set_current_database_and_clean_up};
+use crate::hosted_db::paths::replace_current_database;
 use crate::http::structs::{EmptyResponse, EntityDatabasePath};
 use crate::server::config::AybConfig;
 use crate::server::permissions::can_manage_database;
@@ -34,15 +34,25 @@ async fn restore_snapshot(
             // locking so that only one snapshot per database can be
             // restored at a time.
 
-            // Retrieve the snapshot, move it to the active databases
-            // directory, and set it as the current active database.
+            // Retrieve the snapshot into a staging directory, verify it,
+            // and only then make it the current active database. This is
+            // the same stage/validate/swap path an import takes; the
+            // only difference is where the replacement bytes come from.
             let snapshot_storage = SnapshotStorage::new(snapshot_config).await?;
-            let db_path = &new_database_path(entity_slug, database_slug, &ayb_config.data_path)?;
-
-            snapshot_storage
-                .retrieve_snapshot(entity_slug, database_slug, &snapshot_id, db_path)
-                .await?;
-            set_current_database_and_clean_up(db_path, &daemon_registry).await?;
+            let db_type = DBType::try_from(database.db_type)?;
+            replace_current_database(
+                entity_slug,
+                database_slug,
+                &ayb_config.data_path,
+                &db_type,
+                &daemon_registry,
+                |staging_dir| async move {
+                    snapshot_storage
+                        .retrieve_snapshot(entity_slug, database_slug, &snapshot_id, &staging_dir)
+                        .await
+                },
+            )
+            .await?;
         }
         Ok(HttpResponse::Ok().json(EmptyResponse {}))
     } else {

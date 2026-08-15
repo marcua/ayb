@@ -105,7 +105,6 @@ impl AybClient {
         database: &str,
         db_type: &DBType,
         public_sharing_level: &PublicSharingLevel,
-        seed_file: Option<&Path>,
     ) -> Result<Database, AybError> {
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -118,31 +117,52 @@ impl AybClient {
         );
         self.add_bearer_token(&mut headers, false)?;
 
-        let form = if let Some(file_path) = seed_file {
-            let bytes = tokio::fs::read(file_path)
-                .await
-                .map_err(|err| AybError::Other {
-                    message: format!("Unable to read seed file {}: {err}", file_path.display()),
-                })?;
-            let file_name = file_path
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or(database)
-                .to_string();
-            let part = multipart::Part::bytes(bytes).file_name(file_name);
-            multipart::Form::new().part("database", part)
-        } else {
-            multipart::Form::new()
-        };
-
         let response = reqwest::Client::new()
             .post(self.make_url(format!("{entity}/{database}/create")))
+            .headers(headers)
+            .send()
+            .await?;
+
+        self.handle_response(response, reqwest::StatusCode::CREATED)
+            .await
+    }
+
+    /// Replaces the contents of an existing database with `input_path`.
+    /// The server validates the uploaded file against the database's
+    /// engine type before it replaces anything, so a corrupt file or one
+    /// of the wrong type leaves the database untouched.
+    pub async fn import_database(
+        &self,
+        entity: &str,
+        database: &str,
+        input_path: &Path,
+    ) -> Result<EmptyResponse, AybError> {
+        let mut headers = HeaderMap::new();
+        self.add_bearer_token(&mut headers, false)?;
+
+        let bytes = tokio::fs::read(input_path)
+            .await
+            .map_err(|err| AybError::Other {
+                message: format!("Unable to read {}: {err}", input_path.display()),
+            })?;
+        let file_name = input_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(database)
+            .to_string();
+        let form = multipart::Form::new().part(
+            "database",
+            multipart::Part::bytes(bytes).file_name(file_name),
+        );
+
+        let response = reqwest::Client::new()
+            .post(self.make_url(format!("{entity}/{database}/import")))
             .headers(headers)
             .multipart(form)
             .send()
             .await?;
 
-        self.handle_response(response, reqwest::StatusCode::CREATED)
+        self.handle_response(response, reqwest::StatusCode::OK)
             .await
     }
 
