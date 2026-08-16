@@ -25,6 +25,21 @@ fn is_username_banned(username: &str) -> bool {
     banned_set.contains(&username.to_lowercase())
 }
 
+/// Maximum slug length, in bytes.
+///
+/// Slugs become single path components, and most filesystems cap a
+/// component at 255 bytes. Stay well under that: the engines create
+/// sidecar files beside the database (`{slug}-wal`, `{slug}-shm`,
+/// `{slug}.wal`), so the slug itself needs headroom. Slugs are ASCII-only
+/// today, so bytes and characters coincide; the limit is expressed in
+/// bytes because that is what the filesystem actually constrains.
+///
+/// 128 is generous for real names (GitHub caps usernames at 39 and
+/// repository names at 100). Keep it in sync with the `maxlength`
+/// attribute on the create-database form in
+/// `server/ui_endpoints/templates/create_database_fields.html`.
+const MAX_SLUG_BYTES: usize = 128;
+
 /// Validate the shared syntactic rules for entity and database slugs.
 ///
 /// Slugs are not just display names: they become path components under
@@ -49,6 +64,17 @@ fn validate_slug_syntax(kind: &str, slug: &str) -> Result<(), AybError> {
     if slug.is_empty() {
         return Err(AybError::InvalidSlug {
             message: format!("A {kind} slug can't be empty"),
+        });
+    }
+
+    // The slug itself is deliberately left out of the message: an
+    // over-long slug is by definition too long to echo back usefully.
+    if slug.len() > MAX_SLUG_BYTES {
+        return Err(AybError::InvalidSlug {
+            message: format!(
+                "A {kind} slug can't be longer than {MAX_SLUG_BYTES} bytes, but this one is {} bytes",
+                slug.len()
+            ),
         });
     }
 
@@ -135,6 +161,20 @@ mod tests {
                 "should have rejected entity slug {slug:?}"
             );
         }
+    }
+
+    /// Slugs become single filesystem path components, so they're capped
+    /// well below the 255-byte limit most filesystems impose.
+    #[test]
+    fn test_enforces_length_cap() {
+        let at_limit = "a".repeat(MAX_SLUG_BYTES);
+        let over_limit = "a".repeat(MAX_SLUG_BYTES + 1);
+
+        assert!(validate_database_slug(&at_limit).is_ok());
+        assert!(validate_entity_slug(&at_limit).is_ok());
+
+        assert!(validate_database_slug(&over_limit).is_err());
+        assert!(validate_entity_slug(&over_limit).is_err());
     }
 
     /// Reserved names are rejected for entities but are perfectly fine
