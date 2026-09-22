@@ -76,6 +76,9 @@ pub async fn test_registration_flow(
     )
     .await?;
 
+    // Screenshot comparison of the confirmation interstitial
+    BrowserHelpers::screenshot_compare(page, "confirm_interstitial", &[]).await?;
+
     // Step 7: Continue in this browser
     page.locator("button:has-text('Continue')")
         .await
