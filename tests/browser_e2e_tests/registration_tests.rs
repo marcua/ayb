@@ -68,9 +68,24 @@ pub async fn test_registration_flow(
         extract_token_from_emails(&user_emails).expect("Should extract token from email");
     let confirmation_url = format!("{}/confirm/{}", base_url, confirmation_token);
 
-    // Step 6: Navigate to confirmation link
+    // Step 6: Navigate to the confirmation interstitial. The URL is
+    // non-consuming; the user must explicitly confirm.
     page.goto(
         &confirmation_url,
+        Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+    )
+    .await?;
+
+    // Step 7: Continue in this browser
+    page.locator("button:has-text('Continue')")
+        .await
+        .first()
+        .click(Some(ClickOptions::builder().timeout(5000.0).build()))
+        .await?;
+
+    // The success page redirects to the user dashboard.
+    page.wait_for_url(
+        &format!("{}/{}", base_url, username),
         Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
     )
     .await?;
@@ -78,7 +93,7 @@ pub async fn test_registration_flow(
     // Screenshot comparison of user dashboard
     BrowserHelpers::screenshot_compare(page, "user_dashboard", &[]).await?;
 
-    // Step 7: Verify we're now on the authenticated user dashboard
+    // Step 8: Verify we're now on the authenticated user dashboard
     let expected_title = format!("{} - ayb", username);
     assert_eq!(page.title().await?, expected_title);
 

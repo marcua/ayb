@@ -74,6 +74,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         .service(ui_endpoints::register_endpoint)
         .service(ui_endpoints::register_submit_endpoint)
         .service(ui_endpoints::confirm_endpoint)
+        .service(ui_endpoints::confirm_submit_endpoint)
         .service(ui_endpoints::entity_tokens_endpoint)
         .service(ui_endpoints::revoke_token_endpoint)
         .service(ui_endpoints::oauth_authorize_endpoint)
