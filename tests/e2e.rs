@@ -7,7 +7,7 @@ mod utils;
 use crate::browser_e2e_tests::{
     test_create_and_query_database_flow, test_duckdb_flow, test_entity_profile_flow,
     test_oauth_deny_flow, test_oauth_flow, test_permissions_flow, test_registration_flow,
-    test_snapshots_flow, test_token_management_flow,
+    test_snapshots_flow, test_token_management_flow, ConfirmVia,
 };
 use crate::e2e_tests::{
     test_anonymous_access, test_create_and_query_db, test_create_and_query_duckdb,
@@ -132,7 +132,8 @@ async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     let base_url = format!("http://127.0.0.1:{}", port);
 
     // Run registration test and get the username
-    let username = test_registration_flow(page, &base_url, "browser_sqlite").await?;
+    let username =
+        test_registration_flow(page, &base_url, "browser_sqlite", ConfirmVia::Link).await?;
 
     // Continue with profile test using the registered user
     test_entity_profile_flow(page, &username).await?;

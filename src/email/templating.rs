@@ -2,9 +2,9 @@ use crate::server::config::{public_base_url, AybConfig};
 use crate::templating::TemplateString;
 
 pub fn render_confirmation_template(ayb_config: &AybConfig, token: &str) -> String {
-    let tmpl: TemplateString = "To complete your registration, visit\n\t{url}\n\n\
-                                Or type\n\tayb client confirm {token}\n\n\
-                                Or copy this confirmation code into the login screen:\n\t{token}"
+    let tmpl: TemplateString = "To confirm your email and sign in, visit\n\t{url}\n\n\
+                                Or paste this code into the ayb window where you started:\n\t{token}\n\n\
+                                Or type\n\tayb client confirm {token}"
         .to_string()
         .into();
     let confirmation_url = format!(
@@ -54,9 +54,9 @@ mod tests {
 
         assert_eq!(
             result,
-            "To complete your registration, visit\n\thttp://localhost:5433/confirm/test_token_456\n\n\
-             Or type\n\tayb client confirm test_token_456\n\n\
-             Or copy this confirmation code into the login screen:\n\ttest_token_456"
+            "To confirm your email and sign in, visit\n\thttp://localhost:5433/confirm/test_token_456\n\n\
+             Or paste this code into the ayb window where you started:\n\ttest_token_456\n\n\
+             Or type\n\tayb client confirm test_token_456"
         );
     }
 
@@ -68,9 +68,9 @@ mod tests {
 
         assert_eq!(
             result,
-            "To complete your registration, visit\n\thttps://ayb.example.com/confirm/test_token_789\n\n\
-             Or type\n\tayb client confirm test_token_789\n\n\
-             Or copy this confirmation code into the login screen:\n\ttest_token_789"
+            "To confirm your email and sign in, visit\n\thttps://ayb.example.com/confirm/test_token_789\n\n\
+             Or paste this code into the ayb window where you started:\n\ttest_token_789\n\n\
+             Or type\n\tayb client confirm test_token_789"
         );
     }
 }

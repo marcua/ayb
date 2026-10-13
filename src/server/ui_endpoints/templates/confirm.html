@@ -1,6 +1,6 @@
 {% extends "base_auth.html" %}
 
-{% block title %}Login successful{% endblock %}
+{% block title %}Finish signing in{% endblock %}
 
 {% block other_action %}
 <a href="/log_in" class="text-sm">Log in</a>
@@ -8,9 +8,9 @@
 
 {% block auth_content %}
 <div class="bg-white rounded-lg shadow-sm p-6 w-full max-w-md">
-    <h1 class="text-2xl font-bold mb-2">Login successful</h1>
+    <h1 class="text-2xl font-bold mb-2">Finish signing in</h1>
     <p class="text-sm text-muted-foreground mb-4">
-        Click below to proceed in the current browser or copy login code to another window.
+        Continue here to finish signing in, or copy the code and paste it into the window where you started.
     </p>
 
     <input type="hidden" id="confirmation-code" value="{{ token }}">
@@ -18,7 +18,7 @@
     <form method="POST" action="/confirm" class="space-y-3">
         <input type="hidden" name="token" value="{{ token }}">
         <button type="submit" class="uk-btn uk-btn-primary w-full">
-            Continue
+            Continue in this browser
         </button>
     </form>
 

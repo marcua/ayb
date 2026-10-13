@@ -28,27 +28,7 @@ impl BrowserHelpers {
         }
 
         let chromium = playwright.chromium();
-
-        // Attach to an externally-managed Chrome instead of launching one when
-        // AYB_PLAYWRIGHT_CDP is set (e.g. http://127.0.0.1:9222), or when
-        // launching fails (e.g. inside nono, where Chrome crashes on a Mach
-        // bootstrap/crashpad restriction). This lets the browser e2e suite run
-        // in-sandbox against a Chrome the user started on the host.
-        let browser = if let Ok(cdp_url) = std::env::var("AYB_PLAYWRIGHT_CDP") {
-            println!("🔌 Connecting to existing Chrome over CDP at {cdp_url}");
-            chromium.connect_over_cdp(&cdp_url, None).await?
-        } else {
-            match Self::try_launch_browser(chromium, headless).await {
-                Ok(browser) => browser,
-                Err(e) => {
-                    let cdp_url = "http://127.0.0.1:9222";
-                    println!(
-                        "Could not launch a browser ({e}); attaching to an existing Chrome over CDP at {cdp_url}"
-                    );
-                    chromium.connect_over_cdp(cdp_url, None).await?
-                }
-            }
-        };
+        let browser = Self::try_launch_browser(chromium, headless).await?;
 
         let mut contexts_and_pages = Vec::new();
 
@@ -82,8 +62,8 @@ impl BrowserHelpers {
             .await
         {
             Ok(browser) => return Ok(browser),
-            Err(e) => println!(
-                "Preinstalled Playwright not available on this platform ({e}), trying fallbacks..."
+            Err(_) => println!(
+                "Preinstalled Playwright not available on this platform, trying fallbacks..."
             ),
         }
 
@@ -108,7 +88,7 @@ impl BrowserHelpers {
             if std::path::Path::new(path).exists() {
                 println!("Trying system browser at: {}", path);
                 // On failure, fall through to the next fallback.
-                match chromium
+                if let Ok(browser) = chromium
                     .launch_with_options(
                         LaunchOptions::new()
                             .headless(headless)
@@ -116,8 +96,7 @@ impl BrowserHelpers {
                     )
                     .await
                 {
-                    Ok(browser) => return Ok(browser),
-                    Err(e) => println!("Failed to launch system browser at {path}: {e}"),
+                    return Ok(browser);
                 }
             }
         }
@@ -190,16 +169,6 @@ impl BrowserHelpers {
             Some(ScreenshotOptions::builder().full_page(true).build()),
         )
         .await?;
-
-        // Escape hatch for quick functional runs: capture screenshots for
-        // inspection without comparing them against the references.
-        if std::env::var("AYB_SKIP_SCREENSHOT_COMPARE").is_ok() {
-            println!(
-                "📸 Captured '{}' without comparison ({})",
-                prefixed_name, current_path
-            );
-            return Ok(());
-        }
 
         // If no reference exists, save current as reference
         if !Path::new(&reference_path).exists() {

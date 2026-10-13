@@ -12,6 +12,6 @@ pub use duckdb::test_duckdb_flow;
 pub use entity_profile::test_entity_profile_flow;
 pub use oauth_flow::{test_oauth_deny_flow, test_oauth_flow};
 pub use permissions::test_permissions_flow;
-pub use registration_tests::test_registration_flow;
+pub use registration_tests::{test_registration_flow, ConfirmVia};
 pub use snapshots::test_snapshots_flow;
 pub use token_management::test_token_management_flow;
