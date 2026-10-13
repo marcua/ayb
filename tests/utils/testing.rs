@@ -137,30 +137,30 @@ pub fn reset_test_environment(test_type: &str) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-static MINIO_INIT: Once = Once::new();
+static S3_MOCK_INIT: Once = Once::new();
 
-pub fn ensure_minio_running() -> Result<(), Box<dyn std::error::Error>> {
-    MINIO_INIT.call_once(|| {
-        if let Err(e) = setup_minio() {
-            eprintln!("Failed to setup MinIO: {}", e);
+pub fn ensure_s3_mock_running() -> Result<(), Box<dyn std::error::Error>> {
+    S3_MOCK_INIT.call_once(|| {
+        if let Err(e) = setup_s3_mock() {
+            eprintln!("Failed to setup S3 mock: {}", e);
             std::process::exit(1);
         }
     });
     Ok(())
 }
 
-fn setup_minio() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting MinIO (one-time setup)...");
+fn setup_s3_mock() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Starting S3 mock (one-time setup)...");
 
-    let output = Command::new("tests/run_minio.sh").output()?;
+    let output = Command::new("tests/run_s3_mock.sh").output()?;
 
     if output.status.success() {
         print!("{}", String::from_utf8_lossy(&output.stdout));
         Ok(())
     } else {
-        eprintln!("MinIO setup failed:");
+        eprintln!("S3 mock setup failed:");
         eprintln!("{}", String::from_utf8_lossy(&output.stderr));
-        Err("Failed to run MinIO setup script".into())
+        Err("Failed to run S3 mock setup script".into())
     }
 }
 
