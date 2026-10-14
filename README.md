@@ -540,7 +540,7 @@ cargo test --verbose
 
 In order to mimic as close to a realistic environment as possible, the end-to-end tests mock out very little functionality. The `tests/set_up_e2e_env.sh` script, which has been used extensively in Ubuntu, does the following:
 * Sets up a Python virtual environment and installs requirements for various helpers.
-* Installs the requirements for a [MinIO](https://min.io/) server and then runs that server in the background (requires Docker) in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
+* Installs [moto](https://github.com/getmoto/moto)'s S3 server and then runs it in the background in order to test database snapshotting functionality that stores snapshots in S3-compatible storage.
 * Tests `ayb`'s [isolation](#isolation) functionality using the kernel's Landlock security module.
 
 ## FAQ
