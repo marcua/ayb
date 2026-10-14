@@ -51,11 +51,11 @@ make test TEST=client_server_integration_sqlite
 
 # The test setup script installs:
 # - Python virtual environment with awscli
-# - MinIO for S3-compatible storage testing
+# - moto S3 mock for S3-compatible storage testing
 # - Landlock isolation testing (requires Linux kernel 5.13+)
 ```
 
-If tests fail with S3 errors, run `tests/run_minio.sh` and try again.
+If tests fail with S3 errors, run `tests/run_s3_mock.sh` and try again.
 
 ### Code Quality
 CRITICAL: Run `make lint` any time you edit code. Your task is not complete if either of these report an error: fix all warnings and errors before reporting back.
@@ -142,6 +142,6 @@ daemon logs a loud warning and runs unsandboxed.
 
 ### Testing Strategy
 - End-to-end integration tests that mirror realistic usage
-- Mock services: SMTP server, MinIO S3, isolated environments
+- Mock services: SMTP server, moto S3 mock, isolated environments
 - Tests both SQLite and PostgreSQL metadata storage backends
 - Minimal unit tests, focuses on comprehensive integration testing

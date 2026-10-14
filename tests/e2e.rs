@@ -18,7 +18,7 @@ use crate::e2e_tests::{
 use crate::utils::browser::BrowserHelpers;
 use crate::utils::email::clear_email_data;
 use crate::utils::testing::{
-    ensure_minio_running, get_test_port, reset_test_environment, AybServer, Cleanup,
+    ensure_s3_mock_running, get_test_port, reset_test_environment, AybServer, Cleanup,
 };
 use ayb::client::config::ClientConfig;
 use regex::Regex;
@@ -76,8 +76,8 @@ async fn client_server_integration(
     let mut expected_config = ClientConfig::new();
     let _cleanup = Cleanup;
 
-    // Ensure MinIO is running
-    ensure_minio_running()?;
+    // Ensure the S3 mock is running
+    ensure_s3_mock_running()?;
 
     reset_test_environment(test_type)?;
 
@@ -108,8 +108,8 @@ async fn client_server_integration(
 async fn browser_e2e() -> Result<(), Box<dyn std::error::Error>> {
     let _cleanup = Cleanup;
 
-    // Ensure MinIO is running
-    ensure_minio_running()?;
+    // Ensure the S3 mock is running
+    ensure_s3_mock_running()?;
 
     // Reset database
     reset_test_environment("browser_sqlite")?;
