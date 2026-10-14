@@ -4,10 +4,20 @@ use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page};
 use std::error::Error;
 use std::time::Duration;
 
+/// How the user completes confirmation after registering.
+#[derive(Clone, Copy)]
+pub enum ConfirmVia {
+    /// Open the emailed link and click through the interstitial.
+    Link,
+    /// Paste the emailed code into the check-email page.
+    PastedCode,
+}
+
 pub async fn test_registration_flow(
     page: &Page,
     base_url: &str,
     test_type: &str,
+    confirm_via: ConfirmVia,
 ) -> Result<String, Box<dyn Error>> {
     // Step 1: Navigate to registration page
     page.goto(
@@ -66,11 +76,54 @@ pub async fn test_registration_flow(
 
     let confirmation_token =
         extract_token_from_emails(&user_emails).expect("Should extract token from email");
-    let confirmation_url = format!("{}/confirm/{}", base_url, confirmation_token);
 
-    // Step 6: Navigate to confirmation link
-    page.goto(
-        &confirmation_url,
+    match confirm_via {
+        ConfirmVia::Link => {
+            // Step 6: Navigate to the confirmation interstitial. The URL is
+            // non-consuming; the user must explicitly confirm.
+            let confirmation_url = format!("{}/confirm/{}", base_url, confirmation_token);
+            page.goto(
+                &confirmation_url,
+                Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
+            )
+            .await?;
+
+            // Screenshot comparison of the confirmation interstitial
+            BrowserHelpers::screenshot_compare(page, "confirm_interstitial", &[]).await?;
+
+            // Step 7: Continue in this browser
+            page.locator("button:has-text('Continue')")
+                .await
+                .first()
+                .click(Some(ClickOptions::builder().timeout(5000.0).build()))
+                .await?;
+        }
+        ConfirmVia::PastedCode => {
+            // Step 6: Paste the code into the check-email page we're still on.
+            page.locator("input[name='token']")
+                .await
+                .first()
+                .fill(
+                    &confirmation_token,
+                    Some(FillOptions::builder().timeout(1000.0).build()),
+                )
+                .await?;
+
+            // Screenshot comparison of the pasted code
+            BrowserHelpers::screenshot_compare(page, "confirm_code_pasted", &[]).await?;
+
+            // Step 7: Confirm
+            page.locator("button:has-text('Confirm')")
+                .await
+                .first()
+                .click(Some(ClickOptions::builder().timeout(5000.0).build()))
+                .await?;
+        }
+    }
+
+    // The success page redirects to the user dashboard.
+    page.wait_for_url(
+        &format!("{}/{}", base_url, username),
         Some(GotoOptions::new().timeout(Duration::from_millis(5000))),
     )
     .await?;
@@ -78,7 +131,7 @@ pub async fn test_registration_flow(
     // Screenshot comparison of user dashboard
     BrowserHelpers::screenshot_compare(page, "user_dashboard", &[]).await?;
 
-    // Step 7: Verify we're now on the authenticated user dashboard
+    // Step 8: Verify we're now on the authenticated user dashboard
     let expected_title = format!("{} - ayb", username);
     assert_eq!(page.title().await?, expected_title);
 

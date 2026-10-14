@@ -18,6 +18,8 @@ fn templates() -> &'static Tera {
             include_str!("templates/base_content.html"),
         )
         .unwrap();
+        tera.add_raw_template("confirm.html", include_str!("templates/confirm.html"))
+            .unwrap();
         tera.add_raw_template(
             "confirm_error.html",
             include_str!("templates/confirm_error.html"),
