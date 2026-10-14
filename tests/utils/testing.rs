@@ -67,8 +67,8 @@ token_expiration_seconds = 3600
 origin = "*"
 
 [snapshots]
-access_key_id = "minioadmin"
-secret_access_key = "minioadmin"
+access_key_id = "s3-mock-access-key"
+secret_access_key = "s3-mock-secret-key"
 bucket = "bucket"
 path_prefix = "{path_prefix}"
 endpoint_url = "http://localhost:9000"

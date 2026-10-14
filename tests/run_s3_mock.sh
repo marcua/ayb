@@ -46,8 +46,8 @@ for i in {1..30}; do
 done
 
 # Create the test bucket using AWS CLI
-export AWS_ACCESS_KEY_ID=minioadmin
-export AWS_SECRET_ACCESS_KEY=minioadmin
+export AWS_ACCESS_KEY_ID=s3-mock-access-key
+export AWS_SECRET_ACCESS_KEY=s3-mock-secret-key
 export AWS_DEFAULT_REGION=us-east-1
 
 # Use aws from virtual environment (works whether venv is activated or not)
