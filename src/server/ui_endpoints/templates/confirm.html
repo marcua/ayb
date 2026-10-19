@@ -1,0 +1,58 @@
+{% extends "base_auth.html" %}
+
+{% block title %}Finish signing in{% endblock %}
+
+{% block other_action %}
+<a href="/log_in" class="text-sm">Log in</a>
+{% endblock %}
+
+{% block auth_content %}
+<div class="bg-white rounded-lg shadow-sm p-6 w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-2">Finish signing in</h1>
+    <p class="text-sm text-muted-foreground mb-4">
+        Continue here to finish signing in, or copy the code and paste it into the window where you started.
+    </p>
+
+    <input type="hidden" id="confirmation-code" value="{{ token }}">
+
+    <form method="POST" action="/confirm" class="space-y-3">
+        <input type="hidden" name="token" value="{{ token }}">
+        <button type="submit" class="uk-btn uk-btn-primary w-full">
+            Continue in this browser
+        </button>
+    </form>
+
+    <button type="button" id="copy-code" class="uk-btn uk-btn-default w-full mt-3"
+            onclick="copyConfirmationCode()">
+        Copy code
+    </button>
+</div>
+<script>
+    function copyConfirmationCode() {
+        var code = document.getElementById('confirmation-code').value;
+        var button = document.getElementById('copy-code');
+
+        function copied() {
+            button.textContent = 'Copied';
+        }
+
+        function fallbackCopy() {
+            var temp = document.createElement('textarea');
+            temp.value = code;
+            temp.style.position = 'fixed';
+            temp.style.opacity = '0';
+            document.body.appendChild(temp);
+            temp.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(temp);
+            copied();
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(copied, fallbackCopy);
+        } else {
+            fallbackCopy();
+        }
+    }
+</script>
+{% endblock %}

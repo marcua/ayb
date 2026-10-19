@@ -7,10 +7,20 @@
 {% endblock %}
 
 {% block auth_content %}
-<div class="uk-alert" data-uk-alert>
-  <div class="uk-alert-title">Check email</div>
-  <p>
-    Please check your email for a confirmation link.
-  </p>
+<div class="w-full max-w-md">
+  <div class="uk-alert" data-uk-alert>
+    <div class="uk-alert-title">Check email</div>
+    <p>
+      Please check your email for a confirmation link or code.
+    </p>
+  </div>
+  <form method="POST" action="/confirm" class="space-y-3 mt-4">
+    <input type="text" name="token" required
+           placeholder="Paste your confirmation code"
+           class="uk-input">
+    <button type="submit" class="uk-btn uk-btn-primary w-full">
+      Confirm
+    </button>
+  </form>
 </div>
 {% endblock %}

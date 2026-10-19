@@ -1,4 +1,4 @@
-use crate::browser_e2e_tests::test_registration_flow;
+use crate::browser_e2e_tests::{test_registration_flow, ConfirmVia};
 use crate::utils::browser::BrowserHelpers;
 use playwright_rs::{BrowserContext, ClickOptions, FillOptions, GotoOptions, Page};
 use std::error::Error;
@@ -18,7 +18,14 @@ pub async fn register_multiple_users(
     let mut users = Vec::new();
 
     for (i, (_context, page)) in contexts_and_pages.into_iter().enumerate() {
-        let username = test_registration_flow(&page, base_url, test_type).await?;
+        // Confirm the second user by pasting the emailed code so both
+        // confirmation paths are covered.
+        let confirm_via = if i == 1 {
+            ConfirmVia::PastedCode
+        } else {
+            ConfirmVia::Link
+        };
+        let username = test_registration_flow(&page, base_url, test_type, confirm_via).await?;
 
         println!("Registered User {}: {}", i + 1, username);
 

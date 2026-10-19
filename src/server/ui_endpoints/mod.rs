@@ -13,7 +13,7 @@ mod snapshots;
 mod templates;
 mod tokens;
 
-pub use confirm::confirm as confirm_endpoint;
+pub use confirm::{confirm as confirm_endpoint, confirm_submit as confirm_submit_endpoint};
 pub use create_database::create_database as create_database_endpoint;
 pub use database::database as database_endpoint;
 pub use entity_details::{
