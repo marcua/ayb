@@ -23,7 +23,6 @@ pub async fn test_duckdb_flow(
     .await?;
 
     page.locator("button:has-text('Create database')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -33,7 +32,6 @@ pub async fn test_duckdb_flow(
 
     // Step 2: Fill in database name
     page.locator("input[name='database_slug']")
-        .await
         .first()
         .fill(
             "test.duckdb",
@@ -43,7 +41,6 @@ pub async fn test_duckdb_flow(
 
     // Step 3: Select the DuckDB engine (the form defaults to SQLite)
     page.locator("button[data-value='duckdb']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -53,7 +50,6 @@ pub async fn test_duckdb_flow(
 
     // Step 4: Submit the create database form
     page.locator("button[type='submit']:has-text('Create database')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -71,7 +67,6 @@ pub async fn test_duckdb_flow(
     let create_table_query = "CREATE TABLE test_table(fname varchar, lname varchar);";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             create_table_query,
@@ -84,7 +79,6 @@ pub async fn test_duckdb_flow(
 
     // Run the create table query
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -97,13 +91,11 @@ pub async fn test_duckdb_flow(
 
     // Clear previous query and enter insert query
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             insert_query1,
@@ -112,7 +104,6 @@ pub async fn test_duckdb_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -126,13 +117,11 @@ pub async fn test_duckdb_flow(
     let insert_query2 = "INSERT INTO test_table (fname, lname) VALUES ('the first2', 'the last2');";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             insert_query2,
@@ -141,7 +130,6 @@ pub async fn test_duckdb_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -153,13 +141,11 @@ pub async fn test_duckdb_flow(
     let select_query = "SELECT * FROM test_table;";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             select_query,
@@ -171,7 +157,6 @@ pub async fn test_duckdb_flow(
     BrowserHelpers::screenshot_compare(page, "duckdb_select_query", &[]).await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -181,7 +166,7 @@ pub async fn test_duckdb_flow(
 
     // Step 9: Verify the results contain the expected data with exact
     // string matching (rendering is engine-agnostic for the same data)
-    let query_results = page.locator("#query-results").await.inner_text().await?;
+    let query_results = page.locator("#query-results").inner_text().await?;
 
     let expected_results = "Download CSV\nDownload JSON\nfname\tlname\nthe first\tthe last\nthe first2\tthe last2\n2 rows";
 
@@ -199,13 +184,11 @@ pub async fn test_duckdb_flow(
     let insert_query = "INSERT INTO test_table (fname, lname) VALUES ('snapshot', 'test');";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             insert_query,
@@ -216,7 +199,6 @@ pub async fn test_duckdb_flow(
     BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_insert_query", &[]).await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -227,7 +209,6 @@ pub async fn test_duckdb_flow(
     let count_query = "SELECT COUNT(*) FROM test_table;";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             count_query,
@@ -236,14 +217,13 @@ pub async fn test_duckdb_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_count_after_insert", &[]).await?;
 
-    let query_results = page.locator("#query-results").await.inner_text().await?;
+    let query_results = page.locator("#query-results").inner_text().await?;
     assert!(
         query_results.contains("3"),
         "Count after insert should show 3 rows"
@@ -254,7 +234,6 @@ pub async fn test_duckdb_flow(
 
     // Step 14: Click the Snapshots tab to see available snapshots
     page.locator("a[href='#snapshots']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -265,7 +244,6 @@ pub async fn test_duckdb_flow(
     // with 2 rows). Snapshots are sorted newest-first, so we need the
     // second table row's button.
     page.locator("tbody tr:nth-child(2) button[title='Restore from this snapshot']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -278,13 +256,11 @@ pub async fn test_duckdb_flow(
     // Step 16: Wait for the actual restore button to be clickable and
     // click it
     page.locator("#confirm-restore-btn")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(15000.0).build()))
         .await?;
 
     page.locator("#confirm-restore-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(15000.0).build()))
         .await?;
@@ -300,7 +276,6 @@ pub async fn test_duckdb_flow(
 
     // Step 18: Verify we're back to 2 rows (one less than the 3 we had)
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             count_query,
@@ -309,14 +284,13 @@ pub async fn test_duckdb_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_final_count", &[]).await?;
 
-    let page_text_after_restore = page.locator("#query-results").await.inner_text().await?;
+    let page_text_after_restore = page.locator("#query-results").inner_text().await?;
     assert!(
         page_text_after_restore.contains("2"),
         "Count after snapshot restore should show 2 rows (one less than before)"
@@ -324,7 +298,6 @@ pub async fn test_duckdb_flow(
 
     // Step 19: Verify the inserted row is gone
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             select_query,
@@ -333,14 +306,13 @@ pub async fn test_duckdb_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_test_complete", &[]).await?;
 
-    let final_page_text = page.locator("#query-results").await.inner_text().await?;
+    let final_page_text = page.locator("#query-results").inner_text().await?;
     assert!(
         !final_page_text.contains("snapshot"),
         "The inserted row with 'snapshot' should be gone after restore"

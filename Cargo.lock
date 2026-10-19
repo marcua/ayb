@@ -1626,9 +1626,9 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "6.0.0"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
+checksum = "8d57d423b3c82e89b9a24ca3091fee61f456a26edbd28d26c65906f4bc1dcd8f"
 dependencies = [
  "dirs-sys 0.5.0",
 ]
@@ -2183,12 +2183,6 @@ dependencies = [
  "color_quant",
  "weezl",
 ]
-
-[[package]]
-name = "glob"
-version = "0.3.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
 name = "globset"
@@ -3766,38 +3760,42 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "playwright-rs"
-version = "0.14.1"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3317d37f816d9fbd550ba155a146068575a0c97e5af969f5d0895199344fa0b5"
+checksum = "da16d75a7a31d13049a296ba721c9f9c13702467e68c5f2e0eeb845948ddc411"
 dependencies = [
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.0",
  "bytes",
- "dirs 6.0.0",
+ "dirs 7.0.0",
  "flate2",
  "futures-util",
- "glob",
+ "http 1.5.0",
+ "http-body",
+ "http-body-util",
  "libc",
  "parking_lot 0.12.5",
  "playwright-rs-macros",
  "regex",
+ "rustls",
  "serde",
  "serde_json",
  "tar",
  "thiserror 2.0.19",
  "tokio",
  "tokio-tungstenite",
+ "tower",
  "tracing",
  "ureq",
  "url",
- "zip 8.6.0",
+ "zip 9.0.5",
 ]
 
 [[package]]
 name = "playwright-rs-macros"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98c99f415553cb835d9c492c217207bda0fa56e229a863eb8ab79f5d6a8774f1"
+checksum = "861068e12cb3566c6abadd002270955bc43ffbe616bcac00cd3b4666be4834b5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5472,9 +5470,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f72a05e828585856dacd553fba484c242c46e391fb0e58917c942ee9202915c"
+checksum = "17a073bfed563fa236697a068031408a93cd9522e08abf9933ead3e73411bd71"
 dependencies = [
  "futures-util",
  "log",
@@ -5622,9 +5620,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tungstenite"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c01152af293afb9c7c2a57e4b559c5620b421f6d133261c60dd2d0cdb38e6b8"
+checksum = "e48ac77174b19c110a50ab2128b24215ac9cb40e0e12e093fb602d175c569d22"
 dependencies = [
  "bytes",
  "data-encoding",
@@ -5632,8 +5630,8 @@ dependencies = [
  "httparse",
  "log",
  "native-tls",
- "rand 0.9.5",
- "sha1 0.10.7",
+ "rand 0.10.2",
+ "sha1 0.11.0",
  "thiserror 2.0.19",
 ]
 
@@ -6458,14 +6456,15 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "8.6.0"
+version = "9.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
+checksum = "6e04976da629d3b04204ba8105b396a193af8ad2583b2c79bfb3ab8af580a11e"
 dependencies = [
  "crc32fast",
  "flate2",
  "indexmap 2.14.0",
  "memchr",
+ "nix",
  "typed-path",
  "zopfli",
 ]
