@@ -68,7 +68,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     // than cookie-authenticated non-safe methods, add explicit CSRF tokens
     // (e.g. a double-submit cookie or a per-session token embedded in forms)
     // — `SameSite=Lax` alone will not cover those cases.
-    cfg.service(ui_endpoints::log_in_endpoint)
+    cfg.service(ui_endpoints::static_file_endpoint)
+        .service(ui_endpoints::log_in_endpoint)
         .service(ui_endpoints::log_in_submit_endpoint)
         .service(ui_endpoints::log_out_endpoint)
         .service(ui_endpoints::register_endpoint)
