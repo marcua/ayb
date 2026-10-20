@@ -39,8 +39,7 @@ pub async fn test_token_management_flow(
         .await?;
 
     // Navigate to the tokens page via the dropdown menu
-    page.locator(&format!("a:has-text('{}')", username))
-        .await
+    page.locator(format!("a:has-text('{}')", username))
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -48,7 +47,6 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_dropdown_menu", &[]).await?;
 
     page.locator("a:has-text('Tokens')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -64,7 +62,7 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_page_initial", &[]).await?;
 
     // Step 3: Verify the page content
-    let page_text = page.locator("body").await.inner_text().await?;
+    let page_text = page.locator("body").inner_text().await?;
     assert!(
         page_text.contains("API Tokens") || page_text.contains("Short token"),
         "Tokens page should show token-related content"
@@ -99,14 +97,12 @@ pub async fn test_token_management_flow(
 
     // Step 7: Revoke the read-only OAuth token by finding its row via the app name
     page.locator("tr:has-text('Test OAuth App (read-only)') button:has-text('Revoke')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     // Wait for the modal to appear
     page.locator("#revoke-token-modal")
-        .await
         .first()
         .wait_for(Some(
             WaitForOptions::builder()
@@ -122,7 +118,6 @@ pub async fn test_token_management_flow(
 
     // Click the confirm button
     page.locator("#confirm-revoke-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -132,7 +127,7 @@ pub async fn test_token_management_flow(
     BrowserHelpers::screenshot_compare(page, "tokens_page_after_revoke", &[]).await?;
 
     // Verify the revocation message appears
-    let page_text = page.locator("body").await.inner_text().await?;
+    let page_text = page.locator("body").inner_text().await?;
     assert!(
         page_text.contains("revoked successfully"),
         "Should show revocation success message"
@@ -141,7 +136,6 @@ pub async fn test_token_management_flow(
     // Reload and verify token count decreased
     page.reload(None).await?;
     page.locator("table")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -180,14 +174,12 @@ pub async fn test_token_management_flow(
     println!("Confirmed: revoked OAuth token no longer works");
 
     // Step 9: Navigate back to profile
-    page.locator(&format!("a:has-text('{}')", username))
-        .await
+    page.locator(format!("a:has-text('{}')", username))
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     page.locator("a:has-text('Profile')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;

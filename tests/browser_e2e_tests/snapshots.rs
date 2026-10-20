@@ -27,7 +27,6 @@ pub async fn test_snapshots_flow(
     let count_query = "SELECT COUNT(*) FROM test_table;";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             count_query,
@@ -38,7 +37,6 @@ pub async fn test_snapshots_flow(
     BrowserHelpers::screenshot_compare(page, "snapshots_count_query", &[]).await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -46,7 +44,7 @@ pub async fn test_snapshots_flow(
     BrowserHelpers::screenshot_compare(page, "snapshots_initial_count", &[]).await?;
 
     // Verify we have 2 rows initially
-    let page_text = page.locator("#query-results").await.inner_text().await?;
+    let page_text = page.locator("#query-results").inner_text().await?;
     assert!(page_text.contains("2"), "Initial count should show 2 rows");
 
     // Step 3: Wait for automatic snapshot to be created (snapshots are auto-created after DB changes)
@@ -57,13 +55,11 @@ pub async fn test_snapshots_flow(
     let insert_query = "INSERT INTO test_table (fname, lname) VALUES ('snapshot', 'test');";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             insert_query,
@@ -74,7 +70,6 @@ pub async fn test_snapshots_flow(
     BrowserHelpers::screenshot_compare(page, "snapshots_insert_query", &[]).await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -83,7 +78,6 @@ pub async fn test_snapshots_flow(
 
     // Step 5: Verify we now have 3 rows
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             count_query,
@@ -92,7 +86,6 @@ pub async fn test_snapshots_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -101,7 +94,7 @@ pub async fn test_snapshots_flow(
     BrowserHelpers::screenshot_compare(page, "snapshots_count_after_insert", &[]).await?;
 
     // Now read the results from the specific query results element
-    let query_results = page.locator("#query-results").await.inner_text().await?;
+    let query_results = page.locator("#query-results").inner_text().await?;
     assert!(
         query_results.contains("3"),
         "Count after insert should show 3 rows"
@@ -113,7 +106,6 @@ pub async fn test_snapshots_flow(
     // Step 7: Click the Snapshots tab to see available snapshots
     // This triggers the proper tab switching and AJAX loading of snapshots
     page.locator("a[href='#snapshots']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -123,7 +115,6 @@ pub async fn test_snapshots_flow(
     // Step 8: Click the restore button for the SECOND snapshot (older one with 2 rows)
     // Snapshots are sorted newest-first, so we need the second table row's button
     page.locator("tbody tr:nth-child(2) button[title='Restore from this snapshot']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -135,13 +126,11 @@ pub async fn test_snapshots_flow(
 
     // Step 9: Wait for the actual restore button to be clickable and click it
     page.locator("#confirm-restore-btn")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(15000.0).build()))
         .await?;
 
     page.locator("#confirm-restore-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(15000.0).build()))
         .await?;
@@ -158,7 +147,6 @@ pub async fn test_snapshots_flow(
 
     // Step 11: Verify we're back to 2 rows (one less than the 3 we had)
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             count_query,
@@ -167,14 +155,13 @@ pub async fn test_snapshots_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "snapshots_final_count", &[]).await?;
 
-    let page_text_after_restore = page.locator("#query-results").await.inner_text().await?;
+    let page_text_after_restore = page.locator("#query-results").inner_text().await?;
     assert!(
         page_text_after_restore.contains("2"),
         "Count after snapshot restore should show 2 rows (one less than before)"
@@ -184,7 +171,6 @@ pub async fn test_snapshots_flow(
     let select_query = "SELECT * FROM test_table;";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             select_query,
@@ -193,14 +179,13 @@ pub async fn test_snapshots_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
     BrowserHelpers::screenshot_compare(page, "snapshots_test_complete", &[]).await?;
 
-    let final_page_text = page.locator("#query-results").await.inner_text().await?;
+    let final_page_text = page.locator("#query-results").inner_text().await?;
     assert!(
         !final_page_text.contains("snapshot"),
         "The inserted row with 'snapshot' should be gone after restore"

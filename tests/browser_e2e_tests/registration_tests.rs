@@ -41,7 +41,6 @@ pub async fn test_registration_flow(
     let email = format!("{}@example.com", username);
 
     page.locator("input[name='username']")
-        .await
         .first()
         .fill(
             &username,
@@ -49,7 +48,6 @@ pub async fn test_registration_flow(
         )
         .await?;
     page.locator("input[name='email']")
-        .await
         .first()
         .fill(&email, Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
@@ -59,7 +57,6 @@ pub async fn test_registration_flow(
 
     // Step 3: Submit form
     page.locator("button:has-text('Create account')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -93,7 +90,6 @@ pub async fn test_registration_flow(
 
             // Step 7: Continue in this browser
             page.locator("button:has-text('Continue')")
-                .await
                 .first()
                 .click(Some(ClickOptions::builder().timeout(5000.0).build()))
                 .await?;
@@ -101,7 +97,6 @@ pub async fn test_registration_flow(
         ConfirmVia::PastedCode => {
             // Step 6: Paste the code into the check-email page we're still on.
             page.locator("input[name='token']")
-                .await
                 .first()
                 .fill(
                     &confirmation_token,
@@ -114,7 +109,6 @@ pub async fn test_registration_flow(
 
             // Step 7: Confirm
             page.locator("button:has-text('Confirm')")
-                .await
                 .first()
                 .click(Some(ClickOptions::builder().timeout(5000.0).build()))
                 .await?;
