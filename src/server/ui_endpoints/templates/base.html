@@ -25,36 +25,13 @@
       }
     </style>
 
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css"
-      crossorigin="anonymous"
-    />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/franken-ui@2.0.0/dist/css/utilities.min.css"
-      crossorigin="anonymous"
-    />
-    <script
-      src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/core.iife.js"
-      type="module"
-      crossorigin="anonymous"
-    ></script>
-    <script
-      src="https://unpkg.com/franken-ui@2.0.0-internal.42/dist/js/icon.iife.js"
-      type="module"
-      crossorigin="anonymous"
-    ></script>
+    <link rel="stylesheet" href="/static/franken-ui-2.0.0/core.min.css" />
+    <link rel="stylesheet" href="/static/franken-ui-2.0.0/utilities.min.css" />
+    <script src="/static/franken-ui-2.0.0-internal.42/core.iife.js" type="module"></script>
+    <script src="/static/franken-ui-2.0.0-internal.42/icon.iife.js" type="module"></script>
     <!-- TODO(marcua): Can we only include it where necessary, like on the database page? -->
-    <script
-      src="https://unpkg.com/htmx.org@2.0.4"
-      integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
-      crossorigin="anonymous"
-    ></script>
-    <script
-      src="https://unpkg.com/htmx-ext-response-targets@2.0.3/dist/response-targets.min.js"
-      crossorigin="anonymous"
-    ></script>
+    <script src="/static/htmx-2.0.4/htmx.min.js"></script>
+    <script src="/static/htmx-ext-response-targets-2.0.3/response-targets.min.js"></script>
 </head>
 <body class="bg-background text-foreground" hx-ext="response-targets">
     {% block content %}{% endblock %}
