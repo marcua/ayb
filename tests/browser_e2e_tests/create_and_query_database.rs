@@ -17,7 +17,6 @@ pub async fn test_create_and_query_database_flow(
 
     // Step 2: Click on "Create database" button
     page.locator("button:has-text('Create database')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -27,7 +26,6 @@ pub async fn test_create_and_query_database_flow(
 
     // Step 3: Fill in database name (using similar name to e2e tests)
     page.locator("input[name='database_slug']")
-        .await
         .first()
         .fill(
             "test.sqlite",
@@ -40,7 +38,6 @@ pub async fn test_create_and_query_database_flow(
 
     // Step 4: Submit the create database form
     page.locator("button[type='submit']:has-text('Create database')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -58,7 +55,6 @@ pub async fn test_create_and_query_database_flow(
     let create_table_query = "CREATE TABLE test_table(fname varchar, lname varchar);";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             create_table_query,
@@ -71,7 +67,6 @@ pub async fn test_create_and_query_database_flow(
 
     // Run the create table query
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -84,13 +79,11 @@ pub async fn test_create_and_query_database_flow(
 
     // Clear previous query and enter insert query
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             insert_query1,
@@ -99,7 +92,6 @@ pub async fn test_create_and_query_database_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -113,13 +105,11 @@ pub async fn test_create_and_query_database_flow(
     let insert_query2 = "INSERT INTO test_table (fname, lname) VALUES ('the first2', 'the last2');";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             insert_query2,
@@ -128,7 +118,6 @@ pub async fn test_create_and_query_database_flow(
         .await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -140,13 +129,11 @@ pub async fn test_create_and_query_database_flow(
     let select_query = "SELECT * FROM test_table;";
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill("", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     page.locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             select_query,
@@ -158,7 +145,6 @@ pub async fn test_create_and_query_database_flow(
     BrowserHelpers::screenshot_compare(page, "select_query", &[]).await?;
 
     page.locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -167,7 +153,7 @@ pub async fn test_create_and_query_database_flow(
     BrowserHelpers::screenshot_compare(page, "query_results", &[]).await?;
 
     // Step 9: Verify the results contain the expected data with exact string matching
-    let query_results = page.locator("#query-results").await.inner_text().await?;
+    let query_results = page.locator("#query-results").inner_text().await?;
 
     // Define the expected complete query results content
     let expected_results = "Download CSV\nDownload JSON\nfname\tlname\nthe first\tthe last\nthe first2\tthe last2\n2 rows";
@@ -182,7 +168,6 @@ pub async fn test_create_and_query_database_flow(
     // Step 10: Test CSV download functionality
     let download_waiter = page.expect_download(Some(3000.0)).await?;
     page.locator("button:has-text('Download CSV')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -209,7 +194,6 @@ pub async fn test_create_and_query_database_flow(
     // Step 11: Test JSON download functionality
     let download_waiter = page.expect_download(Some(3000.0)).await?;
     page.locator("button:has-text('Download JSON')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
