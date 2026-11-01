@@ -13,7 +13,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
 
     // Step 2: Enter profile edit mode
     page.locator("button:has-text('Edit profile')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -23,7 +22,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
 
     // Step 3: Fill in profile fields with test data
     page.locator("input[name='display_name']")
-        .await
         .first()
         .fill(
             "Entity 0",
@@ -32,7 +30,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .await?;
 
     page.locator("input[name='description']")
-        .await
         .first()
         .fill(
             "Entity 0 NEW description",
@@ -41,7 +38,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .await?;
 
     page.locator("input[name='organization']")
-        .await
         .first()
         .fill(
             "Entity 0 organization",
@@ -50,21 +46,18 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
         .await?;
 
     page.locator("input[name='location']")
-        .await
         .first()
         .fill("NYC", Some(FillOptions::builder().timeout(1000.0).build()))
         .await?;
 
     // Add first link by clicking the "Add link" button and filling the field
     page.locator("button:has-text('Add link')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(2000.0).build()))
         .await?;
 
     // Fill the first link input (should be the only one at this point)
     page.locator("input[name='links[]']")
-        .await
         .first()
         .fill(
             "http://ayb.host/",
@@ -74,13 +67,11 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
 
     // Add a second link
     page.locator("button:has-text('Add link')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(2000.0).build()))
         .await?;
 
     page.locator("div.link-input-group:nth-child(2) input[name='links[]']")
-        .await
         .first()
         .fill(
             "http://ayb2.host/",
@@ -93,7 +84,6 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
 
     // Step 4: Save the profile
     page.locator("button:has-text('Save')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -113,7 +103,7 @@ pub async fn test_entity_profile_flow(page: &Page, username: &str) -> Result<(),
     // Step 6: Verify the profile data was saved correctly by checking visible text
 
     // Check display name
-    let page_text = page.locator("body").await.inner_text().await?;
+    let page_text = page.locator("body").inner_text().await?;
     assert!(
         page_text.contains("Entity 0"),
         "Display name should be visible after reload"

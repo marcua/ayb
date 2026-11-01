@@ -60,7 +60,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("button:has-text('Create database')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -68,7 +67,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("input[name='database_slug']")
-        .await
         .first()
         .fill(
             "shared_test.sqlite",
@@ -82,7 +80,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("button[type='submit']:has-text('Create database')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -95,7 +92,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             create_table_query,
@@ -106,7 +102,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -122,7 +117,7 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         )
         .await?;
 
-    let page_content_b = user_b.page.locator("body").await.inner_text().await?;
+    let page_content_b = user_b.page.locator("body").inner_text().await?;
     let can_see_db_b = page_content_b.contains("shared_test.sqlite");
     assert!(
         !can_see_db_b,
@@ -138,7 +133,7 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         )
         .await?;
 
-    let page_content_c = user_c.page.locator("body").await.inner_text().await?;
+    let page_content_c = user_c.page.locator("body").inner_text().await?;
     let can_see_db_c = page_content_c.contains("shared_test.sqlite");
     assert!(
         !can_see_db_c,
@@ -159,7 +154,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("a[href='#sharing']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -170,7 +164,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("button[data-value='read-only']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -178,7 +171,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("#update-public-sharing-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -200,7 +192,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_b
         .page
         .locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             "SELECT COUNT(*) FROM test_table;",
@@ -211,7 +202,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_b
         .page
         .locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -219,12 +209,7 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_readonly_query_success", &[]).await?;
 
     // Verify User B can see the count result (should be 0 since no data inserted yet)
-    let query_results_b_count = user_b
-        .page
-        .locator("#query-results")
-        .await
-        .inner_text()
-        .await?;
+    let query_results_b_count = user_b.page.locator("#query-results").inner_text().await?;
     assert!(
         query_results_b_count.contains("0"),
         "User B should see count of 0 rows in empty table"
@@ -234,7 +219,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_b
         .page
         .locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             "INSERT INTO test_table (fname, lname) VALUES ('unauthorized', 'insert');",
@@ -245,7 +229,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_b
         .page
         .locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -253,12 +236,7 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_insert_query_failed", &[]).await?;
 
     // Verify the error message indicates read-only access
-    let query_results_b = user_b
-        .page
-        .locator("#query-results")
-        .await
-        .inner_text()
-        .await?;
+    let query_results_b = user_b.page.locator("#query-results").inner_text().await?;
     assert!(
         query_results_b.contains("Attempted to write to database while in read-only mode"),
         "User B should get the specific read-only error when trying to insert"
@@ -290,7 +268,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("a[href='#sharing']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -298,7 +275,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("button[data-value='no-access']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -306,7 +282,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("#update-public-sharing-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -317,7 +292,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("#share-entity")
-        .await
         .first()
         .fill(
             &user_b.username,
@@ -328,7 +302,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("#entity-sharing-form button[data-value='read-only']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(3000.0).build()))
         .await?;
@@ -336,7 +309,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_a
         .page
         .locator("#share-entity-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -361,7 +333,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_b
         .page
         .locator("textarea[name='query']")
-        .await
         .first()
         .fill(
             "SELECT COUNT(*) FROM test_table;",
@@ -372,7 +343,6 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     user_b
         .page
         .locator("button:has-text('Run query')")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -380,12 +350,7 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
     BrowserHelpers::screenshot_compare(&user_b.page, "userB_specific_query_success", &[]).await?;
 
     // Verify User B can see the count result (should still be 0)
-    let query_results_b_specific = user_b
-        .page
-        .locator("#query-results")
-        .await
-        .inner_text()
-        .await?;
+    let query_results_b_specific = user_b.page.locator("#query-results").inner_text().await?;
     assert!(
         query_results_b_specific.contains("0"),
         "User B should see count of 0 rows when specifically shared"
@@ -400,7 +365,7 @@ pub async fn test_permissions_flow(base_url: &str, test_type: &str) -> Result<()
         )
         .await?;
 
-    let page_content_c_final = user_c.page.locator("body").await.inner_text().await?;
+    let page_content_c_final = user_c.page.locator("body").inner_text().await?;
     let can_see_db_c_final = page_content_c_final.contains("shared_test.sqlite")
         || page_content_c_final.contains("Query");
     assert!(

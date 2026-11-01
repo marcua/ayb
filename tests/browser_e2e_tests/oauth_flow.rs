@@ -69,7 +69,6 @@ async fn complete_oauth_flow(
     page.goto(&authorize_url, None).await?;
 
     page.locator("#database-select")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -109,7 +108,6 @@ async fn complete_oauth_flow(
     .await?;
 
     page.locator("#authorize-btn")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -365,7 +363,6 @@ pub async fn test_oauth_deny_flow(
     page.goto(&authorize_url, None).await?;
 
     page.locator("#database-select")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -387,7 +384,6 @@ pub async fn test_oauth_deny_flow(
     BrowserHelpers::screenshot_compare(page, "oauth_before_deny", &[]).await?;
 
     page.locator("button[value='deny']")
-        .await
         .first()
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
