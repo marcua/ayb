@@ -2,6 +2,7 @@ use actix_web::{get, http::header, web, HttpResponse};
 
 const CSS: &str = "text/css; charset=utf-8";
 const JS: &str = "text/javascript; charset=utf-8";
+const WOFF2: &str = "font/woff2";
 
 /// Third-party UI assets, embedded in the binary so pages don't depend
 /// on a CDN at runtime. See static/README.md for where each came from.
@@ -25,6 +26,36 @@ const STATIC_FILES: &[(&str, &str, &[u8])] = &[
         "franken-ui-2.0.0-internal.42/icon.iife.js",
         JS,
         include_bytes!("static/franken-ui-2.0.0-internal.42/icon.iife.js"),
+    ),
+    (
+        "geist-v5/geist.css",
+        CSS,
+        include_bytes!("static/geist-v5/geist.css"),
+    ),
+    (
+        "geist-v5/geist-cyrillic-ext.woff2",
+        WOFF2,
+        include_bytes!("static/geist-v5/geist-cyrillic-ext.woff2"),
+    ),
+    (
+        "geist-v5/geist-cyrillic.woff2",
+        WOFF2,
+        include_bytes!("static/geist-v5/geist-cyrillic.woff2"),
+    ),
+    (
+        "geist-v5/geist-vietnamese.woff2",
+        WOFF2,
+        include_bytes!("static/geist-v5/geist-vietnamese.woff2"),
+    ),
+    (
+        "geist-v5/geist-latin-ext.woff2",
+        WOFF2,
+        include_bytes!("static/geist-v5/geist-latin-ext.woff2"),
+    ),
+    (
+        "geist-v5/geist-latin.woff2",
+        WOFF2,
+        include_bytes!("static/geist-v5/geist-latin.woff2"),
     ),
     (
         "htmx-2.0.4/htmx.min.js",
@@ -73,6 +104,16 @@ mod tests {
             "text/javascript; charset=utf-8"
         );
         assert!(!test::read_body(resp).await.is_empty());
+
+        let req = test::TestRequest::get()
+            .uri("/static/geist-v5/geist-latin.woff2")
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), 200);
+        assert_eq!(
+            resp.headers().get(header::CONTENT_TYPE).unwrap(),
+            "font/woff2"
+        );
 
         for missing in ["/static/nope.js", "/static/../Cargo.toml"] {
             let req = test::TestRequest::get().uri(missing).to_request();
