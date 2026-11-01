@@ -1,5 +1,5 @@
 use super::snapshots::{
-    wait_for_new_snapshot, wait_for_settled_snapshots, SNAPSHOT_DATE_SELECTORS,
+    wait_for_new_snapshot, wait_for_restore, wait_for_settled_snapshots, SNAPSHOT_DATE_SELECTORS,
 };
 use crate::utils::browser::BrowserHelpers;
 use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions};
@@ -252,7 +252,6 @@ pub async fn test_duckdb_flow(
 
     // Wait for the list to render so its dates exist to be hidden
     page.locator("#snapshots-list-container tbody tr:nth-child(2)")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -290,7 +289,10 @@ pub async fn test_duckdb_flow(
         .click(Some(ClickOptions::builder().timeout(15000.0).build()))
         .await?;
 
-    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_restored", &[]).await?;
+    wait_for_restore(page).await?;
+
+    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_restored", SNAPSHOT_DATE_SELECTORS)
+        .await?;
 
     // Step 17: Navigate back to database page to verify restoration
     page.goto(

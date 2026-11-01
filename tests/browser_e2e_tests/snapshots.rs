@@ -1,5 +1,5 @@
 use crate::utils::browser::BrowserHelpers;
-use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions};
+use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions, WaitForState};
 use std::error::Error;
 use std::time::{Duration, Instant};
 
@@ -60,6 +60,44 @@ pub async fn wait_for_settled_snapshots(
             ids = latest;
             unchanged_since = Instant::now();
         }
+    }
+}
+
+/// Waits for a confirmed restore to finish so the page is settled for a
+/// screenshot: the success message is shown, the restore dialog has
+/// closed, and the snapshot list has been reloaded (replacing any dates
+/// hidden for an earlier screenshot with real ones).
+pub async fn wait_for_restore(page: &Page) -> Result<(), Box<dyn Error>> {
+    page.locator("#restore-snapshot-results:has-text('Success')")
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(15000.0).build()))
+        .await?;
+    page.locator("#restore-snapshot-modal")
+        .first()
+        .wait_for(Some(
+            WaitForOptions::builder()
+                .state(WaitForState::Hidden)
+                .timeout(5000.0)
+                .build(),
+        ))
+        .await?;
+
+    let script = r#"(() => {
+        const cells = [...document.querySelectorAll('#snapshots-list-container tbody td:nth-child(2)')];
+        return cells.length > 0 && cells.every(cell => /\d{4}-\d{2}-\d{2}/.test(cell.textContent));
+    })()"#;
+    let deadline = Instant::now() + SNAPSHOT_TIMEOUT;
+    loop {
+        let reloaded = page
+            .evaluate::<serde_json::Value, serde_json::Value>(script, None)
+            .await?;
+        if reloaded == serde_json::Value::Bool(true) {
+            return Ok(());
+        }
+        if Instant::now() > deadline {
+            return Err("The snapshot list wasn't reloaded after the restore".into());
+        }
+        tokio::time::sleep(SNAPSHOT_POLL_INTERVAL).await;
     }
 }
 
@@ -200,7 +238,6 @@ pub async fn test_snapshots_flow(
 
     // Wait for the list to render so its dates exist to be hidden
     page.locator("#snapshots-list-container tbody tr:nth-child(2)")
-        .await
         .first()
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
@@ -236,7 +273,9 @@ pub async fn test_snapshots_flow(
         .click(Some(ClickOptions::builder().timeout(15000.0).build()))
         .await?;
 
-    BrowserHelpers::screenshot_compare(page, "snapshots_restored", &[]).await?;
+    wait_for_restore(page).await?;
+
+    BrowserHelpers::screenshot_compare(page, "snapshots_restored", SNAPSHOT_DATE_SELECTORS).await?;
 
     // Step 10: Navigate back to database page to verify restoration
     let database_url = format!("{}/{}/test.sqlite", base_url, username);
