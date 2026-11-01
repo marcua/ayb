@@ -140,13 +140,17 @@ impl BrowserHelpers {
         let current_path = format!("{}/{}_current.png", screenshots_dir, prefixed_name);
         let diff_path = format!("{}/{}_diff.png", screenshots_dir, prefixed_name);
 
-        // Grey out specified elements before taking screenshot
+        // Grey out specified elements before taking screenshot, for
+        // content that changes from run to run (like timestamps). Their
+        // text is replaced with a fixed placeholder of the same length,
+        // so its width doesn't shift the layout, and then hidden.
         for selector in selectors_to_grey {
             let script = format!(
                 r#"
                 document.querySelectorAll('{}').forEach(el => {{
+                    el.textContent = '0'.repeat(el.textContent.length);
                     el.style.background = '#f0f0f0';
-                    el.style.color = '#888888';
+                    el.style.color = 'transparent';
                     el.style.borderColor = '#cccccc';
                 }});
                 "#,

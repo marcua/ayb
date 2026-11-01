@@ -1,7 +1,87 @@
 use crate::utils::browser::BrowserHelpers;
 use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions};
 use std::error::Error;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+const SNAPSHOT_TIMEOUT: Duration = Duration::from_secs(30);
+const SNAPSHOT_POLL_INTERVAL: Duration = Duration::from_millis(500);
+// Automatic snapshots run every 2s (see the test server config).
+const SNAPSHOTS_SETTLED_AFTER: Duration = Duration::from_secs(6);
+
+/// Snapshot list cells whose contents change from run to run, hidden in
+/// screenshots.
+pub const SNAPSHOT_DATE_SELECTORS: &[&str] = &[
+    "#snapshots-list-container tbody td:nth-child(2)",
+    "#restore-snapshot-date",
+];
+
+/// Returns the IDs of a database's snapshots, newest first, as listed on
+/// its Snapshots tab. `database_path` is `entity/database`.
+async fn list_snapshot_ids(
+    page: &Page,
+    database_path: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let script = format!(
+        r#"(async () => {{
+            const response = await fetch('/{database_path}/snapshots');
+            const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+            return [...html.querySelectorAll('tbody tr code')].map(code => code.textContent.trim());
+        }})()"#
+    );
+    let ids = page
+        .evaluate::<serde_json::Value, serde_json::Value>(&script, None)
+        .await?;
+    Ok(serde_json::from_value(ids)?)
+}
+
+/// Waits until a database's current contents have been snapshotted and
+/// returns its snapshot IDs, newest first. Automatic snapshots skip a
+/// round while the previous one is still running, so under load they can
+/// lag well behind a fixed sleep. A snapshot is only uploaded for new
+/// contents, so once the current contents are captured the list stops
+/// changing: wait for it to be non-empty and unchanged for a few rounds.
+pub async fn wait_for_settled_snapshots(
+    page: &Page,
+    database_path: &str,
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let deadline = Instant::now() + SNAPSHOT_TIMEOUT;
+    let mut ids = list_snapshot_ids(page, database_path).await?;
+    let mut unchanged_since = Instant::now();
+    loop {
+        if !ids.is_empty() && unchanged_since.elapsed() >= SNAPSHOTS_SETTLED_AFTER {
+            return Ok(ids);
+        }
+        if Instant::now() > deadline {
+            return Err(format!("Snapshots of {database_path} didn't settle: {ids:?}").into());
+        }
+        tokio::time::sleep(SNAPSHOT_POLL_INTERVAL).await;
+        let latest = list_snapshot_ids(page, database_path).await?;
+        if latest != ids {
+            ids = latest;
+            unchanged_since = Instant::now();
+        }
+    }
+}
+
+/// Waits until a snapshot that isn't in `previous` is the newest one, and
+/// returns the database's snapshot IDs, newest first.
+pub async fn wait_for_new_snapshot(
+    page: &Page,
+    database_path: &str,
+    previous: &[String],
+) -> Result<Vec<String>, Box<dyn Error>> {
+    let deadline = Instant::now() + SNAPSHOT_TIMEOUT;
+    loop {
+        let ids = list_snapshot_ids(page, database_path).await?;
+        if ids.first().is_some_and(|newest| !previous.contains(newest)) {
+            return Ok(ids);
+        }
+        if Instant::now() > deadline {
+            return Err(format!("No new snapshot of {database_path}: {ids:?}").into());
+        }
+        tokio::time::sleep(SNAPSHOT_POLL_INTERVAL).await;
+    }
+}
 
 pub async fn test_snapshots_flow(
     page: &Page,
@@ -49,9 +129,9 @@ pub async fn test_snapshots_flow(
     let page_text = page.locator("#query-results").await.inner_text().await?;
     assert!(page_text.contains("2"), "Initial count should show 2 rows");
 
-    // Step 3: Wait for automatic snapshot to be created (snapshots are auto-created after DB changes)
-    // The system takes snapshots automatically every 2 seconds when database changes
-    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
+    // Step 3: Wait for an automatic snapshot of the current (2-row) contents
+    let database_path = format!("{}/test.sqlite", username);
+    let snapshots_before_insert = wait_for_settled_snapshots(page, &database_path).await?;
 
     // Step 4: Insert a new row
     let insert_query = "INSERT INTO test_table (fname, lname) VALUES ('snapshot', 'test');";
@@ -107,8 +187,16 @@ pub async fn test_snapshots_flow(
         "Count after insert should show 3 rows"
     );
 
-    // Step 6: Sleep to allow automatic snapshot after insert
-    tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
+    // Step 6: Wait for an automatic snapshot of the 3-row contents. The
+    // restore below picks the second-newest snapshot, which must then be
+    // the 2-row one.
+    let snapshots_after_insert =
+        wait_for_new_snapshot(page, &database_path, &snapshots_before_insert).await?;
+    assert_eq!(
+        snapshots_after_insert.get(1),
+        snapshots_before_insert.first(),
+        "The pre-insert snapshot should be second-newest"
+    );
 
     // Step 7: Click the Snapshots tab to see available snapshots
     // This triggers the proper tab switching and AJAX loading of snapshots
@@ -118,7 +206,15 @@ pub async fn test_snapshots_flow(
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
-    BrowserHelpers::screenshot_compare(page, "snapshots_list_page", &[]).await?;
+    // Wait for the list to render so its dates exist to be hidden
+    page.locator("#snapshots-list-container tbody tr:nth-child(2)")
+        .await
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
+        .await?;
+
+    BrowserHelpers::screenshot_compare(page, "snapshots_list_page", SNAPSHOT_DATE_SELECTORS)
+        .await?;
 
     // Step 8: Click the restore button for the SECOND snapshot (older one with 2 rows)
     // Snapshots are sorted newest-first, so we need the second table row's button
@@ -131,7 +227,12 @@ pub async fn test_snapshots_flow(
     // Extra delay for modal animation to complete
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
-    BrowserHelpers::screenshot_compare(page, "snapshots_confirmation_modal", &[]).await?;
+    BrowserHelpers::screenshot_compare(
+        page,
+        "snapshots_confirmation_modal",
+        SNAPSHOT_DATE_SELECTORS,
+    )
+    .await?;
 
     // Step 9: Wait for the actual restore button to be clickable and click it
     page.locator("#confirm-restore-btn")
