@@ -161,7 +161,8 @@ pub async fn snapshot_database(
                 .list_snapshots(entity_slug, database_slug)
                 .await?;
             let num_existing_snapshots = existing_snapshots.len();
-            let snapshot_hash = hash_db_directory(&snapshot_directory)?;
+            let snapshot_hash =
+                hash_db_directory(&snapshot_directory, engine.snapshot_hash_ignored_bytes())?;
             let mut should_upload_snapshot = true;
             for snapshot in &existing_snapshots {
                 if snapshot.snapshot_id == snapshot_hash {
