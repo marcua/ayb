@@ -5,6 +5,7 @@ use rusqlite;
 use rusqlite::config::DbConfig;
 use rusqlite::limits::Limit;
 use rusqlite::types::ValueRef;
+use std::ops::Range;
 use std::path::Path;
 
 pub struct SqliteEngine;
@@ -46,6 +47,15 @@ impl DbEngine for SqliteEngine {
             });
         }
         Ok(())
+    }
+
+    // VACUUM INTO writes the source database's schema cookie plus one
+    // (bytes 40-43 of the header), so snapshotting a restored snapshot
+    // produces a file that differs from that snapshot only there. (One
+    // range is intended, not a mistyped list of byte offsets.)
+    #[allow(clippy::single_range_in_vec_init)]
+    fn snapshot_hash_ignored_bytes(&self) -> &'static [Range<usize>] {
+        &[40..44]
     }
 }
 

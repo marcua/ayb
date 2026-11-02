@@ -51,6 +51,31 @@ fn wait_for_snapshot_count(
     }
 }
 
+/// Assert that several snapshot rounds pass without the snapshot list
+/// changing, e.g., after restoring contents that are already snapshotted.
+fn assert_snapshots_unchanged(
+    config_path: &str,
+    api_key: &str,
+    database: &str,
+    expected: &[ayb::server::snapshots::models::ListSnapshotResult],
+) {
+    // The background snapshot daemon runs every 2 seconds.
+    thread::sleep(time::Duration::from_secs(6));
+    let snapshots =
+        list_snapshots(config_path, api_key, database, "csv").expect("failed to list snapshots");
+    let ids = |snapshots: &[ayb::server::snapshots::models::ListSnapshotResult]| {
+        snapshots
+            .iter()
+            .map(|snapshot| snapshot.snapshot_id.clone())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        ids(&snapshots),
+        ids(expected),
+        "the snapshot list shouldn't change"
+    );
+}
+
 pub async fn test_snapshots(
     db_type: &str,
     config_path: &str,
@@ -149,7 +174,7 @@ pub async fn test_snapshots(
     )?;
 
     // Wait for snapshot of the latest insert to be taken before restoring.
-    wait_for_snapshot_count(
+    let snapshots_before_restores = wait_for_snapshot_count(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
@@ -178,13 +203,13 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 3 \n\nRows: 1",
     )?;
 
-    // Wait for the restore-triggered snapshot before doing the next restore.
-    wait_for_snapshot_count(
+    // The restored contents are already snapshotted, so restoring
+    // doesn't create a snapshot.
+    assert_snapshots_unchanged(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        4,
-        None,
+        &snapshots_before_restores,
     );
 
     // Restore the snapshot before that, ensuring there are only two
@@ -208,38 +233,44 @@ pub async fn test_snapshots(
         " the_count \n-----------\n 2 \n\nRows: 1",
     )?;
 
-    // Wait for restore-triggered snapshot.
-    wait_for_snapshot_count(
+    assert_snapshots_unchanged(
         config_path,
         &api_keys.get("first").unwrap()[0],
         FIRST_ENTITY_DB,
-        5,
-        None,
+        &snapshots_before_restores,
     );
 
-    // There are 6 max_snapshots, so let's force 2 more snapshots to
+    // There are 6 max_snapshots, so let's force 4 more snapshots to
     // be created (more than 6 snapshots would exist: the original
-    // three, two from the restores, and two more from the inserts
-    // below) and then: 1) Ensure there are still only 6 snapshots
-    // remaining due to pruning, 2) Get an error restoring to the
-    // oldest snapshot, which should have been pruned.
-    query(
-        config_path,
-        &api_keys.get("first").unwrap()[1],
-        "INSERT INTO test_table (fname, lname) VALUES ('a new first name', 'a new last name');",
-        FIRST_ENTITY_DB,
-        "table",
-        "\nRows: 0",
-    )?;
-
-    // Wait for snapshot of the insert above (6th snapshot, no pruning yet).
-    let snapshots_before_prune = wait_for_snapshot_count(
-        config_path,
-        &api_keys.get("first").unwrap()[0],
-        FIRST_ENTITY_DB,
-        6,
-        None,
-    );
+    // three and four more from the inserts below) and then: 1) Ensure
+    // there are still only 6 snapshots remaining due to pruning, 2) Get
+    // an error restoring to the oldest snapshot, which should have been
+    // pruned. Wait for each insert's snapshot, up to the 6th (no
+    // pruning yet).
+    let mut snapshots_before_prune = Vec::new();
+    for (expected_count, fname) in [
+        (4, "a new first name"),
+        (5, "a second new first name"),
+        (6, "a third new first name"),
+    ] {
+        query(
+            config_path,
+            &api_keys.get("first").unwrap()[1],
+            &format!(
+                "INSERT INTO test_table (fname, lname) VALUES ('{fname}', 'a new last name');"
+            ),
+            FIRST_ENTITY_DB,
+            "table",
+            "\nRows: 0",
+        )?;
+        snapshots_before_prune = wait_for_snapshot_count(
+            config_path,
+            &api_keys.get("first").unwrap()[0],
+            FIRST_ENTITY_DB,
+            expected_count,
+            None,
+        );
+    }
 
     query(
         config_path,
