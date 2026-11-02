@@ -1,3 +1,7 @@
+use super::snapshots::{
+    hide_older_snapshot_rows, wait_for_new_snapshot, wait_for_restore, wait_for_settled_snapshots,
+    SNAPSHOT_DATE_SELECTORS,
+};
 use crate::utils::browser::BrowserHelpers;
 use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions};
 use std::error::Error;
@@ -176,9 +180,10 @@ pub async fn test_duckdb_flow(
         "Query results should exactly match expected content"
     );
 
-    // Step 10: Wait for automatic snapshot to be created (snapshots are
-    // auto-created after DB changes, every 2 seconds)
-    tokio::time::sleep(Duration::from_millis(3000)).await;
+    // Step 10: Wait for an automatic snapshot of the current (2-row)
+    // contents
+    let database_path = format!("{}/test.duckdb", username);
+    let snapshots_before_insert = wait_for_settled_snapshots(page, &database_path).await?;
 
     // Step 11: Insert a new row
     let insert_query = "INSERT INTO test_table (fname, lname) VALUES ('snapshot', 'test');";
@@ -229,8 +234,16 @@ pub async fn test_duckdb_flow(
         "Count after insert should show 3 rows"
     );
 
-    // Step 13: Sleep to allow automatic snapshot after insert
-    tokio::time::sleep(Duration::from_millis(3000)).await;
+    // Step 13: Wait for an automatic snapshot of the 3-row contents. The
+    // restore below picks the second-newest snapshot, which must then be
+    // the 2-row one.
+    let snapshots_after_insert =
+        wait_for_new_snapshot(page, &database_path, &snapshots_before_insert).await?;
+    assert_eq!(
+        snapshots_after_insert.get(1),
+        snapshots_before_insert.first(),
+        "The pre-insert snapshot should be second-newest"
+    );
 
     // Step 14: Click the Snapshots tab to see available snapshots
     page.locator("a[href='#snapshots']")
@@ -238,7 +251,15 @@ pub async fn test_duckdb_flow(
         .click(Some(ClickOptions::builder().timeout(5000.0).build()))
         .await?;
 
-    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_list_page", &[]).await?;
+    // Wait for the list to render so its dates exist to be hidden
+    page.locator("#snapshots-list-container tbody tr:nth-child(2)")
+        .first()
+        .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
+        .await?;
+
+    hide_older_snapshot_rows(page).await?;
+    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_list_page", SNAPSHOT_DATE_SELECTORS)
+        .await?;
 
     // Step 15: Click the restore button for the SECOND snapshot (older one
     // with 2 rows). Snapshots are sorted newest-first, so we need the
@@ -251,7 +272,12 @@ pub async fn test_duckdb_flow(
     // Extra delay for modal animation to complete
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_confirmation_modal", &[]).await?;
+    BrowserHelpers::screenshot_compare(
+        page,
+        "duckdb_snapshots_confirmation_modal",
+        SNAPSHOT_DATE_SELECTORS,
+    )
+    .await?;
 
     // Step 16: Wait for the actual restore button to be clickable and
     // click it
@@ -264,6 +290,8 @@ pub async fn test_duckdb_flow(
         .first()
         .click(Some(ClickOptions::builder().timeout(15000.0).build()))
         .await?;
+
+    wait_for_restore(page).await?;
 
     BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_restored", &[]).await?;
 
