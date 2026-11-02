@@ -10,6 +10,7 @@ mod query;
 mod register;
 mod sharing;
 mod snapshots;
+mod static_files;
 mod templates;
 mod tokens;
 
@@ -36,4 +37,5 @@ pub use snapshots::{
     database_snapshots as database_snapshots_endpoint,
     restore_snapshot as restore_snapshot_endpoint,
 };
+pub use static_files::static_file as static_file_endpoint;
 pub use tokens::{entity_tokens as entity_tokens_endpoint, revoke_token as revoke_token_endpoint};
