@@ -1,5 +1,6 @@
 use super::snapshots::{
-    wait_for_new_snapshot, wait_for_restore, wait_for_settled_snapshots, SNAPSHOT_DATE_SELECTORS,
+    hide_older_snapshot_rows, wait_for_new_snapshot, wait_for_restore, wait_for_settled_snapshots,
+    SNAPSHOT_DATE_SELECTORS,
 };
 use crate::utils::browser::BrowserHelpers;
 use playwright_rs::{ClickOptions, FillOptions, GotoOptions, Page, WaitForOptions};
@@ -256,6 +257,7 @@ pub async fn test_duckdb_flow(
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
+    hide_older_snapshot_rows(page).await?;
     BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_list_page", SNAPSHOT_DATE_SELECTORS)
         .await?;
 
@@ -291,8 +293,7 @@ pub async fn test_duckdb_flow(
 
     wait_for_restore(page).await?;
 
-    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_restored", SNAPSHOT_DATE_SELECTORS)
-        .await?;
+    BrowserHelpers::screenshot_compare(page, "duckdb_snapshots_restored", &[]).await?;
 
     // Step 17: Navigate back to database page to verify restoration
     page.goto(

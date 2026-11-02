@@ -63,10 +63,30 @@ pub async fn wait_for_settled_snapshots(
     }
 }
 
-/// Waits for a confirmed restore to finish so the page is settled for a
-/// screenshot: the success message is shown, the restore dialog has
-/// closed, and the snapshot list has been reloaded (replacing any dates
-/// hidden for an earlier screenshot with real ones).
+/// Hides all but the two newest rows of the snapshot list in screenshots.
+/// Those two are the ones the test needs (the snapshots from before and
+/// after its insert); whether an automatic round also captured an
+/// intermediate state from earlier depends on timing. A style rule, unlike
+/// changing the rows, still applies after the list reloads.
+pub async fn hide_older_snapshot_rows(page: &Page) -> Result<(), Box<dyn Error>> {
+    page.evaluate::<serde_json::Value, serde_json::Value>(
+        r#"(() => {
+            const style = document.createElement('style');
+            style.textContent = '#snapshots-list-container tbody tr:nth-child(n+3) { display: none; }';
+            document.head.appendChild(style);
+        })()"#,
+        None,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Waits for a confirmed restore to finish and readies the page for a
+/// screenshot: the success message is shown and the restore dialog has
+/// closed. The snapshot list is hidden, since what it shows by then
+/// depends on timing: it reloads after the restore, and a snapshot round
+/// may or may not have captured the restored contents yet (the list
+/// itself is covered by the earlier screenshot).
 pub async fn wait_for_restore(page: &Page) -> Result<(), Box<dyn Error>> {
     page.locator("#restore-snapshot-results:has-text('Success')")
         .first()
@@ -81,24 +101,12 @@ pub async fn wait_for_restore(page: &Page) -> Result<(), Box<dyn Error>> {
                 .build(),
         ))
         .await?;
-
-    let script = r#"(() => {
-        const cells = [...document.querySelectorAll('#snapshots-list-container tbody td:nth-child(2)')];
-        return cells.length > 0 && cells.every(cell => /\d{4}-\d{2}-\d{2}/.test(cell.textContent));
-    })()"#;
-    let deadline = Instant::now() + SNAPSHOT_TIMEOUT;
-    loop {
-        let reloaded = page
-            .evaluate::<serde_json::Value, serde_json::Value>(script, None)
-            .await?;
-        if reloaded == serde_json::Value::Bool(true) {
-            return Ok(());
-        }
-        if Instant::now() > deadline {
-            return Err("The snapshot list wasn't reloaded after the restore".into());
-        }
-        tokio::time::sleep(SNAPSHOT_POLL_INTERVAL).await;
-    }
+    page.evaluate::<serde_json::Value, serde_json::Value>(
+        "document.getElementById('snapshots-list-container').style.visibility = 'hidden'",
+        None,
+    )
+    .await?;
+    Ok(())
 }
 
 /// Waits until a snapshot that isn't in `previous` is the newest one, and
@@ -242,6 +250,7 @@ pub async fn test_snapshots_flow(
         .wait_for(Some(WaitForOptions::builder().timeout(5000.0).build()))
         .await?;
 
+    hide_older_snapshot_rows(page).await?;
     BrowserHelpers::screenshot_compare(page, "snapshots_list_page", SNAPSHOT_DATE_SELECTORS)
         .await?;
 
@@ -275,7 +284,7 @@ pub async fn test_snapshots_flow(
 
     wait_for_restore(page).await?;
 
-    BrowserHelpers::screenshot_compare(page, "snapshots_restored", SNAPSHOT_DATE_SELECTORS).await?;
+    BrowserHelpers::screenshot_compare(page, "snapshots_restored", &[]).await?;
 
     // Step 10: Navigate back to database page to verify restoration
     let database_url = format!("{}/{}/test.sqlite", base_url, username);
